@@ -62,12 +62,12 @@ struct InventoryView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
-                    if let filter = vm.selectedFilter {
+                    if vm.selectedFilter != nil {
                         Button {
                             vm.setFilter(nil)
                         } label: {
                             HStack(spacing: 4) {
-                                Text(filter.displayName)
+                                Text("Show All")
                                 Image(systemName: "xmark.circle.fill")
                             }
                             .font(.caption.bold())
