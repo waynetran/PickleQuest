@@ -33,7 +33,7 @@ enum GameConstants {
         // Rating bounds
         static let minRating: Double = 2.00
         static let maxRating: Double = 8.00
-        static let startingRating: Double = 3.00
+        static let startingRating: Double = 2.00
 
         // K-factor tiers (based on reliability)
         static let kFactorNew: Double = 64.0       // reliability < 0.3

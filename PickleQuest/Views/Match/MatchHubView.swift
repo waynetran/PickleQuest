@@ -40,7 +40,9 @@ struct MatchHubView: View {
                 Text("PickleQuest")
                     .font(.largeTitle.bold())
 
-                Text("SUPR \(String(format: "%.2f", appState.player.duprRating))")
+                Text(appState.player.duprProfile.hasRating
+                    ? "SUPR \(String(format: "%.2f", appState.player.duprRating))"
+                    : "SUPR: Not Rated")
                     .font(.title3)
                     .foregroundStyle(.secondary)
 

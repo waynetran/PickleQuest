@@ -6,6 +6,11 @@ struct DUPRProfile: Codable, Equatable, Sendable {
     var uniqueOpponentIDs: Set<UUID>
     var lastRatedMatchDate: Date?
 
+    /// True once the player has completed at least one rated match.
+    var hasRating: Bool {
+        ratedMatchCount > 0
+    }
+
     var reliability: Double {
         DUPRCalculator.computeReliability(profile: self)
     }

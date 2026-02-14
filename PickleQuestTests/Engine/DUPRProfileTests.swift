@@ -30,6 +30,12 @@ struct DUPRProfileTests {
 
     // MARK: - Recording Matches
 
+    @Test("Starter profile is not rated")
+    func starterNotRated() {
+        let profile = DUPRProfile.starter
+        #expect(!profile.hasRating)
+    }
+
     @Test("Recording a match updates all profile fields")
     func recordMatchUpdatesFields() {
         var profile = DUPRProfile.starter
@@ -38,7 +44,8 @@ struct DUPRProfileTests {
 
         profile.recordRatedMatch(opponentID: opponentID, ratingChange: 0.10, date: date)
 
-        #expect(profile.rating == 3.10)
+        #expect(profile.rating == 2.10)
+        #expect(profile.hasRating)
         #expect(profile.ratedMatchCount == 1)
         #expect(profile.uniqueOpponentIDs.contains(opponentID))
         #expect(profile.lastRatedMatchDate == date)

@@ -138,7 +138,7 @@ Each item gets a rarity-appropriate prefix + slot-appropriate base name (e.g., "
 Performance-based rating using margin-of-victory Elo. See [docs/supr-algorithm.md](supr-algorithm.md) for full details.
 
 ### Key Properties
-- **Range**: 2.00 - 8.00, starting at 3.00
+- **Range**: 2.00 - 8.00, starting as NR (Not Rated) at 2.00
 - **Margin matters**: Score differential determines rating change, not just win/loss
 - **Close loss to stronger opponent can gain rating**: Incentivizes competitive play
 - **Reliability system**: K-factor (64 → 32 → 16) decreases as match depth/breadth/recency improve

@@ -39,9 +39,15 @@ struct PlayerProfileView: View {
                             Text("SUPR Score")
                                 .font(.headline)
                             Spacer()
-                            Text(String(format: "%.2f", appState.player.duprRating))
-                                .font(.title.bold().monospacedDigit())
-                                .foregroundStyle(.green)
+                            if appState.player.duprProfile.hasRating {
+                                Text(String(format: "%.2f", appState.player.duprRating))
+                                    .font(.title.bold().monospacedDigit())
+                                    .foregroundStyle(.green)
+                            } else {
+                                Text("NR")
+                                    .font(.title.bold())
+                                    .foregroundStyle(.secondary)
+                            }
                         }
 
                         VStack(alignment: .leading, spacing: 4) {

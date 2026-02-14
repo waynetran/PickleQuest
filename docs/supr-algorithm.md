@@ -108,7 +108,8 @@ No matches played: recency = 0.0.
 | Constraint | Value |
 |-----------|-------|
 | Rating range | 2.00 - 8.00 |
-| Starting rating | 3.00 |
+| Starting state | NR (Not Rated) |
+| Starting rating | 2.00 (once first rated match is played) |
 | Auto-unrate threshold | > 1.0 rating gap |
 
 ### Auto-Unrate
@@ -134,7 +135,7 @@ enum DUPRRating {
     // Rating bounds
     static let minRating = 2.00
     static let maxRating = 8.00
-    static let startingRating = 3.00
+    static let startingRating = 2.00  // players start as NR until first rated match
 
     // K-factor tiers
     static let kFactorNew = 64.0         // reliability < 0.3
