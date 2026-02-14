@@ -11,6 +11,7 @@ struct MatchResult: Sendable {
     let coinsEarned: Int
     let loot: [Equipment]
     let duration: TimeInterval // simulated match duration
+    let duprChange: Double? // nil for unrated matches
 
     var formattedScore: String {
         gameScores.map { "\($0.playerPoints)-\($0.opponentPoints)" }.joined(separator: ", ")

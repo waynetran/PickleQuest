@@ -313,7 +313,8 @@ actor MatchEngine {
             xpEarned: xp,
             coinsEarned: coins,
             loot: loot,
-            duration: Double(totalPts) * 1.5 // rough simulated time
+            duration: Double(totalPts) * 1.5, // rough simulated time
+            duprChange: nil
         )
     }
 

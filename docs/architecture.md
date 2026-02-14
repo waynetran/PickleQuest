@@ -21,8 +21,9 @@ PickleQuest follows MVVM + Services architecture with protocol-based dependency 
 ### Models (`Models/`)
 Pure value types (structs/enums) that are `Codable`, `Sendable`, and `Equatable`. No business logic beyond simple computed properties.
 
-- **Player**: identity, stats, progression, equipment slots, wallet
+- **Player**: identity, stats, progression, equipment slots, wallet, DUPR profile
 - **PlayerStats**: 10-stat system with DUPR mapping
+- **DUPRProfile**: rating, match count, unique opponents, last match date, computed reliability/K-factor
 - **Equipment**: 6 slots, 5 rarities, stat bonuses, triggered abilities (epic+)
 - **Match types**: MatchConfig, MatchPoint, MatchEvent, MatchResult
 - **NPC**: difficulty tiers, personality archetypes, dialogue
@@ -42,6 +43,9 @@ The match simulation engine runs as an `actor` and emits events via `AsyncStream
 5. **PointResolver**: Orchestrates a single point combining all modifiers
 6. **MatchEngine**: Runs full match loop (games → points), tracks stats, calculates rewards, generates loot
 
+#### Rating System (`Engine/Rating/`)
+**DUPRCalculator**: Static methods for SUPR rating calculations — expected score (Elo formula), actual score (margin-of-victory via tanh), rating change, reliability computation, K-factor tiers, auto-unrate detection.
+
 #### Loot Generation (`Engine/LootGeneration/`)
 Procedural equipment generation system used for match loot drops and store inventory.
 
@@ -52,13 +56,13 @@ Procedural equipment generation system used for match loot drops and store inven
 All services are protocol-based. Current implementations are in-memory mocks.
 
 - **PlayerService**: CRUD for player data, stat allocation
-- **MatchService**: Creates match engine instances (resolves equipped items), processes results (returns level-up rewards)
+- **MatchService**: Creates match engine instances (resolves equipped items), processes results (XP, coins, level-up rewards, DUPR rating changes)
 - **NPCService**: NPC catalog
 - **InventoryService**: Equipment inventory management (add/remove/batch add, equipped item resolution)
 - **StoreService**: Procedurally-generated shop items, buy/refresh
 
 ### ViewModels
-- **MatchViewModel**: Async match flow with loot drops and level-up tracking
+- **MatchViewModel**: Async match flow with loot drops, level-up tracking, rated/unrated toggle, DUPR change display
 - **InventoryViewModel**: Load/filter/equip/unequip/sell with stat preview
 - **StoreViewModel**: Store loading, purchasing, refreshing
 - **PlayerProfileViewModel**: Stat allocation, effective stats with equipment
@@ -75,11 +79,12 @@ All services are protocol-based. Current implementations are in-memory mocks.
 - ViewModels are `@MainActor` for UI thread safety
 - `RandomSource` protocol enables deterministic testing via `SeededRandomSource`
 
-## Data Flow: Match → Loot → Inventory
-1. Player selects NPC opponent
+## Data Flow: Match → Loot → Inventory → Rating
+1. Player selects NPC opponent (rated/unrated toggle, auto-unrate if gap >1.0)
 2. MatchService resolves equipped item UUIDs → Equipment via InventoryService
 3. MatchEngine creates with player equipment, LootGenerator, and opponent difficulty
 4. Engine simulates match, LootGenerator rolls loot in `buildResult()`
 5. MatchResult includes loot drops; MatchViewModel surfaces them
-6. On continue, MatchHubView adds loot to InventoryService and processes XP/coins
-7. Loot appears in Inventory tab; equipped items affect future matches
+6. On continue, MatchHubView processes rewards: XP/coins, loot → InventoryService, DUPR rating update
+7. If rated match: DUPRCalculator computes rating change from margin-of-victory; player's DUPRProfile updated
+8. Loot appears in Inventory tab; equipped items affect future matches; SUPR score visible on Profile

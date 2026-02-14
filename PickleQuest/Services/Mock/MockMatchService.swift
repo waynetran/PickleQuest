@@ -31,15 +31,46 @@ final class MockMatchService: MatchService {
     func processMatchResult(
         _ result: MatchResult,
         for player: inout Player,
-        opponent: NPC
-    ) -> [LevelUpReward] {
+        opponent: NPC,
+        config: MatchConfig
+    ) -> MatchRewards {
         // Award XP
-        let rewards = player.progression.addXP(result.xpEarned)
+        let levelUpRewards = player.progression.addXP(result.xpEarned)
 
         // Award coins with difficulty bonus
         let bonus = Int(Double(result.coinsEarned) * opponent.rewardMultiplier)
         player.wallet.add(result.coinsEarned + bonus)
 
-        return rewards
+        // Calculate DUPR change for rated matches
+        var duprChange: Double? = nil
+        let isRated = config.isRated && !DUPRCalculator.shouldAutoUnrate(
+            playerRating: player.duprRating,
+            opponentRating: opponent.duprRating
+        )
+
+        if isRated {
+            // Use the last game score for margin-of-victory calculation
+            let lastGame = result.gameScores.last ?? result.finalScore
+            let change = DUPRCalculator.calculateRatingChange(
+                playerRating: player.duprRating,
+                opponentRating: opponent.duprRating,
+                playerPoints: lastGame.playerPoints,
+                opponentPoints: lastGame.opponentPoints,
+                pointsToWin: config.pointsToWin,
+                kFactor: player.duprProfile.kFactor
+            )
+            player.duprProfile.recordRatedMatch(opponentID: opponent.id, ratingChange: change)
+            duprChange = change
+        }
+
+        return MatchRewards(
+            levelUpRewards: levelUpRewards,
+            duprChange: duprChange
+        )
     }
+}
+
+struct MatchRewards: Sendable {
+    let levelUpRewards: [LevelUpReward]
+    let duprChange: Double?
 }

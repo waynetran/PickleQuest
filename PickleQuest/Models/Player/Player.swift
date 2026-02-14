@@ -7,9 +7,10 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
     var progression: PlayerProgression
     var equippedItems: [EquipmentSlot: UUID] // slot → equipment ID
     var wallet: Wallet
+    var duprProfile: DUPRProfile
 
     var duprRating: Double {
-        stats.duprRating
+        duprProfile.rating
     }
 
     static func newPlayer(name: String) -> Player {
@@ -19,7 +20,8 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
             stats: .starter,
             progression: .starter,
             equippedItems: [:],
-            wallet: Wallet(coins: GameConstants.Economy.startingCoins)
+            wallet: Wallet(coins: GameConstants.Economy.startingCoins),
+            duprProfile: .starter
         )
     }
 }

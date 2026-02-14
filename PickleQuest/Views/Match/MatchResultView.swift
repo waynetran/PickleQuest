@@ -4,6 +4,7 @@ struct MatchResultView: View {
     let result: MatchResult
     let opponent: NPC?
     let levelUpRewards: [LevelUpReward]
+    let duprChange: Double?
     let onDismiss: () -> Void
 
     var body: some View {
@@ -31,6 +32,7 @@ struct MatchResultView: View {
                 HStack(spacing: 32) {
                     RewardBadge(icon: "star.fill", label: "XP", value: "+\(result.xpEarned)", color: .blue)
                     RewardBadge(icon: "dollarsign.circle.fill", label: "Coins", value: "+\(result.coinsEarned)", color: .yellow)
+                    suprBadge
                 }
 
                 // Loot Drops
@@ -90,6 +92,26 @@ struct MatchResultView: View {
                 }
             }
             .padding()
+        }
+    }
+
+    @ViewBuilder
+    private var suprBadge: some View {
+        if let change = duprChange {
+            let isPositive = change >= 0
+            RewardBadge(
+                icon: "chart.line.uptrend.xyaxis",
+                label: "SUPR",
+                value: String(format: "%@%.2f", isPositive ? "+" : "", change),
+                color: isPositive ? .green : .red
+            )
+        } else {
+            RewardBadge(
+                icon: "chart.line.uptrend.xyaxis",
+                label: "SUPR",
+                value: "Unrated",
+                color: .gray
+            )
         }
     }
 }

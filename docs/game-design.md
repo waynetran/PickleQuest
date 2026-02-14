@@ -9,6 +9,7 @@ A Pokemon Go-like pickleball RPG where players physically explore their city to 
 |---|-----------|--------|
 | 1 | Foundation + Match Engine | **Complete** |
 | 2 | Inventory, Equipment, Store, Leveling | **Complete** |
+| 2.5 | SUPR Rating System | **Complete** |
 | 3 | Map + Location + NPC World | Planned |
 | 4 | SpriteKit Match Visualization | Planned |
 | 5 | Doubles, Team Synergy, Tournaments | Planned |
@@ -131,3 +132,21 @@ Each item gets a rarity-appropriate prefix + slot-appropriate base name (e.g., "
 - Points allocated manually to any of the 10 stats
 - Profile shows base stats vs effective stats (with equipment bonuses)
 - Stat allocation available from Profile view when points are available
+
+## SUPR Rating System (Milestone 2.5)
+
+Performance-based rating using margin-of-victory Elo. See [docs/supr-algorithm.md](supr-algorithm.md) for full details.
+
+### Key Properties
+- **Range**: 2.00 - 8.00, starting at 3.00
+- **Margin matters**: Score differential determines rating change, not just win/loss
+- **Close loss to stronger opponent can gain rating**: Incentivizes competitive play
+- **Reliability system**: K-factor (64 → 32 → 16) decreases as match depth/breadth/recency improve
+- **Rated vs unrated**: Toggle on NPC picker; auto-unrate if rating gap > 1.0
+- **NPCs have fixed ratings**: Only the player's SUPR changes dynamically
+
+### UI Surfaces
+- **Profile**: SUPR score with reliability progress bar
+- **NPC Picker**: Opponent SUPR scores, rated/unrated toggle, auto-unrate warning
+- **Match Results**: SUPR change badge (+0.05 green / -0.03 red / "Unrated" gray)
+- **Match Hub**: SUPR score displayed on idle screen

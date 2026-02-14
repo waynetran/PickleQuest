@@ -10,9 +10,30 @@ struct NPC: Identifiable, Codable, Equatable, Sendable {
     let dialogue: NPCDialogue
     let portraitName: String // asset catalog image name
     let rewardMultiplier: Double
+    let duprRating: Double
 
-    var duprRating: Double {
-        stats.duprRating
+    init(
+        id: UUID,
+        name: String,
+        title: String,
+        difficulty: NPCDifficulty,
+        stats: PlayerStats,
+        personality: NPCPersonality,
+        dialogue: NPCDialogue,
+        portraitName: String,
+        rewardMultiplier: Double,
+        duprRating: Double? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.title = title
+        self.difficulty = difficulty
+        self.stats = stats
+        self.personality = personality
+        self.dialogue = dialogue
+        self.portraitName = portraitName
+        self.rewardMultiplier = rewardMultiplier
+        self.duprRating = duprRating ?? stats.duprRating
     }
 }
 

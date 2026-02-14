@@ -3,6 +3,7 @@ import SwiftUI
 struct MatchHubView: View {
     @Environment(AppState.self) private var appState
     @EnvironmentObject private var container: DependencyContainer
+
     @State private var viewModel: MatchViewModel?
 
     var body: some View {
@@ -39,7 +40,7 @@ struct MatchHubView: View {
                 Text("PickleQuest")
                     .font(.largeTitle.bold())
 
-                Text("DUPR \(String(format: "%.1f", appState.player.duprRating))")
+                Text("SUPR \(String(format: "%.2f", appState.player.duprRating))")
                     .font(.title3)
                     .foregroundStyle(.secondary)
 
@@ -70,7 +71,8 @@ struct MatchHubView: View {
                 MatchResultView(
                     result: result,
                     opponent: vm.selectedNPC,
-                    levelUpRewards: vm.levelUpRewards
+                    levelUpRewards: vm.levelUpRewards,
+                    duprChange: vm.duprChange
                 ) {
                     Task {
                         await processResult(vm: vm)
@@ -82,7 +84,7 @@ struct MatchHubView: View {
     }
 
     private func processResult(vm: MatchViewModel) async {
-        // Process match rewards (XP, coins, level-ups)
+        // Process match rewards (XP, coins, level-ups, DUPR)
         var player = appState.player
         let rewards = vm.processResult(player: &player)
         _ = rewards

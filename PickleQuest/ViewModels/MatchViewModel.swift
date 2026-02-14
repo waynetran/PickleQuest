@@ -17,6 +17,9 @@ final class MatchViewModel {
     var currentScore: MatchScore?
     var lootDrops: [Equipment] = []
     var levelUpRewards: [LevelUpReward] = []
+    var isRated: Bool = true
+    var duprChange: Double?
+    var matchConfig: MatchConfig = .quickMatch
 
     enum MatchState: Equatable {
         case idle
@@ -35,6 +38,16 @@ final class MatchViewModel {
         matchState = .selectingOpponent
     }
 
+    /// Whether the match will be auto-unrated due to rating gap.
+    func isAutoUnrated(playerRating: Double, opponentRating: Double) -> Bool {
+        DUPRCalculator.shouldAutoUnrate(playerRating: playerRating, opponentRating: opponentRating)
+    }
+
+    /// The effective rated status (considering auto-unrate).
+    func effectiveIsRated(playerRating: Double, opponentRating: Double) -> Bool {
+        isRated && !isAutoUnrated(playerRating: playerRating, opponentRating: opponentRating)
+    }
+
     func startMatch(player: Player, opponent: NPC) async {
         selectedNPC = opponent
         matchState = .simulating
@@ -43,11 +56,24 @@ final class MatchViewModel {
         currentScore = nil
         lootDrops = []
         levelUpRewards = []
+        duprChange = nil
+
+        let effectiveRated = effectiveIsRated(
+            playerRating: player.duprRating,
+            opponentRating: opponent.duprRating
+        )
+        matchConfig = MatchConfig(
+            matchType: .singles,
+            pointsToWin: GameConstants.Match.defaultPointsToWin,
+            gamesToWin: 1,
+            winByTwo: GameConstants.Match.winByTwo,
+            isRated: effectiveRated
+        )
 
         let engine = await matchService.createMatch(
             player: player,
             opponent: opponent,
-            config: .quickMatch
+            config: matchConfig
         )
 
         let stream = await engine.simulate()
@@ -68,10 +94,13 @@ final class MatchViewModel {
         }
     }
 
-    func processResult(player: inout Player) -> [LevelUpReward] {
-        guard let result = matchResult, let npc = selectedNPC else { return [] }
-        let rewards = matchService.processMatchResult(result, for: &player, opponent: npc)
-        levelUpRewards = rewards
+    func processResult(player: inout Player) -> MatchRewards {
+        guard let result = matchResult, let npc = selectedNPC else {
+            return MatchRewards(levelUpRewards: [], duprChange: nil)
+        }
+        let rewards = matchService.processMatchResult(result, for: &player, opponent: npc, config: matchConfig)
+        levelUpRewards = rewards.levelUpRewards
+        duprChange = rewards.duprChange
         return rewards
     }
 
@@ -83,6 +112,8 @@ final class MatchViewModel {
         currentScore = nil
         lootDrops = []
         levelUpRewards = []
+        isRated = true
+        duprChange = nil
     }
 }
 

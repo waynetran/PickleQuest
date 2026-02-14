@@ -5,6 +5,21 @@ struct MatchConfig: Sendable {
     let pointsToWin: Int
     let gamesToWin: Int
     let winByTwo: Bool
+    let isRated: Bool
+
+    init(
+        matchType: MatchType,
+        pointsToWin: Int,
+        gamesToWin: Int,
+        winByTwo: Bool,
+        isRated: Bool = true
+    ) {
+        self.matchType = matchType
+        self.pointsToWin = pointsToWin
+        self.gamesToWin = gamesToWin
+        self.winByTwo = winByTwo
+        self.isRated = isRated
+    }
 
     static let defaultSingles = MatchConfig(
         matchType: .singles,

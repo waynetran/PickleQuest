@@ -28,6 +28,43 @@ enum GameConstants {
         }
     }
 
+    // MARK: - DUPR Rating System
+    enum DUPRRating {
+        // Rating bounds
+        static let minRating: Double = 2.00
+        static let maxRating: Double = 8.00
+        static let startingRating: Double = 3.00
+
+        // K-factor tiers (based on reliability)
+        static let kFactorNew: Double = 64.0       // reliability < 0.3
+        static let kFactorDeveloping: Double = 32.0 // reliability 0.3-0.7
+        static let kFactorEstablished: Double = 16.0 // reliability > 0.7
+
+        // Reliability weights
+        static let depthWeight: Double = 0.4
+        static let breadthWeight: Double = 0.3
+        static let recencyWeight: Double = 0.3
+
+        // Reliability thresholds
+        static let depthMax: Int = 30           // matches for 1.0 depth
+        static let breadthMax: Int = 15         // unique opponents for 1.0 breadth
+        static let recencyFullDays: Int = 7     // days for 1.0 recency
+        static let recencyDecayDays: Int = 90   // days for minimum recency
+        static let recencyMinimum: Double = 0.3 // floor for recency component
+
+        // Margin-of-victory scaling (for actualScore)
+        static let marginExponent: Double = 1.5  // controls curve steepness
+        static let pointsToWin: Double = 11.0    // reference for normalization
+
+        // Elo parameters
+        static let eloScaleFactor: Double = 400.0
+        static let duprToEloScale: Double = 100.0 // 1.0 DUPR gap = 100 Elo-equivalent
+        static let ratingChangeDivisor: Double = 200.0 // scales raw Elo to DUPR range
+
+        // Auto-unrate threshold
+        static let maxRatedGap: Double = 1.0
+    }
+
     // MARK: - Match
     enum Match {
         static let defaultPointsToWin: Int = 11

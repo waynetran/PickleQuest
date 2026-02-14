@@ -27,13 +27,66 @@ struct PlayerProfileView: View {
                         HStack(spacing: 16) {
                             Label("Lv. \(appState.player.progression.level)", systemImage: "star.fill")
                                 .font(.subheadline)
-                            Label("DUPR \(String(format: "%.1f", appState.player.duprRating))", systemImage: "chart.bar.fill")
-                                .font(.subheadline)
                             Label("\(appState.player.wallet.coins)", systemImage: "dollarsign.circle.fill")
                                 .font(.subheadline)
                         }
                         .foregroundStyle(.secondary)
                     }
+
+                    // SUPR Score Card
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("SUPR Score")
+                                .font(.headline)
+                            Spacer()
+                            Text(String(format: "%.2f", appState.player.duprRating))
+                                .font(.title.bold().monospacedDigit())
+                                .foregroundStyle(.green)
+                        }
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text("Reliability")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(String(format: "%.0f%%", appState.player.duprProfile.reliability * 100))
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                            }
+                            ProgressView(value: appState.player.duprProfile.reliability)
+                                .tint(reliabilityColor(appState.player.duprProfile.reliability))
+                        }
+
+                        HStack(spacing: 16) {
+                            VStack(spacing: 2) {
+                                Text("\(appState.player.duprProfile.ratedMatchCount)")
+                                    .font(.subheadline.bold().monospacedDigit())
+                                Text("Matches")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Divider().frame(height: 24)
+                            VStack(spacing: 2) {
+                                Text("\(appState.player.duprProfile.uniqueOpponentIDs.count)")
+                                    .font(.subheadline.bold().monospacedDigit())
+                                Text("Opponents")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Divider().frame(height: 24)
+                            VStack(spacing: 2) {
+                                Text(kFactorLabel(appState.player.duprProfile.kFactor))
+                                    .font(.subheadline.bold())
+                                Text("K-Factor")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(.regularMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     // XP Progress
                     VStack(alignment: .leading, spacing: 8) {
@@ -170,5 +223,17 @@ struct PlayerProfileView: View {
         case .defensive: return .blue
         case .mental: return .purple
         }
+    }
+
+    private func reliabilityColor(_ reliability: Double) -> Color {
+        if reliability < 0.3 { return .red }
+        if reliability < 0.7 { return .orange }
+        return .green
+    }
+
+    private func kFactorLabel(_ kFactor: Double) -> String {
+        if kFactor >= GameConstants.DUPRRating.kFactorNew { return "High" }
+        if kFactor >= GameConstants.DUPRRating.kFactorDeveloping { return "Med" }
+        return "Low"
     }
 }

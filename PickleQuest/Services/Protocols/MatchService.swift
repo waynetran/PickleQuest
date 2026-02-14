@@ -10,6 +10,7 @@ protocol MatchService: Sendable {
     func processMatchResult(
         _ result: MatchResult,
         for player: inout Player,
-        opponent: NPC
-    ) -> [LevelUpReward]
+        opponent: NPC,
+        config: MatchConfig
+    ) -> MatchRewards
 }
