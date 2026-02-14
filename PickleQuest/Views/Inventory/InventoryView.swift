@@ -44,34 +44,41 @@ struct InventoryView: View {
                 // Equipment Slots
                 EquipmentSlotsView(
                     player: appState.player,
+                    selectedFilter: vm.selectedFilter,
                     equippedItemFor: { slot in
                         vm.equippedItem(for: slot, player: appState.player)
                     },
                     onSlotTap: { slot in
                         vm.setFilter(vm.selectedFilter == slot ? nil : slot)
+                    },
+                    onShowAll: {
+                        vm.setFilter(nil)
                     }
                 )
 
-                // Filter indicator
-                if let filter = vm.selectedFilter {
-                    HStack {
-                        Text("Showing: \(filter.displayName)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Button("Clear") {
-                            vm.setFilter(nil)
-                        }
-                        .font(.caption)
-                    }
-                    .padding(.horizontal)
-                }
-
-                // Item count
+                // Item count + active filter chip
                 HStack {
                     Text("\(vm.filteredInventory.count) items")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+
+                    if let filter = vm.selectedFilter {
+                        Button {
+                            vm.setFilter(nil)
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(filter.displayName)
+                                Image(systemName: "xmark.circle.fill")
+                            }
+                            .font(.caption.bold())
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(.green.opacity(0.15))
+                            .foregroundStyle(.green)
+                            .clipShape(Capsule())
+                        }
+                    }
+
                     Spacer()
                 }
                 .padding(.horizontal)
