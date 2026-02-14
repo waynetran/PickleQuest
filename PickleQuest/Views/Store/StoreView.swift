@@ -23,13 +23,15 @@ struct StoreView: View {
             .navigationTitle("Store")
             .task {
                 if viewModel == nil {
-                    let vm = StoreViewModel(
+                    viewModel = StoreViewModel(
                         storeService: container.storeService,
                         inventoryService: container.inventoryService
                     )
-                    viewModel = vm
-                    await vm.loadStore()
                 }
+            }
+            .onAppear {
+                guard let vm = viewModel else { return }
+                Task { await vm.loadStore() }
             }
         }
     }

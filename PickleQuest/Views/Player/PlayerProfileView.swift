@@ -144,13 +144,15 @@ struct PlayerProfileView: View {
             .navigationTitle("Profile")
             .task {
                 if viewModel == nil {
-                    let vm = PlayerProfileViewModel(
+                    viewModel = PlayerProfileViewModel(
                         playerService: container.playerService,
                         inventoryService: container.inventoryService
                     )
-                    viewModel = vm
-                    await vm.loadPlayer()
                 }
+            }
+            .onAppear {
+                guard let vm = viewModel else { return }
+                Task { await vm.loadPlayer() }
             }
             .sheet(isPresented: $showStatAllocation) {
                 if let vm = viewModel {
