@@ -1,0 +1,59 @@
+name: PickleQuest
+options:
+  bundleIdPrefix: com.waynetran
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+
+targets:
+  PickleQuest:
+    type: application
+    platform: iOS
+    sources:
+      - PickleQuest
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait"
+        PRODUCT_BUNDLE_IDENTIFIER: com.waynetran.PickleQuest
+        PRODUCT_NAME: PickleQuest
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_STRICT_CONCURRENCY: complete
+    scheme:
+      testTargets:
+        - PickleQuestTests
+
+  PickleQuestTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - PickleQuestTests
+    dependencies:
+      - target: PickleQuest
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.waynetran.PickleQuestTests
+
+  PickleQuestUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - PickleQuestUITests
+    dependencies:
+      - target: PickleQuest
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.waynetran.PickleQuestUITests

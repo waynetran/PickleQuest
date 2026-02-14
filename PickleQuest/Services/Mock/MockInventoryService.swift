@@ -1,0 +1,59 @@
+import Foundation
+
+actor MockInventoryService: InventoryService {
+    private var inventory: [Equipment]
+
+    init() {
+        self.inventory = MockInventoryService.createStarterInventory()
+    }
+
+    func getInventory() async -> [Equipment] {
+        inventory
+    }
+
+    func addEquipment(_ equipment: Equipment) async {
+        inventory.append(equipment)
+    }
+
+    func removeEquipment(_ id: UUID) async {
+        inventory.removeAll { $0.id == id }
+    }
+
+    func getEquipment(by id: UUID) async -> Equipment? {
+        inventory.first { $0.id == id }
+    }
+
+    // MARK: - Starter Equipment
+
+    private static func createStarterInventory() -> [Equipment] {
+        [
+            Equipment(
+                id: UUID(uuidString: "10000001-0000-0000-0000-000000000001")!,
+                name: "Beginner's Paddle",
+                slot: .paddle,
+                rarity: .common,
+                statBonuses: [StatBonus(stat: .power, value: 2), StatBonus(stat: .accuracy, value: 1)],
+                ability: nil,
+                sellPrice: 25
+            ),
+            Equipment(
+                id: UUID(uuidString: "10000002-0000-0000-0000-000000000002")!,
+                name: "Basic Court Shoes",
+                slot: .shoes,
+                rarity: .common,
+                statBonuses: [StatBonus(stat: .speed, value: 2), StatBonus(stat: .positioning, value: 1)],
+                ability: nil,
+                sellPrice: 20
+            ),
+            Equipment(
+                id: UUID(uuidString: "10000003-0000-0000-0000-000000000003")!,
+                name: "Cotton T-Shirt",
+                slot: .shirt,
+                rarity: .common,
+                statBonuses: [StatBonus(stat: .stamina, value: 3)],
+                ability: nil,
+                sellPrice: 15
+            )
+        ]
+    }
+}

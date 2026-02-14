@@ -1,0 +1,108 @@
+import Foundation
+
+enum GameConstants {
+    // MARK: - Stats
+    enum Stats {
+        static let minValue: Int = 1
+        static let maxValue: Int = 99
+        static let hardCap: Int = 99
+        static let linearCap: Int = 60
+        static let midCap: Int = 80
+        static let linearScale: Double = 1.0
+        static let midScale: Double = 0.7
+        static let highScale: Double = 0.4
+        static let startingLevel: Int = 1
+        static let maxLevel: Int = 50
+        static let statPointsPerLevel: Int = 3
+        static let startingStatTotal: Int = 150 // distributed across 10 stats
+    }
+
+    // MARK: - DUPR Mapping
+    enum DUPR {
+        static let minRating: Double = 2.0
+        static let maxRating: Double = 8.0
+        /// Maps average stat (1-99) to DUPR (2.0-8.0)
+        static func rating(fromAverageStat avg: Double) -> Double {
+            let clamped = min(max(avg, 1.0), 99.0)
+            return minRating + (clamped - 1.0) / 98.0 * (maxRating - minRating)
+        }
+    }
+
+    // MARK: - Match
+    enum Match {
+        static let defaultPointsToWin: Int = 11
+        static let defaultGamesToWin: Int = 2
+        static let winByTwo: Bool = true
+        static let maxPoints: Int = 21 // safety cap per game
+        static let serveSwitchInterval: Int = 2 // singles: every 2 points
+    }
+
+    // MARK: - Fatigue
+    enum Fatigue {
+        static let maxEnergy: Double = 100.0
+        static let baseEnergyDrainPerShot: Double = 0.3
+        static let rallyLengthDrainMultiplier: Double = 0.05
+        static let threshold1: Double = 70.0 // mild fatigue
+        static let threshold2: Double = 50.0 // moderate fatigue
+        static let threshold3: Double = 30.0 // severe fatigue
+        static let penalty1: Double = 0.03  // -3% stats at threshold1
+        static let penalty2: Double = 0.08  // -8% stats at threshold2
+        static let penalty3: Double = 0.15  // -15% stats at threshold3
+        static let staminaReductionFactor: Double = 0.01 // per stamina point
+    }
+
+    // MARK: - Momentum
+    enum Momentum {
+        static let streakThresholds: [Int: Double] = [
+            2: 0.02,  // 2 in a row: +2%
+            3: 0.04,
+            4: 0.05,
+            5: 0.06,
+            6: 0.07   // 6+: +7%
+        ]
+        static let negativePenalties: [Int: Double] = [
+            2: -0.01,
+            3: -0.02,
+            4: -0.03,
+            5: -0.05  // 5+ lost in a row: -5%
+        ]
+    }
+
+    // MARK: - Rally
+    enum Rally {
+        static let baseAceChance: Double = 0.05
+        static let powerAceScaling: Double = 0.002 // per power point
+        static let reflexDefenseScale: Double = 0.0015
+        static let minRallyShots: Int = 1
+        static let maxRallyShots: Int = 30
+        static let baseWinnerChance: Double = 0.15
+        static let baseErrorChance: Double = 0.12
+    }
+
+    // MARK: - Equipment
+    enum Equipment {
+        static let maxSlots: Int = 6
+        static let maxBonusPerStat: Int = 25 // legendary max single-stat bonus
+    }
+
+    // MARK: - Economy
+    enum Economy {
+        static let startingCoins: Int = 500
+        static let matchWinBaseReward: Int = 100
+        static let matchLossBaseReward: Int = 25
+        static let difficultyBonusMultiplier: Double = 0.5
+    }
+
+    // MARK: - XP
+    enum XP {
+        static let baseXPPerMatch: Int = 50
+        static let winBonusXP: Int = 30
+        static let levelUpBase: Int = 100
+        static let levelUpGrowthRate: Double = 1.3
+        /// XP required to reach a given level
+        static func xpRequired(forLevel level: Int) -> Int {
+            guard level > 1 else { return 0 }
+            return Int(Double(levelUpBase) * pow(levelUpGrowthRate, Double(level - 2)))
+        }
+    }
+}

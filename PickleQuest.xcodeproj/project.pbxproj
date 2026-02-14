@@ -1,0 +1,849 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		030053C44EF48B07E766AD2B /* PlayerProgression.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52C2A0413DC0CD20FB85994C /* PlayerProgression.swift */; };
+		0DFA243D216FD16F1255A3EC /* NPC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1675D372694A305F611FE32D /* NPC.swift */; };
+		1DFA20353BD0EAC474762221 /* MatchSimulationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73B3FD5E1D993A1A80123844 /* MatchSimulationView.swift */; };
+		21A8FEC6BE691264FAE691E7 /* MatchEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB744DF042767593746C101B /* MatchEngineTests.swift */; };
+		26134A1B57938FFC3E195A26 /* Wallet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775C461714AC3A47F1E99E0B /* Wallet.swift */; };
+		2839DF2A3E920AD06E50AAA3 /* PlayerProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14730B939773D5593EEF66F9 /* PlayerProfileViewModel.swift */; };
+		28AB4CC6F088EE0D1F7A279D /* MapItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761E0DC7B75C06D52FBD491E /* MapItem.swift */; };
+		2EDA97EBB0A6E7B56999B34B /* MatchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20C3B07BE8F5AC941C995746 /* MatchViewModel.swift */; };
+		3057984831215C6587916C74 /* MatchHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D397036B916DEC1B19A645F /* MatchHubView.swift */; };
+		35CED6482D21AAD5F0F53425 /* MockMatchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC470B6290926172C33A09F /* MockMatchService.swift */; };
+		3A3878E9CF1C3B1BD53F30AD /* MatchResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E37015A94BA1E07BCD8C05A5 /* MatchResultView.swift */; };
+		3B050E3BBEEFF0A145385100 /* PlayerProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02FF717F7DEC1E46AC1C7912 /* PlayerProfileView.swift */; };
+		4551C2277923A1D661225504 /* MockPlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A75F2EF611AE8E7A6FCC71E0 /* MockPlayerService.swift */; };
+		49657DCD34805C399017F8FA /* FatigueModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549DF67C3EB0E36D696AE3EA /* FatigueModelTests.swift */; };
+		4DAD72FBC09DA09E916FEB5B /* InventoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0E26D687250C76182C3D4C /* InventoryService.swift */; };
+		60C1CA5709BB3E240DBDCB74 /* NPCPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40CF56E088227F546C60B738 /* NPCPickerView.swift */; };
+		66DE4973BD9BED0C2197BD50 /* EquipmentAbility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13D27DD38A3C07AF3DC1F5AF /* EquipmentAbility.swift */; };
+		72218CB4A65BD13B1CE5DDD9 /* MomentumTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B134E5A041B5743FC9C0BBC /* MomentumTrackerTests.swift */; };
+		74E78A543C1A38A6C0C2CA25 /* MockInventoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 596C158D03744C9EBA1A7870 /* MockInventoryService.swift */; };
+		77F751CCE1AC083DD17E8B36 /* MatchConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECEA1686848E23241264008F /* MatchConfig.swift */; };
+		784F9AB42DE8809127A302A1 /* MomentumTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64FE8C463FC243A364CDD109 /* MomentumTracker.swift */; };
+		7925FA2AB77DB5D5CB6B2B4A /* MatchPoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113D32D22345163D83B3B9D9 /* MatchPoint.swift */; };
+		7C28EC5E2BDA53B5A0DDC7FD /* PointResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08207D8485476682AC02577 /* PointResolver.swift */; };
+		7D38D7EB38143D8854EE48C0 /* Consumable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78EDF9FACA3C6EB32CC7BAF /* Consumable.swift */; };
+		7D96587EFB503CAA3EAEEED0 /* NPCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 317B5B682D9B2CC67773486B /* NPCService.swift */; };
+		87FC21F3F57E1F3D93EC6104 /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF93932170EAA8760BA56E83 /* Player.swift */; };
+		902F65DDE7981382B64D20BB /* PlayerStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA01C280E5F28D53830ED79E /* PlayerStats.swift */; };
+		9082675C17CCC084A5BEDBB1 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AEAB8CBD3D6D5C1EBBECABA /* AppState.swift */; };
+		A10F0FF3F349FAF8D6F50647 /* PickleQuestUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9C13867B41A5C25A60AE0F /* PickleQuestUITests.swift */; };
+		A626669F5ACFF89A909F5072 /* StatBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A76446B9A2021FE2A0668EC0 /* StatBar.swift */; };
+		AFADB2EE7CFC9A8B6114BF26 /* RallySimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F35FD040AF4661A856F9D6FA /* RallySimulator.swift */; };
+		B04EDE991297618814A545E4 /* StatCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 840065301D6F3845B7E589EA /* StatCalculator.swift */; };
+		B26771FE90898DD826D9B56D /* EquipmentSlot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0D6A9C6DD259AB87FE0D21 /* EquipmentSlot.swift */; };
+		B5C0FEFD9E53A201516D645C /* MatchEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E2060A9BBEF6769156A056F /* MatchEvent.swift */; };
+		B926619285D7778F1326F291 /* EquipmentRarity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DE2F3174E21AC04B25ECDDA /* EquipmentRarity.swift */; };
+		C42CE90D2DA3273949387E7D /* MatchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 912C27A2B8A18DDDEDA05D69 /* MatchEngine.swift */; };
+		C568849F3E7E70B323E268D6 /* DependencyContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C7DF57C299CE8D8DF73B080 /* DependencyContainer.swift */; };
+		D1C34495E0D732C0A1341776 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5EA4DC48371B4ABC65DBEA0 /* ContentView.swift */; };
+		D726C1B09F3C251DB2798EBB /* MockNPCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE09A927C4E070179DA2B55B /* MockNPCService.swift */; };
+		D94A60FDE166721728A7C6FD /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584959296BFD092ED3EE3FD8 /* PlayerService.swift */; };
+		DB1E24C03C5CA4CDFAA83ABD /* MatchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 784E4E44166C3416091BA7E0 /* MatchResult.swift */; };
+		DBE5F18AC6CBE4C42E7A712E /* StatCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */; };
+		EFE1996F96F40167DAFB4032 /* FatigueModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0FFE7F286E16DF1CB68BDB /* FatigueModel.swift */; };
+		F2A74E1AACB4DE039B603545 /* MatchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46B06729836D2E4D76ECC28B /* MatchService.swift */; };
+		F2E663160A6E773AAC127E77 /* GameConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34188BBE97EE7E2D002892CE /* GameConstants.swift */; };
+		F7AC5CB510EB35254105DCE4 /* Equipment.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE3FB9F0A9E372A5A0CB3D66 /* Equipment.swift */; };
+		F8EB27192BD681D5C6389AD3 /* PickleQuestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9C040E3A053E3DAC2DD0AC /* PickleQuestApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2674E19DCCAD652DB5A8C8C5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EAB6AE60657DE22B5FD3118C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 06B1C32CDD2A45D368A92289;
+			remoteInfo = PickleQuest;
+		};
+		351698797991F93177BA96B0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EAB6AE60657DE22B5FD3118C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 06B1C32CDD2A45D368A92289;
+			remoteInfo = PickleQuest;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		02FF717F7DEC1E46AC1C7912 /* PlayerProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProfileView.swift; sourceTree = "<group>"; };
+		113D32D22345163D83B3B9D9 /* MatchPoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPoint.swift; sourceTree = "<group>"; };
+		13D27DD38A3C07AF3DC1F5AF /* EquipmentAbility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentAbility.swift; sourceTree = "<group>"; };
+		14730B939773D5593EEF66F9 /* PlayerProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProfileViewModel.swift; sourceTree = "<group>"; };
+		1675D372694A305F611FE32D /* NPC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NPC.swift; sourceTree = "<group>"; };
+		18092C844ECE15E47E4AB4F1 /* PickleQuestTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PickleQuestTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1B134E5A041B5743FC9C0BBC /* MomentumTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentumTrackerTests.swift; sourceTree = "<group>"; };
+		1EA16300A59A2F1C52C8B9CF /* PickleQuest.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PickleQuest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		20C3B07BE8F5AC941C995746 /* MatchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchViewModel.swift; sourceTree = "<group>"; };
+		2F1DCE8C0C6EC3452588B923 /* PickleQuestUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PickleQuestUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		317B5B682D9B2CC67773486B /* NPCService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NPCService.swift; sourceTree = "<group>"; };
+		34188BBE97EE7E2D002892CE /* GameConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameConstants.swift; sourceTree = "<group>"; };
+		3AEAB8CBD3D6D5C1EBBECABA /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		3C7DF57C299CE8D8DF73B080 /* DependencyContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DependencyContainer.swift; sourceTree = "<group>"; };
+		40CF56E088227F546C60B738 /* NPCPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NPCPickerView.swift; sourceTree = "<group>"; };
+		46B06729836D2E4D76ECC28B /* MatchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchService.swift; sourceTree = "<group>"; };
+		4C0D6A9C6DD259AB87FE0D21 /* EquipmentSlot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentSlot.swift; sourceTree = "<group>"; };
+		4DC470B6290926172C33A09F /* MockMatchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockMatchService.swift; sourceTree = "<group>"; };
+		52C2A0413DC0CD20FB85994C /* PlayerProgression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProgression.swift; sourceTree = "<group>"; };
+		549DF67C3EB0E36D696AE3EA /* FatigueModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FatigueModelTests.swift; sourceTree = "<group>"; };
+		584959296BFD092ED3EE3FD8 /* PlayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerService.swift; sourceTree = "<group>"; };
+		596C158D03744C9EBA1A7870 /* MockInventoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockInventoryService.swift; sourceTree = "<group>"; };
+		5A0FFE7F286E16DF1CB68BDB /* FatigueModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FatigueModel.swift; sourceTree = "<group>"; };
+		64FE8C463FC243A364CDD109 /* MomentumTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentumTracker.swift; sourceTree = "<group>"; };
+		6DE2F3174E21AC04B25ECDDA /* EquipmentRarity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentRarity.swift; sourceTree = "<group>"; };
+		73B3FD5E1D993A1A80123844 /* MatchSimulationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchSimulationView.swift; sourceTree = "<group>"; };
+		761E0DC7B75C06D52FBD491E /* MapItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapItem.swift; sourceTree = "<group>"; };
+		775C461714AC3A47F1E99E0B /* Wallet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wallet.swift; sourceTree = "<group>"; };
+		784E4E44166C3416091BA7E0 /* MatchResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchResult.swift; sourceTree = "<group>"; };
+		7B9C13867B41A5C25A60AE0F /* PickleQuestUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickleQuestUITests.swift; sourceTree = "<group>"; };
+		7E2060A9BBEF6769156A056F /* MatchEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchEvent.swift; sourceTree = "<group>"; };
+		840065301D6F3845B7E589EA /* StatCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCalculator.swift; sourceTree = "<group>"; };
+		912C27A2B8A18DDDEDA05D69 /* MatchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchEngine.swift; sourceTree = "<group>"; };
+		9D397036B916DEC1B19A645F /* MatchHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchHubView.swift; sourceTree = "<group>"; };
+		9D9C040E3A053E3DAC2DD0AC /* PickleQuestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickleQuestApp.swift; sourceTree = "<group>"; };
+		A5EA4DC48371B4ABC65DBEA0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A75F2EF611AE8E7A6FCC71E0 /* MockPlayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPlayerService.swift; sourceTree = "<group>"; };
+		A76446B9A2021FE2A0668EC0 /* StatBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatBar.swift; sourceTree = "<group>"; };
+		AF0E26D687250C76182C3D4C /* InventoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryService.swift; sourceTree = "<group>"; };
+		B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCalculatorTests.swift; sourceTree = "<group>"; };
+		BE3FB9F0A9E372A5A0CB3D66 /* Equipment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Equipment.swift; sourceTree = "<group>"; };
+		CB744DF042767593746C101B /* MatchEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchEngineTests.swift; sourceTree = "<group>"; };
+		CE09A927C4E070179DA2B55B /* MockNPCService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNPCService.swift; sourceTree = "<group>"; };
+		D08207D8485476682AC02577 /* PointResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointResolver.swift; sourceTree = "<group>"; };
+		E37015A94BA1E07BCD8C05A5 /* MatchResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchResultView.swift; sourceTree = "<group>"; };
+		ECEA1686848E23241264008F /* MatchConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchConfig.swift; sourceTree = "<group>"; };
+		F35FD040AF4661A856F9D6FA /* RallySimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RallySimulator.swift; sourceTree = "<group>"; };
+		F78EDF9FACA3C6EB32CC7BAF /* Consumable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Consumable.swift; sourceTree = "<group>"; };
+		FA01C280E5F28D53830ED79E /* PlayerStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerStats.swift; sourceTree = "<group>"; };
+		FF93932170EAA8760BA56E83 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		01221201A40B6CB2A273CFEF /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				BBBBE45EE2CB1BDA94373679 /* Mock */,
+				D9EDF630CF2FB3A1EF9E1B1D /* Protocols */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		0D097ED7ABF0314EC92C52F0 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A5EA4DC48371B4ABC65DBEA0 /* ContentView.swift */,
+				EE5FFCEBC26742DF88F9B35E /* Components */,
+				A413DB1056B131CC0D86793D /* Match */,
+				D7E55E3986AD180480962406 /* Player */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		1D3AEE556832EE839A9F7973 /* MatchSimulation */ = {
+			isa = PBXGroup;
+			children = (
+				5A0FFE7F286E16DF1CB68BDB /* FatigueModel.swift */,
+				912C27A2B8A18DDDEDA05D69 /* MatchEngine.swift */,
+				64FE8C463FC243A364CDD109 /* MomentumTracker.swift */,
+				D08207D8485476682AC02577 /* PointResolver.swift */,
+				F35FD040AF4661A856F9D6FA /* RallySimulator.swift */,
+				840065301D6F3845B7E589EA /* StatCalculator.swift */,
+			);
+			path = MatchSimulation;
+			sourceTree = "<group>";
+		};
+		2E1F0DC40AC05499712C9EF9 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				20C3B07BE8F5AC941C995746 /* MatchViewModel.swift */,
+				14730B939773D5593EEF66F9 /* PlayerProfileViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		2EF01CF3F061D5D202929F34 /* Engine */ = {
+			isa = PBXGroup;
+			children = (
+				549DF67C3EB0E36D696AE3EA /* FatigueModelTests.swift */,
+				CB744DF042767593746C101B /* MatchEngineTests.swift */,
+				1B134E5A041B5743FC9C0BBC /* MomentumTrackerTests.swift */,
+				B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */,
+			);
+			path = Engine;
+			sourceTree = "<group>";
+		};
+		3802345BF8EF7857186EDFB2 /* Engine */ = {
+			isa = PBXGroup;
+			children = (
+				1D3AEE556832EE839A9F7973 /* MatchSimulation */,
+			);
+			path = Engine;
+			sourceTree = "<group>";
+		};
+		395BDBB9DC2940ED90B60ED6 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		454967790484C53D321E561C /* App */ = {
+			isa = PBXGroup;
+			children = (
+				3AEAB8CBD3D6D5C1EBBECABA /* AppState.swift */,
+				3C7DF57C299CE8D8DF73B080 /* DependencyContainer.swift */,
+				9D9C040E3A053E3DAC2DD0AC /* PickleQuestApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		4B59238A2FF54263EA2B6F37 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				7AF4EAE57D48B1A7B8C14F56 /* Common */,
+				955481A2982D7DB49A0DC99A /* Economy */,
+				73DDA5C4D4217131E9C96989 /* Equipment */,
+				D3D407AD89F78BD6EB649FDC /* Match */,
+				E609B018CF2E8783A97E52E3 /* Player */,
+				B5AC7F2DD931B06F5035E40D /* World */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		629F8845B7EE41F1934A1746 /* MockData */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = MockData;
+			sourceTree = "<group>";
+		};
+		6AC69F477520CF2001DEB4A9 /* PickleQuestUITests */ = {
+			isa = PBXGroup;
+			children = (
+				7B9C13867B41A5C25A60AE0F /* PickleQuestUITests.swift */,
+			);
+			path = PickleQuestUITests;
+			sourceTree = "<group>";
+		};
+		73DDA5C4D4217131E9C96989 /* Equipment */ = {
+			isa = PBXGroup;
+			children = (
+				BE3FB9F0A9E372A5A0CB3D66 /* Equipment.swift */,
+				13D27DD38A3C07AF3DC1F5AF /* EquipmentAbility.swift */,
+				6DE2F3174E21AC04B25ECDDA /* EquipmentRarity.swift */,
+				4C0D6A9C6DD259AB87FE0D21 /* EquipmentSlot.swift */,
+			);
+			path = Equipment;
+			sourceTree = "<group>";
+		};
+		7AF4EAE57D48B1A7B8C14F56 /* Common */ = {
+			isa = PBXGroup;
+			children = (
+				34188BBE97EE7E2D002892CE /* GameConstants.swift */,
+			);
+			path = Common;
+			sourceTree = "<group>";
+		};
+		8A9AD840C315123DEC984A2A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1EA16300A59A2F1C52C8B9CF /* PickleQuest.app */,
+				18092C844ECE15E47E4AB4F1 /* PickleQuestTests.xctest */,
+				2F1DCE8C0C6EC3452588B923 /* PickleQuestUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		955481A2982D7DB49A0DC99A /* Economy */ = {
+			isa = PBXGroup;
+			children = (
+				F78EDF9FACA3C6EB32CC7BAF /* Consumable.swift */,
+				775C461714AC3A47F1E99E0B /* Wallet.swift */,
+			);
+			path = Economy;
+			sourceTree = "<group>";
+		};
+		A413DB1056B131CC0D86793D /* Match */ = {
+			isa = PBXGroup;
+			children = (
+				9D397036B916DEC1B19A645F /* MatchHubView.swift */,
+				E37015A94BA1E07BCD8C05A5 /* MatchResultView.swift */,
+				73B3FD5E1D993A1A80123844 /* MatchSimulationView.swift */,
+				40CF56E088227F546C60B738 /* NPCPickerView.swift */,
+			);
+			path = Match;
+			sourceTree = "<group>";
+		};
+		AC9DBB2A105A70419C43C6F7 /* PickleQuest */ = {
+			isa = PBXGroup;
+			children = (
+				454967790484C53D321E561C /* App */,
+				3802345BF8EF7857186EDFB2 /* Engine */,
+				395BDBB9DC2940ED90B60ED6 /* Extensions */,
+				4B59238A2FF54263EA2B6F37 /* Models */,
+				D3A0B29900EFF94ED1D9AA0C /* Resources */,
+				01221201A40B6CB2A273CFEF /* Services */,
+				2E1F0DC40AC05499712C9EF9 /* ViewModels */,
+				0D097ED7ABF0314EC92C52F0 /* Views */,
+			);
+			path = PickleQuest;
+			sourceTree = "<group>";
+		};
+		B5AC7F2DD931B06F5035E40D /* World */ = {
+			isa = PBXGroup;
+			children = (
+				761E0DC7B75C06D52FBD491E /* MapItem.swift */,
+				1675D372694A305F611FE32D /* NPC.swift */,
+			);
+			path = World;
+			sourceTree = "<group>";
+		};
+		BBBBE45EE2CB1BDA94373679 /* Mock */ = {
+			isa = PBXGroup;
+			children = (
+				596C158D03744C9EBA1A7870 /* MockInventoryService.swift */,
+				4DC470B6290926172C33A09F /* MockMatchService.swift */,
+				CE09A927C4E070179DA2B55B /* MockNPCService.swift */,
+				A75F2EF611AE8E7A6FCC71E0 /* MockPlayerService.swift */,
+			);
+			path = Mock;
+			sourceTree = "<group>";
+		};
+		D3A0B29900EFF94ED1D9AA0C /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				629F8845B7EE41F1934A1746 /* MockData */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		D3D407AD89F78BD6EB649FDC /* Match */ = {
+			isa = PBXGroup;
+			children = (
+				ECEA1686848E23241264008F /* MatchConfig.swift */,
+				7E2060A9BBEF6769156A056F /* MatchEvent.swift */,
+				113D32D22345163D83B3B9D9 /* MatchPoint.swift */,
+				784E4E44166C3416091BA7E0 /* MatchResult.swift */,
+			);
+			path = Match;
+			sourceTree = "<group>";
+		};
+		D7E55E3986AD180480962406 /* Player */ = {
+			isa = PBXGroup;
+			children = (
+				02FF717F7DEC1E46AC1C7912 /* PlayerProfileView.swift */,
+			);
+			path = Player;
+			sourceTree = "<group>";
+		};
+		D9EDF630CF2FB3A1EF9E1B1D /* Protocols */ = {
+			isa = PBXGroup;
+			children = (
+				AF0E26D687250C76182C3D4C /* InventoryService.swift */,
+				46B06729836D2E4D76ECC28B /* MatchService.swift */,
+				317B5B682D9B2CC67773486B /* NPCService.swift */,
+				584959296BFD092ED3EE3FD8 /* PlayerService.swift */,
+			);
+			path = Protocols;
+			sourceTree = "<group>";
+		};
+		E609B018CF2E8783A97E52E3 /* Player */ = {
+			isa = PBXGroup;
+			children = (
+				FF93932170EAA8760BA56E83 /* Player.swift */,
+				52C2A0413DC0CD20FB85994C /* PlayerProgression.swift */,
+				FA01C280E5F28D53830ED79E /* PlayerStats.swift */,
+			);
+			path = Player;
+			sourceTree = "<group>";
+		};
+		EE5FFCEBC26742DF88F9B35E /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A76446B9A2021FE2A0668EC0 /* StatBar.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		F9F39E0BB7BEEF7255D7B746 = {
+			isa = PBXGroup;
+			children = (
+				AC9DBB2A105A70419C43C6F7 /* PickleQuest */,
+				FEC27436E718FCB8E139DF5D /* PickleQuestTests */,
+				6AC69F477520CF2001DEB4A9 /* PickleQuestUITests */,
+				8A9AD840C315123DEC984A2A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		FEC27436E718FCB8E139DF5D /* PickleQuestTests */ = {
+			isa = PBXGroup;
+			children = (
+				2EF01CF3F061D5D202929F34 /* Engine */,
+			);
+			path = PickleQuestTests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		06B1C32CDD2A45D368A92289 /* PickleQuest */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A2D019CB42F308265969937 /* Build configuration list for PBXNativeTarget "PickleQuest" */;
+			buildPhases = (
+				CFBDA8597763D58545F89F89 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PickleQuest;
+			packageProductDependencies = (
+			);
+			productName = PickleQuest;
+			productReference = 1EA16300A59A2F1C52C8B9CF /* PickleQuest.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9C7055D97D6EF042701E8F72 /* PickleQuestUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E58E9BE64C0C9A1600B3B37B /* Build configuration list for PBXNativeTarget "PickleQuestUITests" */;
+			buildPhases = (
+				190C8C26CAE1E0807F3D3E73 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				45D06BCB8F830DAFD1B3C7B5 /* PBXTargetDependency */,
+			);
+			name = PickleQuestUITests;
+			packageProductDependencies = (
+			);
+			productName = PickleQuestUITests;
+			productReference = 2F1DCE8C0C6EC3452588B923 /* PickleQuestUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		D1A0967FBFA55DEF7F18F135 /* PickleQuestTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 07941D6A96D72E79B49346E5 /* Build configuration list for PBXNativeTarget "PickleQuestTests" */;
+			buildPhases = (
+				617F02E927F29D5641A7D1BB /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				989373C4259C3B0D101B8802 /* PBXTargetDependency */,
+			);
+			name = PickleQuestTests;
+			packageProductDependencies = (
+			);
+			productName = PickleQuestTests;
+			productReference = 18092C844ECE15E47E4AB4F1 /* PickleQuestTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		EAB6AE60657DE22B5FD3118C /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					9C7055D97D6EF042701E8F72 = {
+						TestTargetID = 06B1C32CDD2A45D368A92289;
+					};
+				};
+			};
+			buildConfigurationList = 5CCC3829EF66ADF24F764A3B /* Build configuration list for PBXProject "PickleQuest" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = F9F39E0BB7BEEF7255D7B746;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				06B1C32CDD2A45D368A92289 /* PickleQuest */,
+				D1A0967FBFA55DEF7F18F135 /* PickleQuestTests */,
+				9C7055D97D6EF042701E8F72 /* PickleQuestUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		190C8C26CAE1E0807F3D3E73 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10F0FF3F349FAF8D6F50647 /* PickleQuestUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		617F02E927F29D5641A7D1BB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				49657DCD34805C399017F8FA /* FatigueModelTests.swift in Sources */,
+				21A8FEC6BE691264FAE691E7 /* MatchEngineTests.swift in Sources */,
+				72218CB4A65BD13B1CE5DDD9 /* MomentumTrackerTests.swift in Sources */,
+				DBE5F18AC6CBE4C42E7A712E /* StatCalculatorTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CFBDA8597763D58545F89F89 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9082675C17CCC084A5BEDBB1 /* AppState.swift in Sources */,
+				7D38D7EB38143D8854EE48C0 /* Consumable.swift in Sources */,
+				D1C34495E0D732C0A1341776 /* ContentView.swift in Sources */,
+				C568849F3E7E70B323E268D6 /* DependencyContainer.swift in Sources */,
+				F7AC5CB510EB35254105DCE4 /* Equipment.swift in Sources */,
+				66DE4973BD9BED0C2197BD50 /* EquipmentAbility.swift in Sources */,
+				B926619285D7778F1326F291 /* EquipmentRarity.swift in Sources */,
+				B26771FE90898DD826D9B56D /* EquipmentSlot.swift in Sources */,
+				EFE1996F96F40167DAFB4032 /* FatigueModel.swift in Sources */,
+				F2E663160A6E773AAC127E77 /* GameConstants.swift in Sources */,
+				4DAD72FBC09DA09E916FEB5B /* InventoryService.swift in Sources */,
+				28AB4CC6F088EE0D1F7A279D /* MapItem.swift in Sources */,
+				77F751CCE1AC083DD17E8B36 /* MatchConfig.swift in Sources */,
+				C42CE90D2DA3273949387E7D /* MatchEngine.swift in Sources */,
+				B5C0FEFD9E53A201516D645C /* MatchEvent.swift in Sources */,
+				3057984831215C6587916C74 /* MatchHubView.swift in Sources */,
+				7925FA2AB77DB5D5CB6B2B4A /* MatchPoint.swift in Sources */,
+				DB1E24C03C5CA4CDFAA83ABD /* MatchResult.swift in Sources */,
+				3A3878E9CF1C3B1BD53F30AD /* MatchResultView.swift in Sources */,
+				F2A74E1AACB4DE039B603545 /* MatchService.swift in Sources */,
+				1DFA20353BD0EAC474762221 /* MatchSimulationView.swift in Sources */,
+				2EDA97EBB0A6E7B56999B34B /* MatchViewModel.swift in Sources */,
+				74E78A543C1A38A6C0C2CA25 /* MockInventoryService.swift in Sources */,
+				35CED6482D21AAD5F0F53425 /* MockMatchService.swift in Sources */,
+				D726C1B09F3C251DB2798EBB /* MockNPCService.swift in Sources */,
+				4551C2277923A1D661225504 /* MockPlayerService.swift in Sources */,
+				784F9AB42DE8809127A302A1 /* MomentumTracker.swift in Sources */,
+				0DFA243D216FD16F1255A3EC /* NPC.swift in Sources */,
+				60C1CA5709BB3E240DBDCB74 /* NPCPickerView.swift in Sources */,
+				7D96587EFB503CAA3EAEEED0 /* NPCService.swift in Sources */,
+				F8EB27192BD681D5C6389AD3 /* PickleQuestApp.swift in Sources */,
+				87FC21F3F57E1F3D93EC6104 /* Player.swift in Sources */,
+				3B050E3BBEEFF0A145385100 /* PlayerProfileView.swift in Sources */,
+				2839DF2A3E920AD06E50AAA3 /* PlayerProfileViewModel.swift in Sources */,
+				030053C44EF48B07E766AD2B /* PlayerProgression.swift in Sources */,
+				D94A60FDE166721728A7C6FD /* PlayerService.swift in Sources */,
+				902F65DDE7981382B64D20BB /* PlayerStats.swift in Sources */,
+				7C28EC5E2BDA53B5A0DDC7FD /* PointResolver.swift in Sources */,
+				AFADB2EE7CFC9A8B6114BF26 /* RallySimulator.swift in Sources */,
+				A626669F5ACFF89A909F5072 /* StatBar.swift in Sources */,
+				B04EDE991297618814A545E4 /* StatCalculator.swift in Sources */,
+				26134A1B57938FFC3E195A26 /* Wallet.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		45D06BCB8F830DAFD1B3C7B5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 06B1C32CDD2A45D368A92289 /* PickleQuest */;
+			targetProxy = 2674E19DCCAD652DB5A8C8C5 /* PBXContainerItemProxy */;
+		};
+		989373C4259C3B0D101B8802 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 06B1C32CDD2A45D368A92289 /* PickleQuest */;
+			targetProxy = 351698797991F93177BA96B0 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1A2A2F718F455F84DF7EA8E9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.waynetran.PickleQuestUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = PickleQuest;
+			};
+			name = Debug;
+		};
+		34AC7E1BEC3AC7DF06633599 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.waynetran.PickleQuestTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PickleQuest.app/PickleQuest";
+			};
+			name = Debug;
+		};
+		52C989FEDFDFF149A10FF5B9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.waynetran.PickleQuest;
+				PRODUCT_NAME = PickleQuest;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		750DC30558BEDE674C4C929D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.waynetran.PickleQuest;
+				PRODUCT_NAME = PickleQuest;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		92226BD1417F0AE11C6A6219 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		CD6B82B5B968FCF1D70E91CF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.waynetran.PickleQuestTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PickleQuest.app/PickleQuest";
+			};
+			name = Release;
+		};
+		D9D7C2C8C8A040F4851F8870 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.waynetran.PickleQuestUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = PickleQuest;
+			};
+			name = Release;
+		};
+		DB40F183BDD27D48726DF040 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		07941D6A96D72E79B49346E5 /* Build configuration list for PBXNativeTarget "PickleQuestTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				34AC7E1BEC3AC7DF06633599 /* Debug */,
+				CD6B82B5B968FCF1D70E91CF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5A2D019CB42F308265969937 /* Build configuration list for PBXNativeTarget "PickleQuest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				52C989FEDFDFF149A10FF5B9 /* Debug */,
+				750DC30558BEDE674C4C929D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5CCC3829EF66ADF24F764A3B /* Build configuration list for PBXProject "PickleQuest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				92226BD1417F0AE11C6A6219 /* Debug */,
+				DB40F183BDD27D48726DF040 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E58E9BE64C0C9A1600B3B37B /* Build configuration list for PBXNativeTarget "PickleQuestUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A2A2F718F455F84DF7EA8E9 /* Debug */,
+				D9D7C2C8C8A040F4851F8870 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = EAB6AE60657DE22B5FD3118C /* Project object */;
+}
