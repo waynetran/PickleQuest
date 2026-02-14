@@ -67,18 +67,31 @@ struct MatchHubView: View {
 
         case .finished:
             if let result = vm.matchResult {
-                MatchResultView(result: result, opponent: vm.selectedNPC) {
-                    processResult(result)
-                    vm.reset()
+                MatchResultView(
+                    result: result,
+                    opponent: vm.selectedNPC,
+                    levelUpRewards: vm.levelUpRewards
+                ) {
+                    Task {
+                        await processResult(vm: vm)
+                        vm.reset()
+                    }
                 }
             }
         }
     }
 
-    private func processResult(_ result: MatchResult) {
-        guard let npc = viewModel?.selectedNPC else { return }
+    private func processResult(vm: MatchViewModel) async {
+        // Process match rewards (XP, coins, level-ups)
         var player = appState.player
-        container.matchService.processMatchResult(result, for: &player, opponent: npc)
+        let rewards = vm.processResult(player: &player)
+        _ = rewards
+
+        // Add loot to inventory
+        if !vm.lootDrops.isEmpty {
+            await container.inventoryService.addEquipmentBatch(vm.lootDrops)
+        }
+
         appState.player = player
     }
 }

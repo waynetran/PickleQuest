@@ -8,7 +8,7 @@ A Pokemon Go-like pickleball RPG where players physically explore their city to 
 | # | Milestone | Status |
 |---|-----------|--------|
 | 1 | Foundation + Match Engine | **Complete** |
-| 2 | Inventory, Equipment, Store, Leveling | Planned |
+| 2 | Inventory, Equipment, Store, Leveling | **Complete** |
 | 3 | Map + Location + NPC World | Planned |
 | 4 | SpriteKit Match Visualization | Planned |
 | 5 | Doubles, Team Synergy, Tournaments | Planned |
@@ -59,6 +59,33 @@ Paddle, Shirt, Shoes, Shorts, Eyewear, Wristband
 Triggered on: serve, match point, 3-point streak, low energy, clutch situation
 Effects: stat boost (temporary), energy restore, momentum boost
 
+## Loot System (Milestone 2)
+
+### Match Drops
+- Win: guaranteed 1 equipment drop
+- Loss: 30% chance of 1 drop
+- Higher difficulty opponents boost rare+ drop rates (beginner +0%, master +25%)
+
+### Stat Bonuses per Rarity
+| Rarity | Bonus Stats | Range |
+|--------|------------|-------|
+| Common | 1-2 | distributed across max 5 |
+| Uncommon | 1-3 | distributed across max 10 |
+| Rare | 2-3 | distributed across max 15 |
+| Epic | 2-4 | distributed across max 20 |
+| Legendary | 3-4 | distributed across max 25 |
+
+### Procedural Naming
+Each item gets a rarity-appropriate prefix + slot-appropriate base name (e.g., "Elite Court Shoes", "Champion's Blade").
+
+## Store System (Milestone 2)
+
+- 8 items per stock rotation
+- Weighted rarity: Common 30%, Uncommon 35%, Rare 20%, Epic 12%, Legendary 3%
+- Prices scale with rarity (50-100 common, up to 1000-2500 legendary)
+- Refresh costs 50 coins and generates new stock
+- Purchased items marked as sold out until refresh
+
 ## Match Simulation
 
 ### Point Resolution Flow
@@ -77,6 +104,11 @@ Effects: stat boost (temporary), energy restore, momentum boost
 - Thresholds: 70% (-3% stats), 50% (-8%), 30% (-15%)
 - Rest between games restores 10%
 
+### Equipment in Matches
+- Equipped items resolved from UUID → Equipment at match creation time
+- StatCalculator applies equipment bonuses with diminishing returns
+- LootGenerator injected into MatchEngine; loot generated in buildResult()
+
 ## NPC Difficulty Tiers
 | Tier | Stat Range | Reward Multiplier |
 |------|-----------|-------------------|
@@ -92,3 +124,10 @@ Effects: stat boost (temporary), energy restore, momentum boost
 - Match loss: 25 base
 - XP per match: 50 base + 30 win bonus
 - Level-up: exponential curve (base 100, growth 1.3x), 3 stat points per level
+- Equipment sell prices: 15-600+ base (scales with rarity + bonus value)
+
+## Leveling & Stat Allocation (Milestone 2)
+- Each level-up grants 3 stat points
+- Points allocated manually to any of the 10 stats
+- Profile shows base stats vs effective stats (with equipment bonuses)
+- Stat allocation available from Profile view when points are available

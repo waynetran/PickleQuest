@@ -13,7 +13,9 @@ struct NPCPickerView: View {
 
                 ForEach(viewModel.availableNPCs) { npc in
                     NPCCard(npc: npc) {
-                        viewModel.startMatch(player: appState.player, opponent: npc)
+                        Task {
+                            await viewModel.startMatch(player: appState.player, opponent: npc)
+                        }
                     }
                 }
             }

@@ -5,11 +5,11 @@ protocol MatchService: Sendable {
         player: Player,
         opponent: NPC,
         config: MatchConfig
-    ) -> MatchEngine
+    ) async -> MatchEngine
 
     func processMatchResult(
         _ result: MatchResult,
         for player: inout Player,
         opponent: NPC
-    )
+    ) -> [LevelUpReward]
 }

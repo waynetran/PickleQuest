@@ -26,9 +26,11 @@ Pure value types (structs/enums) that are `Codable`, `Sendable`, and `Equatable`
 - **Equipment**: 6 slots, 5 rarities, stat bonuses, triggered abilities (epic+)
 - **Match types**: MatchConfig, MatchPoint, MatchEvent, MatchResult
 - **NPC**: difficulty tiers, personality archetypes, dialogue
-- **Economy**: Wallet, Consumable
+- **Economy**: Wallet, Consumable, StoreItem
 
-### Engine (`Engine/MatchSimulation/`)
+### Engine (`Engine/`)
+
+#### Match Simulation (`Engine/MatchSimulation/`)
 The match simulation engine runs as an `actor` and emits events via `AsyncStream<MatchEvent>`.
 
 **Pipeline**: StatCalculator → FatigueModel → MomentumTracker → RallySimulator → PointResolver → MatchEngine
@@ -38,18 +40,33 @@ The match simulation engine runs as an `actor` and emits events via `AsyncStream
 3. **MomentumTracker**: Consecutive point streaks give +2% to +7% bonus; opponent streaks give -1% to -5% penalty
 4. **RallySimulator**: Serve phase (ace check) → shot-by-shot rally resolution (winner/error/forced error checks per shot)
 5. **PointResolver**: Orchestrates a single point combining all modifiers
-6. **MatchEngine**: Runs full match loop (games → points), tracks stats, calculates rewards
+6. **MatchEngine**: Runs full match loop (games → points), tracks stats, calculates rewards, generates loot
+
+#### Loot Generation (`Engine/LootGeneration/`)
+Procedural equipment generation system used for match loot drops and store inventory.
+
+1. **LootGenerator**: Weighted rarity rolls with difficulty boosts, random stat bonuses with rarity-appropriate caps, ability generation for epic+ items, store inventory generation
+2. **EquipmentNameGenerator**: Procedural names from prefix + base name pools per slot and rarity
 
 ### Services (`Services/`)
 All services are protocol-based. Current implementations are in-memory mocks.
 
 - **PlayerService**: CRUD for player data, stat allocation
-- **MatchService**: Creates match engine instances, processes results
+- **MatchService**: Creates match engine instances (resolves equipped items), processes results (returns level-up rewards)
 - **NPCService**: NPC catalog
-- **InventoryService**: Equipment inventory management
+- **InventoryService**: Equipment inventory management (add/remove/batch add, equipped item resolution)
+- **StoreService**: Procedurally-generated shop items, buy/refresh
+
+### ViewModels
+- **MatchViewModel**: Async match flow with loot drops and level-up tracking
+- **InventoryViewModel**: Load/filter/equip/unequip/sell with stat preview
+- **StoreViewModel**: Store loading, purchasing, refreshing
+- **PlayerProfileViewModel**: Stat allocation, effective stats with equipment
 
 ### Dependency Injection
 `DependencyContainer` holds all service instances and is injected via `@EnvironmentObject`. `AppState` holds the current player and UI state, injected via `.environment()`.
+
+**Service wiring**: MockMatchService receives InventoryService to resolve equipment UUIDs → actual Equipment objects before creating MatchEngine instances.
 
 ## Concurrency Model
 - Swift 6 strict concurrency throughout
@@ -57,3 +74,12 @@ All services are protocol-based. Current implementations are in-memory mocks.
 - Mutable service mocks use `actor` isolation
 - ViewModels are `@MainActor` for UI thread safety
 - `RandomSource` protocol enables deterministic testing via `SeededRandomSource`
+
+## Data Flow: Match → Loot → Inventory
+1. Player selects NPC opponent
+2. MatchService resolves equipped item UUIDs → Equipment via InventoryService
+3. MatchEngine creates with player equipment, LootGenerator, and opponent difficulty
+4. Engine simulates match, LootGenerator rolls loot in `buildResult()`
+5. MatchResult includes loot drops; MatchViewModel surfaces them
+6. On continue, MatchHubView adds loot to InventoryService and processes XP/coins
+7. Loot appears in Inventory tab; equipped items affect future matches

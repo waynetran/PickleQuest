@@ -15,12 +15,22 @@ actor MockInventoryService: InventoryService {
         inventory.append(equipment)
     }
 
+    func addEquipmentBatch(_ equipment: [Equipment]) async {
+        inventory.append(contentsOf: equipment)
+    }
+
     func removeEquipment(_ id: UUID) async {
         inventory.removeAll { $0.id == id }
     }
 
     func getEquipment(by id: UUID) async -> Equipment? {
         inventory.first { $0.id == id }
+    }
+
+    func getEquippedItems(for equippedSlots: [EquipmentSlot: UUID]) async -> [Equipment] {
+        equippedSlots.values.compactMap { id in
+            inventory.first { $0.id == id }
+        }
     }
 
     // MARK: - Starter Equipment

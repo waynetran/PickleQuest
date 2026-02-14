@@ -85,6 +85,49 @@ enum GameConstants {
         static let maxBonusPerStat: Int = 25 // legendary max single-stat bonus
     }
 
+    // MARK: - Loot
+    enum Loot {
+        static let winDropCount: Int = 1
+        static let lossDropChance: Double = 0.3
+        // Difficulty boosts: higher difficulty → better rarity chances
+        static let difficultyRarityBoost: [NPCDifficulty: Double] = [
+            .beginner: 0.0,
+            .intermediate: 0.05,
+            .advanced: 0.10,
+            .expert: 0.15,
+            .master: 0.25
+        ]
+        // Bonus stats per rarity
+        static let bonusStatCount: [EquipmentRarity: ClosedRange<Int>] = [
+            .common: 1...2,
+            .uncommon: 1...3,
+            .rare: 2...3,
+            .epic: 2...4,
+            .legendary: 3...4
+        ]
+    }
+
+    // MARK: - Store
+    enum Store {
+        static let shopSize: Int = 8
+        static let refreshCost: Int = 50
+        static let priceRange: [EquipmentRarity: ClosedRange<Int>] = [
+            .common: 50...100,
+            .uncommon: 100...250,
+            .rare: 250...500,
+            .epic: 500...1000,
+            .legendary: 1000...2500
+        ]
+        // Store has slightly better rarity odds than loot
+        static let storeRarityWeights: [EquipmentRarity: Double] = [
+            .common: 0.30,
+            .uncommon: 0.35,
+            .rare: 0.20,
+            .epic: 0.12,
+            .legendary: 0.03
+        ]
+    }
+
     // MARK: - Economy
     enum Economy {
         static let startingCoins: Int = 500

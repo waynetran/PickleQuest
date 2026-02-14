@@ -4,6 +4,9 @@ import Foundation
 actor MatchEngine {
     private let pointResolver: PointResolver
     private let config: MatchConfig
+    private let lootGenerator: LootGenerator?
+    private let opponentDifficulty: NPCDifficulty
+    private let playerLevel: Int
 
     // Participant data
     private let playerStats: PlayerStats
@@ -45,7 +48,10 @@ actor MatchEngine {
         playerName: String = "You",
         opponentName: String = "Opponent",
         config: MatchConfig = .defaultSingles,
-        pointResolver: PointResolver = PointResolver()
+        pointResolver: PointResolver = PointResolver(),
+        lootGenerator: LootGenerator? = nil,
+        opponentDifficulty: NPCDifficulty = .beginner,
+        playerLevel: Int = 1
     ) {
         self.playerStats = playerStats
         self.opponentStats = opponentStats
@@ -55,6 +61,9 @@ actor MatchEngine {
         self.opponentName = opponentName
         self.config = config
         self.pointResolver = pointResolver
+        self.lootGenerator = lootGenerator
+        self.opponentDifficulty = opponentDifficulty
+        self.playerLevel = playerLevel
         self.playerFatigue = FatigueModel(stamina: playerStats.stamina)
         self.opponentFatigue = FatigueModel(stamina: opponentStats.stamina)
     }
@@ -260,6 +269,17 @@ actor MatchEngine {
         let xp = calculateXP(didWin: didWin)
         let coins = calculateCoins(didWin: didWin)
 
+        let loot: [Equipment]
+        if let generator = lootGenerator {
+            loot = generator.generateMatchLoot(
+                didWin: didWin,
+                opponentDifficulty: opponentDifficulty,
+                playerLevel: playerLevel
+            )
+        } else {
+            loot = []
+        }
+
         return MatchResult(
             didPlayerWin: didWin,
             finalScore: MatchScore(
@@ -292,7 +312,7 @@ actor MatchEngine {
             ),
             xpEarned: xp,
             coinsEarned: coins,
-            loot: [], // TODO: loot generation in milestone 2
+            loot: loot,
             duration: Double(totalPts) * 1.5 // rough simulated time
         )
     }

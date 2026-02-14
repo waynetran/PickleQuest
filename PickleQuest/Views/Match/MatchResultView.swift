@@ -3,6 +3,7 @@ import SwiftUI
 struct MatchResultView: View {
     let result: MatchResult
     let opponent: NPC?
+    let levelUpRewards: [LevelUpReward]
     let onDismiss: () -> Void
 
     var body: some View {
@@ -23,10 +24,28 @@ struct MatchResultView: View {
                 }
                 .padding(.top, 24)
 
+                // Level Up Banner
+                LevelUpBanner(rewards: levelUpRewards)
+
                 // Rewards
                 HStack(spacing: 32) {
                     RewardBadge(icon: "star.fill", label: "XP", value: "+\(result.xpEarned)", color: .blue)
                     RewardBadge(icon: "dollarsign.circle.fill", label: "Coins", value: "+\(result.coinsEarned)", color: .yellow)
+                }
+
+                // Loot Drops
+                if !result.loot.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Loot Drops")
+                            .font(.headline)
+
+                        ForEach(result.loot) { item in
+                            LootDropRow(equipment: item)
+                        }
+                    }
+                    .padding()
+                    .background(.regularMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
 
                 // Stats comparison

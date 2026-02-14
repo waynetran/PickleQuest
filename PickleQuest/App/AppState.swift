@@ -16,12 +16,14 @@ enum AppTab: String, CaseIterable {
     case match = "Match"
     case profile = "Profile"
     case inventory = "Inventory"
+    case store = "Store"
 
     var iconName: String {
         switch self {
         case .match: return "sportscourt"
         case .profile: return "person.fill"
         case .inventory: return "bag.fill"
+        case .store: return "cart.fill"
         }
     }
 }

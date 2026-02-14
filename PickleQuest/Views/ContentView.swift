@@ -16,25 +16,12 @@ struct ContentView: View {
             }
 
             Tab("Inventory", systemImage: AppTab.inventory.iconName, value: .inventory) {
-                InventoryStubView()
+                InventoryView()
             }
-        }
-    }
-}
 
-struct InventoryStubView: View {
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                Image(systemName: "bag.fill")
-                    .font(.system(size: 60))
-                    .foregroundStyle(.secondary)
-                Text("Inventory")
-                    .font(.title2.bold())
-                Text("Coming in Milestone 2")
-                    .foregroundStyle(.secondary)
+            Tab("Store", systemImage: AppTab.store.iconName, value: .store) {
+                StoreView()
             }
-            .navigationTitle("Inventory")
         }
     }
 }

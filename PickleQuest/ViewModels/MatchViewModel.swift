@@ -15,6 +15,8 @@ final class MatchViewModel {
     var eventLog: [MatchEventEntry] = []
     var matchResult: MatchResult?
     var currentScore: MatchScore?
+    var lootDrops: [Equipment] = []
+    var levelUpRewards: [LevelUpReward] = []
 
     enum MatchState: Equatable {
         case idle
@@ -33,36 +35,44 @@ final class MatchViewModel {
         matchState = .selectingOpponent
     }
 
-    func startMatch(player: Player, opponent: NPC) {
+    func startMatch(player: Player, opponent: NPC) async {
         selectedNPC = opponent
         matchState = .simulating
         eventLog = []
         matchResult = nil
         currentScore = nil
+        lootDrops = []
+        levelUpRewards = []
 
-        let engine = matchService.createMatch(
+        let engine = await matchService.createMatch(
             player: player,
             opponent: opponent,
             config: .quickMatch
         )
 
-        Task {
-            let stream = await engine.simulate()
-            for await event in stream {
-                let entry = MatchEventEntry(event: event)
-                eventLog.append(entry)
+        let stream = await engine.simulate()
+        for await event in stream {
+            let entry = MatchEventEntry(event: event)
+            eventLog.append(entry)
 
-                if case .pointPlayed(let point) = event {
-                    currentScore = point.scoreAfter
-                }
-                if case .matchEnd(let result) = event {
-                    matchResult = result
-                    matchState = .finished
-                }
-                // Small delay between events for visual pacing
-                try? await Task.sleep(for: .milliseconds(150))
+            if case .pointPlayed(let point) = event {
+                currentScore = point.scoreAfter
             }
+            if case .matchEnd(let result) = event {
+                matchResult = result
+                lootDrops = result.loot
+                matchState = .finished
+            }
+            // Small delay between events for visual pacing
+            try? await Task.sleep(for: .milliseconds(150))
         }
+    }
+
+    func processResult(player: inout Player) -> [LevelUpReward] {
+        guard let result = matchResult, let npc = selectedNPC else { return [] }
+        let rewards = matchService.processMatchResult(result, for: &player, opponent: npc)
+        levelUpRewards = rewards
+        return rewards
     }
 
     func reset() {
@@ -71,6 +81,8 @@ final class MatchViewModel {
         matchResult = nil
         selectedNPC = nil
         currentScore = nil
+        lootDrops = []
+        levelUpRewards = []
     }
 }
 

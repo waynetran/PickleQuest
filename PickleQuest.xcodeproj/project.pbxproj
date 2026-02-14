@@ -8,8 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		030053C44EF48B07E766AD2B /* PlayerProgression.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52C2A0413DC0CD20FB85994C /* PlayerProgression.swift */; };
+		0D9B2D6B41077877A74F860C /* LootGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FE0743BF162137BA3E922FE /* LootGeneratorTests.swift */; };
 		0DFA243D216FD16F1255A3EC /* NPC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1675D372694A305F611FE32D /* NPC.swift */; };
+		1D4054E15A14E383E1E5DA81 /* InventoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCDD3AF27C7FE92C46AD5297 /* InventoryViewModel.swift */; };
 		1DFA20353BD0EAC474762221 /* MatchSimulationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73B3FD5E1D993A1A80123844 /* MatchSimulationView.swift */; };
+		1F1A8B0C4EAA874288A018B5 /* EquipmentSlotsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C7D0E4AD263AFFDB2620896 /* EquipmentSlotsView.swift */; };
 		21A8FEC6BE691264FAE691E7 /* MatchEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB744DF042767593746C101B /* MatchEngineTests.swift */; };
 		26134A1B57938FFC3E195A26 /* Wallet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775C461714AC3A47F1E99E0B /* Wallet.swift */; };
 		2839DF2A3E920AD06E50AAA3 /* PlayerProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14730B939773D5593EEF66F9 /* PlayerProfileViewModel.swift */; };
@@ -19,12 +22,19 @@
 		35CED6482D21AAD5F0F53425 /* MockMatchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC470B6290926172C33A09F /* MockMatchService.swift */; };
 		3A3878E9CF1C3B1BD53F30AD /* MatchResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E37015A94BA1E07BCD8C05A5 /* MatchResultView.swift */; };
 		3B050E3BBEEFF0A145385100 /* PlayerProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02FF717F7DEC1E46AC1C7912 /* PlayerProfileView.swift */; };
+		412DC22F0B76ED5957269316 /* StatAllocationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71BCAA08F2AC0ED226B60E86 /* StatAllocationView.swift */; };
+		43B535BCBF33D536997AD2BA /* EquipmentNameGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDABEB3FE4D53ECE0EF7759B /* EquipmentNameGenerator.swift */; };
 		4551C2277923A1D661225504 /* MockPlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A75F2EF611AE8E7A6FCC71E0 /* MockPlayerService.swift */; };
+		46CF6D1A2CAC995CCA768029 /* LootGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BFE0CBC43F0E6621040BFCB /* LootGenerator.swift */; };
 		49657DCD34805C399017F8FA /* FatigueModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549DF67C3EB0E36D696AE3EA /* FatigueModelTests.swift */; };
 		4DAD72FBC09DA09E916FEB5B /* InventoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0E26D687250C76182C3D4C /* InventoryService.swift */; };
+		5CC05AE0BF17214046CCAFD1 /* StoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0752261B8ED02D534503C85 /* StoreView.swift */; };
 		60C1CA5709BB3E240DBDCB74 /* NPCPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40CF56E088227F546C60B738 /* NPCPickerView.swift */; };
+		61ABDD9DBF6C28F76F3D5E5F /* StoreViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFAD8E2F8A415500DC0220A /* StoreViewModel.swift */; };
 		66DE4973BD9BED0C2197BD50 /* EquipmentAbility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13D27DD38A3C07AF3DC1F5AF /* EquipmentAbility.swift */; };
+		694E9D55D983B6A7B17E33F3 /* EquipmentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC56C33DEA89A36C94D6A5DE /* EquipmentDetailView.swift */; };
 		72218CB4A65BD13B1CE5DDD9 /* MomentumTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B134E5A041B5743FC9C0BBC /* MomentumTrackerTests.swift */; };
+		72B54FB6B5F49BBA080E5BB7 /* LootDropRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5408E905229A627A3B5BAA80 /* LootDropRow.swift */; };
 		74E78A543C1A38A6C0C2CA25 /* MockInventoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 596C158D03744C9EBA1A7870 /* MockInventoryService.swift */; };
 		77F751CCE1AC083DD17E8B36 /* MatchConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECEA1686848E23241264008F /* MatchConfig.swift */; };
 		784F9AB42DE8809127A302A1 /* MomentumTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64FE8C463FC243A364CDD109 /* MomentumTracker.swift */; };
@@ -36,6 +46,7 @@
 		902F65DDE7981382B64D20BB /* PlayerStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA01C280E5F28D53830ED79E /* PlayerStats.swift */; };
 		9082675C17CCC084A5BEDBB1 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AEAB8CBD3D6D5C1EBBECABA /* AppState.swift */; };
 		A10F0FF3F349FAF8D6F50647 /* PickleQuestUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9C13867B41A5C25A60AE0F /* PickleQuestUITests.swift */; };
+		A59A00DD59A508DD8118D1B7 /* MockStoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7AEE335773012DD0EA1E5EF /* MockStoreService.swift */; };
 		A626669F5ACFF89A909F5072 /* StatBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A76446B9A2021FE2A0668EC0 /* StatBar.swift */; };
 		AFADB2EE7CFC9A8B6114BF26 /* RallySimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F35FD040AF4661A856F9D6FA /* RallySimulator.swift */; };
 		B04EDE991297618814A545E4 /* StatCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 840065301D6F3845B7E589EA /* StatCalculator.swift */; };
@@ -44,14 +55,21 @@
 		B926619285D7778F1326F291 /* EquipmentRarity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DE2F3174E21AC04B25ECDDA /* EquipmentRarity.swift */; };
 		C42CE90D2DA3273949387E7D /* MatchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 912C27A2B8A18DDDEDA05D69 /* MatchEngine.swift */; };
 		C568849F3E7E70B323E268D6 /* DependencyContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C7DF57C299CE8D8DF73B080 /* DependencyContainer.swift */; };
+		C7E0584C2C5148BE0F63989B /* LevelUpBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75BF66C5ABC414685644FB7 /* LevelUpBanner.swift */; };
+		CD7F3AAC4180F9ECBFCA635D /* EquipmentCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B619B590B70982D275E99B1B /* EquipmentCardView.swift */; };
+		D0DB3E7B604374E484843D56 /* StoreItemCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0D6102CDEE0226239FB7ED /* StoreItemCard.swift */; };
 		D1C34495E0D732C0A1341776 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5EA4DC48371B4ABC65DBEA0 /* ContentView.swift */; };
 		D726C1B09F3C251DB2798EBB /* MockNPCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE09A927C4E070179DA2B55B /* MockNPCService.swift */; };
 		D94A60FDE166721728A7C6FD /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584959296BFD092ED3EE3FD8 /* PlayerService.swift */; };
 		DB1E24C03C5CA4CDFAA83ABD /* MatchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 784E4E44166C3416091BA7E0 /* MatchResult.swift */; };
 		DBE5F18AC6CBE4C42E7A712E /* StatCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */; };
+		E6F707FA78EEF37EBF192904 /* RarityBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F69B4AC575F890472955931 /* RarityBadge.swift */; };
 		EFE1996F96F40167DAFB4032 /* FatigueModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0FFE7F286E16DF1CB68BDB /* FatigueModel.swift */; };
+		F0E6CC3AE8F78A6B3B951572 /* StoreItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B58F409C0413C7C983E62A1A /* StoreItem.swift */; };
 		F2A74E1AACB4DE039B603545 /* MatchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46B06729836D2E4D76ECC28B /* MatchService.swift */; };
 		F2E663160A6E773AAC127E77 /* GameConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34188BBE97EE7E2D002892CE /* GameConstants.swift */; };
+		F389FCF6873F6777A0D4B3C5 /* StoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01992CB63887808953615677 /* StoreService.swift */; };
+		F45115D8662B6784B8EABDB1 /* InventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5CEC35A0CEB4D245BCFE7C6 /* InventoryView.swift */; };
 		F7AC5CB510EB35254105DCE4 /* Equipment.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE3FB9F0A9E372A5A0CB3D66 /* Equipment.swift */; };
 		F8EB27192BD681D5C6389AD3 /* PickleQuestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9C040E3A053E3DAC2DD0AC /* PickleQuestApp.swift */; };
 /* End PBXBuildFile section */
@@ -74,6 +92,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		01992CB63887808953615677 /* StoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreService.swift; sourceTree = "<group>"; };
 		02FF717F7DEC1E46AC1C7912 /* PlayerProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProfileView.swift; sourceTree = "<group>"; };
 		113D32D22345163D83B3B9D9 /* MatchPoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPoint.swift; sourceTree = "<group>"; };
 		13D27DD38A3C07AF3DC1F5AF /* EquipmentAbility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentAbility.swift; sourceTree = "<group>"; };
@@ -87,18 +106,24 @@
 		317B5B682D9B2CC67773486B /* NPCService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NPCService.swift; sourceTree = "<group>"; };
 		34188BBE97EE7E2D002892CE /* GameConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameConstants.swift; sourceTree = "<group>"; };
 		3AEAB8CBD3D6D5C1EBBECABA /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		3BFE0CBC43F0E6621040BFCB /* LootGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LootGenerator.swift; sourceTree = "<group>"; };
+		3C7D0E4AD263AFFDB2620896 /* EquipmentSlotsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentSlotsView.swift; sourceTree = "<group>"; };
 		3C7DF57C299CE8D8DF73B080 /* DependencyContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DependencyContainer.swift; sourceTree = "<group>"; };
+		3FE0743BF162137BA3E922FE /* LootGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LootGeneratorTests.swift; sourceTree = "<group>"; };
 		40CF56E088227F546C60B738 /* NPCPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NPCPickerView.swift; sourceTree = "<group>"; };
 		46B06729836D2E4D76ECC28B /* MatchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchService.swift; sourceTree = "<group>"; };
 		4C0D6A9C6DD259AB87FE0D21 /* EquipmentSlot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentSlot.swift; sourceTree = "<group>"; };
 		4DC470B6290926172C33A09F /* MockMatchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockMatchService.swift; sourceTree = "<group>"; };
 		52C2A0413DC0CD20FB85994C /* PlayerProgression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProgression.swift; sourceTree = "<group>"; };
+		5408E905229A627A3B5BAA80 /* LootDropRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LootDropRow.swift; sourceTree = "<group>"; };
 		549DF67C3EB0E36D696AE3EA /* FatigueModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FatigueModelTests.swift; sourceTree = "<group>"; };
 		584959296BFD092ED3EE3FD8 /* PlayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerService.swift; sourceTree = "<group>"; };
 		596C158D03744C9EBA1A7870 /* MockInventoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockInventoryService.swift; sourceTree = "<group>"; };
+		5A0D6102CDEE0226239FB7ED /* StoreItemCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreItemCard.swift; sourceTree = "<group>"; };
 		5A0FFE7F286E16DF1CB68BDB /* FatigueModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FatigueModel.swift; sourceTree = "<group>"; };
 		64FE8C463FC243A364CDD109 /* MomentumTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentumTracker.swift; sourceTree = "<group>"; };
 		6DE2F3174E21AC04B25ECDDA /* EquipmentRarity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentRarity.swift; sourceTree = "<group>"; };
+		71BCAA08F2AC0ED226B60E86 /* StatAllocationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatAllocationView.swift; sourceTree = "<group>"; };
 		73B3FD5E1D993A1A80123844 /* MatchSimulationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchSimulationView.swift; sourceTree = "<group>"; };
 		761E0DC7B75C06D52FBD491E /* MapItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapItem.swift; sourceTree = "<group>"; };
 		775C461714AC3A47F1E99E0B /* Wallet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wallet.swift; sourceTree = "<group>"; };
@@ -109,18 +134,29 @@
 		912C27A2B8A18DDDEDA05D69 /* MatchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchEngine.swift; sourceTree = "<group>"; };
 		9D397036B916DEC1B19A645F /* MatchHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchHubView.swift; sourceTree = "<group>"; };
 		9D9C040E3A053E3DAC2DD0AC /* PickleQuestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickleQuestApp.swift; sourceTree = "<group>"; };
+		9F69B4AC575F890472955931 /* RarityBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RarityBadge.swift; sourceTree = "<group>"; };
 		A5EA4DC48371B4ABC65DBEA0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A75F2EF611AE8E7A6FCC71E0 /* MockPlayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockPlayerService.swift; sourceTree = "<group>"; };
 		A76446B9A2021FE2A0668EC0 /* StatBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatBar.swift; sourceTree = "<group>"; };
+		AEFAD8E2F8A415500DC0220A /* StoreViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreViewModel.swift; sourceTree = "<group>"; };
 		AF0E26D687250C76182C3D4C /* InventoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryService.swift; sourceTree = "<group>"; };
+		B58F409C0413C7C983E62A1A /* StoreItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreItem.swift; sourceTree = "<group>"; };
+		B619B590B70982D275E99B1B /* EquipmentCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentCardView.swift; sourceTree = "<group>"; };
 		B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCalculatorTests.swift; sourceTree = "<group>"; };
 		BE3FB9F0A9E372A5A0CB3D66 /* Equipment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Equipment.swift; sourceTree = "<group>"; };
+		C0752261B8ED02D534503C85 /* StoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreView.swift; sourceTree = "<group>"; };
 		CB744DF042767593746C101B /* MatchEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchEngineTests.swift; sourceTree = "<group>"; };
+		CC56C33DEA89A36C94D6A5DE /* EquipmentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentDetailView.swift; sourceTree = "<group>"; };
+		CCDD3AF27C7FE92C46AD5297 /* InventoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryViewModel.swift; sourceTree = "<group>"; };
+		CDABEB3FE4D53ECE0EF7759B /* EquipmentNameGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentNameGenerator.swift; sourceTree = "<group>"; };
 		CE09A927C4E070179DA2B55B /* MockNPCService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNPCService.swift; sourceTree = "<group>"; };
 		D08207D8485476682AC02577 /* PointResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointResolver.swift; sourceTree = "<group>"; };
+		D7AEE335773012DD0EA1E5EF /* MockStoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockStoreService.swift; sourceTree = "<group>"; };
 		E37015A94BA1E07BCD8C05A5 /* MatchResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchResultView.swift; sourceTree = "<group>"; };
+		E5CEC35A0CEB4D245BCFE7C6 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
 		ECEA1686848E23241264008F /* MatchConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchConfig.swift; sourceTree = "<group>"; };
 		F35FD040AF4661A856F9D6FA /* RallySimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RallySimulator.swift; sourceTree = "<group>"; };
+		F75BF66C5ABC414685644FB7 /* LevelUpBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelUpBanner.swift; sourceTree = "<group>"; };
 		F78EDF9FACA3C6EB32CC7BAF /* Consumable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Consumable.swift; sourceTree = "<group>"; };
 		FA01C280E5F28D53830ED79E /* PlayerStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerStats.swift; sourceTree = "<group>"; };
 		FF93932170EAA8760BA56E83 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
@@ -141,8 +177,10 @@
 			children = (
 				A5EA4DC48371B4ABC65DBEA0 /* ContentView.swift */,
 				EE5FFCEBC26742DF88F9B35E /* Components */,
+				EC783C579F6677030A94EDA3 /* Inventory */,
 				A413DB1056B131CC0D86793D /* Match */,
 				D7E55E3986AD180480962406 /* Player */,
+				6D02DE9C978DEE479C2F0BBF /* Store */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -163,8 +201,10 @@
 		2E1F0DC40AC05499712C9EF9 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				CCDD3AF27C7FE92C46AD5297 /* InventoryViewModel.swift */,
 				20C3B07BE8F5AC941C995746 /* MatchViewModel.swift */,
 				14730B939773D5593EEF66F9 /* PlayerProfileViewModel.swift */,
+				AEFAD8E2F8A415500DC0220A /* StoreViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -173,6 +213,7 @@
 			isa = PBXGroup;
 			children = (
 				549DF67C3EB0E36D696AE3EA /* FatigueModelTests.swift */,
+				3FE0743BF162137BA3E922FE /* LootGeneratorTests.swift */,
 				CB744DF042767593746C101B /* MatchEngineTests.swift */,
 				1B134E5A041B5743FC9C0BBC /* MomentumTrackerTests.swift */,
 				B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */,
@@ -183,6 +224,7 @@
 		3802345BF8EF7857186EDFB2 /* Engine */ = {
 			isa = PBXGroup;
 			children = (
+				7536A6EDDE8E4DF812518979 /* LootGeneration */,
 				1D3AEE556832EE839A9F7973 /* MatchSimulation */,
 			);
 			path = Engine;
@@ -233,6 +275,15 @@
 			path = PickleQuestUITests;
 			sourceTree = "<group>";
 		};
+		6D02DE9C978DEE479C2F0BBF /* Store */ = {
+			isa = PBXGroup;
+			children = (
+				5A0D6102CDEE0226239FB7ED /* StoreItemCard.swift */,
+				C0752261B8ED02D534503C85 /* StoreView.swift */,
+			);
+			path = Store;
+			sourceTree = "<group>";
+		};
 		73DDA5C4D4217131E9C96989 /* Equipment */ = {
 			isa = PBXGroup;
 			children = (
@@ -242,6 +293,15 @@
 				4C0D6A9C6DD259AB87FE0D21 /* EquipmentSlot.swift */,
 			);
 			path = Equipment;
+			sourceTree = "<group>";
+		};
+		7536A6EDDE8E4DF812518979 /* LootGeneration */ = {
+			isa = PBXGroup;
+			children = (
+				CDABEB3FE4D53ECE0EF7759B /* EquipmentNameGenerator.swift */,
+				3BFE0CBC43F0E6621040BFCB /* LootGenerator.swift */,
+			);
+			path = LootGeneration;
 			sourceTree = "<group>";
 		};
 		7AF4EAE57D48B1A7B8C14F56 /* Common */ = {
@@ -266,6 +326,7 @@
 			isa = PBXGroup;
 			children = (
 				F78EDF9FACA3C6EB32CC7BAF /* Consumable.swift */,
+				B58F409C0413C7C983E62A1A /* StoreItem.swift */,
 				775C461714AC3A47F1E99E0B /* Wallet.swift */,
 			);
 			path = Economy;
@@ -313,6 +374,7 @@
 				4DC470B6290926172C33A09F /* MockMatchService.swift */,
 				CE09A927C4E070179DA2B55B /* MockNPCService.swift */,
 				A75F2EF611AE8E7A6FCC71E0 /* MockPlayerService.swift */,
+				D7AEE335773012DD0EA1E5EF /* MockStoreService.swift */,
 			);
 			path = Mock;
 			sourceTree = "<group>";
@@ -340,6 +402,7 @@
 			isa = PBXGroup;
 			children = (
 				02FF717F7DEC1E46AC1C7912 /* PlayerProfileView.swift */,
+				71BCAA08F2AC0ED226B60E86 /* StatAllocationView.swift */,
 			);
 			path = Player;
 			sourceTree = "<group>";
@@ -351,6 +414,7 @@
 				46B06729836D2E4D76ECC28B /* MatchService.swift */,
 				317B5B682D9B2CC67773486B /* NPCService.swift */,
 				584959296BFD092ED3EE3FD8 /* PlayerService.swift */,
+				01992CB63887808953615677 /* StoreService.swift */,
 			);
 			path = Protocols;
 			sourceTree = "<group>";
@@ -365,9 +429,23 @@
 			path = Player;
 			sourceTree = "<group>";
 		};
+		EC783C579F6677030A94EDA3 /* Inventory */ = {
+			isa = PBXGroup;
+			children = (
+				B619B590B70982D275E99B1B /* EquipmentCardView.swift */,
+				CC56C33DEA89A36C94D6A5DE /* EquipmentDetailView.swift */,
+				3C7D0E4AD263AFFDB2620896 /* EquipmentSlotsView.swift */,
+				E5CEC35A0CEB4D245BCFE7C6 /* InventoryView.swift */,
+			);
+			path = Inventory;
+			sourceTree = "<group>";
+		};
 		EE5FFCEBC26742DF88F9B35E /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				F75BF66C5ABC414685644FB7 /* LevelUpBanner.swift */,
+				5408E905229A627A3B5BAA80 /* LootDropRow.swift */,
+				9F69B4AC575F890472955931 /* RarityBadge.swift */,
 				A76446B9A2021FE2A0668EC0 /* StatBar.swift */,
 			);
 			path = Components;
@@ -496,6 +574,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				49657DCD34805C399017F8FA /* FatigueModelTests.swift in Sources */,
+				0D9B2D6B41077877A74F860C /* LootGeneratorTests.swift in Sources */,
 				21A8FEC6BE691264FAE691E7 /* MatchEngineTests.swift in Sources */,
 				72218CB4A65BD13B1CE5DDD9 /* MomentumTrackerTests.swift in Sources */,
 				DBE5F18AC6CBE4C42E7A712E /* StatCalculatorTests.swift in Sources */,
@@ -512,11 +591,20 @@
 				C568849F3E7E70B323E268D6 /* DependencyContainer.swift in Sources */,
 				F7AC5CB510EB35254105DCE4 /* Equipment.swift in Sources */,
 				66DE4973BD9BED0C2197BD50 /* EquipmentAbility.swift in Sources */,
+				CD7F3AAC4180F9ECBFCA635D /* EquipmentCardView.swift in Sources */,
+				694E9D55D983B6A7B17E33F3 /* EquipmentDetailView.swift in Sources */,
+				43B535BCBF33D536997AD2BA /* EquipmentNameGenerator.swift in Sources */,
 				B926619285D7778F1326F291 /* EquipmentRarity.swift in Sources */,
 				B26771FE90898DD826D9B56D /* EquipmentSlot.swift in Sources */,
+				1F1A8B0C4EAA874288A018B5 /* EquipmentSlotsView.swift in Sources */,
 				EFE1996F96F40167DAFB4032 /* FatigueModel.swift in Sources */,
 				F2E663160A6E773AAC127E77 /* GameConstants.swift in Sources */,
 				4DAD72FBC09DA09E916FEB5B /* InventoryService.swift in Sources */,
+				F45115D8662B6784B8EABDB1 /* InventoryView.swift in Sources */,
+				1D4054E15A14E383E1E5DA81 /* InventoryViewModel.swift in Sources */,
+				C7E0584C2C5148BE0F63989B /* LevelUpBanner.swift in Sources */,
+				72B54FB6B5F49BBA080E5BB7 /* LootDropRow.swift in Sources */,
+				46CF6D1A2CAC995CCA768029 /* LootGenerator.swift in Sources */,
 				28AB4CC6F088EE0D1F7A279D /* MapItem.swift in Sources */,
 				77F751CCE1AC083DD17E8B36 /* MatchConfig.swift in Sources */,
 				C42CE90D2DA3273949387E7D /* MatchEngine.swift in Sources */,
@@ -532,6 +620,7 @@
 				35CED6482D21AAD5F0F53425 /* MockMatchService.swift in Sources */,
 				D726C1B09F3C251DB2798EBB /* MockNPCService.swift in Sources */,
 				4551C2277923A1D661225504 /* MockPlayerService.swift in Sources */,
+				A59A00DD59A508DD8118D1B7 /* MockStoreService.swift in Sources */,
 				784F9AB42DE8809127A302A1 /* MomentumTracker.swift in Sources */,
 				0DFA243D216FD16F1255A3EC /* NPC.swift in Sources */,
 				60C1CA5709BB3E240DBDCB74 /* NPCPickerView.swift in Sources */,
@@ -545,8 +634,15 @@
 				902F65DDE7981382B64D20BB /* PlayerStats.swift in Sources */,
 				7C28EC5E2BDA53B5A0DDC7FD /* PointResolver.swift in Sources */,
 				AFADB2EE7CFC9A8B6114BF26 /* RallySimulator.swift in Sources */,
+				E6F707FA78EEF37EBF192904 /* RarityBadge.swift in Sources */,
+				412DC22F0B76ED5957269316 /* StatAllocationView.swift in Sources */,
 				A626669F5ACFF89A909F5072 /* StatBar.swift in Sources */,
 				B04EDE991297618814A545E4 /* StatCalculator.swift in Sources */,
+				F0E6CC3AE8F78A6B3B951572 /* StoreItem.swift in Sources */,
+				D0DB3E7B604374E484843D56 /* StoreItemCard.swift in Sources */,
+				F389FCF6873F6777A0D4B3C5 /* StoreService.swift in Sources */,
+				5CC05AE0BF17214046CCAFD1 /* StoreView.swift in Sources */,
+				61ABDD9DBF6C28F76F3D5E5F /* StoreViewModel.swift in Sources */,
 				26134A1B57938FFC3E195A26 /* Wallet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
