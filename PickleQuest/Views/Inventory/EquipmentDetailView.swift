@@ -8,6 +8,7 @@ struct EquipmentDetailView: View {
     let onEquip: () -> Void
     let onUnequip: () -> Void
     let onSell: () -> Void
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
@@ -136,6 +137,11 @@ struct EquipmentDetailView: View {
             }
             .navigationTitle("Equipment Details")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Close") { dismiss() }
+                }
+            }
         }
     }
 }
