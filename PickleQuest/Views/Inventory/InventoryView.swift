@@ -22,10 +22,12 @@ struct InventoryView: View {
             .navigationTitle("Inventory")
             .task {
                 if viewModel == nil {
-                    viewModel = InventoryViewModel(
+                    let vm = InventoryViewModel(
                         inventoryService: container.inventoryService,
                         playerService: container.playerService
                     )
+                    viewModel = vm
+                    await vm.loadInventory()
                 }
             }
             .onAppear {

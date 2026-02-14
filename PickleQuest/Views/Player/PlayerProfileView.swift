@@ -144,10 +144,12 @@ struct PlayerProfileView: View {
             .navigationTitle("Profile")
             .task {
                 if viewModel == nil {
-                    viewModel = PlayerProfileViewModel(
+                    let vm = PlayerProfileViewModel(
                         playerService: container.playerService,
                         inventoryService: container.inventoryService
                     )
+                    viewModel = vm
+                    await vm.loadPlayer()
                 }
             }
             .onAppear {
