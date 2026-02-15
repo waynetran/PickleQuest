@@ -5,6 +5,9 @@ struct MatchResultView: View {
     let opponent: NPC?
     let levelUpRewards: [LevelUpReward]
     let duprChange: Double?
+    let repChange: Int?
+    let brokenEquipment: [Equipment]
+    let energyDrain: Double
     let onDismiss: () -> Void
 
     var body: some View {
@@ -29,10 +32,53 @@ struct MatchResultView: View {
                 LevelUpBanner(rewards: levelUpRewards)
 
                 // Rewards
-                HStack(spacing: 32) {
+                HStack(spacing: 24) {
                     RewardBadge(icon: "star.fill", label: "XP", value: "+\(result.xpEarned)", color: .blue)
                     RewardBadge(icon: "dollarsign.circle.fill", label: "Coins", value: "+\(result.coinsEarned)", color: .yellow)
                     suprBadge
+                    repBadge
+                }
+
+                // Energy drain indicator
+                if energyDrain > 0 {
+                    HStack(spacing: 8) {
+                        Image(systemName: "bolt.slash.fill")
+                            .foregroundStyle(.orange)
+                        Text("Energy drained: -\(Int(energyDrain))%")
+                            .font(.subheadline)
+                            .foregroundStyle(.orange)
+                    }
+                    .padding(8)
+                    .frame(maxWidth: .infinity)
+                    .background(.orange.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+
+                // Broken equipment warning
+                if !brokenEquipment.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.red)
+                            Text("Equipment Broken!")
+                                .font(.headline)
+                                .foregroundStyle(.red)
+                        }
+
+                        ForEach(brokenEquipment) { item in
+                            HStack(spacing: 8) {
+                                Text(item.slot.icon)
+                                Text(item.name)
+                                    .font(.subheadline)
+                                    .foregroundStyle(item.rarity.color)
+                                    .strikethrough()
+                            }
+                        }
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.red.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
 
                 // Loot Drops
@@ -92,6 +138,19 @@ struct MatchResultView: View {
                 }
             }
             .padding()
+        }
+    }
+
+    @ViewBuilder
+    private var repBadge: some View {
+        if let change = repChange, change != 0 {
+            let isPositive = change > 0
+            RewardBadge(
+                icon: isPositive ? "hand.thumbsup.fill" : "hand.thumbsdown.fill",
+                label: "Rep",
+                value: "\(isPositive ? "+" : "")\(change)",
+                color: isPositive ? .purple : .red
+            )
         }
     }
 

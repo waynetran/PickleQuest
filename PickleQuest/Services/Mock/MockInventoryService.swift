@@ -23,8 +23,18 @@ actor MockInventoryService: InventoryService {
         inventory.removeAll { $0.id == id }
     }
 
+    func removeEquipmentBatch(_ ids: [UUID]) async {
+        let idSet = Set(ids)
+        inventory.removeAll { idSet.contains($0.id) }
+    }
+
     func getEquipment(by id: UUID) async -> Equipment? {
         inventory.first { $0.id == id }
+    }
+
+    func updateEquipmentCondition(_ id: UUID, condition: Double) async {
+        guard let index = inventory.firstIndex(where: { $0.id == id }) else { return }
+        inventory[index].condition = condition
     }
 
     func getEquippedItems(for equippedSlots: [EquipmentSlot: UUID]) async -> [Equipment] {

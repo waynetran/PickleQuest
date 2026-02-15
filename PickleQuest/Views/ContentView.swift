@@ -11,6 +11,10 @@ struct ContentView: View {
                 MatchHubView()
             }
 
+            Tab("Performance", systemImage: AppTab.performance.iconName, value: .performance) {
+                PerformanceView()
+            }
+
             Tab("Profile", systemImage: AppTab.profile.iconName, value: .profile) {
                 PlayerProfileView()
             }

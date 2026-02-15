@@ -14,15 +14,22 @@ struct LootGenerator: Sendable {
     func generateMatchLoot(
         didWin: Bool,
         opponentDifficulty: NPCDifficulty,
-        playerLevel: Int
+        playerLevel: Int,
+        suprGap: Double = 0
     ) -> [Equipment] {
         var loot: [Equipment] = []
 
         if didWin {
+            var boost = GameConstants.Loot.difficultyRarityBoost[opponentDifficulty] ?? 0
+            // Beat someone stronger (suprGap > 0) → better loot
+            if suprGap > 0 {
+                boost += min(
+                    GameConstants.Loot.maxSuprLootBoost,
+                    suprGap * GameConstants.Loot.suprGapRarityBoost
+                )
+            }
             for _ in 0..<GameConstants.Loot.winDropCount {
-                loot.append(generateEquipment(
-                    difficultyBoost: GameConstants.Loot.difficultyRarityBoost[opponentDifficulty] ?? 0
-                ))
+                loot.append(generateEquipment(difficultyBoost: boost))
             }
         } else {
             if rng.nextDouble() < GameConstants.Loot.lossDropChance {

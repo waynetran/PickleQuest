@@ -10,6 +10,7 @@ A Pokemon Go-like pickleball RPG where players physically explore their city to 
 | 1 | Foundation + Match Engine | **Complete** |
 | 2 | Inventory, Equipment, Store, Leveling | **Complete** |
 | 2.5 | SUPR Rating System | **Complete** |
+| 2.6 | Match History, Rep, Durability, Energy | **Complete** |
 | 3 | Map + Location + NPC World | Planned |
 | 4 | SpriteKit Match Visualization | Planned |
 | 5 | Doubles, Team Synergy, Tournaments | Planned |
@@ -66,6 +67,7 @@ Effects: stat boost (temporary), energy restore, momentum boost
 - Win: guaranteed 1 equipment drop
 - Loss: 30% chance of 1 drop
 - Higher difficulty opponents boost rare+ drop rates (beginner +0%, master +25%)
+- **SUPR-scaled loot** (Milestone 2.6): Beating stronger opponents (positive SUPR gap) boosts rare drop rate by +10% per 1.0 SUPR gap (capped at +25%)
 
 ### Stat Bonuses per Rarity
 | Rarity | Bonus Stats | Range |
@@ -146,7 +148,54 @@ Performance-based rating using margin-of-victory Elo. See [docs/supr-algorithm.m
 - **NPCs have fixed ratings**: Only the player's SUPR changes dynamically
 
 ### UI Surfaces
-- **Profile**: SUPR score with reliability progress bar
+- **Profile**: SUPR score with monthly delta, reliability progress bar, reputation card
 - **NPC Picker**: Opponent SUPR scores, rated/unrated toggle, auto-unrate warning
-- **Match Results**: SUPR change badge (+0.05 green / -0.03 red / "Unrated" gray)
-- **Match Hub**: SUPR score displayed on idle screen
+- **Match Results**: SUPR change badge, rep change badge, broken equipment warnings, energy drain indicator
+- **Match Hub**: SUPR score + energy bar displayed on idle screen
+- **Performance Tab**: SUPR + delta, reputation + title, energy + recovery time, W-L record, match history list
+
+## Reputation System (Milestone 2.6)
+
+Social currency earned through competitive play. Foundation for future NPC relationships, store sponsorships, tournament invites, and secret court access.
+
+### Rep Gain/Loss
+- **Win**: +10 base + bonus for beating stronger opponents (SUPR gap * 10, min +5)
+- **Loss**: -10 base - penalty for losing to weaker opponents (SUPR gap * 10, max -30)
+
+### Rep Titles
+| Rep Range | Title |
+|-----------|-------|
+| <0 | Disgrace |
+| 0-49 | Unknown |
+| 50-149 | Local Player |
+| 150-299 | Rising Star |
+| 300-499 | Court Regular |
+| 500-799 | Community Favorite |
+| 800-1199 | Local Legend |
+| 1200+ | Court Celebrity |
+
+### Rep Benefits
+- **NPC Selling** (50+ rep): Sell equipment to NPCs at reputation-scaled prices (40%-100% of sell value)
+- Higher rep tiers unlock better sell price multipliers
+
+## Equipment Durability (Milestone 2.6)
+
+Shoes and paddles wear down from losses and eventually break permanently.
+
+- **Base wear**: 8% per loss
+- **SUPR gap bonus**: +4% per 1.0 SUPR gap (stronger opponent = more wear)
+- **Max wear**: 15% per match
+- At 0% condition, equipment is destroyed and auto-unequipped
+
+## Persistent Energy (Milestone 2.6)
+
+Between-match energy system that recovers over real time.
+
+- **Max energy**: 100%, floor: 50% (can't drain below)
+- **Drain on loss**: 10% base + 5% per 1.0 SUPR gap (cap 20%)
+- **Recovery**: +1% per real minute
+- **Starting energy** carried into match as in-match starting fatigue
+
+## Match History (Milestone 2.6)
+
+All match outcomes persisted to player's matchHistory array. Each entry records opponent details, score, SUPR/rep changes, and equipment breaks. Displayed in the Performance tab.

@@ -39,14 +39,22 @@ struct PlayerProfileView: View {
                             Text("SUPR Score")
                                 .font(.headline)
                             Spacer()
-                            if appState.player.duprProfile.hasRating {
-                                Text(String(format: "%.2f", appState.player.duprRating))
-                                    .font(.title.bold().monospacedDigit())
-                                    .foregroundStyle(.green)
-                            } else {
-                                Text("NR")
-                                    .font(.title.bold())
-                                    .foregroundStyle(.secondary)
+                            VStack(alignment: .trailing, spacing: 2) {
+                                if appState.player.duprProfile.hasRating {
+                                    Text(String(format: "%.2f", appState.player.duprRating))
+                                        .font(.title.bold().monospacedDigit())
+                                        .foregroundStyle(.green)
+                                } else {
+                                    Text("NR")
+                                        .font(.title.bold())
+                                        .foregroundStyle(.secondary)
+                                }
+                                if appState.player.monthlyDUPRDelta != 0 {
+                                    let delta = appState.player.monthlyDUPRDelta
+                                    Text(String(format: "%@%.2f this month", delta > 0 ? "+" : "", delta))
+                                        .font(.caption2)
+                                        .foregroundStyle(delta > 0 ? .green : .red)
+                                }
                             }
                         }
 
@@ -89,6 +97,24 @@ struct PlayerProfileView: View {
                                     .foregroundStyle(.secondary)
                             }
                         }
+                    }
+                    .padding()
+                    .background(.regularMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    // Reputation Card
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Reputation")
+                                .font(.headline)
+                            Text(appState.player.repProfile.title)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text("\(appState.player.repProfile.reputation)")
+                            .font(.title2.bold().monospacedDigit())
+                            .foregroundStyle(.purple)
                     }
                     .padding()
                     .background(.regularMaterial)

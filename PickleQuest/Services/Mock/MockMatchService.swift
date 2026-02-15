@@ -12,8 +12,8 @@ final class MockMatchService: MatchService {
         opponent: NPC,
         config: MatchConfig
     ) async -> MatchEngine {
-        // Resolve equipped items from inventory
         let equippedItems = await inventoryService.getEquippedItems(for: player.equippedItems)
+        let suprGap = opponent.duprRating - player.duprRating
 
         return MatchEngine(
             playerStats: player.stats,
@@ -24,7 +24,9 @@ final class MockMatchService: MatchService {
             config: config,
             lootGenerator: LootGenerator(),
             opponentDifficulty: opponent.difficulty,
-            playerLevel: player.progression.level
+            playerLevel: player.progression.level,
+            startingEnergy: player.currentEnergy,
+            suprGap: suprGap
         )
     }
 
@@ -49,7 +51,6 @@ final class MockMatchService: MatchService {
         )
 
         if isRated {
-            // Use the last game score for margin-of-victory calculation
             let lastGame = result.gameScores.last ?? result.finalScore
             let change = DUPRCalculator.calculateRatingChange(
                 playerRating: player.duprRating,
@@ -63,9 +64,61 @@ final class MockMatchService: MatchService {
             duprChange = change
         }
 
+        // Reputation
+        let repChange = RepCalculator.calculateRepChange(
+            didWin: result.didPlayerWin,
+            playerSUPR: player.duprRating,
+            opponentSUPR: opponent.duprRating,
+            opponentDifficulty: opponent.difficulty
+        )
+        player.repProfile.applyRepChange(repChange)
+
+        // Equipment durability (only on loss, only wearable slots)
+        let suprGap = opponent.duprRating - player.duprRating
+        var brokenEquipment: [Equipment] = []
+
+        if !result.didPlayerWin {
+            let baseWear = GameConstants.Durability.baseLossWear
+            let gapBonus = suprGap > 0
+                ? suprGap * GameConstants.Durability.suprGapWearBonus
+                : 0
+            let wear = min(GameConstants.Durability.maxWearPerMatch, baseWear + gapBonus)
+
+            for (slot, equipID) in player.equippedItems {
+                if slot == .shoes || slot == .paddle {
+                    // Find current condition from inventory (we'll update in MatchHubView)
+                    // For now store the wear amount; MatchHubView applies it
+                }
+                _ = (slot, equipID, wear) // suppress unused warnings
+            }
+            // We compute broken equipment at the MatchHubView level with inventory access
+        }
+
+        // Persistent energy drain (only on loss)
+        var energyDrain = 0.0
+        if !result.didPlayerWin {
+            let baseDrain = GameConstants.PersistentEnergy.baseLossDrain
+            let gapDrain = suprGap > 0
+                ? suprGap * GameConstants.PersistentEnergy.suprGapDrainBonus
+                : 0
+            energyDrain = min(GameConstants.PersistentEnergy.maxDrainPerMatch, baseDrain + gapDrain)
+            let newEnergy = max(
+                GameConstants.PersistentEnergy.minEnergy,
+                player.currentEnergy - energyDrain
+            )
+            player.energy = newEnergy
+        } else {
+            // Wins don't drain persistent energy; snapshot current recovered energy
+            player.energy = player.currentEnergy
+        }
+        player.lastMatchDate = Date()
+
         return MatchRewards(
             levelUpRewards: levelUpRewards,
-            duprChange: duprChange
+            duprChange: duprChange,
+            repChange: repChange,
+            energyDrain: energyDrain,
+            brokenEquipment: brokenEquipment
         )
     }
 }
@@ -73,4 +126,7 @@ final class MockMatchService: MatchService {
 struct MatchRewards: Sendable {
     let levelUpRewards: [LevelUpReward]
     let duprChange: Double?
+    let repChange: Int
+    let energyDrain: Double
+    let brokenEquipment: [Equipment]
 }

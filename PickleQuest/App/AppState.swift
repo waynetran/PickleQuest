@@ -14,6 +14,7 @@ final class AppState {
 
 enum AppTab: String, CaseIterable {
     case match = "Match"
+    case performance = "Performance"
     case profile = "Profile"
     case inventory = "Inventory"
     case store = "Store"
@@ -21,6 +22,7 @@ enum AppTab: String, CaseIterable {
     var iconName: String {
         switch self {
         case .match: return "sportscourt"
+        case .performance: return "chart.line.uptrend.xyaxis"
         case .profile: return "person.fill"
         case .inventory: return "bag.fill"
         case .store: return "cart.fill"

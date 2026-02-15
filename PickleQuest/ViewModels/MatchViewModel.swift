@@ -19,6 +19,9 @@ final class MatchViewModel {
     var levelUpRewards: [LevelUpReward] = []
     var isRated: Bool = true
     var duprChange: Double?
+    var repChange: Int?
+    var brokenEquipment: [Equipment] = []
+    var energyDrain: Double = 0
     var matchConfig: MatchConfig = .quickMatch
 
     enum MatchState: Equatable {
@@ -57,6 +60,9 @@ final class MatchViewModel {
         lootDrops = []
         levelUpRewards = []
         duprChange = nil
+        repChange = nil
+        brokenEquipment = []
+        energyDrain = 0
 
         let effectiveRated = effectiveIsRated(
             playerRating: player.duprRating,
@@ -96,11 +102,14 @@ final class MatchViewModel {
 
     func processResult(player: inout Player) -> MatchRewards {
         guard let result = matchResult, let npc = selectedNPC else {
-            return MatchRewards(levelUpRewards: [], duprChange: nil)
+            return MatchRewards(levelUpRewards: [], duprChange: nil, repChange: 0, energyDrain: 0, brokenEquipment: [])
         }
         let rewards = matchService.processMatchResult(result, for: &player, opponent: npc, config: matchConfig)
         levelUpRewards = rewards.levelUpRewards
         duprChange = rewards.duprChange
+        repChange = rewards.repChange
+        brokenEquipment = rewards.brokenEquipment
+        energyDrain = rewards.energyDrain
         return rewards
     }
 
@@ -114,6 +123,9 @@ final class MatchViewModel {
         levelUpRewards = []
         isRated = true
         duprChange = nil
+        repChange = nil
+        brokenEquipment = []
+        energyDrain = 0
     }
 }
 

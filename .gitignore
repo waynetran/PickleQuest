@@ -39,6 +39,9 @@ Pods/
 .idea/
 .vscode/
 
+# Claude Code
+.claude/
+
 # Secrets
 *.env
 credentials.json

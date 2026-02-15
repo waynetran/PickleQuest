@@ -5,8 +5,8 @@ struct FatigueModel: Sendable {
     private(set) var energy: Double
     let staminaStat: Int
 
-    init(stamina: Int) {
-        self.energy = GameConstants.Fatigue.maxEnergy
+    init(stamina: Int, startingEnergy: Double = GameConstants.Fatigue.maxEnergy) {
+        self.energy = startingEnergy
         self.staminaStat = stamina
     }
 

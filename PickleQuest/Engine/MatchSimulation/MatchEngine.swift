@@ -7,6 +7,8 @@ actor MatchEngine {
     private let lootGenerator: LootGenerator?
     private let opponentDifficulty: NPCDifficulty
     private let playerLevel: Int
+    private let startingEnergy: Double
+    private let suprGap: Double
 
     // Participant data
     private let playerStats: PlayerStats
@@ -51,7 +53,9 @@ actor MatchEngine {
         pointResolver: PointResolver = PointResolver(),
         lootGenerator: LootGenerator? = nil,
         opponentDifficulty: NPCDifficulty = .beginner,
-        playerLevel: Int = 1
+        playerLevel: Int = 1,
+        startingEnergy: Double = GameConstants.PersistentEnergy.maxEnergy,
+        suprGap: Double = 0
     ) {
         self.playerStats = playerStats
         self.opponentStats = opponentStats
@@ -64,7 +68,9 @@ actor MatchEngine {
         self.lootGenerator = lootGenerator
         self.opponentDifficulty = opponentDifficulty
         self.playerLevel = playerLevel
-        self.playerFatigue = FatigueModel(stamina: playerStats.stamina)
+        self.startingEnergy = startingEnergy
+        self.suprGap = suprGap
+        self.playerFatigue = FatigueModel(stamina: playerStats.stamina, startingEnergy: startingEnergy)
         self.opponentFatigue = FatigueModel(stamina: opponentStats.stamina)
     }
 
@@ -274,7 +280,8 @@ actor MatchEngine {
             loot = generator.generateMatchLoot(
                 didWin: didWin,
                 opponentDifficulty: opponentDifficulty,
-                playerLevel: playerLevel
+                playerLevel: playerLevel,
+                suprGap: suprGap
             )
         } else {
             loot = []

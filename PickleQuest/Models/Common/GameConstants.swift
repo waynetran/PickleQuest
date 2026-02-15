@@ -142,6 +142,35 @@ enum GameConstants {
             .epic: 2...4,
             .legendary: 3...4
         ]
+        // SUPR-scaled loot: beating stronger opponents boosts rare drops
+        static let suprGapRarityBoost = 0.10  // per 1.0 SUPR gap overcome
+        static let maxSuprLootBoost = 0.25    // cap
+    }
+
+    // MARK: - Reputation
+    enum Reputation {
+        static let baseWinRep = 10
+        static let baseLossRep = 10
+        static let suprGapMultiplier = 10.0  // rep per 1.0 SUPR gap
+        static let minWinRep = 5
+        static let maxLossRep = 30
+    }
+
+    // MARK: - Durability
+    enum Durability {
+        static let baseLossWear = 0.08       // 8% per loss
+        static let suprGapWearBonus = 0.04   // +4% per 1.0 SUPR gap (stronger opp)
+        static let maxWearPerMatch = 0.15    // cap 15%
+    }
+
+    // MARK: - Persistent Energy
+    enum PersistentEnergy {
+        static let maxEnergy = 100.0
+        static let minEnergy = 50.0          // floor between matches
+        static let baseLossDrain = 10.0      // -10% on loss
+        static let suprGapDrainBonus = 5.0   // +5% per 1.0 SUPR gap
+        static let maxDrainPerMatch = 20.0
+        static let recoveryPerMinute = 1.0   // +1% real time
     }
 
     // MARK: - Store
