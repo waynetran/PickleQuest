@@ -19,6 +19,8 @@ struct DevModeView: View {
                     progressionSection
                     economySection
                     energySection
+                    coachingSection
+                    dailyChallengeSection
                     locationSection
                     resetSection
                 }
@@ -233,6 +235,64 @@ struct DevModeView: View {
                     step: 1
                 )
             }
+        }
+    }
+
+    private var coachingSection: some View {
+        Section("Coaching") {
+            let totalBoosts = appState.player.coachingRecord.statBoosts.values.reduce(0, +)
+            Text("Total coaching boosts: \(totalBoosts)")
+                .font(.subheadline)
+
+            ForEach(StatType.allCases, id: \.self) { stat in
+                let boost = appState.player.coachingRecord.currentBoost(for: stat)
+                if boost > 0 {
+                    HStack {
+                        Text(stat.displayName)
+                            .font(.caption)
+                        Spacer()
+                        Text("+\(boost)")
+                            .font(.caption.bold())
+                            .foregroundStyle(.blue)
+                    }
+                }
+            }
+
+            Button("Reset Coaching Record", role: .destructive) {
+                appState.player.coachingRecord = .empty
+            }
+            .font(.subheadline)
+        }
+    }
+
+    private var dailyChallengeSection: some View {
+        Section("Daily Challenges") {
+            if let state = appState.player.dailyChallengeState {
+                Text("Challenges: \(state.completedCount)/\(state.challenges.count)")
+                    .font(.subheadline)
+                Text("Bonus claimed: \(state.bonusClaimed ? "Yes" : "No")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("No challenges loaded")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button("Complete All Challenges") {
+                if var state = appState.player.dailyChallengeState {
+                    for i in state.challenges.indices {
+                        state.challenges[i].currentCount = state.challenges[i].targetCount
+                    }
+                    appState.player.dailyChallengeState = state
+                }
+            }
+            .font(.subheadline)
+
+            Button("Reset Daily Challenges", role: .destructive) {
+                appState.player.dailyChallengeState = nil
+            }
+            .font(.subheadline)
         }
     }
 

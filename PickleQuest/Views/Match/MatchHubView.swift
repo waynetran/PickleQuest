@@ -29,6 +29,8 @@ struct MatchHubView: View {
                         courtService: container.courtService,
                         courtProgressionService: container.courtProgressionService,
                         npcService: container.npcService,
+                        coachService: container.coachService,
+                        dailyChallengeService: container.dailyChallengeService,
                         locationManager: container.locationManager
                     )
                 }
@@ -122,15 +124,22 @@ struct MatchHubView: View {
         var player = appState.player
         let rewards = matchVM.processResult(player: &player)
 
-        // Equipment durability on loss (skip for resigned matches)
+        // Equipment durability wear
         var brokenItems: [Equipment] = []
-        if !result.didPlayerWin && !result.wasResigned {
-            let suprGap = npc.duprRating - player.duprRating
-            let baseWear = GameConstants.Durability.baseLossWear
-            let gapBonus = suprGap > 0
-                ? suprGap * GameConstants.Durability.suprGapWearBonus
-                : 0
-            let wear = min(GameConstants.Durability.maxWearPerMatch, baseWear + gapBonus)
+        if !result.wasResigned {
+            let wear: Double
+            if result.didPlayerWin {
+                // Win wear: flat 3%
+                wear = GameConstants.Durability.baseWinWear
+            } else {
+                // Loss wear: base + SUPR gap bonus
+                let suprGap = npc.duprRating - player.duprRating
+                let baseWear = GameConstants.Durability.baseLossWear
+                let gapBonus = suprGap > 0
+                    ? suprGap * GameConstants.Durability.suprGapWearBonus
+                    : 0
+                wear = min(GameConstants.Durability.maxWearPerMatch, baseWear + gapBonus)
+            }
 
             for (slot, equipID) in player.equippedItems {
                 guard slot == .shoes || slot == .paddle else { continue }
@@ -143,14 +152,33 @@ struct MatchHubView: View {
                 }
             }
 
-            // Unequip and remove broken items
+            // Broken equipment stays in inventory but gets unequipped
             if !brokenItems.isEmpty {
                 for item in brokenItems {
                     player.equippedItems.removeValue(forKey: item.slot)
                 }
-                await container.inventoryService.removeEquipmentBatch(brokenItems.map(\.id))
                 matchVM.brokenEquipment = brokenItems
             }
+        }
+
+        // Daily challenge progress
+        if var challengeState = mapVM?.dailyChallengeState {
+            if result.didPlayerWin && !result.wasResigned {
+                challengeState.incrementProgress(for: .winMatches)
+                // Beat stronger NPC
+                if npc.duprRating > player.duprRating {
+                    challengeState.incrementProgress(for: .beatStrongerNPC)
+                }
+                // Win without consumables
+                if matchVM.consumablesUsedCount == 0 {
+                    challengeState.incrementProgress(for: .winWithoutConsumables)
+                }
+            }
+            if matchVM.isDoublesMode {
+                challengeState.incrementProgress(for: .playDoublesMatch)
+            }
+            mapVM?.dailyChallengeState = challengeState
+            player.dailyChallengeState = challengeState
         }
 
         // Add loot to inventory (only items the player chose to keep or equip)

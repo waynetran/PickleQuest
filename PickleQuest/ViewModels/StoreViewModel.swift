@@ -8,6 +8,7 @@ final class StoreViewModel {
     private let inventoryService: InventoryService
 
     var storeItems: [StoreItem] = []
+    var consumableItems: [StoreConsumableItem] = []
     var isLoading = false
     var purchaseMessage: String?
 
@@ -19,6 +20,7 @@ final class StoreViewModel {
     func loadStore() async {
         isLoading = true
         storeItems = await storeService.getStoreInventory()
+        consumableItems = await storeService.getStoreConsumables()
         isLoading = false
     }
 
@@ -54,7 +56,34 @@ final class StoreViewModel {
         }
 
         storeItems = await storeService.refreshStore()
+        consumableItems = await storeService.getStoreConsumables()
         purchaseMessage = "Store refreshed!"
+        return true
+    }
+
+    func buyConsumable(_ item: StoreConsumableItem, player: inout Player) async -> Bool {
+        guard player.wallet.coins >= item.consumable.price else {
+            purchaseMessage = "Not enough coins!"
+            return false
+        }
+
+        guard let consumable = await storeService.buyConsumable(item.id) else {
+            purchaseMessage = "Item no longer available."
+            return false
+        }
+
+        let spent = player.wallet.spend(consumable.price)
+        guard spent else { return false }
+
+        await inventoryService.addConsumable(consumable)
+        player.consumables.append(consumable)
+
+        // Update local state
+        if let index = consumableItems.firstIndex(where: { $0.id == item.id }) {
+            consumableItems[index].isSoldOut = true
+        }
+
+        purchaseMessage = "Purchased \(consumable.name)!"
         return true
     }
 }

@@ -12,55 +12,15 @@ struct MapContentView: View {
     @State private var pendingDoublesOpp1: NPC?
     @State private var pendingDoublesOpp2: NPC?
     @State private var visibleRegion: MKCoordinateRegion?
+    @State private var showTrainingView = false
+    @State private var selectedDrillType: DrillType?
 
     var body: some View {
         @Bindable var mapState = mapVM
 
         MapReader { proxy in
         ZStack {
-            Map(position: $cameraPosition) {
-                // Player location (dev override or real)
-                if let override = appState.locationOverride {
-                    Annotation("You", coordinate: override) {
-                        PlayerAnnotationDot()
-                    }
-                } else {
-                    UserAnnotation()
-                }
-
-                // Court annotations
-                ForEach(mapVM.courts) { court in
-                    let discovered = appState.isDevMode
-                        || appState.player.discoveredCourtIDs.contains(court.id)
-                    Annotation(
-                        discovered ? court.name : "???",
-                        coordinate: court.coordinate
-                    ) {
-                        CourtAnnotationView(
-                            court: court,
-                            isDiscovered: discovered
-                        ) {
-                            if discovered {
-                                Task { await mapVM.selectCourt(court) }
-                            } else {
-                                undiscoveredCourt = court
-                            }
-                        }
-                    }
-                    .annotationTitles(.hidden)
-                }
-            }
-            .mapControls {
-                MapCompass()
-                MapScaleView()
-            }
-            .onMapCameraChange(frequency: .continuous) { context in
-                visibleRegion = context.region
-                mapVM.updateStickyLocation(
-                    center: context.camera.centerCoordinate,
-                    appState: appState
-                )
-            }
+            mapLayer
 
             // Fog of war overlay
             if appState.fogOfWarEnabled, let region = visibleRegion {
@@ -82,6 +42,22 @@ struct MapContentView: View {
                     }
                     .padding(.bottom, 72) // above the bottom bar
                 }
+            }
+
+            // Daily challenge banner
+            VStack {
+                if let challengeState = mapVM.dailyChallengeState, !challengeState.challenges.isEmpty {
+                    DailyChallengeBanner(state: challengeState) {
+                        // Claim completion bonus
+                        if challengeState.allCompleted && !challengeState.bonusClaimed {
+                            appState.player.wallet.coins += GameConstants.DailyChallenge.completionBonusCoins
+                            mapVM.dailyChallengeState?.bonusClaimed = true
+                            appState.player.dailyChallengeState = mapVM.dailyChallengeState
+                        }
+                    }
+                    .padding(.top, 8)
+                }
+                Spacer()
             }
 
             // Bottom overlay: court count + energy
@@ -119,6 +95,8 @@ struct MapContentView: View {
                     alphaNPC: mapVM.alphaNPC,
                     doublesAlphaNPC: nil, // Phase 6: doubles alpha
                     playerPersonality: appState.player.personality,
+                    coach: mapVM.coachAtSelectedCourt,
+                    player: appState.player,
                     isRated: Bindable(matchVM).isRated,
                     isDoublesMode: $isDoublesMode,
                     onChallenge: { npc in
@@ -132,6 +110,25 @@ struct MapContentView: View {
                     },
                     onTournament: {
                         // Phase 5: tournament flow
+                    },
+                    onStartDrill: { drillType in
+                        selectedDrillType = drillType
+                        showTrainingView = true
+                    },
+                    onCoachSession: { stat in
+                        guard let coach = mapVM.coachAtSelectedCourt else { return }
+                        var player = appState.player
+                        // Check limits
+                        guard !player.coachingRecord.hasSessionToday(coachID: coach.id) else { return }
+                        guard player.coachingRecord.canTrain(stat: stat) else { return }
+                        let fee = player.coachingRecord.fee(for: coach, stat: stat)
+                        guard player.wallet.coins >= fee else { return }
+                        // Apply
+                        player.wallet.coins -= fee
+                        player.stats.setStat(stat, value: player.stats.stat(stat) + GameConstants.Coaching.baseStatBoost)
+                        player.coachingRecord.recordSession(coachID: coach.id, stat: stat)
+                        player.progression.currentXP += GameConstants.Coaching.baseBonusXP
+                        appState.player = player
                     }
                 )
             }
@@ -168,6 +165,10 @@ struct MapContentView: View {
         } message: {
             Text("Walk within 200m to discover this court and challenge its players.")
         }
+        .sheet(isPresented: $showTrainingView) {
+            TrainingDrillView(initialDrillType: selectedDrillType)
+                .environment(appState)
+        }
         .onChange(of: mapVM.showCourtDetail) { _, isPresented in
             if !isPresented {
                 if let npc = mapVM.pendingChallenge {
@@ -190,11 +191,65 @@ struct MapContentView: View {
         }
     }
 
+    // MARK: - Map Layer
+
+    private var mapLayer: some View {
+        Map(position: $cameraPosition) {
+            // Player location (dev override or real)
+            if let override = appState.locationOverride {
+                Annotation("You", coordinate: override) {
+                    MapPlayerAnnotation(appearance: appState.player.appearance)
+                }
+            } else {
+                UserAnnotation()
+            }
+
+            // Court annotations
+            ForEach(mapVM.courts) { court in
+                let discovered = appState.isDevMode
+                    || appState.player.discoveredCourtIDs.contains(court.id)
+                Annotation(
+                    discovered ? court.name : "???",
+                    coordinate: court.coordinate
+                ) {
+                    CourtAnnotationView(
+                        court: court,
+                        isDiscovered: discovered
+                    ) {
+                        if discovered {
+                            Task { await mapVM.selectCourt(court) }
+                        } else {
+                            undiscoveredCourt = court
+                        }
+                    }
+                }
+                .annotationTitles(.hidden)
+            }
+        }
+        .mapControls {
+            MapCompass()
+            MapScaleView()
+        }
+        .onMapCameraChange(frequency: .continuous) { context in
+            visibleRegion = context.region
+            mapVM.updateStickyLocation(
+                center: context.camera.centerCoordinate,
+                appState: appState
+            )
+        }
+    }
+
     // MARK: - Setup
 
     private func setupMap() async {
         mapVM.requestLocationPermission()
         mapVM.startLocationUpdates()
+
+        // Load daily challenges
+        await mapVM.loadDailyChallenges(playerState: appState.player.dailyChallengeState)
+
+        // Reset coaching daily sessions
+        appState.player.coachingRecord.resetDailySessions()
 
         if let override = appState.locationOverride {
             cameraPosition = .region(MKCoordinateRegion(
@@ -226,6 +281,8 @@ struct MapContentView: View {
         )
         for id in newIDs {
             appState.player.discoveredCourtIDs.insert(id)
+            // Track daily challenge progress
+            appState.player.dailyChallengeState?.incrementProgress(for: .visitCourts)
         }
     }
 

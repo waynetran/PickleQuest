@@ -120,6 +120,7 @@ struct InventoryView: View {
                     isEquipped: appState.player.equippedItems.values.contains(item.id),
                     currentStats: vm.effectiveStats(for: appState.player),
                     previewStats: vm.previewStats,
+                    playerCoins: appState.player.wallet.coins,
                     onEquip: {
                         Task {
                             var player = appState.player
@@ -142,7 +143,19 @@ struct InventoryView: View {
                             await vm.sellItem(item, player: &player)
                             appState.player = player
                         }
-                    }
+                    },
+                    onRepair: item.isBroken ? {
+                        Task {
+                            var player = appState.player
+                            guard player.wallet.coins >= item.repairCost else { return }
+                            player.wallet.coins -= item.repairCost
+                            let success = await vm.repairItem(item)
+                            if success {
+                                appState.player = player
+                                vm.showingDetail = false
+                            }
+                        }
+                    } : nil
                 )
                 .presentationDetents([.large])
             }

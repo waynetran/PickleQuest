@@ -103,6 +103,19 @@ struct StoreView: View {
                     }
                     .padding(.horizontal)
                 }
+
+                // Consumables Section
+                if !vm.consumableItems.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Consumables")
+                            .font(.headline)
+                            .padding(.horizontal)
+
+                        ForEach(vm.consumableItems) { item in
+                            consumableRow(item: item, vm: vm)
+                        }
+                    }
+                }
             }
             .padding(.vertical)
         }
@@ -111,5 +124,60 @@ struct StoreView: View {
         } message: {
             Text(vm.purchaseMessage ?? "")
         }
+    }
+
+    private func consumableRow(item: StoreConsumableItem, vm: StoreViewModel) -> some View {
+        let canAfford = appState.player.wallet.coins >= item.consumable.price
+        return HStack(spacing: 12) {
+            Image(systemName: item.consumable.iconName)
+                .font(.title3)
+                .foregroundStyle(item.isSoldOut ? Color.secondary : Color.blue)
+                .frame(width: 36, height: 36)
+                .background(Color(.systemGray6))
+                .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.consumable.name)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(item.isSoldOut ? .secondary : .primary)
+                Text(item.consumable.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            if item.isSoldOut {
+                Text("Sold")
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+            } else {
+                Button {
+                    Task {
+                        var player = appState.player
+                        let success = await vm.buyConsumable(item, player: &player)
+                        if success {
+                            appState.player = player
+                        }
+                        showPurchaseAlert = true
+                    }
+                } label: {
+                    Text("\(item.consumable.price)")
+                        .font(.caption.bold())
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(canAfford ? .yellow : .gray)
+                        .foregroundStyle(.black)
+                        .clipShape(Capsule())
+                }
+                .disabled(!canAfford)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal)
     }
 }

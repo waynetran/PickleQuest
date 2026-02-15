@@ -18,6 +18,8 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
     var courtLadders: [CourtLadder] = []
     var courtPerks: [CourtPerk] = []
     var personality: NPCPersonality = .allRounder
+    var coachingRecord: CoachingRecord = .empty
+    var dailyChallengeState: DailyChallengeState? = nil
 
     var duprRating: Double {
         duprProfile.rating

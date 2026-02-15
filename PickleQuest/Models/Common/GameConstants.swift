@@ -172,6 +172,7 @@ enum GameConstants {
     // MARK: - Durability
     enum Durability {
         static let baseLossWear = 0.08       // 8% per loss
+        static let baseWinWear = 0.03        // 3% per win (shoes + paddle only)
         static let suprGapWearBonus = 0.04   // +4% per 1.0 SUPR gap (stronger opp)
         static let maxWearPerMatch = 0.15    // cap 15%
     }
@@ -189,6 +190,7 @@ enum GameConstants {
     // MARK: - Store
     enum Store {
         static let shopSize: Int = 8
+        static let consumableSlots: Int = 2
         static let refreshCost: Int = 50
         static let priceRange: [EquipmentRarity: ClosedRange<Int>] = [
             .common: 50...100,
@@ -254,6 +256,49 @@ enum GameConstants {
         static let winnerLegendaryCount: Int = 1
         static let winnerEpicCount: Int = 2
         static let participationLootCount: Int = 1
+    }
+
+    // MARK: - Training
+    enum Training {
+        static let drillCoinCost: [DrillDifficulty: Int] = [
+            .easy: 10, .medium: 15, .hard: 25
+        ]
+        static let drillEnergyCost: Double = 15.0 // 15% persistent energy
+        static let drillBaseXP: [DrillDifficulty: Int] = [
+            .easy: 20, .medium: 40, .hard: 70
+        ]
+        static let gradeThresholds: [(Double, DrillGrade)] = [
+            (0.85, .S), (0.70, .A), (0.55, .B), (0.40, .C)
+            // below 0.40 → D
+        ]
+        static let gradeXPMultiplier: [DrillGrade: Double] = [
+            .S: 2.0, .A: 1.5, .B: 1.0, .C: 0.7, .D: 0.4
+        ]
+        static let drillAnimationDuration: Double = 4.0
+        static let gradeVariance: Double = 0.05 // ±5% random variance on score
+    }
+
+    // MARK: - Coaching
+    enum Coaching {
+        static let coachCourtPercentage: Double = 0.5 // ~50% of courts get a coach
+        static let alphaCoachChance: Double = 0.8 // 80% of coach courts use the alpha NPC
+        static let alphaDefeatedDiscount: Double = 0.5 // 50% off when alpha is defeated
+        static let sessionsPerCoachPerDay: Int = 1
+        static let baseStatBoost: Int = 1
+        static let baseBonusXP: Int = 50
+        static let baseFees: [Int: Int] = [ // tier → base fee
+            1: 200, 2: 500, 3: 1000, 4: 2000
+        ]
+        static let feeDoublePerExistingBoost: Double = 2.0 // fee doubles per existing boost
+        static let maxCoachingBoostPerStat: Int = 5
+    }
+
+    // MARK: - Daily Challenges
+    enum DailyChallenge {
+        static let challengesPerDay: Int = 3
+        static let individualCoinReward: ClosedRange<Int> = 50...200
+        static let individualXPReward: ClosedRange<Int> = 25...100
+        static let completionBonusCoins: Int = 500
     }
 
     // MARK: - XP

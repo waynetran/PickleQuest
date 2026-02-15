@@ -67,6 +67,14 @@ final class InventoryViewModel {
         selectedItem = nil
     }
 
+    func repairItem(_ item: Equipment) async -> Bool {
+        let success = await inventoryService.repairEquipment(item.id)
+        if success {
+            await loadInventory()
+        }
+        return success
+    }
+
     func equippedItem(for slot: EquipmentSlot, player: Player) -> Equipment? {
         guard let id = player.equippedItems[slot] else { return nil }
         return inventory.first { $0.id == id }

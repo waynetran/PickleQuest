@@ -5,9 +5,11 @@ struct EquipmentDetailView: View {
     let isEquipped: Bool
     let currentStats: PlayerStats
     let previewStats: PlayerStats?
+    let playerCoins: Int
     let onEquip: () -> Void
     let onUnequip: () -> Void
     let onSell: () -> Void
+    let onRepair: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -144,6 +146,35 @@ struct EquipmentDetailView: View {
                         }
                         .padding()
                         .background(.regularMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
+                    // Repair (for broken equipment)
+                    if equipment.isBroken, let onRepair {
+                        VStack(spacing: 8) {
+                            HStack {
+                                Image(systemName: "wrench.and.screwdriver.fill")
+                                    .foregroundStyle(.red)
+                                Text("This equipment is broken!")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.red)
+                            }
+
+                            Button {
+                                onRepair()
+                            } label: {
+                                Label("Repair for \(equipment.repairCost) coins", systemImage: "wrench.fill")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(playerCoins >= equipment.repairCost ? .blue : .gray)
+                                    .foregroundStyle(.white)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            .disabled(playerCoins < equipment.repairCost)
+                        }
+                        .padding()
+                        .background(.red.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
 

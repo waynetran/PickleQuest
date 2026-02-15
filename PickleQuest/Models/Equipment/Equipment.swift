@@ -28,6 +28,24 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
         slot == .shoes || slot == .paddle
     }
 
+    /// Equipment is broken when condition hits 0 (wearable items only)
+    var isBroken: Bool {
+        condition <= 0 && isWearable
+    }
+
+    /// Repair cost is ~30% of rarity base price
+    var repairCost: Int {
+        let basePrice: Int
+        switch rarity {
+        case .common: basePrice = 50
+        case .uncommon: basePrice = 100
+        case .rare: basePrice = 250
+        case .epic: basePrice = 500
+        case .legendary: basePrice = 1000
+        }
+        return Int(Double(basePrice) * 0.3)
+    }
+
     init(
         id: UUID,
         name: String,

@@ -13,3 +13,15 @@ struct StoreItem: Identifiable, Sendable {
         self.isSoldOut = isSoldOut
     }
 }
+
+struct StoreConsumableItem: Identifiable, Sendable {
+    let id: UUID
+    let consumable: Consumable
+    var isSoldOut: Bool
+
+    init(consumable: Consumable, isSoldOut: Bool = false) {
+        self.id = consumable.id
+        self.consumable = consumable
+        self.isSoldOut = isSoldOut
+    }
+}

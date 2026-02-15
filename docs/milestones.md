@@ -17,7 +17,7 @@
 | 4.4 | Court Ladder Progression System | **Complete** |
 | 4.5 | Fog of War Map Exploration | **Complete** |
 | 5 | Doubles, Team Synergy, Tournaments | **Complete** |
-| 6 | Training, Coaching, Energy + Economy | Planned |
+| 6 | Training, Coaching, Daily Challenges & Economy Rebalance | **Complete** |
 | 7 | Persistence, Polish, Multiplayer Prep | Planned |
 
 ---
@@ -528,14 +528,70 @@ MatchViewModel (reused for player's tournament matches)
 
 ---
 
-## Milestone 6: Training, Coaching, Energy + Economy (Planned)
+## Milestone 6: Training, Coaching, Daily Challenges & Economy Rebalance
 
-### Goals
-- Training mini-games at courts (serve practice, rally drills)
-- NPC coaches with stat-specific training bonuses
-- Expanded energy system (consumables to restore energy)
-- Economy balancing (coin sinks, premium items)
-- Daily challenges and quests
+### What was built
+- **Training drill system**: 4 drill types (serve, rally, defense, footwork) each targeting 2-3 stats, 3 difficulty levels, grade system (S/A/B/C/D) based on effective stats + variance, SpriteKit drill scene with court visualization and per-drill animations
+- **Coach NPCs**: 80% of coach courts use the alpha NPC as coach (derived from top 2 stats), 20% use one of 6 predefined coaches; tier-based fees (200-2000 coins) with exponential diminishing returns (fee doubles per existing boost); beating the alpha unlocks 50% discount on coaching sessions
+- **Daily challenges**: 3 random challenges per day (7 types: win matches, complete drills, visit courts, beat stronger, win without consumables, play doubles, earn drill grade), per-challenge coin+XP rewards, 500-coin completion bonus for all 3, floating map banner with expand/collapse
+- **Economy rebalance**: equipment now degrades 3% on wins (8% on loss), broken equipment stays in inventory (repairable for ~30% of rarity base price), store expanded with 2 consumable slots (Stamina Shake, Lucky Charm + existing consumables), coach fees as major coin sink
+- **Coach discount system**: alpha-as-coach courts resolve the alpha NPC into a Coach with specialty stats derived from the NPC's top 2 stats; defeating the alpha applies a 50% fee discount, with unique dialogue for defeated vs undefeated alphas
+
+### Architecture
+```
+Training Flow:
+CourtDetailSheet → "Train Here" drill buttons → TrainingDrillView (picker/scene/results)
+    ↓
+TrainingViewModel.startDrill() → TrainingDrillSimulator → TrainingResult (grade + XP)
+    ↓
+TrainingDrillScene (SpriteKit) → CourtRenderer + SpriteFactory reuse → drill animation
+
+Coach Flow:
+MapViewModel.selectCourt() → isAlphaCoachCourt? → Coach.fromAlphaNPC() or getCoachAtCourt()
+    ↓
+CourtDetailSheet → CoachView (fee display + discount badge) → onCoachSession callback
+    ↓
+Player: -fee coins, +1 stat, record session, +50 XP
+
+Daily Challenges:
+MapContentView .task → loadDailyChallenges() → DailyChallengeBanner overlay
+    ↓
+Progress tracked: match wins, drill completions, court visits, grades
+    ↓
+All-3 bonus: +500 coins (claimed from banner)
+```
+
+### New files
+- `Models/Training/TrainingDrill.swift` — DrillType, DrillDifficulty, DrillGrade, TrainingDrill
+- `Models/Training/TrainingResult.swift` — drill result with grade and stat scores
+- `Models/Training/Coach.swift` — Coach (with alpha-coach support + discount), CoachDialogue, CoachingRecord
+- `Models/Training/DailyChallenge.swift` — ChallengeType, DailyChallenge, DailyChallengeState
+- `Engine/Training/TrainingDrillSimulator.swift` — stat-based grade calculation
+- `Services/Protocols/TrainingService.swift` + `Services/Mock/MockTrainingService.swift`
+- `Services/Protocols/CoachService.swift` + `Services/Mock/MockCoachService.swift` — 6 predefined coaches, alpha-coach court tracking
+- `Services/Protocols/DailyChallengeService.swift` + `Services/Mock/MockDailyChallengeService.swift`
+- `ViewModels/TrainingViewModel.swift` — drill execution + coach session logic
+- `Views/Training/TrainingDrillScene.swift` — SpriteKit drill visualization
+- `Views/Training/TrainingDrillView.swift` — drill picker, difficulty, SpriteKit scene, results overlay
+- `Views/Training/CoachView.swift` — coach info, specialty stat buttons, discount badge
+- `Views/Map/DailyChallengeBanner.swift` — floating compact/expanded challenge tracker
+
+### Modified files
+- `GameConstants.swift` — Training, Coaching (alphaCoachChance, alphaDefeatedDiscount), DailyChallenge sections; baseWinWear; consumableSlots
+- `Player.swift` — coachingRecord, dailyChallengeState fields
+- `Equipment.swift` — isBroken, repairCost computed properties
+- `StoreItem.swift` — StoreConsumableItem struct
+- `InventoryService.swift` + `MockInventoryService.swift` — repairEquipment method
+- `StoreService.swift` + `MockStoreService.swift` — consumable methods + 5-item pool
+- `DependencyContainer.swift` — 3 new service dependencies
+- `MapViewModel.swift` — coach/daily challenge loading, alpha-coach resolution in selectCourt
+- `CourtDetailSheet.swift` — training section + coach section
+- `MapContentView.swift` — daily banner, training sheet, daily challenge progress on court visit
+- `MatchHubView.swift` — win durability wear, broken equipment stays, daily challenge progress
+- `EquipmentDetailView.swift` — repair button for broken equipment
+- `InventoryView.swift` + `InventoryViewModel.swift` — repair flow
+- `StoreView.swift` + `StoreViewModel.swift` — consumable section
+- `DevModeView.swift` — coaching record + daily challenge overrides
 
 ---
 

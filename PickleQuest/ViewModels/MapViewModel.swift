@@ -8,6 +8,8 @@ final class MapViewModel {
     private let courtService: CourtService
     private let courtProgressionService: CourtProgressionService
     private let npcService: NPCService
+    private let coachService: CoachService
+    private let dailyChallengeService: DailyChallengeService
     let locationManager: LocationManager
 
     var courts: [Court] = []
@@ -23,6 +25,12 @@ final class MapViewModel {
     var alphaNPC: NPC?
     var ladderAdvanceResult: LadderAdvanceResult?
 
+    // Coach state
+    var coachAtSelectedCourt: Coach?
+
+    // Daily challenges
+    var dailyChallengeState: DailyChallengeState?
+
     // Dev mode movement
     var isStickyMode = false
 
@@ -33,11 +41,15 @@ final class MapViewModel {
         courtService: CourtService,
         courtProgressionService: CourtProgressionService,
         npcService: NPCService,
+        coachService: CoachService,
+        dailyChallengeService: DailyChallengeService,
         locationManager: LocationManager
     ) {
         self.courtService = courtService
         self.courtProgressionService = courtProgressionService
         self.npcService = npcService
+        self.coachService = coachService
+        self.dailyChallengeService = dailyChallengeService
         self.locationManager = locationManager
     }
 
@@ -60,6 +72,10 @@ final class MapViewModel {
         }
         courts = await courtService.getAllCourts()
         courtsLoaded = true
+
+        // Assign coaches to ~50% of courts
+        let courtDifficulties = Dictionary(uniqueKeysWithValues: courts.map { ($0.id, $0.primaryDifficulty) })
+        await coachService.assignCoaches(to: courts.map(\.id), courtDifficulties: courtDifficulties)
     }
 
     func selectCourt(_ court: Court) async {
@@ -76,6 +92,20 @@ final class MapViewModel {
         alphaNPC = await courtProgressionService.getAlphaNPC(courtID: court.id, gameType: .singles)
         ladderAdvanceResult = nil
 
+        // Load coach at this court
+        if await coachService.isAlphaCoachCourt(court.id) {
+            // Alpha NPC acts as the coach — derive coach from alpha
+            if let alpha = alphaNPC {
+                let ladder = currentLadder
+                let defeated = ladder?.alphaDefeated ?? false
+                let coach = Coach.fromAlphaNPC(alpha, alphaDefeated: defeated)
+                await coachService.setAlphaCoach(coach, courtID: court.id)
+                coachAtSelectedCourt = coach
+            }
+        } else {
+            coachAtSelectedCourt = await coachService.getCoachAtCourt(court.id)
+        }
+
         showCourtDetail = true
     }
 
@@ -87,6 +117,17 @@ final class MapViewModel {
         currentCourtPerk = nil
         alphaNPC = nil
         ladderAdvanceResult = nil
+        coachAtSelectedCourt = nil
+    }
+
+    // MARK: - Daily Challenges
+
+    func loadDailyChallenges(playerState: DailyChallengeState?) async {
+        if let existing = playerState {
+            dailyChallengeState = await dailyChallengeService.checkAndResetIfNeeded(current: existing)
+        } else {
+            dailyChallengeState = await dailyChallengeService.getTodaysChallenges()
+        }
     }
 
     /// Validate that an NPC can be challenged based on ladder position.

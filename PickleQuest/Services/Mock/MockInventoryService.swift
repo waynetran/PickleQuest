@@ -45,6 +45,12 @@ actor MockInventoryService: InventoryService {
         }
     }
 
+    func repairEquipment(_ id: UUID) async -> Bool {
+        guard let index = inventory.firstIndex(where: { $0.id == id }) else { return false }
+        inventory[index].condition = 1.0
+        return true
+    }
+
     // MARK: - Consumables
 
     func getConsumables() async -> [Consumable] {

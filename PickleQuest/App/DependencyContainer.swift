@@ -11,6 +11,9 @@ final class DependencyContainer: ObservableObject {
     let courtService: CourtService
     let courtProgressionService: CourtProgressionService
     let tournamentService: TournamentService
+    let trainingService: TrainingService
+    let coachService: CoachService
+    let dailyChallengeService: DailyChallengeService
     let locationManager: LocationManager
 
     init(
@@ -22,6 +25,9 @@ final class DependencyContainer: ObservableObject {
         courtService: CourtService? = nil,
         courtProgressionService: CourtProgressionService? = nil,
         tournamentService: TournamentService? = nil,
+        trainingService: TrainingService? = nil,
+        coachService: CoachService? = nil,
+        dailyChallengeService: DailyChallengeService? = nil,
         locationManager: LocationManager? = nil
     ) {
         let inventory = inventoryService ?? MockInventoryService()
@@ -34,6 +40,9 @@ final class DependencyContainer: ObservableObject {
         self.courtService = courtService ?? MockCourtService(npcService: npcs)
         self.courtProgressionService = courtProgressionService ?? MockCourtProgressionService()
         self.tournamentService = tournamentService ?? MockTournamentService()
+        self.trainingService = trainingService ?? MockTrainingService()
+        self.coachService = coachService ?? MockCoachService()
+        self.dailyChallengeService = dailyChallengeService ?? MockDailyChallengeService()
         self.locationManager = locationManager ?? LocationManager()
     }
 
