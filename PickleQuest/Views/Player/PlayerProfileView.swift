@@ -6,6 +6,7 @@ struct PlayerProfileView: View {
     @State private var viewModel: PlayerProfileViewModel?
     @State private var showStatAllocation = false
     @State private var showDevMode = false
+    @State private var showPlayerChooser = false
 
     var body: some View {
         NavigationStack {
@@ -259,6 +260,22 @@ struct PlayerProfileView: View {
                 Task { await vm.loadPlayer() }
             }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        Task {
+                            let inventory = await container.inventoryService.getInventory()
+                            let consumables = await container.inventoryService.getConsumables()
+                            await appState.saveCurrentPlayer(
+                                using: container.persistenceService,
+                                inventory: inventory,
+                                consumables: consumables
+                            )
+                            showPlayerChooser = true
+                        }
+                    } label: {
+                        Image(systemName: "person.2.fill")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showDevMode = true
@@ -275,6 +292,11 @@ struct PlayerProfileView: View {
             }
             .sheet(isPresented: $showDevMode) {
                 DevModeView()
+            }
+            .fullScreenCover(isPresented: $showPlayerChooser) {
+                PlayerChooserView()
+                    .environment(appState)
+                    .environmentObject(container)
             }
         }
     }

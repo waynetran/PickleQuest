@@ -239,5 +239,14 @@ struct MatchHubView: View {
         player.matchHistory.append(historyEntry)
 
         appState.player = player
+
+        // Auto-save after match
+        let currentInventory = await container.inventoryService.getInventory()
+        let currentConsumables = await container.inventoryService.getConsumables()
+        await appState.saveCurrentPlayer(
+            using: container.persistenceService,
+            inventory: currentInventory,
+            consumables: currentConsumables
+        )
     }
 }

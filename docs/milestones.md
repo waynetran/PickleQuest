@@ -18,7 +18,8 @@
 | 4.5 | Fog of War Map Exploration | **Complete** |
 | 5 | Doubles, Team Synergy, Tournaments | **Complete** |
 | 6 | Training, Coaching, Daily Challenges & Economy Rebalance | **Complete** |
-| 7 | Persistence, Polish, Multiplayer Prep | Planned |
+| 7a | Onboarding, Player Management & Basic Persistence | **Complete** |
+| 7b | Persistence Polish, Cloud Prep, Multiplayer Prep | Planned |
 
 ---
 
@@ -595,11 +596,67 @@ All-3 bonus: +500 coins (claimed from banner)
 
 ---
 
-## Milestone 7: Persistence, Polish, Multiplayer Prep (Planned)
+## Milestone 7a: Onboarding, Player Management & Basic Persistence
+
+### What was built
+- **SwiftData persistence**: `SavedPlayer` @Model stores full player data as JSON blob with indexed summary fields; `SwiftDataPersistenceService` actor creates isolated `ModelContext` per operation
+- **Save/load bundle**: `SavedPlayerBundle` round-trips Player + inventory + consumables + fog cells + tutorial status; saves on background, after match, and on player switch
+- **Character creation flow**: 3-step paged onboarding — name entry (1-20 chars), appearance preset picker (8 color themes with animated sprite previews), personality selection (5 playstyles with stat biases)
+- **AnimatedSpriteView**: reusable sprite animation component extracted from MapPlayerAnnotation; uses TimelineView for animation and Task.detached for off-main-thread color replacement
+- **Player chooser**: grid of saved player cards with animated sprite previews, "New Character" card, delete via context menu, loads full bundle and restores services
+- **Tutorial match**: guided intro with 3 tip cards, auto-starts unrated match against Coach Pickles (very weak stats ~5, DUPR 2.0, 2x reward multiplier), simplified result processing (XP/coins/loot only)
+- **Tutorial post-match**: 3 explainer cards (loot, exploration, progression) before entering the main game
+- **App routing**: `AppPhase` enum (loading → playerChooser → characterCreation → tutorialMatch → tutorialPostMatch → playing), `RootView` router
+- **Player switching**: "Switch Player" toolbar button on Profile saves current state then opens chooser as full-screen cover
+- **Auto-save**: saves on scene phase → background, after every match result
+
+### State flow
+```
+Launch → [.loading] → check saved players
+  ├─ none → [.characterCreation] → name/appearance/personality → save → [.tutorialMatch]
+  └─ exists → [.playerChooser] → pick player → load
+                ├─ tutorial done → [.playing]
+                └─ tutorial pending → [.tutorialMatch]
+
+[.tutorialMatch] → guided match vs Coach Pickles → [.tutorialPostMatch] → explainers → [.playing]
+
+Profile → "Switch Player" → save current → [.playerChooser]
+```
+
+### New files (17)
+- `Models/Persistence/SavedPlayer.swift` — @Model SwiftData entity
+- `Models/Persistence/SavedPlayerSummary.swift` — lightweight chooser display struct
+- `Models/Persistence/SavedPlayerBundle.swift` — full save/load bundle
+- `Models/Player/CharacterPreset.swift` — 8 appearance presets
+- `Models/Onboarding/TutorialTip.swift` — tutorial tip model
+- `Models/World/TutorialNPC.swift` — weak tutorial opponent (Coach Pickles)
+- `Services/Protocols/PersistenceService.swift` — save/load protocol
+- `Services/SwiftData/SwiftDataPersistenceService.swift` — SwiftData actor implementation
+- `Views/RootView.swift` — top-level phase router
+- `Views/Components/AnimatedSpriteView.swift` — reusable sprite animation
+- `Views/Onboarding/CharacterCreationView.swift` — 3-step creation flow
+- `Views/Onboarding/PlayerChooserView.swift` — multi-slot player picker
+- `Views/Onboarding/PlayerSlotCard.swift` — player card in chooser
+- `Views/Onboarding/TutorialMatchView.swift` — tutorial match + tips
+- `Views/Onboarding/TutorialPostMatchView.swift` — post-tutorial explainers
+- `ViewModels/CharacterCreationViewModel.swift` — creation state
+- `ViewModels/TutorialViewModel.swift` — tutorial phases + tips
+- `Extensions/NPCPersonality+Display.swift` — personality display metadata
+
+### Modified files (7)
+- `App/PickleQuestApp.swift` — ModelContainer, RootView, scenePhase auto-save
+- `App/AppState.swift` — AppPhase, optional player init, save method, loadFromBundle
+- `App/DependencyContainer.swift` — persistenceService dependency, ModelContainer in init
+- `Views/Map/MapPlayerAnnotation.swift` — delegates to AnimatedSpriteView
+- `Views/Player/PlayerProfileView.swift` — Switch Player toolbar button + fullScreenCover
+- `Views/Match/MatchHubView.swift` — auto-save after match result
+- `Services/Mock/MockInventoryService.swift` — reset(inventory:consumables:), static starter helpers
+
+---
+
+## Milestone 7b: Persistence Polish, Cloud Prep, Multiplayer Prep (Planned)
 
 ### Goals
-- Local persistence (SwiftData or UserDefaults)
 - Cloud save preparation (protocol-based storage layer)
 - UI polish pass (animations, haptics, sound effects)
-- Onboarding flow for new players
 - Multiplayer architecture prep (real-time match protocol)

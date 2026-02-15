@@ -65,7 +65,22 @@ actor MockInventoryService: InventoryService {
         consumables.removeAll { $0.id == id }
     }
 
+    // MARK: - Reset (for loading saved players)
+
+    func reset(inventory: [Equipment], consumables: [Consumable]) {
+        self.inventory = inventory
+        self.consumables = consumables
+    }
+
     // MARK: - Starter Equipment
+
+    static func starterInventory() -> [Equipment] {
+        createStarterInventory()
+    }
+
+    static func starterConsumables() -> [Consumable] {
+        createStarterConsumables()
+    }
 
     private static func createStarterInventory() -> [Equipment] {
         [

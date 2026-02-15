@@ -7,6 +7,9 @@ import CoreLocation
 final class AppState {
     var player: Player
     var selectedTab: AppTab = .match
+    var appPhase: AppPhase = .loading
+    var activePlayerID: UUID?
+    var tutorialCompleted: Bool = false
 
     // Dev mode
     var isDevMode: Bool = true
@@ -17,9 +20,9 @@ final class AppState {
     var fogOfWarEnabled: Bool = true
     var revealedFogCells: Set<FogCell> = []
 
-    init(player: Player = Player.newPlayer(name: "Rookie")) {
-        self.player = player
-        self.devModeSnapshot = player
+    init(player: Player? = nil) {
+        self.player = player ?? Player.newPlayer(name: "Rookie")
+        self.devModeSnapshot = self.player
     }
 
     func revealFog(around coordinate: CLLocationCoordinate2D) {
@@ -41,6 +44,38 @@ final class AppState {
         player = snapshot
         locationOverride = nil
     }
+
+    func saveCurrentPlayer(
+        using persistenceService: PersistenceService,
+        inventory: [Equipment],
+        consumables: [Consumable]
+    ) async {
+        let bundle = SavedPlayerBundle(
+            player: player,
+            inventory: inventory,
+            consumables: consumables,
+            fogCells: revealedFogCells,
+            tutorialCompleted: tutorialCompleted
+        )
+        try? await persistenceService.savePlayer(bundle)
+    }
+
+    func loadFromBundle(_ bundle: SavedPlayerBundle) {
+        player = bundle.player
+        activePlayerID = bundle.player.id
+        tutorialCompleted = bundle.tutorialCompleted
+        revealedFogCells = bundle.fogCells
+        devModeSnapshot = bundle.player
+    }
+}
+
+enum AppPhase: Equatable {
+    case loading
+    case playerChooser
+    case characterCreation
+    case tutorialMatch
+    case tutorialPostMatch
+    case playing
 }
 
 enum AppTab: String, CaseIterable {

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 /// Protocol-based dependency container. Swap mock implementations for real ones later.
 @MainActor
@@ -14,9 +15,11 @@ final class DependencyContainer: ObservableObject {
     let trainingService: TrainingService
     let coachService: CoachService
     let dailyChallengeService: DailyChallengeService
+    let persistenceService: PersistenceService
     let locationManager: LocationManager
 
     init(
+        modelContainer: ModelContainer,
         playerService: PlayerService? = nil,
         matchService: MatchService? = nil,
         npcService: NPCService? = nil,
@@ -28,6 +31,7 @@ final class DependencyContainer: ObservableObject {
         trainingService: TrainingService? = nil,
         coachService: CoachService? = nil,
         dailyChallengeService: DailyChallengeService? = nil,
+        persistenceService: PersistenceService? = nil,
         locationManager: LocationManager? = nil
     ) {
         let inventory = inventoryService ?? MockInventoryService()
@@ -43,8 +47,7 @@ final class DependencyContainer: ObservableObject {
         self.trainingService = trainingService ?? MockTrainingService()
         self.coachService = coachService ?? MockCoachService()
         self.dailyChallengeService = dailyChallengeService ?? MockDailyChallengeService()
+        self.persistenceService = persistenceService ?? SwiftDataPersistenceService(modelContainer: modelContainer)
         self.locationManager = locationManager ?? LocationManager()
     }
-
-    static let shared = DependencyContainer()
 }
