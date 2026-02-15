@@ -44,6 +44,25 @@ struct MapContentView: View {
                 MapCompass()
                 MapScaleView()
             }
+            .onMapCameraChange(frequency: .onEnd) { context in
+                mapVM.updateStickyLocation(
+                    center: context.camera.centerCoordinate,
+                    appState: appState
+                )
+            }
+
+            // Dev mode movement controls
+            if appState.isDevMode {
+                VStack {
+                    Spacer()
+                    HStack {
+                        DevMovementPad(mapVM: mapVM, appState: appState)
+                            .padding(.leading, 16)
+                        Spacer()
+                    }
+                    .padding(.bottom, 72) // above the bottom bar
+                }
+            }
 
             // Bottom overlay: court count + energy
             VStack {
@@ -56,10 +75,13 @@ struct MapContentView: View {
         }
         .onChange(of: appState.locationOverride) { _, newOverride in
             if let coord = newOverride {
-                cameraPosition = .region(MKCoordinateRegion(
-                    center: coord,
-                    span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-                ))
+                // Only recenter camera when not in sticky mode (sticky mode = user is panning)
+                if !mapVM.isStickyMode {
+                    cameraPosition = .region(MKCoordinateRegion(
+                        center: coord,
+                        span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                    ))
+                }
                 Task { await mapVM.generateCourtsIfNeeded(around: coord) }
                 runDiscoveryCheck()
             }
@@ -192,6 +214,58 @@ struct PlayerAnnotationDot: View {
             Circle()
                 .stroke(.white, lineWidth: 2)
                 .frame(width: 14, height: 14)
+        }
+    }
+}
+
+// MARK: - Dev Movement D-Pad
+
+struct DevMovementPad: View {
+    let mapVM: MapViewModel
+    let appState: AppState
+
+    var body: some View {
+        VStack(spacing: 4) {
+            // North
+            directionButton(.north, icon: "chevron.up")
+
+            HStack(spacing: 4) {
+                // West
+                directionButton(.west, icon: "chevron.left")
+
+                // Sticky mode toggle (center)
+                Button {
+                    mapVM.isStickyMode.toggle()
+                } label: {
+                    Image(systemName: mapVM.isStickyMode ? "scope" : "pin.slash")
+                        .font(.system(size: 14, weight: .bold))
+                        .frame(width: 36, height: 36)
+                        .background(mapVM.isStickyMode ? Color.orange : Color(.systemGray5))
+                        .foregroundStyle(mapVM.isStickyMode ? .white : .primary)
+                        .clipShape(Circle())
+                }
+
+                // East
+                directionButton(.east, icon: "chevron.right")
+            }
+
+            // South
+            directionButton(.south, icon: "chevron.down")
+        }
+        .padding(8)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func directionButton(_ direction: MapViewModel.MoveDirection, icon: String) -> some View {
+        Button {
+            mapVM.movePlayer(direction: direction, appState: appState)
+        } label: {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .bold))
+                .frame(width: 36, height: 36)
+                .background(Color(.systemGray5))
+                .clipShape(Circle())
         }
     }
 }

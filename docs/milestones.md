@@ -128,21 +128,24 @@
 ### What was built
 - **Map tab**: replaced static Match tab with MapKit-powered map centered on player GPS
 - **10 courts**: generated procedurally around player location at 200m-2.5km offsets, from beginner (Sunrise Rec Center) to master (Legends Court)
+- **POI-based court placement**: MKLocalSearch finds real parks, recreation centers, and pickleball courts; CLGeocoder validates random fallback locations (no water, bridges, highways)
 - **17 NPCs**: expanded from 6 to 17 across all 5 difficulty tiers with unique personalities and dialogue
 - **Court discovery**: undiscovered courts show as "?" markers, walk within 200m to reveal, dev mode reveals all
 - **Court detail sheet**: court info, difficulty badges, NPC list with SUPR scores and Challenge buttons, rated/unrated toggle
 - **LocationManager**: `@MainActor` CLLocationManager wrapper with delegate pattern
 - **Developer mode**: wrench icon in Profile toolbar opens sheet to override stats (sliders 1-99), SUPR rating, reputation, level, coins, energy, and GPS location; snapshot/reset to true values
+- **Dev mode D-pad**: arrow buttons on map for ~50m walking simulation in N/S/E/W directions
+- **Sticky mode**: toggle in D-pad center — when enabled, panning the map moves the player location to the camera center
 - **Bottom status bar**: discovery progress (4/10 courts), SUPR score, energy, paddle warning
 - **Match flow integration**: tap court → detail sheet → Challenge NPC → existing simulation → results → back to map
 
 ### New files
 - `Models/World/Court.swift` — Court model (GPS, difficulty tiers, MapItem conformance)
 - `Services/Protocols/CourtService.swift` — Court generation + NPC assignment protocol
-- `Services/Mock/MockCourtService.swift` — 10 court templates, round-robin NPC distribution
+- `Services/Mock/MockCourtService.swift` — POI-based court generation with safety validation, NPC distribution
 - `Services/LocationManager.swift` — CLLocationManager with delegate callbacks
-- `ViewModels/MapViewModel.swift` — Location, courts, selection, discovery
-- `Views/Map/MapContentView.swift` — MapKit with annotations + bottom bar
+- `ViewModels/MapViewModel.swift` — Location, courts, selection, discovery, dev movement + sticky mode
+- `Views/Map/MapContentView.swift` — MapKit with annotations, D-pad overlay, sticky mode, bottom bar
 - `Views/Map/CourtAnnotationView.swift` — Colored difficulty markers
 - `Views/Map/CourtDetailSheet.swift` — Court info + NPC challenge cards
 - `Views/Player/DevModeView.swift` — Stat/rating/location override panel
@@ -150,6 +153,10 @@
 
 ### Modified files
 - NPC.swift (Comparable), Player.swift (discoveredCourtIDs), MockNPCService (17 NPCs), DependencyContainer (CourtService, LocationManager), AppState (dev mode, location override), ContentView (tab rename), MatchHubView (map as idle state), project.yml (location permission)
+
+### Post-milestone patches
+- Smart court placement: MKLocalSearch POI queries + CLGeocoder safety validation
+- Dev mode movement: D-pad (N/S/E/W ~50m steps) + sticky mode (pan to move player)
 
 ---
 

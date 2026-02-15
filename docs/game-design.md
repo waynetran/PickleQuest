@@ -226,20 +226,27 @@ All match outcomes persisted to player's matchHistory array. Each entry records 
 The Match tab is replaced by a MapKit-powered Map tab. Players see their real GPS location on a map dotted with pickleball courts. NPCs hang out at courts based on difficulty tier. Tap a court to see opponents and challenge them.
 
 ### Courts (10)
-Courts are generated procedurally around the player's initial GPS location at fixed offsets (200m to 2km). Each court has a name, description, difficulty tier(s), and physical court count.
+Courts are placed using real-world POI data via MKLocalSearch within 3km of the player. Difficulty tiers are assigned by distance (closest = beginner, farthest = master).
 
-| Court | Distance | Difficulty |
-|-------|----------|------------|
-| Sunrise Recreation Center | ~250m | Beginner |
-| Lakeside Park Courts | ~500m | Beginner |
-| Community Center | ~540m | Beginner + Intermediate |
-| Downtown Athletic Club | ~750m | Intermediate |
-| Riverside Sports Complex | ~1km | Intermediate + Advanced |
-| Highland Park Courts | ~950m | Advanced |
-| Metro Championship Arena | ~1.4km | Advanced + Expert |
-| Grand Slam Sports Center | ~1.7km | Expert |
-| The Proving Grounds | ~2.2km | Expert + Master |
-| Legends Court | ~2.5km | Master |
+#### Placement Priority
+1. **POI search**: Queries Apple Maps for "pickleball court", "recreation center", "park"
+2. **Safety validation**: Random fallback locations validated via CLGeocoder reverse geocoding
+3. **Safety rules**: No courts in water, on bridges, highways, freeways, overpasses, tunnels, or ramps
+4. **Acceptable locations**: Parks, green spaces, building addresses (especially rec centers, schools, pickleball venues)
+5. **Last resort**: Generic named courts if geocoding is unavailable
+
+#### Difficulty by Distance
+| Order | Difficulty |
+|-------|------------|
+| 1-2 (closest) | Beginner |
+| 3 | Beginner + Intermediate |
+| 4 | Intermediate |
+| 5 | Intermediate + Advanced |
+| 6 | Advanced |
+| 7 | Advanced + Expert |
+| 8 | Expert |
+| 9 | Expert + Master |
+| 10 (farthest) | Master |
 
 ### NPC Roster (17)
 Expanded from 6 to 17 NPCs across all 5 difficulty tiers, each with unique personality, dialogue, and stat distribution.
@@ -277,3 +284,5 @@ NPCs are distributed to courts via round-robin within their difficulty tier (2 p
 - Location override places player at custom coordinates
 - All courts auto-discovered in dev mode
 - Dev mode stats/rating overrides work with map-based matches
+- **D-pad movement**: Arrow buttons on map move player ~50m per tap (N/S/E/W)
+- **Sticky mode**: Toggle in D-pad center — panning the map moves the player location to the camera center

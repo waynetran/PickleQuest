@@ -15,7 +15,11 @@ final class MapViewModel {
     var courtsLoaded = false
     var pendingChallenge: NPC?
 
+    // Dev mode movement
+    var isStickyMode = false
+
     static let discoveryRadius: CLLocationDistance = 200
+    private static let moveStepMeters: Double = 50
 
     init(courtService: CourtService, locationManager: LocationManager) {
         self.courtService = courtService
@@ -80,5 +84,41 @@ final class MapViewModel {
             }
         }
         return newlyDiscovered
+    }
+
+    // MARK: - Dev Mode Movement
+
+    enum MoveDirection {
+        case north, south, east, west
+    }
+
+    /// Move the player ~50m in the given direction (dev mode only).
+    func movePlayer(direction: MoveDirection, appState: AppState) {
+        guard appState.isDevMode else { return }
+
+        let current = appState.locationOverride
+            ?? locationManager.currentLocation?.coordinate
+        guard let coord = current else { return }
+
+        let latStep = Self.moveStepMeters / 111_000.0
+        let lngStep = Self.moveStepMeters / (111_000.0 * cos(coord.latitude * .pi / 180))
+
+        var newLat = coord.latitude
+        var newLng = coord.longitude
+
+        switch direction {
+        case .north: newLat += latStep
+        case .south: newLat -= latStep
+        case .east: newLng += lngStep
+        case .west: newLng -= lngStep
+        }
+
+        appState.locationOverride = CLLocationCoordinate2D(latitude: newLat, longitude: newLng)
+    }
+
+    /// In sticky mode, update the player location to the map camera center.
+    func updateStickyLocation(center: CLLocationCoordinate2D, appState: AppState) {
+        guard appState.isDevMode, isStickyMode else { return }
+        appState.locationOverride = center
     }
 }

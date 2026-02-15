@@ -65,12 +65,12 @@ All services are protocol-based. Current implementations are in-memory mocks.
 - **NPCService**: NPC catalog (17 NPCs across 5 difficulty tiers)
 - **InventoryService**: Equipment inventory management (add/remove/batch add/remove, equipped item resolution, condition updates)
 - **StoreService**: Procedurally-generated shop items, buy/refresh
-- **CourtService**: Court generation around player GPS, NPC-to-court assignment by difficulty tier
+- **CourtService**: POI-based court generation (MKLocalSearch for parks/rec centers/pickleball + CLGeocoder safety validation for random fallback), NPC-to-court assignment by difficulty tier
 - **LocationManager**: Concrete `@MainActor` class wrapping `CLLocationManager` for real GPS (not protocol-based since it wraps system API)
 
 ### ViewModels
 - **MatchViewModel**: Async match flow with loot drops, level-up tracking, rated/unrated toggle, DUPR change, rep change, broken equipment, energy drain display
-- **MapViewModel**: Location management, court loading/generation, court selection, discovery checks, dev mode override support
+- **MapViewModel**: Location management, court loading/generation, court selection, discovery checks, dev mode override support, D-pad movement + sticky mode
 - **InventoryViewModel**: Load/filter/equip/unequip/sell with stat preview
 - **StoreViewModel**: Store loading, purchasing, refreshing
 - **PlayerProfileViewModel**: Stat allocation, effective stats with equipment
