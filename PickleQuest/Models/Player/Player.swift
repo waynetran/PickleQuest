@@ -35,13 +35,21 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
             .reduce(0, +)
     }
 
+    var hasPaddleEquipped: Bool {
+        equippedItems[.paddle] != nil
+    }
+
     static func newPlayer(name: String) -> Player {
         Player(
             id: UUID(),
             name: name,
             stats: .starter,
             progression: .starter,
-            equippedItems: [:],
+            equippedItems: [
+                .paddle: UUID(uuidString: "10000001-0000-0000-0000-000000000001")!,
+                .shoes: UUID(uuidString: "10000002-0000-0000-0000-000000000002")!,
+                .shirt: UUID(uuidString: "10000003-0000-0000-0000-000000000003")!
+            ],
             wallet: Wallet(coins: GameConstants.Economy.startingCoins),
             duprProfile: .starter
         )

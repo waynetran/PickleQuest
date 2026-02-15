@@ -4,8 +4,8 @@ enum EquipmentSlot: String, Codable, CaseIterable, Sendable {
     case paddle
     case shirt
     case shoes
-    case shorts
-    case eyewear
+    case bottoms
+    case headwear
     case wristband
 
     var displayName: String {
@@ -17,8 +17,8 @@ enum EquipmentSlot: String, Codable, CaseIterable, Sendable {
         case .paddle: return "🏓"
         case .shirt: return "👕"
         case .shoes: return "👟"
-        case .shorts: return "🩳"
-        case .eyewear: return "🕶️"
+        case .bottoms: return "🩳"
+        case .headwear: return "🧢"
         case .wristband: return "⌚"
         }
     }

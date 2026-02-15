@@ -6,6 +6,9 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
     let slot: EquipmentSlot
     let rarity: EquipmentRarity
     let statBonuses: [StatBonus]
+    let flavorText: String
+    let setID: String?
+    let setName: String?
     let ability: EquipmentAbility?
     let sellPrice: Int
     var condition: Double
@@ -30,6 +33,9 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
         slot: EquipmentSlot,
         rarity: EquipmentRarity,
         statBonuses: [StatBonus],
+        flavorText: String = "",
+        setID: String? = nil,
+        setName: String? = nil,
         ability: EquipmentAbility?,
         sellPrice: Int,
         condition: Double = 1.0
@@ -39,6 +45,9 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
         self.slot = slot
         self.rarity = rarity
         self.statBonuses = statBonuses
+        self.flavorText = flavorText
+        self.setID = setID
+        self.setName = setName
         self.ability = ability
         self.sellPrice = sellPrice
         self.condition = condition

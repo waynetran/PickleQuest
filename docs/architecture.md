@@ -25,7 +25,8 @@ Pure value types (structs/enums) that are `Codable`, `Sendable`, and `Equatable`
 - **PlayerStats**: 10-stat system with DUPR mapping
 - **DUPRProfile**: rating, match count, unique opponents, last match date, computed reliability/K-factor
 - **RepProfile**: reputation score, lifetime rep earned, computed title and NPC sell price multiplier
-- **Equipment**: 6 slots, 5 rarities, stat bonuses, triggered abilities (epic+), condition (durability for shoes/paddle)
+- **Equipment**: 6 slots, 5 rarities, stat bonuses, triggered abilities (epic+), condition (durability for shoes/paddle), flavor text, optional set membership
+- **EquipmentSet**: Set templates with tiered cumulative bonuses (5 sets: Court King, Speed Demon, Iron Wall, Mind Games, Endurance Pro)
 - **MatchHistoryEntry**: persisted match outcome with opponent, score, SUPR/rep changes, broken equipment
 - **Match types**: MatchConfig, MatchPoint, MatchEvent, MatchResult
 - **NPC**: difficulty tiers, personality archetypes, dialogue
@@ -38,7 +39,7 @@ The match simulation engine runs as an `actor` and emits events via `AsyncStream
 
 **Pipeline**: StatCalculator → FatigueModel → MomentumTracker → RallySimulator → PointResolver → MatchEngine
 
-1. **StatCalculator**: Base stats + equipment bonuses (with diminishing returns) + fatigue penalties + momentum modifiers
+1. **StatCalculator**: Base stats + equipment bonuses + set bonuses (with diminishing returns) + fatigue penalties + momentum modifiers
 2. **FatigueModel**: Energy drain per rally shot, thresholds at 70/50/30% with increasing stat penalties
 3. **MomentumTracker**: Consecutive point streaks give +2% to +7% bonus; opponent streaks give -1% to -5% penalty
 4. **RallySimulator**: Serve phase (ace check) → shot-by-shot rally resolution (winner/error/forced error checks per shot)
@@ -52,8 +53,8 @@ The match simulation engine runs as an `actor` and emits events via `AsyncStream
 #### Loot Generation (`Engine/LootGeneration/`)
 Procedural equipment generation system used for match loot drops and store inventory.
 
-1. **LootGenerator**: Weighted rarity rolls with difficulty boosts, random stat bonuses with rarity-appropriate caps, ability generation for epic+ items, store inventory generation
-2. **EquipmentNameGenerator**: Procedural names from prefix + base name pools per slot and rarity
+1. **LootGenerator**: Weighted rarity rolls with difficulty boosts, random stat bonuses with rarity-appropriate caps, ability generation for epic+ items, store inventory generation, set piece rolling (rare+ items), flavor text generation
+2. **EquipmentNameGenerator**: Procedural names from prefix + base name pools per slot and rarity, flavor text generation from humor pools by slot/stat/rarity
 
 ### Services (`Services/`)
 All services are protocol-based. Current implementations are in-memory mocks.

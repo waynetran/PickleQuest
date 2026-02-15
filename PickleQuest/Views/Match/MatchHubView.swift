@@ -63,6 +63,17 @@ struct MatchHubView: View {
                 }
                 .padding(.horizontal, 40)
 
+                if !appState.player.hasPaddleEquipped {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.yellow)
+                        Text("Paddle Required — Equip a paddle to play")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 40)
+                }
+
                 Button {
                     Task { await vm.loadNPCs() }
                 } label: {
@@ -70,10 +81,11 @@ struct MatchHubView: View {
                         .font(.title3.bold())
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(.green)
+                        .background(appState.player.hasPaddleEquipped ? .green : .gray)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
+                .disabled(!appState.player.hasPaddleEquipped)
                 .padding(.horizontal, 40)
 
                 Spacer()

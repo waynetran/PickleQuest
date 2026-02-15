@@ -53,6 +53,7 @@ actor MockInventoryService: InventoryService {
                 slot: .paddle,
                 rarity: .common,
                 statBonuses: [StatBonus(stat: .power, value: 2), StatBonus(stat: .accuracy, value: 1)],
+                flavorText: "Every legend starts somewhere. Usually at the free paddle bin.",
                 ability: nil,
                 sellPrice: 25
             ),
@@ -62,6 +63,7 @@ actor MockInventoryService: InventoryService {
                 slot: .shoes,
                 rarity: .common,
                 statBonuses: [StatBonus(stat: .speed, value: 2), StatBonus(stat: .positioning, value: 1)],
+                flavorText: "They squeak. That's how you know they're working.",
                 ability: nil,
                 sellPrice: 20
             ),
@@ -71,6 +73,7 @@ actor MockInventoryService: InventoryService {
                 slot: .shirt,
                 rarity: .common,
                 statBonuses: [StatBonus(stat: .stamina, value: 3)],
+                flavorText: "100% cotton, 0% aerodynamics. But hey, it's comfortable.",
                 ability: nil,
                 sellPrice: 15
             )

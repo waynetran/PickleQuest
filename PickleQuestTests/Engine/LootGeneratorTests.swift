@@ -151,4 +151,15 @@ struct LootGeneratorTests {
             #expect(item.name.contains(" ")) // prefix + base name
         }
     }
+
+    // MARK: - Flavor Text
+
+    @Test("Generated equipment has non-empty flavor text")
+    func flavorTextNonEmpty() {
+        for seed in UInt64(0)..<UInt64(50) {
+            let generator = LootGenerator(rng: SeededRandomSource(seed: seed))
+            let item = generator.generateEquipment()
+            #expect(!item.flavorText.isEmpty, "Seed \(seed) produced empty flavor text")
+        }
+    }
 }

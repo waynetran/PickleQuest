@@ -84,4 +84,48 @@ struct StatCalculatorTests {
         let penalized = calculator.applyMomentum(stats: stats, modifier: -0.05)
         #expect(penalized.power < stats.power)
     }
+
+    @Test("Set bonuses apply with 2+ pieces of same set")
+    func setBonusesApplyWithTwoPieces() {
+        let base = PlayerStats(
+            power: 30, accuracy: 30, spin: 30, speed: 30,
+            defense: 30, reflexes: 30, positioning: 30,
+            clutch: 30, stamina: 30, consistency: 30
+        )
+        let piece1 = Equipment(
+            id: .init(), name: "CK Paddle", slot: .paddle, rarity: .rare,
+            statBonuses: [StatBonus(stat: .power, value: 5)],
+            setID: "court_king", setName: "Court King",
+            ability: nil, sellPrice: 100
+        )
+        let piece2 = Equipment(
+            id: .init(), name: "CK Shirt", slot: .shirt, rarity: .rare,
+            statBonuses: [StatBonus(stat: .accuracy, value: 5)],
+            setID: "court_king", setName: "Court King",
+            ability: nil, sellPrice: 100
+        )
+
+        let effective = calculator.effectiveStats(base: base, equipment: [piece1, piece2])
+        // 2-piece Court King: +3 power → base 30 + item 5 + set 3 = 38
+        #expect(effective.power == 38)
+    }
+
+    @Test("No set bonus with only 1 piece")
+    func noSetBonusWithOnePiece() {
+        let base = PlayerStats(
+            power: 30, accuracy: 30, spin: 30, speed: 30,
+            defense: 30, reflexes: 30, positioning: 30,
+            clutch: 30, stamina: 30, consistency: 30
+        )
+        let piece1 = Equipment(
+            id: .init(), name: "CK Paddle", slot: .paddle, rarity: .rare,
+            statBonuses: [StatBonus(stat: .power, value: 5)],
+            setID: "court_king", setName: "Court King",
+            ability: nil, sellPrice: 100
+        )
+
+        let effective = calculator.effectiveStats(base: base, equipment: [piece1])
+        // Only item bonus, no set bonus → 30 + 5 = 35
+        #expect(effective.power == 35)
+    }
 }

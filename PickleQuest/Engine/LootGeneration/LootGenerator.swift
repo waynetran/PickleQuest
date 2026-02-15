@@ -60,9 +60,16 @@ struct LootGenerator: Sendable {
     ) -> Equipment {
         let finalRarity = rarity ?? rollRarity(boost: difficultyBoost)
         let slot = EquipmentSlot.allCases[rng.nextInt(in: 0...EquipmentSlot.allCases.count - 1)]
-        let name = nameGenerator.generateName(slot: slot, rarity: finalRarity)
         let bonuses = generateBonuses(rarity: finalRarity)
         let ability = finalRarity.hasAbility ? generateAbility() : nil
+        let flavorText = nameGenerator.generateFlavorText(slot: slot, rarity: finalRarity, statBonuses: bonuses)
+
+        // Roll for set piece
+        let (setID, setName) = rollSetPiece(rarity: finalRarity, slot: slot)
+
+        let baseName = nameGenerator.generateName(slot: slot, rarity: finalRarity)
+        let name = setName.map { "\($0) \(baseName)" } ?? baseName
+
         let sellPrice = calculateSellPrice(rarity: finalRarity, bonuses: bonuses)
 
         return Equipment(
@@ -71,9 +78,31 @@ struct LootGenerator: Sendable {
             slot: slot,
             rarity: finalRarity,
             statBonuses: bonuses,
+            flavorText: flavorText,
+            setID: setID,
+            setName: setName,
             ability: ability,
             sellPrice: sellPrice
         )
+    }
+
+    private func rollSetPiece(rarity: EquipmentRarity, slot: EquipmentSlot) -> (String?, String?) {
+        let setChance: Double
+        switch rarity {
+        case .rare: setChance = GameConstants.Equipment.setChanceRare
+        case .epic: setChance = GameConstants.Equipment.setChanceEpic
+        case .legendary: setChance = GameConstants.Equipment.setChanceLegendary
+        default: return (nil, nil)
+        }
+
+        guard rng.nextDouble() < setChance else { return (nil, nil) }
+
+        // Pick a random set that includes this slot
+        let eligibleSets = EquipmentSet.allSets.filter { $0.pieces.contains(slot) }
+        guard !eligibleSets.isEmpty else { return (nil, nil) }
+
+        let chosen = eligibleSets[rng.nextInt(in: 0...eligibleSets.count - 1)]
+        return (chosen.id, chosen.name)
     }
 
     // MARK: - Rarity Rolling

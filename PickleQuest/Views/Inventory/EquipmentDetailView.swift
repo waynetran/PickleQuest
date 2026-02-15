@@ -24,6 +24,14 @@ struct EquipmentDetailView: View {
                             .foregroundStyle(equipment.rarity.color)
 
                         RarityBadge(rarity: equipment.rarity)
+
+                        if !equipment.flavorText.isEmpty {
+                            Text(equipment.flavorText)
+                                .font(.subheadline.italic())
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                        }
                     }
                     .padding(.top)
 
@@ -64,6 +72,47 @@ struct EquipmentDetailView: View {
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(.orange.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
+                    // Set Bonuses
+                    if let setID = equipment.setID, let equipSet = EquipmentSet.set(for: setID) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Set: \(equipSet.name)")
+                                    .font(.headline)
+                                    .foregroundStyle(.purple)
+                                Spacer()
+                                if let setName = equipment.setName {
+                                    Text(setName)
+                                        .font(.caption2.bold())
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .background(.purple.opacity(0.2))
+                                        .foregroundStyle(.purple)
+                                        .clipShape(Capsule())
+                                }
+                            }
+
+                            Text(equipSet.description)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            ForEach(equipSet.bonusTiers, id: \.piecesRequired) { tier in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("\(tier.piecesRequired)pc — \(tier.label)")
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(.primary.opacity(0.8))
+                                    ForEach(tier.bonuses, id: \.stat) { bonus in
+                                        Text("+\(bonus.value) \(bonus.stat.displayName)")
+                                            .font(.caption)
+                                            .foregroundStyle(.green.opacity(0.8))
+                                    }
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(.purple.opacity(0.05))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
 

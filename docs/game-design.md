@@ -40,7 +40,7 @@ Scale: 1-99, maps to DUPR 2.0-8.0
 ## Equipment System
 
 ### Slots (6)
-Paddle, Shirt, Shoes, Shorts, Eyewear, Wristband
+Paddle, Shirt, Shoes, Bottoms, Headwear, Wristband
 
 ### Rarities (5)
 | Rarity | Max Stat Bonus | Has Ability | Drop Rate |
@@ -56,6 +56,26 @@ Paddle, Shirt, Shoes, Shorts, Eyewear, Wristband
 - 0.7x scaling 60-80
 - 0.4x scaling 80+
 - Hard cap at 99
+
+### Flavor Text
+Every equipment item has a randomly generated humorous description drawn from pools organized by slot, dominant stat, and rarity.
+
+### Equipment Sets
+Rare+ items have a chance to be part of an equipment set (Rare 15%, Epic 30%, Legendary 50%). Equipping multiple pieces from the same set grants cumulative tiered stat bonuses.
+
+| Set | Slots | Focus |
+|-----|-------|-------|
+| Court King | All 6 | Power/Accuracy |
+| Speed Demon | Shoes/Bottoms/Wristband/Headwear | Speed/Reflexes |
+| Iron Wall | Paddle/Shirt/Shoes/Bottoms | Defense/Positioning |
+| Mind Games | Paddle/Headwear/Wristband/Shirt | Clutch/Consistency/Spin |
+| Endurance Pro | Shoes/Shirt/Bottoms/Wristband | Stamina/Consistency/Defense |
+
+### Paddle Gate
+Players must have a paddle equipped to start a Quick Match. The button is disabled with a warning message when no paddle is equipped.
+
+### Starter Equipment
+New players start with a paddle, shoes, and shirt auto-equipped (not just in inventory).
 
 ### Abilities (Epic+ only)
 Triggered on: serve, match point, 3-point streak, low energy, clutch situation

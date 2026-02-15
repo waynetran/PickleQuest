@@ -24,6 +24,16 @@ struct EquipmentCardView: View {
 
             RarityBadge(rarity: equipment.rarity)
 
+            if let setName = equipment.setName {
+                Text(setName)
+                    .font(.caption2.bold())
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.purple.opacity(0.2))
+                    .foregroundStyle(.purple)
+                    .clipShape(Capsule())
+            }
+
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(equipment.statBonuses, id: \.stat) { bonus in
                     Text("+\(bonus.value) \(bonus.stat.displayName)")

@@ -120,6 +120,9 @@ enum GameConstants {
     enum Equipment {
         static let maxSlots: Int = 6
         static let maxBonusPerStat: Int = 25 // legendary max single-stat bonus
+        static let setChanceRare = 0.15
+        static let setChanceEpic = 0.30
+        static let setChanceLegendary = 0.50
     }
 
     // MARK: - Loot
