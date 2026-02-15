@@ -37,7 +37,7 @@ struct NPC: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
-enum NPCDifficulty: String, Codable, CaseIterable, Sendable {
+enum NPCDifficulty: String, Codable, CaseIterable, Sendable, Comparable {
     case beginner
     case intermediate
     case advanced
@@ -66,6 +66,20 @@ enum NPCDifficulty: String, Codable, CaseIterable, Sendable {
         case .expert: return "orange"
         case .master: return "red"
         }
+    }
+
+    private var sortOrder: Int {
+        switch self {
+        case .beginner: return 0
+        case .intermediate: return 1
+        case .advanced: return 2
+        case .expert: return 3
+        case .master: return 4
+        }
+    }
+
+    static func < (lhs: NPCDifficulty, rhs: NPCDifficulty) -> Bool {
+        lhs.sortOrder < rhs.sortOrder
     }
 }
 

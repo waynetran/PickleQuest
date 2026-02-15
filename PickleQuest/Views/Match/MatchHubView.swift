@@ -4,128 +4,83 @@ struct MatchHubView: View {
     @Environment(AppState.self) private var appState
     @EnvironmentObject private var container: DependencyContainer
 
-    @State private var viewModel: MatchViewModel?
+    @State private var matchVM: MatchViewModel?
+    @State private var mapVM: MapViewModel?
 
     var body: some View {
         NavigationStack {
             Group {
-                if let vm = viewModel {
-                    matchContent(vm: vm)
+                if let matchVM, let mapVM {
+                    matchContent(matchVM: matchVM, mapVM: mapVM)
                 } else {
                     ProgressView()
                 }
             }
-            .navigationTitle("Match")
+            .navigationTitle(navigationTitle)
             .task {
-                if viewModel == nil {
-                    viewModel = MatchViewModel(
+                if matchVM == nil {
+                    matchVM = MatchViewModel(
                         matchService: container.matchService,
                         npcService: container.npcService
+                    )
+                }
+                if mapVM == nil {
+                    mapVM = MapViewModel(
+                        courtService: container.courtService,
+                        locationManager: container.locationManager
                     )
                 }
             }
         }
     }
 
+    private var navigationTitle: String {
+        switch matchVM?.matchState {
+        case .simulating: return "Match"
+        case .finished: return "Results"
+        default: return "Map"
+        }
+    }
+
     @ViewBuilder
-    private func matchContent(vm: MatchViewModel) -> some View {
-        switch vm.matchState {
-        case .idle:
-            VStack(spacing: 24) {
-                Spacer()
-                Image(systemName: "figure.pickleball")
-                    .font(.system(size: 80))
-                    .foregroundStyle(.green)
-
-                Text("PickleQuest")
-                    .font(.largeTitle.bold())
-
-                Text(appState.player.duprProfile.hasRating
-                    ? "SUPR \(String(format: "%.2f", appState.player.duprRating))"
-                    : "SUPR: Not Rated")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-
-                // Energy bar
-                VStack(spacing: 4) {
-                    HStack {
-                        Image(systemName: "bolt.fill")
-                            .foregroundStyle(energyColor)
-                        Text("Energy")
-                            .font(.subheadline)
-                        Spacer()
-                        Text("\(Int(appState.player.currentEnergy))%")
-                            .font(.subheadline.bold().monospacedDigit())
-                            .foregroundStyle(energyColor)
-                    }
-                    ProgressView(value: appState.player.currentEnergy, total: GameConstants.PersistentEnergy.maxEnergy)
-                        .tint(energyColor)
-                }
-                .padding(.horizontal, 40)
-
-                if !appState.player.hasPaddleEquipped {
-                    HStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.yellow)
-                        Text("Paddle Required — Equip a paddle to play")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.horizontal, 40)
-                }
-
-                Button {
-                    Task { await vm.loadNPCs() }
-                } label: {
-                    Label("Quick Match", systemImage: "bolt.fill")
-                        .font(.title3.bold())
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(appState.player.hasPaddleEquipped ? .green : .gray)
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                }
-                .disabled(!appState.player.hasPaddleEquipped)
-                .padding(.horizontal, 40)
-
-                Spacer()
-            }
-
-        case .selectingOpponent:
-            NPCPickerView(viewModel: vm)
+    private func matchContent(matchVM: MatchViewModel, mapVM: MapViewModel) -> some View {
+        switch matchVM.matchState {
+        case .idle, .selectingOpponent:
+            MapContentView(mapVM: mapVM, matchVM: matchVM)
+                .navigationBarTitleDisplayMode(.inline)
 
         case .simulating:
-            MatchSimulationView(viewModel: vm)
+            MatchSimulationView(viewModel: matchVM)
 
         case .finished:
-            if let result = vm.matchResult {
+            if let result = matchVM.matchResult {
                 MatchResultView(
                     result: result,
-                    opponent: vm.selectedNPC,
-                    levelUpRewards: vm.levelUpRewards,
-                    duprChange: vm.duprChange,
-                    potentialDuprChange: vm.potentialDuprChange,
-                    repChange: vm.repChange,
-                    brokenEquipment: vm.brokenEquipment,
-                    energyDrain: vm.energyDrain
+                    opponent: matchVM.selectedNPC,
+                    levelUpRewards: matchVM.levelUpRewards,
+                    duprChange: matchVM.duprChange,
+                    potentialDuprChange: matchVM.potentialDuprChange,
+                    repChange: matchVM.repChange,
+                    brokenEquipment: matchVM.brokenEquipment,
+                    energyDrain: matchVM.energyDrain
                 ) {
                     Task {
-                        await processResult(vm: vm)
-                        vm.reset()
+                        await processResult(matchVM: matchVM)
+                        matchVM.reset()
                     }
                 }
             }
         }
     }
 
-    private func processResult(vm: MatchViewModel) async {
-        guard let result = vm.matchResult, let npc = vm.selectedNPC else { return }
+    private func processResult(matchVM: MatchViewModel) async {
+        guard let result = matchVM.matchResult, let npc = matchVM.selectedNPC else { return }
 
         let suprBefore = appState.player.duprRating
 
         // Process match rewards (XP, coins, level-ups, DUPR, rep, energy)
         var player = appState.player
-        let rewards = vm.processResult(player: &player)
+        let rewards = matchVM.processResult(player: &player)
 
         // Equipment durability on loss
         var brokenItems: [Equipment] = []
@@ -154,13 +109,13 @@ struct MatchHubView: View {
                     player.equippedItems.removeValue(forKey: item.slot)
                 }
                 await container.inventoryService.removeEquipmentBatch(brokenItems.map(\.id))
-                vm.brokenEquipment = brokenItems
+                matchVM.brokenEquipment = brokenItems
             }
         }
 
         // Add loot to inventory
-        if !vm.lootDrops.isEmpty {
-            await container.inventoryService.addEquipmentBatch(vm.lootDrops)
+        if !matchVM.lootDrops.isEmpty {
+            await container.inventoryService.addEquipmentBatch(matchVM.lootDrops)
         }
 
         // Record match history
@@ -184,12 +139,5 @@ struct MatchHubView: View {
         player.matchHistory.append(historyEntry)
 
         appState.player = player
-    }
-
-    private var energyColor: Color {
-        let energy = appState.player.currentEnergy
-        if energy >= 80 { return .green }
-        if energy >= 50 { return .yellow }
-        return .red
     }
 }

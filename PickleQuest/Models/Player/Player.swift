@@ -12,6 +12,7 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
     var repProfile: RepProfile = .starter
     var energy: Double = GameConstants.PersistentEnergy.maxEnergy
     var lastMatchDate: Date? = nil
+    var discoveredCourtIDs: Set<UUID> = []
 
     var duprRating: Double {
         duprProfile.rating

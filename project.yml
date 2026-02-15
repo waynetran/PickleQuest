@@ -25,6 +25,7 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait"
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "PickleQuest uses your location to show nearby pickleball courts and opponents on the map."
         PRODUCT_BUNDLE_IDENTIFIER: com.waynetran.PickleQuest
         PRODUCT_NAME: PickleQuest
         MARKETING_VERSION: "0.1.0"

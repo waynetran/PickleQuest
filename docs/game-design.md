@@ -11,7 +11,7 @@ A Pokemon Go-like pickleball RPG where players physically explore their city to 
 | 2 | Inventory, Equipment, Store, Leveling | **Complete** |
 | 2.5 | SUPR Rating System | **Complete** |
 | 2.6 | Match History, Rep, Durability, Energy | **Complete** |
-| 3 | Map + Location + NPC World | Planned |
+| 3 | Map + Location + NPC World | **Complete** |
 | 4 | SpriteKit Match Visualization | Planned |
 | 5 | Doubles, Team Synergy, Tournaments | Planned |
 | 6 | Training, Coaching, Energy + Economy | Planned |
@@ -219,3 +219,61 @@ Between-match energy system that recovers over real time.
 ## Match History (Milestone 2.6)
 
 All match outcomes persisted to player's matchHistory array. Each entry records opponent details, score, SUPR/rep changes, and equipment breaks. Displayed in the Performance tab.
+
+## Map + Location System (Milestone 3)
+
+### Overview
+The Match tab is replaced by a MapKit-powered Map tab. Players see their real GPS location on a map dotted with pickleball courts. NPCs hang out at courts based on difficulty tier. Tap a court to see opponents and challenge them.
+
+### Courts (10)
+Courts are generated procedurally around the player's initial GPS location at fixed offsets (200m to 2km). Each court has a name, description, difficulty tier(s), and physical court count.
+
+| Court | Distance | Difficulty |
+|-------|----------|------------|
+| Sunrise Recreation Center | ~250m | Beginner |
+| Lakeside Park Courts | ~500m | Beginner |
+| Community Center | ~540m | Beginner + Intermediate |
+| Downtown Athletic Club | ~750m | Intermediate |
+| Riverside Sports Complex | ~1km | Intermediate + Advanced |
+| Highland Park Courts | ~950m | Advanced |
+| Metro Championship Arena | ~1.4km | Advanced + Expert |
+| Grand Slam Sports Center | ~1.7km | Expert |
+| The Proving Grounds | ~2.2km | Expert + Master |
+| Legends Court | ~2.5km | Master |
+
+### NPC Roster (17)
+Expanded from 6 to 17 NPCs across all 5 difficulty tiers, each with unique personality, dialogue, and stat distribution.
+
+| Tier | NPCs |
+|------|------|
+| Beginner | Gentle Gary, Speedy Sam, Nervous Nora, Big Serve Bob |
+| Intermediate | Consistent Clara, Power Pete, Tricky Tanya, Marathon Mike |
+| Advanced | Strategic Sarah, Ace Angela, Zen Zack, Quick Quinn |
+| Expert | Lightning Liu, Iron Ivan, Smash Suki |
+| Master | The Professor, Blaze |
+
+NPCs are distributed to courts via round-robin within their difficulty tier (2 per tier per court).
+
+### Court Discovery
+- Courts start undiscovered (shown as "?" markers on the map)
+- Walking within 200m auto-discovers a court
+- Dev mode auto-discovers all courts
+- Discovery progress shown in map bottom bar (e.g. "4/10 courts")
+
+### Match Flow (via Map)
+1. Player sees courts on map
+2. Tap a court → Court Detail Sheet slides up
+3. Sheet shows court info, NPC list, rated/unrated toggle
+4. Tap "Challenge" on an NPC → match simulation begins
+5. Match result → back to map
+
+### Location System
+- Real GPS via CoreLocation (CLLocationManager)
+- Dev mode location override (set lat/lng in Profile → Developer Mode)
+- If location denied: map works but without user position dot
+- Courts generated once around first known location
+
+### Developer Mode Integration
+- Location override places player at custom coordinates
+- All courts auto-discovered in dev mode
+- Dev mode stats/rating overrides work with map-based matches

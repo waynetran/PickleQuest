@@ -7,7 +7,7 @@ struct ContentView: View {
     var body: some View {
         @Bindable var state = appState
         TabView(selection: $state.selectedTab) {
-            Tab("Match", systemImage: AppTab.match.iconName, value: .match) {
+            Tab("Map", systemImage: AppTab.match.iconName, value: .match) {
                 MatchHubView()
             }
 

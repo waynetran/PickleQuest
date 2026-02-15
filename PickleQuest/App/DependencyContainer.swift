@@ -8,20 +8,27 @@ final class DependencyContainer: ObservableObject {
     let npcService: NPCService
     let inventoryService: InventoryService
     let storeService: StoreService
+    let courtService: CourtService
+    let locationManager: LocationManager
 
     init(
         playerService: PlayerService? = nil,
         matchService: MatchService? = nil,
         npcService: NPCService? = nil,
         inventoryService: InventoryService? = nil,
-        storeService: StoreService? = nil
+        storeService: StoreService? = nil,
+        courtService: CourtService? = nil,
+        locationManager: LocationManager? = nil
     ) {
         let inventory = inventoryService ?? MockInventoryService()
+        let npcs = npcService ?? MockNPCService()
         self.playerService = playerService ?? MockPlayerService()
         self.inventoryService = inventory
         self.matchService = matchService ?? MockMatchService(inventoryService: inventory)
-        self.npcService = npcService ?? MockNPCService()
+        self.npcService = npcs
         self.storeService = storeService ?? MockStoreService()
+        self.courtService = courtService ?? MockCourtService(npcService: npcs)
+        self.locationManager = locationManager ?? LocationManager()
     }
 
     static let shared = DependencyContainer()
