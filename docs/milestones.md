@@ -15,6 +15,7 @@
 | 4.2 | Court Realism + Player Positioning | **Complete** |
 | 4.3 | Match Actions, Consumables, Character2 | **Complete** |
 | 4.4 | Court Ladder Progression System | **Complete** |
+| 4.5 | Fog of War Map Exploration | **Complete** |
 | 5 | Doubles, Team Synergy, Tournaments | Planned |
 | 6 | Training, Coaching, Energy + Economy | Planned |
 | 7 | Persistence, Polish, Multiplayer Prep | Planned |
@@ -417,6 +418,30 @@ MatchHubView processResult — calls mapVM.recordMatchResult on win, handles alp
 - `CourtDetailSheet.swift` — full ladder UI overhaul (ladder rungs, alpha card, perk badges, King of Court crown)
 - `MapContentView.swift` — passes ladder/perk/alpha to CourtDetailSheet
 - `MatchHubView.swift` — post-match ladder advancement, alpha loot handling
+
+---
+
+## Milestone 4.5: Fog of War Map Exploration
+
+**Commit**: `c4b9770`
+
+### What was built
+- **Grid-based fog of war**: map covered in semi-transparent dark overlay that hides unexplored areas; walking reveals ~20m radius around the player
+- **FogCell grid system**: map divided into 20m x 20m cells; cells tracked as `Set<FogCell>` on AppState with fast coordinate-to-cell conversion using approximate meter-to-degree math
+- **Canvas overlay rendering**: `FogOfWarOverlay` uses SwiftUI Canvas with even-odd fill path — draws full-screen fog rectangle, then punches ellipse holes for each revealed cell; `MapReader`/`MapProxy` handles coordinate-to-screen conversion
+- **Reveal triggers**: fog reveals on all player movement — real GPS updates, dev mode D-pad, and sticky mode panning all call `revealFog(around:)` through the existing discovery check flow
+- **Performance optimizations**: only visible cells rendered (filtered by current map region bounds), sub-pixel cells skipped at extreme zoom-out, circle radius slightly inflated (1.15x) to overlap adjacent cells for smooth edges
+- **Dev mode defaults to on**: `isDevMode` now starts `true` with snapshot saved in init
+- **Fog of war toggle**: new "Fog of War" section in DevModeView with on/off toggle (default on), revealed cell count display, and "Clear Fog" quick-disable button
+
+### New files
+- `Models/FogOfWar.swift` — `FogCell` struct (Hashable, Codable, Sendable) + `FogOfWar` utility enum (cell conversion, reveal radius calculation, fast approximate distance)
+- `Views/Map/FogOfWarOverlay.swift` — Canvas-based fog renderer with MapProxy coordinate conversion and even-odd fill
+
+### Modified files
+- `AppState.swift` — `fogOfWarEnabled`, `revealedFogCells`, `revealFog(around:)`, `isDevMode` default changed to `true`
+- `MapContentView.swift` — `MapReader` wrapper, `visibleRegion` tracking via `.onMapCameraChange(.continuous)`, `FogOfWarOverlay` in ZStack, `revealFog()` call in discovery check
+- `DevModeView.swift` — fog of war section with toggle, cell count, clear button
 
 ---
 
