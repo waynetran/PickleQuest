@@ -35,8 +35,8 @@ struct FogOfWarOverlay: View {
 
             // Use drawLayer so destinationOut only erases within this layer
             context.drawLayer { layerContext in
-                // Fog covers full canvas plus overflow above top edge
-                let fogRect = CGRect(x: 0, y: -200, width: size.width, height: size.height + 200)
+                // Fog covers full canvas plus overflow for safe area edges
+                let fogRect = CGRect(x: -50, y: -200, width: size.width + 100, height: size.height + 400)
                 layerContext.fill(
                     Path(fogRect),
                     with: .color(Color(white: 0.08, opacity: 0.7))
@@ -61,6 +61,7 @@ struct FogOfWarOverlay: View {
                 }
             }
         }
+        .ignoresSafeArea()
         .allowsHitTesting(false)
     }
 }

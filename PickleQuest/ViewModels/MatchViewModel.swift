@@ -65,7 +65,7 @@ final class MatchViewModel {
     var courtName: String = ""
 
     var canUseTimeout: Bool {
-        matchState == .simulating && !isSkipping && timeoutsAvailable > 0 && opponentStreak >= GameConstants.MatchActions.timeoutMinOpponentStreak
+        matchState == .simulating && !isSkipping && timeoutsAvailable > 0
     }
 
     var canUseConsumable: Bool {
@@ -197,7 +197,7 @@ final class MatchViewModel {
         brokenEquipment = []
         energyDrain = 0
         isSkipping = false
-        timeoutsAvailable = 1
+        timeoutsAvailable = matchConfig.maxTimeouts
         consumablesUsedCount = 0
         hookCallsAvailable = 1
         opponentStreak = 0
@@ -217,7 +217,7 @@ final class MatchViewModel {
                 await refreshActionState()
             }
             if case .gameStart = event {
-                timeoutsAvailable = 1
+                timeoutsAvailable = matchConfig.maxTimeouts
                 hookCallsAvailable = 1
             }
             if case .matchEnd(let result) = event {

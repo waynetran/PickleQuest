@@ -27,6 +27,7 @@ final class MapViewModel {
 
     // Coach state
     var coachAtSelectedCourt: Coach?
+    var courtIDsWithCoaches: Set<UUID> = []
 
     // Daily challenges
     var dailyChallengeState: DailyChallengeState?
@@ -76,6 +77,17 @@ final class MapViewModel {
         // Assign coaches to ~50% of courts
         let courtDifficulties = Dictionary(uniqueKeysWithValues: courts.map { ($0.id, $0.primaryDifficulty) })
         await coachService.assignCoaches(to: courts.map(\.id), courtDifficulties: courtDifficulties)
+
+        // Build set of court IDs that have coaches (for map display)
+        var coachIDs = Set<UUID>()
+        let allCoaches = await coachService.getAllCoaches()
+        coachIDs.formUnion(allCoaches.keys)
+        for court in courts {
+            if await coachService.isAlphaCoachCourt(court.id) {
+                coachIDs.insert(court.id)
+            }
+        }
+        courtIDsWithCoaches = coachIDs
     }
 
     func selectCourt(_ court: Court) async {
@@ -94,12 +106,15 @@ final class MapViewModel {
 
         // Load coach at this court
         if await coachService.isAlphaCoachCourt(court.id) {
-            // Alpha NPC acts as the coach — derive coach from alpha
             if let alpha = alphaNPC {
-                let ladder = currentLadder
-                let defeated = ladder?.alphaDefeated ?? false
+                // Alpha available — use as coach
+                let defeated = currentLadder?.alphaDefeated ?? false
                 let coach = Coach.fromAlphaNPC(alpha, alphaDefeated: defeated)
                 await coachService.setAlphaCoach(coach, courtID: court.id)
+                coachAtSelectedCourt = coach
+            } else if let strongest = npcsAtSelectedCourt.max(by: { $0.duprRating < $1.duprRating }) {
+                // Alpha not unlocked yet — strongest NPC coaches
+                let coach = Coach.fromAlphaNPC(strongest, alphaDefeated: false)
                 coachAtSelectedCourt = coach
             }
         } else {

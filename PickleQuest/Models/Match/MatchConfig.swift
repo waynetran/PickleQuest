@@ -6,19 +6,26 @@ struct MatchConfig: Sendable {
     let gamesToWin: Int
     let winByTwo: Bool
     let isRated: Bool
+    let isTournament: Bool
 
     init(
         matchType: MatchType,
         pointsToWin: Int,
         gamesToWin: Int,
         winByTwo: Bool,
-        isRated: Bool = true
+        isRated: Bool = true,
+        isTournament: Bool = false
     ) {
         self.matchType = matchType
         self.pointsToWin = pointsToWin
         self.gamesToWin = gamesToWin
         self.winByTwo = winByTwo
         self.isRated = isRated
+        self.isTournament = isTournament
+    }
+
+    var maxTimeouts: Int {
+        isTournament ? 2 : 1
     }
 
     static let defaultSingles = MatchConfig(

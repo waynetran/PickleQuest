@@ -13,6 +13,8 @@ struct MapContentView: View {
     @State private var pendingDoublesOpp2: NPC?
     @State private var visibleRegion: MKCoordinateRegion?
     @State private var showTrainingView = false
+    @State private var playerAnimationState: CharacterAnimationState = .idleFront
+    @State private var walkResetTask: Task<Void, Never>?
 
     var body: some View {
         @Bindable var mapState = mapVM
@@ -35,7 +37,23 @@ struct MapContentView: View {
                 VStack {
                     Spacer()
                     HStack {
-                        DevMovementPad(mapVM: mapVM, appState: appState)
+                        DevMovementPad(mapVM: mapVM, appState: appState) { direction in
+                            // Set walk animation matching direction
+                            switch direction {
+                            case .north: playerAnimationState = .walkAway
+                            case .south: playerAnimationState = .walkToward
+                            case .east: playerAnimationState = .walkRight
+                            case .west: playerAnimationState = .walkLeft
+                            }
+                            // Reset to idle after a short delay
+                            walkResetTask?.cancel()
+                            walkResetTask = Task {
+                                try? await Task.sleep(for: .milliseconds(600))
+                                if !Task.isCancelled {
+                                    playerAnimationState = .idleFront
+                                }
+                            }
+                        }
                             .padding(.leading, 16)
                         Spacer()
                     }
@@ -183,7 +201,10 @@ struct MapContentView: View {
             // Player location (dev override or real)
             if let override = appState.locationOverride {
                 Annotation("You", coordinate: override) {
-                    MapPlayerAnnotation(appearance: appState.player.appearance)
+                    MapPlayerAnnotation(
+                        appearance: appState.player.appearance,
+                        animationState: playerAnimationState
+                    )
                 }
             } else {
                 UserAnnotation()
@@ -201,7 +222,8 @@ struct MapContentView: View {
                     ) {
                         CourtAnnotationView(
                             court: court,
-                            isDiscovered: discovered
+                            isDiscovered: discovered,
+                            hasCoach: mapVM.courtIDsWithCoaches.contains(court.id)
                         ) {
                             if discovered {
                                 Task { await mapVM.selectCourt(court) }
@@ -371,6 +393,7 @@ struct PlayerAnnotationDot: View {
 struct DevMovementPad: View {
     let mapVM: MapViewModel
     let appState: AppState
+    var onMove: ((MapViewModel.MoveDirection) -> Void)?
 
     var body: some View {
         VStack(spacing: 4) {
@@ -408,6 +431,7 @@ struct DevMovementPad: View {
     private func directionButton(_ direction: MapViewModel.MoveDirection, icon: String) -> some View {
         Button {
             mapVM.movePlayer(direction: direction, appState: appState)
+            onMove?(direction)
         } label: {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .bold))

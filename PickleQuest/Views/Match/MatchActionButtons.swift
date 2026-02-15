@@ -4,6 +4,7 @@ struct MatchActionButtons: View {
     let viewModel: MatchViewModel
     @State private var showResignConfirm = false
     @State private var showConsumablePicker = false
+    @State private var showNoItemsMessage = false
 
     var body: some View {
         VStack {
@@ -24,9 +25,17 @@ struct MatchActionButtons: View {
                     ActionButton(
                         icon: "cup.and.saucer.fill",
                         label: "Item",
-                        enabled: viewModel.canUseConsumable
+                        enabled: viewModel.matchState == .simulating && !viewModel.isSkipping
                     ) {
-                        showConsumablePicker = true
+                        if viewModel.playerConsumables.isEmpty {
+                            showNoItemsMessage = true
+                            Task {
+                                try? await Task.sleep(for: .seconds(2))
+                                showNoItemsMessage = false
+                            }
+                        } else if viewModel.canUseConsumable {
+                            showConsumablePicker = true
+                        }
                     }
 
                     // Hook a Line Call
@@ -84,6 +93,19 @@ struct MatchActionButtons: View {
         .sheet(isPresented: $showConsumablePicker) {
             ConsumablePickerSheet(viewModel: viewModel)
                 .presentationDetents([.medium])
+        }
+        .overlay(alignment: .center) {
+            if showNoItemsMessage {
+                Text("No items available")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(.black.opacity(0.7))
+                    .clipShape(Capsule())
+                    .transition(.opacity)
+                    .animation(.easeInOut(duration: 0.3), value: showNoItemsMessage)
+            }
         }
     }
 }

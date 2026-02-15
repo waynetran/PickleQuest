@@ -7,7 +7,13 @@ enum SpriteSheetLoader {
     static let columns = 10
     static let rows = 13
 
+    private nonisolated(unsafe) static let sheetCache = NSCache<NSString, CGImageWrapper>()
+
     static func loadSheet(named name: String) -> CGImage? {
+        let key = name as NSString
+        if let cached = sheetCache.object(forKey: key) {
+            return cached.image
+        }
         guard let url = Bundle.main.url(forResource: name, withExtension: "png"),
               let data = try? Data(contentsOf: url),
               let provider = CGDataProvider(data: data as CFData),
@@ -19,6 +25,7 @@ enum SpriteSheetLoader {
               ) else {
             return nil
         }
+        sheetCache.setObject(CGImageWrapper(image), forKey: key)
         return image
     }
 
@@ -111,4 +118,10 @@ enum SpriteSheetLoader {
         }
         return frames
     }
+}
+
+/// Wrapper to store CGImage in NSCache
+final class CGImageWrapper {
+    let image: CGImage
+    init(_ image: CGImage) { self.image = image }
 }

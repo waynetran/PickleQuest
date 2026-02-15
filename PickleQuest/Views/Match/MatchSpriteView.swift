@@ -37,10 +37,10 @@ struct MatchSpriteView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                // Scrolling event log with gradient fade
-                EventLogOverlay(events: viewModel.eventLog)
-
                 Spacer()
+
+                // Play-by-play event log at bottom
+                EventLogOverlay(events: viewModel.eventLog)
             }
 
             // Action buttons overlay
@@ -95,9 +95,9 @@ private struct EventLogOverlay: View {
         .background(
             LinearGradient(
                 colors: [
-                    .black.opacity(0.5),
+                    .clear,
                     .black.opacity(0.3),
-                    .clear
+                    .black.opacity(0.5)
                 ],
                 startPoint: .top,
                 endPoint: .bottom

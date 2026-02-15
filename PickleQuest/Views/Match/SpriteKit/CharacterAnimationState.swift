@@ -1,6 +1,6 @@
 import Foundation
 
-enum CharacterAnimationState: Sendable {
+enum CharacterAnimationState: Hashable, Sendable {
     case idleBack
     case idleFront
     case walkToward

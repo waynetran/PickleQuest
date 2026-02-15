@@ -2,7 +2,7 @@ import Foundation
 
 enum TutorialNPC {
     static let opponent = NPC(
-        id: UUID(uuidString: "00000000-0000-0000-0000-TUTORIAL0001")!,
+        id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
         name: "Coach Pickles",
         title: "Your First Opponent",
         difficulty: .beginner,
