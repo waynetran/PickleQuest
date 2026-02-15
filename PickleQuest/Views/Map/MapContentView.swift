@@ -191,10 +191,10 @@ struct MapContentView: View {
 
             // Court annotations
             ForEach(mapVM.courts) { court in
-                let discovered = appState.isDevMode
-                    || appState.player.discoveredCourtIDs.contains(court.id)
-                // Hide undiscovered courts when fog is active — they're invisible anyway
-                if discovered || !appState.fogOfWarEnabled {
+                let discovered = appState.player.discoveredCourtIDs.contains(court.id)
+                // In dev mode, show all courts (even undiscovered); otherwise hide undiscovered when fog is active
+                let visible = discovered || appState.isDevMode || !appState.fogOfWarEnabled
+                if visible {
                     Annotation(
                         discovered ? court.name : "???",
                         coordinate: court.coordinate
