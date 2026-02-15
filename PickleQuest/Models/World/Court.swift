@@ -14,6 +14,11 @@ struct Court: Identifiable, Codable, Equatable, Sendable {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 
+    /// Coordinate slightly offset from court for coach sprite placement
+    var coachCoordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude - 0.00015, longitude: longitude + 0.00015)
+    }
+
     var primaryDifficulty: NPCDifficulty {
         difficultyTiers.max() ?? .beginner
     }

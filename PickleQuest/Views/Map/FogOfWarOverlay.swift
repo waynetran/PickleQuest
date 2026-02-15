@@ -7,27 +7,21 @@ struct FogOfWarOverlay: View {
     let region: MKCoordinateRegion
 
     var body: some View {
-        // GeometryReader captures safe area insets so we can correct the coordinate
-        // mismatch between proxy.convert (MapReader space) and the Canvas (which
-        // extends into the safe area via .ignoresSafeArea()).
         GeometryReader { geometry in
-            let insets = geometry.safeAreaInsets
+            // Use global coordinates to compute the exact offset between the
+            // Canvas coordinate space and the MapProxy coordinate space.
+            // This is device/safe-area independent — no assumptions needed.
+            let canvasOrigin = geometry.frame(in: .global).origin
 
             Canvas(rendersAsynchronously: false) { context, size in
-                // proxy.convert returns points in the MapReader's coordinate space.
-                // The Canvas extends into the safe area, shifting its origin upward
-                // by insets.top and leftward by insets.leading. Offset all proxy
-                // points to align with Canvas coordinates.
-                let offsetX = insets.leading
-                let offsetY = insets.top
-
                 let refCoord = region.center
                 let northCoord = CLLocationCoordinate2D(
                     latitude: refCoord.latitude + FogOfWar.degreesPerCell,
                     longitude: refCoord.longitude
                 )
-                guard let p1 = proxy.convert(refCoord, to: .local),
-                      let p2 = proxy.convert(northCoord, to: .local) else { return }
+                // Convert via .global so we have an absolute reference
+                guard let p1 = proxy.convert(refCoord, to: .global),
+                      let p2 = proxy.convert(northCoord, to: .global) else { return }
 
                 let pixelsPerCell = abs(p1.y - p2.y)
                 guard pixelsPerCell >= 0.5 else { return }
@@ -44,7 +38,6 @@ struct FogOfWarOverlay: View {
                 let maxCol = Int(ceil(maxLng / FogOfWar.degreesPerCell)) + 1
 
                 context.drawLayer { layerContext in
-                    // Canvas covers full screen — no hardcoded overflow needed
                     layerContext.fill(
                         Path(CGRect(origin: .zero, size: size)),
                         with: .color(Color(white: 0.08, opacity: 0.7))
@@ -55,9 +48,10 @@ struct FogOfWarOverlay: View {
                         guard cell.row >= minRow && cell.row <= maxRow
                                 && cell.col >= minCol && cell.col <= maxCol else { continue }
                         let coord = FogOfWar.coordinate(for: cell)
-                        guard let screenPoint = proxy.convert(coord, to: .local) else { continue }
-                        let x = screenPoint.x + offsetX
-                        let y = screenPoint.y + offsetY
+                        guard let globalPoint = proxy.convert(coord, to: .global) else { continue }
+                        // Map global screen point → canvas point
+                        let x = globalPoint.x - canvasOrigin.x
+                        let y = globalPoint.y - canvasOrigin.y
                         layerContext.fill(
                             Path(ellipseIn: CGRect(
                                 x: x - circleRadius,

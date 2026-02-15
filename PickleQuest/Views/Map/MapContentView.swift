@@ -93,7 +93,7 @@ struct MapContentView: View {
                 if !mapVM.isStickyMode {
                     cameraPosition = .region(MKCoordinateRegion(
                         center: coord,
-                        span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                        span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
                     ))
                 }
                 Task { await mapVM.generateCourtsIfNeeded(around: coord) }
@@ -197,7 +197,7 @@ struct MapContentView: View {
     // MARK: - Map Layer
 
     private var mapLayer: some View {
-        Map(position: $cameraPosition) {
+        Map(position: $cameraPosition, bounds: MapCameraBounds(minimumDistance: 2500, maximumDistance: 2500)) {
             // Player location (dev override or real)
             if let override = appState.locationOverride {
                 Annotation("You", coordinate: override) {
@@ -213,8 +213,7 @@ struct MapContentView: View {
             // Court annotations
             ForEach(mapVM.courts) { court in
                 let discovered = appState.player.discoveredCourtIDs.contains(court.id)
-                // In dev mode, show all courts (even undiscovered); otherwise hide undiscovered when fog is active
-                let visible = discovered || appState.isDevMode || !appState.fogOfWarEnabled
+                let visible = discovered || !appState.fogOfWarEnabled
                 if visible {
                     Annotation(
                         discovered ? court.name : "???",
@@ -222,8 +221,7 @@ struct MapContentView: View {
                     ) {
                         CourtAnnotationView(
                             court: court,
-                            isDiscovered: discovered,
-                            hasCoach: mapVM.courtIDsWithCoaches.contains(court.id)
+                            isDiscovered: discovered
                         ) {
                             if discovered {
                                 Task { await mapVM.selectCourt(court) }
@@ -235,10 +233,25 @@ struct MapContentView: View {
                     .annotationTitles(.hidden)
                 }
             }
+
+            // Coach sprites at courts (full-size, separate annotations)
+            ForEach(mapVM.courts) { court in
+                let discovered = appState.player.discoveredCourtIDs.contains(court.id)
+                if discovered && mapVM.courtIDsWithCoaches.contains(court.id) {
+                    Annotation("", coordinate: court.coachCoordinate) {
+                        AnimatedSpriteView(
+                            appearance: Coach.coachAppearance,
+                            size: 160,
+                            animationState: .idleFront
+                        )
+                        .allowsHitTesting(false)
+                    }
+                    .annotationTitles(.hidden)
+                }
+            }
         }
         .mapControls {
             MapCompass()
-            MapScaleView()
         }
         .onMapCameraChange(frequency: .continuous) { context in
             visibleRegion = context.region
@@ -264,7 +277,7 @@ struct MapContentView: View {
         if let override = appState.locationOverride {
             cameraPosition = .region(MKCoordinateRegion(
                 center: override,
-                span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
             ))
             await mapVM.generateCourtsIfNeeded(around: override)
             runDiscoveryCheck()

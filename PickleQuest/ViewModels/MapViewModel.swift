@@ -184,9 +184,6 @@ final class MapViewModel {
         discoveredIDs: Set<UUID>,
         isDevMode: Bool
     ) -> [UUID] {
-        if isDevMode {
-            return courts.map(\.id).filter { !discoveredIDs.contains($0) }
-        }
         var newlyDiscovered: [UUID] = []
         for court in courts where !discoveredIDs.contains(court.id) {
             let courtLocation = CLLocation(latitude: court.latitude, longitude: court.longitude)

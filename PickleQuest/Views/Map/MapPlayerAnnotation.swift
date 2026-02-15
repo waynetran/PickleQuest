@@ -13,9 +13,9 @@ struct MapPlayerAnnotation: View {
         ZStack {
             Circle()
                 .fill(.blue.opacity(0.2))
-                .frame(width: 96, height: 96)
+                .frame(width: 192, height: 192)
 
-            AnimatedSpriteView(appearance: appearance, size: 80, animationState: animationState)
+            AnimatedSpriteView(appearance: appearance, size: 160, animationState: animationState)
         }
     }
 }
