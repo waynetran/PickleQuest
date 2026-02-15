@@ -43,15 +43,9 @@ enum CourtRenderer {
         let courtNode = SKNode()
         courtNode.name = "court"
 
-        // Green apron (surround area outside court lines)
+        // Green apron (surround area outside court lines, follows perspective)
         let apronPad = C.apronPadding
-        let apron = buildTrapezoid(
-            bottomWidth: C.nearBaselineWidth + apronPad * 2,
-            topWidth: C.farBaselineWidth + apronPad * 2,
-            height: C.courtHeight + apronPad * 2,
-            color: UIColor(hex: C.apronColor)
-        )
-        apron.position = CGPoint(x: MatchAnimationConstants.sceneWidth / 2, y: C.courtBottomY - apronPad)
+        let apron = buildApron(padding: apronPad, color: UIColor(hex: C.apronColor))
         apron.zPosition = Z.courtSurface - 0.1
         apron.name = "apron"
         courtNode.addChild(apron)
@@ -108,6 +102,32 @@ enum CourtRenderer {
         path.addLine(to: CGPoint(x: halfBottom, y: 0))
         path.addLine(to: CGPoint(x: halfTop, y: height))
         path.addLine(to: CGPoint(x: -halfTop, y: height))
+        path.closeSubpath()
+
+        let node = SKShapeNode(path: path)
+        node.fillColor = color
+        node.strokeColor = .clear
+        return node
+    }
+
+    private static func buildApron(padding: CGFloat, color: UIColor) -> SKShapeNode {
+        // Use court corners and offset outward to follow the same perspective
+        let bl = courtPoint(nx: 0, ny: 0)
+        let br = courtPoint(nx: 1, ny: 0)
+        let tl = courtPoint(nx: 0, ny: 1)
+        let tr = courtPoint(nx: 1, ny: 1)
+
+        // Offset each corner outward by padding in screen space
+        let abl = CGPoint(x: bl.x - padding, y: bl.y - padding)
+        let abr = CGPoint(x: br.x + padding, y: br.y - padding)
+        let atr = CGPoint(x: tr.x + padding, y: tr.y + padding)
+        let atl = CGPoint(x: tl.x - padding, y: tl.y + padding)
+
+        let path = CGMutablePath()
+        path.move(to: abl)
+        path.addLine(to: abr)
+        path.addLine(to: atr)
+        path.addLine(to: atl)
         path.closeSubpath()
 
         let node = SKShapeNode(path: path)

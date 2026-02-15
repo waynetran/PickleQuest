@@ -62,12 +62,15 @@ struct BroadcastScoreOverlay: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Tournament header
+            // Tournament header (fills full width)
             Text(tournamentName.uppercased())
-                .font(.system(size: 9, weight: .bold))
+                .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.green.opacity(0.85))
 
             // Player rows
@@ -90,15 +93,15 @@ struct BroadcastScoreOverlay: View {
 
             // Event info footer
             Text("SINGLES  \u{2022}  RD 1")
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.9))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.gray.opacity(0.6))
         }
         .clipShape(RoundedRectangle(cornerRadius: 4))
-        .frame(width: 200)
+        .frame(width: 240)
     }
 
     private func playerRow(name: String, score: Int, games: Int, isServing: Bool) -> some View {
@@ -106,34 +109,34 @@ struct BroadcastScoreOverlay: View {
             // Server indicator
             Circle()
                 .fill(isServing ? Color.green : Color.clear)
-                .frame(width: 6, height: 6)
-                .padding(.leading, 6)
+                .frame(width: 7, height: 7)
+                .padding(.leading, 8)
 
             // Player name
             Text(name.uppercased())
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
-                .padding(.leading, 6)
+                .padding(.leading, 8)
 
             Spacer()
 
             // Points score
             Text("\(score)")
-                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .font(.system(size: 15, weight: .bold, design: .monospaced))
                 .foregroundStyle(.white)
-                .frame(width: 24)
+                .frame(width: 28)
                 .contentTransition(.numericText())
 
             // Games score
             Text("\(games)")
-                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .font(.system(size: 15, weight: .bold, design: .monospaced))
                 .foregroundStyle(.green)
-                .frame(width: 24)
+                .frame(width: 28)
                 .background(Color.white.opacity(0.08))
                 .contentTransition(.numericText())
         }
-        .padding(.vertical, 5)
+        .padding(.vertical, 6)
     }
 }
 

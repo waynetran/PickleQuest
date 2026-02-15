@@ -53,6 +53,7 @@ struct MatchHubView: View {
             if matchVM.useSpriteVisualization {
                 MatchSpriteView(viewModel: matchVM)
                     .toolbar(.hidden, for: .navigationBar)
+                    .toolbar(.hidden, for: .tabBar)
             } else {
                 MatchSimulationView(viewModel: matchVM)
             }

@@ -12,7 +12,7 @@ enum MatchAnimationConstants {
         static let nearBaselineWidth: CGFloat = 340
         static let farBaselineWidth: CGFloat = 130
         static let courtHeight: CGFloat = 370
-        static let courtBottomY: CGFloat = 185
+        static let courtBottomY: CGFloat = 250
         static let courtTopY: CGFloat = courtBottomY + courtHeight
 
         // Perspective foreshortening (far court appears shorter)

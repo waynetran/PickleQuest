@@ -24,8 +24,9 @@ enum AppearanceGenerator {
     ]
 
     // MARK: - Shirt Palettes by Personality
+    // Note: no blue shirts — player default is blue (#3498DB), opponents must be distinct
     private static let aggressiveShirts: [String] = ["#E74C3C", "#C0392B", "#FF5722", "#D32F2F"]
-    private static let defensiveShirts: [String] = ["#2196F3", "#1976D2", "#03A9F4", "#0288D1"]
+    private static let defensiveShirts: [String] = ["#26A69A", "#00897B", "#009688", "#00796B"]
     private static let speedsterShirts: [String] = ["#FFC107", "#FFB300", "#FF9800", "#F57C00"]
     private static let strategistShirts: [String] = ["#9C27B0", "#7B1FA2", "#AB47BC", "#8E24AA"]
     private static let allRounderShirts: [String] = ["#4CAF50", "#388E3C", "#66BB6A", "#2E7D32"]
