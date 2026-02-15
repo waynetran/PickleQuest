@@ -50,6 +50,7 @@
 		87FC21F3F57E1F3D93EC6104 /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF93932170EAA8760BA56E83 /* Player.swift */; };
 		902F65DDE7981382B64D20BB /* PlayerStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA01C280E5F28D53830ED79E /* PlayerStats.swift */; };
 		9082675C17CCC084A5BEDBB1 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AEAB8CBD3D6D5C1EBBECABA /* AppState.swift */; };
+		95681C2A013819E0A47237C1 /* DevModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 144F008DAAEF10FB97289E80 /* DevModeView.swift */; };
 		A10F0FF3F349FAF8D6F50647 /* PickleQuestUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9C13867B41A5C25A60AE0F /* PickleQuestUITests.swift */; };
 		A5120AA31F0A8AEBBBFC9900 /* EquipmentSetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D8901DF47B273A28A842991 /* EquipmentSetTests.swift */; };
 		A59A00DD59A508DD8118D1B7 /* MockStoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7AEE335773012DD0EA1E5EF /* MockStoreService.swift */; };
@@ -107,6 +108,7 @@
 		02FF717F7DEC1E46AC1C7912 /* PlayerProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProfileView.swift; sourceTree = "<group>"; };
 		113D32D22345163D83B3B9D9 /* MatchPoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPoint.swift; sourceTree = "<group>"; };
 		13D27DD38A3C07AF3DC1F5AF /* EquipmentAbility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentAbility.swift; sourceTree = "<group>"; };
+		144F008DAAEF10FB97289E80 /* DevModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevModeView.swift; sourceTree = "<group>"; };
 		14730B939773D5593EEF66F9 /* PlayerProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProfileViewModel.swift; sourceTree = "<group>"; };
 		1675D372694A305F611FE32D /* NPC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NPC.swift; sourceTree = "<group>"; };
 		18092C844ECE15E47E4AB4F1 /* PickleQuestTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PickleQuestTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -454,6 +456,7 @@
 		D7E55E3986AD180480962406 /* Player */ = {
 			isa = PBXGroup;
 			children = (
+				144F008DAAEF10FB97289E80 /* DevModeView.swift */,
 				02FF717F7DEC1E46AC1C7912 /* PlayerProfileView.swift */,
 				71BCAA08F2AC0ED226B60E86 /* StatAllocationView.swift */,
 			);
@@ -651,6 +654,7 @@
 				EA2BB3213BC970E6160006AD /* DUPRCalculator.swift in Sources */,
 				0D504017AD0F443740F26367 /* DUPRProfile.swift in Sources */,
 				C568849F3E7E70B323E268D6 /* DependencyContainer.swift in Sources */,
+				95681C2A013819E0A47237C1 /* DevModeView.swift in Sources */,
 				F7AC5CB510EB35254105DCE4 /* Equipment.swift in Sources */,
 				66DE4973BD9BED0C2197BD50 /* EquipmentAbility.swift in Sources */,
 				CD7F3AAC4180F9ECBFCA635D /* EquipmentCardView.swift in Sources */,

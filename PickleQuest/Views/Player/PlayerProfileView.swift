@@ -5,11 +5,28 @@ struct PlayerProfileView: View {
     @EnvironmentObject private var container: DependencyContainer
     @State private var viewModel: PlayerProfileViewModel?
     @State private var showStatAllocation = false
+    @State private var showDevMode = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
+                    // Dev mode banner
+                    if appState.isDevMode {
+                        HStack(spacing: 8) {
+                            Image(systemName: "wrench.and.screwdriver.fill")
+                            Text("DEV MODE ACTIVE")
+                                .font(.caption.bold())
+                            Spacer()
+                            Text("Values may be overridden")
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(.white)
+                        .padding(10)
+                        .background(.orange.gradient)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+
                     // Header
                     VStack(spacing: 8) {
                         ZStack {
@@ -241,10 +258,23 @@ struct PlayerProfileView: View {
                 guard let vm = viewModel else { return }
                 Task { await vm.loadPlayer() }
             }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showDevMode = true
+                    } label: {
+                        Image(systemName: appState.isDevMode ? "wrench.and.screwdriver.fill" : "wrench.and.screwdriver")
+                            .foregroundStyle(appState.isDevMode ? .orange : .secondary)
+                    }
+                }
+            }
             .sheet(isPresented: $showStatAllocation) {
                 if let vm = viewModel {
                     StatAllocationView(viewModel: vm)
                 }
+            }
+            .sheet(isPresented: $showDevMode) {
+                DevModeView()
             }
         }
     }

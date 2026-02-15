@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import CoreLocation
 
 @MainActor
 @Observable
@@ -7,8 +8,28 @@ final class AppState {
     var player: Player
     var selectedTab: AppTab = .match
 
+    // Dev mode
+    var isDevMode: Bool = false
+    var devModeSnapshot: Player?
+    var locationOverride: CLLocationCoordinate2D?
+
     init(player: Player = Player.newPlayer(name: "Rookie")) {
         self.player = player
+    }
+
+    func enableDevMode() {
+        devModeSnapshot = player
+        isDevMode = true
+    }
+
+    func disableDevMode() {
+        isDevMode = false
+    }
+
+    func resetToTrueValues() {
+        guard let snapshot = devModeSnapshot else { return }
+        player = snapshot
+        locationOverride = nil
     }
 }
 
