@@ -8,16 +8,16 @@ enum MatchAnimationConstants {
     static let anchorPointY: CGFloat = 0
 
     enum Court {
-        // Trapezoid: near baseline wider, far baseline narrower (behind-baseline perspective)
-        static let nearBaselineWidth: CGFloat = 320
-        static let farBaselineWidth: CGFloat = 180
-        static let courtHeight: CGFloat = 400
-        static let courtBottomY: CGFloat = 160
+        // Trapezoid: near baseline wider, far baseline narrower (low court-level perspective)
+        static let nearBaselineWidth: CGFloat = 360
+        static let farBaselineWidth: CGFloat = 140
+        static let courtHeight: CGFloat = 460
+        static let courtBottomY: CGFloat = 100
         static let courtTopY: CGFloat = courtBottomY + courtHeight
 
         // Lines
         static let lineWidth: CGFloat = 2
-        static let kitchenDepthRatio: CGFloat = 0.22 // kitchen line at 22% from each baseline
+        static let kitchenDepthRatio: CGFloat = 0.318 // 7/22, official pickleball kitchen depth
 
         // Colors
         static let surfaceColor = "#2D6A4F"      // dark green court
@@ -34,7 +34,7 @@ enum MatchAnimationConstants {
         // Scale factors for display
         static let nearPlayerScale: CGFloat = 1.5   // 64×1.5 = 96pt
         static let farPlayerScale: CGFloat = 1.4    // 64×1.4 ≈ 90pt (× perspectiveScale)
-        static let ballScale: CGFloat = 1.0         // 16×16 at 1:1
+        static let ballScale: CGFloat = 2.5         // 16×2.5 = 40pt, clearly visible
 
         // Display sizes (approximate, for layout calculations)
         static let nearPlayerWidth: CGFloat = frameSize * nearPlayerScale

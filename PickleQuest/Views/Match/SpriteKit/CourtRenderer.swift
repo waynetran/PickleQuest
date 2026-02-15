@@ -20,7 +20,7 @@ enum CourtRenderer {
     /// Near objects are full scale, far objects shrink with perspective.
     static func perspectiveScale(ny: CGFloat) -> CGFloat {
         let nearScale: CGFloat = 1.0
-        let farScale: CGFloat = 0.55
+        let farScale: CGFloat = 0.45
         return nearScale + (farScale - nearScale) * ny
     }
 
@@ -124,8 +124,10 @@ enum CourtRenderer {
         addLine(to: container, from: courtPoint(nx: 0, ny: C.kitchenDepthRatio), to: courtPoint(nx: 1, ny: C.kitchenDepthRatio), color: lineColor)
         // Kitchen line far
         addLine(to: container, from: courtPoint(nx: 0, ny: 1.0 - C.kitchenDepthRatio), to: courtPoint(nx: 1, ny: 1.0 - C.kitchenDepthRatio), color: lineColor)
-        // Center line (between kitchen lines)
-        addLine(to: container, from: courtPoint(nx: 0.5, ny: C.kitchenDepthRatio), to: courtPoint(nx: 0.5, ny: 1.0 - C.kitchenDepthRatio), color: lineColor)
+        // Near-side centerline (baseline to kitchen line — service area only)
+        addLine(to: container, from: courtPoint(nx: 0.5, ny: 0), to: courtPoint(nx: 0.5, ny: C.kitchenDepthRatio), color: lineColor)
+        // Far-side centerline (kitchen line to baseline — service area only)
+        addLine(to: container, from: courtPoint(nx: 0.5, ny: 1.0 - C.kitchenDepthRatio), to: courtPoint(nx: 0.5, ny: 1.0), color: lineColor)
 
         return container
     }

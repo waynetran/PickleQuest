@@ -53,9 +53,18 @@ enum SpriteFactory {
 
         // Apply color replacement to entire sheet
         let mappings = ColorReplacer.buildMappings(from: appearance)
-        guard let recoloredSheet = ColorReplacer.replaceColors(in: sheet, mappings: mappings) else {
+        guard let colorReplaced = ColorReplacer.replaceColors(in: sheet, mappings: mappings) else {
             return [:]
         }
+
+        // Fill paddle interior solid (fix checkerboard string pattern)
+        let paddleColor = ColorReplacer.parseHex(appearance.paddleColor)
+        let shoeColor = ColorReplacer.parseHex(appearance.shoeColor)
+        let recoloredSheet = ColorReplacer.fillPaddleArea(
+            in: colorReplaced,
+            paddleColor: paddleColor,
+            shoeColor: shoeColor
+        ) ?? colorReplaced
 
         // Slice all animation states
         var textures: [CharacterAnimationState: [SKTexture]] = [:]

@@ -176,6 +176,71 @@ enum ColorReplacer {
         return mappings
     }
 
+    // MARK: - Paddle Fill Post-Processing
+
+    /// Fill the racquet head interior solid with paddle color.
+    /// The sprite has a 2x2 checkerboard of string color and shoe-light color in the racquet head.
+    /// After standard color replacement, string→paddle but shoe-light→shoe, leaving a visible pattern.
+    /// This method flood-fills any shoe-colored pixel adjacent to a paddle-colored pixel with paddle color.
+    static func fillPaddleArea(in image: CGImage, paddleColor: (r: UInt8, g: UInt8, b: UInt8), shoeColor: (r: UInt8, g: UInt8, b: UInt8)) -> CGImage? {
+        let width = image.width
+        let height = image.height
+        let bytesPerPixel = 4
+        let bytesPerRow = width * bytesPerPixel
+        var pixelData = [UInt8](repeating: 0, count: width * height * bytesPerPixel)
+
+        guard let context = CGContext(
+            data: &pixelData,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        // Run multiple passes to propagate through the small interior
+        for _ in 0..<3 {
+            var changed = false
+            for y in 0..<height {
+                for x in 0..<width {
+                    let i = (y * width + x) * bytesPerPixel
+                    let a = pixelData[i + 3]
+                    guard a > 10 else { continue }
+
+                    let r = pixelData[i]
+                    let g = pixelData[i + 1]
+                    let b = pixelData[i + 2]
+
+                    // Check if this pixel matches shoe color
+                    guard matches(r, g, b, shoeColor.r, shoeColor.g, shoeColor.b) else { continue }
+
+                    // Check 4-connected neighbors for paddle color
+                    let neighbors = [(x-1, y), (x+1, y), (x, y-1), (x, y+1)]
+                    let hasPaddleNeighbor = neighbors.contains { nx, ny in
+                        guard nx >= 0, nx < width, ny >= 0, ny < height else { return false }
+                        let ni = (ny * width + nx) * bytesPerPixel
+                        return pixelData[ni + 3] > 10 &&
+                            matches(pixelData[ni], pixelData[ni + 1], pixelData[ni + 2],
+                                    paddleColor.r, paddleColor.g, paddleColor.b)
+                    }
+
+                    if hasPaddleNeighbor {
+                        pixelData[i] = paddleColor.r
+                        pixelData[i + 1] = paddleColor.g
+                        pixelData[i + 2] = paddleColor.b
+                        changed = true
+                    }
+                }
+            }
+            if !changed { break }
+        }
+
+        return context.makeImage()
+    }
+
     // MARK: - Helpers
 
     private static func matches(
@@ -195,7 +260,7 @@ enum ColorReplacer {
         return UInt8(min(255, max(0, Int(result.rounded()))))
     }
 
-    private static func parseHex(_ hex: String) -> (r: UInt8, g: UInt8, b: UInt8) {
+    static func parseHex(_ hex: String) -> (r: UInt8, g: UInt8, b: UInt8) {
         let stripped = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
         var rgbValue: UInt64 = 0
         Scanner(string: stripped).scanHexInt64(&rgbValue)
