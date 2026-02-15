@@ -208,22 +208,25 @@ struct MapContentView: View {
             ForEach(mapVM.courts) { court in
                 let discovered = appState.isDevMode
                     || appState.player.discoveredCourtIDs.contains(court.id)
-                Annotation(
-                    discovered ? court.name : "???",
-                    coordinate: court.coordinate
-                ) {
-                    CourtAnnotationView(
-                        court: court,
-                        isDiscovered: discovered
+                // Hide undiscovered courts when fog is active — they're invisible anyway
+                if discovered || !appState.fogOfWarEnabled {
+                    Annotation(
+                        discovered ? court.name : "???",
+                        coordinate: court.coordinate
                     ) {
-                        if discovered {
-                            Task { await mapVM.selectCourt(court) }
-                        } else {
-                            undiscoveredCourt = court
+                        CourtAnnotationView(
+                            court: court,
+                            isDiscovered: discovered
+                        ) {
+                            if discovered {
+                                Task { await mapVM.selectCourt(court) }
+                            } else {
+                                undiscoveredCourt = court
+                            }
                         }
                     }
+                    .annotationTitles(.hidden)
                 }
-                .annotationTitles(.hidden)
             }
         }
         .mapControls {
