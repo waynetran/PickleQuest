@@ -119,7 +119,7 @@ struct MapContentView: View {
                 if !mapVM.isStickyMode {
                     cameraPosition = .region(MKCoordinateRegion(
                         center: coord,
-                        span: MKCoordinateSpan(latitudeDelta: 0.015, longitudeDelta: 0.015)
+                        span: MKCoordinateSpan(latitudeDelta: 0.009, longitudeDelta: 0.009)
                     ))
                 }
                 Task { await mapVM.generateCourtsIfNeeded(around: coord) }
@@ -295,7 +295,7 @@ struct MapContentView: View {
         if let override = appState.locationOverride {
             cameraPosition = .region(MKCoordinateRegion(
                 center: override,
-                span: MKCoordinateSpan(latitudeDelta: 0.015, longitudeDelta: 0.015)
+                span: MKCoordinateSpan(latitudeDelta: 0.009, longitudeDelta: 0.009)
             ))
         } else {
             cameraPosition = .userLocation(fallback: .automatic)
