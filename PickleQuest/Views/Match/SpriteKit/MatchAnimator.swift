@@ -93,7 +93,8 @@ final class MatchAnimator {
         let serverAnimator = serverIsNear ? scene.nearAnimator : scene.farAnimator
         let receiverAnimator = serverIsNear ? scene.farAnimator : scene.nearAnimator
 
-        let serverNY = serverIsNear ? Pos.nearPlayerNY : Pos.farPlayerNY
+        // Server behind baseline (legal serve position), receiver at baseline
+        let serverNY = serverIsNear ? Pos.serverNearNY : Pos.serverFarNY
         let receiverNY = serverIsNear ? Pos.farPlayerNY : Pos.nearPlayerNY
 
         // Position server slightly to one side
@@ -101,6 +102,12 @@ final class MatchAnimator {
         let receiverPos = CourtRenderer.courtPoint(nx: Pos.receiverOffsetNX, ny: receiverNY)
         serverNode.position = serverPos
         receiverNode.position = receiverPos
+
+        // Reset scales for serve positions
+        let serverBaseScale = serverIsNear ? AC.Sprites.nearPlayerScale : AC.Sprites.farPlayerScale
+        serverNode.setScale(serverBaseScale * CourtRenderer.perspectiveScale(ny: serverNY))
+        let receiverBaseScale = serverIsNear ? AC.Sprites.farPlayerScale : AC.Sprites.nearPlayerScale
+        receiverNode.setScale(receiverBaseScale * CourtRenderer.perspectiveScale(ny: receiverNY))
 
         // Ready stance before serve
         serverAnimator?.play(.ready)
@@ -168,19 +175,31 @@ final class MatchAnimator {
         guard let scene else { return }
 
         var goingToFar = !serverIsNear
-        for _ in 0..<bounces {
+        for bounceIndex in 0..<bounces {
             let lateralOffset = CGFloat.random(in: -Pos.lateralRangeNX...Pos.lateralRangeNX)
             let nx = 0.5 + lateralOffset
+
+            // Progressive kitchen approach: returner advances fast, server slow
+            let isServer: Bool
+            if goingToFar {
+                isServer = !serverIsNear // far player is server when server is not near
+            } else {
+                isServer = serverIsNear  // near player is server when server is near
+            }
+            let approachRate: CGFloat = isServer ? 6.0 : 3.0
+            let approachProgress = min(1.0, CGFloat(bounceIndex + 1) / approachRate)
 
             let targetNY: CGFloat
             let hitter: SKSpriteNode
             let hitterAnimator: SpriteSheetAnimator?
             if goingToFar {
-                targetNY = Pos.farPlayerNY - 0.05
+                let baseNY = Pos.farPlayerNY - 0.05
+                targetNY = baseNY + (Pos.kitchenApproachFarNY - baseNY) * approachProgress
                 hitter = scene.farPlayer
                 hitterAnimator = scene.farAnimator
             } else {
-                targetNY = Pos.nearPlayerNY + 0.05
+                let baseNY = Pos.nearPlayerNY + 0.05
+                targetNY = baseNY + (Pos.kitchenApproachNearNY - baseNY) * approachProgress
                 hitter = scene.nearPlayer
                 hitterAnimator = scene.nearAnimator
             }
@@ -188,11 +207,15 @@ final class MatchAnimator {
             let target = CourtRenderer.courtPoint(nx: nx, ny: targetNY)
             let current = scene.ball.position
 
-            // Move hitter laterally with walk animation
-            let hitterTarget = CGPoint(x: target.x, y: hitter.position.y)
+            // Move hitter to position (lateral + forward approach)
             let movingLeft = target.x < hitter.position.x
             hitterAnimator?.play(movingLeft ? .walkLeft : .walkRight)
-            await hitter.runAsync(.move(to: hitterTarget, duration: T.bounceDuration * 0.3))
+            await hitter.runAsync(.move(to: target, duration: T.bounceDuration * 0.4))
+
+            // Update hitter scale for new perspective position
+            let isNear = hitter === scene.nearPlayer
+            let baseScale = isNear ? AC.Sprites.nearPlayerScale : AC.Sprites.farPlayerScale
+            hitter.setScale(baseScale * CourtRenderer.perspectiveScale(ny: targetNY))
 
             // Hit animation (forehand or backhand based on direction)
             let hitAnim: CharacterAnimationState = movingLeft ? .backhand : .forehand
@@ -203,7 +226,6 @@ final class MatchAnimator {
             await animateBallArc(from: current, to: target, duration: T.bounceDuration, arcHeight: arcHeight)
 
             // Return to idle
-            let isNear = hitter === scene.nearPlayer
             hitterAnimator?.play(.idle(isNear: isNear))
 
             goingToFar.toggle()
@@ -342,9 +364,9 @@ final class MatchAnimator {
             scene.ballShadow.position = CGPoint(x: x, y: baseY)
             scene.ballShadow.setScale(max(0.3, shadowScale))
 
-            // Scale ball by perspective
-            let ny = (baseY - AC.Court.courtBottomY) / AC.Court.courtHeight
-            let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, ny)))
+            // Scale ball by perspective (use inverse mapping for correct depth)
+            let ny = CourtRenderer.logicalNY(fromSceneY: baseY)
+            let pScale = CourtRenderer.perspectiveScale(ny: ny)
             scene.ball.setScale(AC.Sprites.ballScale * pScale)
 
             try? await Task.sleep(for: .milliseconds(Int(dt * 1000)))

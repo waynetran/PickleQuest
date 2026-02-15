@@ -8,9 +8,16 @@ enum CourtRenderer {
     /// Convert normalized court coords (0-1 for both axes) to scene points.
     /// (0,0) = near-left, (1,1) = far-right.
     /// Y=0 is near baseline (bottom of court), Y=1 is far baseline (top).
+    /// Applies perspective foreshortening so the far court appears shorter.
     static func courtPoint(nx: CGFloat, ny: CGFloat) -> CGPoint {
-        let y = C.courtBottomY + ny * C.courtHeight
-        let baselineWidth = interpolatedWidth(ny: ny)
+        let mappedNY: CGFloat
+        if ny <= 0 || ny >= 1 {
+            mappedNY = ny  // Behind baselines, extrapolate linearly
+        } else {
+            mappedNY = pow(ny, C.perspectiveExponent)
+        }
+        let y = C.courtBottomY + mappedNY * C.courtHeight
+        let baselineWidth = interpolatedWidth(ny: mappedNY)
         let centerX = MatchAnimationConstants.sceneWidth / 2
         let x = centerX + (nx - 0.5) * baselineWidth
         return CGPoint(x: x, y: y)
@@ -24,10 +31,30 @@ enum CourtRenderer {
         return nearScale + (farScale - nearScale) * ny
     }
 
+    /// Inverse perspective mapping: convert scene Y coordinate back to logical ny (0=near, 1=far).
+    static func logicalNY(fromSceneY y: CGFloat) -> CGFloat {
+        let screenFraction = (y - C.courtBottomY) / C.courtHeight
+        let clamped = max(CGFloat(0), min(1, screenFraction))
+        return pow(clamped, 1.0 / C.perspectiveExponent)
+    }
+
     /// Build the court node tree.
     static func buildCourt() -> SKNode {
         let courtNode = SKNode()
         courtNode.name = "court"
+
+        // Green apron (surround area outside court lines)
+        let apronPad = C.apronPadding
+        let apron = buildTrapezoid(
+            bottomWidth: C.nearBaselineWidth + apronPad * 2,
+            topWidth: C.farBaselineWidth + apronPad * 2,
+            height: C.courtHeight + apronPad * 2,
+            color: UIColor(hex: C.apronColor)
+        )
+        apron.position = CGPoint(x: MatchAnimationConstants.sceneWidth / 2, y: C.courtBottomY - apronPad)
+        apron.zPosition = Z.courtSurface - 0.1
+        apron.name = "apron"
+        courtNode.addChild(apron)
 
         // Court surface (trapezoid)
         let surface = buildTrapezoid(

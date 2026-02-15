@@ -12,6 +12,7 @@
 | 3.1 | Economy, Rep & Loot UX Fixes | **Complete** |
 | 4 | SpriteKit Match Visualization | **Complete** |
 | 4.1 | Sprite Sheet + Character Customization | **Complete** |
+| 4.2 | Court Realism + Player Positioning | **Complete** |
 | 5 | Doubles, Team Synergy, Tournaments | Planned |
 | 6 | Training, Coaching, Energy + Economy | Planned |
 | 7 | Persistence, Polish, Multiplayer Prep | Planned |
@@ -282,6 +283,33 @@ SpriteSheetAnimator(node, textures) → play(state) / playAsync(state)
 - `Views/Match/SpriteKit/MatchAnimator.swift` — frame animation triggers alongside position animations for all match events
 - `ViewModels/MatchViewModel.swift` — playerAppearance/opponentAppearance properties, appearance resolution in startMatch()
 - `Views/Match/MatchSpriteView.swift` — passes appearances to MatchCourtScene init
+
+---
+
+## Milestone 4.2: Court Realism + Player Positioning
+
+### What was built
+- **Perspective foreshortening**: non-linear Y mapping (`pow(ny, 0.75)`) — far court appears compressed, near court takes ~60% of visual height, matching real behind-baseline camera angle
+- **Correct court proportions**: kitchen depth ratio 7/22 (0.318) per official pickleball dimensions, centerlines only in service areas (not through kitchen)
+- **Blue court with green apron**: court surface changed from green to blue with slightly darker blue kitchen zones, green grass surround, matching standard pickleball court aesthetics
+- **Server behind baseline**: servers now position at ny=-0.03 (near) / ny=1.03 (far) — behind the baseline as required by rules, instead of inside the court at ny=0.08/0.92
+- **Progressive kitchen approach**: during rally, players advance toward kitchen line over bounces; returner reaches kitchen by bounce 3 (faster), server by bounce 6 (slower per two-bounce rule)
+- **Perspective-correct scaling**: players scale based on court depth position; inverse perspective mapping (`logicalNY`) ensures ball size scales correctly through non-linear depth
+- **Scale reset**: player scales properly reset between points and between games after rally movements
+- **Paddle fill fix**: post-processing fills checkerboard string pattern in racquet head with solid paddle color
+- **Ball visibility**: ball scale 1.0→2.5 (40pt) for clear visibility during play
+- **Pickleball rules documentation**: comprehensive rules reference covering singles/doubles scoring, two-bounce rule, kitchen rules, serve rules, positioning by phase, and strategy
+
+### Files modified
+- `MatchAnimationConstants.swift` — perspective exponent, blue/green colors, apron, server positions, kitchen approach positions, ball scale, nearPlayerScale
+- `CourtRenderer.swift` — perspective Y mapping in courtPoint(), logicalNY() inverse, green apron trapezoid
+- `MatchAnimator.swift` — server behind baseline, rally kitchen approach with Y movement + scale updates, ball arc inverse perspective
+- `MatchCourtScene.swift` — perspective-based near player scale, resetPlayerPositions with scale reset
+- `ColorReplacer.swift` — fillPaddleArea() post-processing, parseHex made internal
+- `SpriteFactory.swift` — fillPaddleArea() call after color replacement
+
+### New files
+- `docs/pickleball-rules-reference.md` — comprehensive pickleball rules, scoring, positioning, and strategy reference
 
 ---
 

@@ -65,7 +65,7 @@ final class MatchCourtScene: SKScene {
         )
         nearPlayer = nearNode
         nearPlayer.name = "nearPlayer"
-        nearPlayer.setScale(AC.Sprites.nearPlayerScale)
+        nearPlayer.setScale(AC.Sprites.nearPlayerScale * CourtRenderer.perspectiveScale(ny: Pos.nearPlayerNY))
         nearPlayer.zPosition = AC.ZPositions.nearPlayer
         let nearPos = CourtRenderer.courtPoint(nx: Pos.playerCenterNX, ny: Pos.nearPlayerNY)
         nearPlayer.position = nearPos
@@ -181,5 +181,9 @@ final class MatchCourtScene: SKScene {
         let farPos = CourtRenderer.courtPoint(nx: Pos.playerCenterNX, ny: Pos.farPlayerNY)
         nearPlayer.position = nearPos
         farPlayer.position = farPos
+
+        // Reset scales after rally movements
+        nearPlayer.setScale(AC.Sprites.nearPlayerScale * CourtRenderer.perspectiveScale(ny: Pos.nearPlayerNY))
+        farPlayer.setScale(AC.Sprites.farPlayerScale * CourtRenderer.perspectiveScale(ny: Pos.farPlayerNY))
     }
 }

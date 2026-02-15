@@ -15,16 +15,21 @@ enum MatchAnimationConstants {
         static let courtBottomY: CGFloat = 100
         static let courtTopY: CGFloat = courtBottomY + courtHeight
 
+        // Perspective foreshortening (far court appears shorter)
+        static let perspectiveExponent: CGFloat = 0.75
+
         // Lines
         static let lineWidth: CGFloat = 2
         static let kitchenDepthRatio: CGFloat = 0.318 // 7/22, official pickleball kitchen depth
 
         // Colors
-        static let surfaceColor = "#2D6A4F"      // dark green court
+        static let surfaceColor = "#4A86C8"        // blue court
         static let lineColor = "#FFFFFF"
-        static let kitchenColor = "#1B4332"        // slightly darker green for kitchen
+        static let kitchenColor = "#3D73AD"         // slightly darker blue for kitchen
         static let netColor = "#C0C0C0"
         static let netPostColor = "#808080"
+        static let apronColor = "#3A8C42"           // green surround
+        static let apronPadding: CGFloat = 25
     }
 
     enum Sprites {
@@ -32,7 +37,7 @@ enum MatchAnimationConstants {
         static let frameSize: CGFloat = 64
 
         // Scale factors for display
-        static let nearPlayerScale: CGFloat = 1.5   // 64×1.5 = 96pt
+        static let nearPlayerScale: CGFloat = 1.6   // 64×1.6 ≈ 102pt (perspective-adjusted)
         static let farPlayerScale: CGFloat = 1.4    // 64×1.4 ≈ 90pt (× perspectiveScale)
         static let ballScale: CGFloat = 2.5         // 16×2.5 = 40pt, clearly visible
 
@@ -54,6 +59,14 @@ enum MatchAnimationConstants {
         // Serve positions
         static let serverOffsetNX: CGFloat = 0.35   // slightly right of center
         static let receiverOffsetNX: CGFloat = 0.55
+
+        // Server positions (behind baseline for legal serve)
+        static let serverNearNY: CGFloat = -0.03
+        static let serverFarNY: CGFloat = 1.03
+
+        // Kitchen approach positions (just behind kitchen line)
+        static let kitchenApproachNearNY: CGFloat = 0.37
+        static let kitchenApproachFarNY: CGFloat = 0.63
 
         // Lateral movement range
         static let lateralRangeNX: CGFloat = 0.35   // max offset from center
