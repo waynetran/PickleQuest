@@ -1,4 +1,5 @@
 import Foundation
+import SpriteKit
 import SwiftUI
 
 @MainActor
@@ -15,6 +16,10 @@ final class MatchViewModel {
     var hasUnhandledLoot: Bool {
         lootDrops.contains { lootDecisions[$0.id] == nil }
     }
+
+    // SpriteKit visualization
+    var courtScene: MatchCourtScene?
+    var useSpriteVisualization = true
 
     // State
     var availableNPCs: [NPC] = []
@@ -105,10 +110,19 @@ final class MatchViewModel {
                 matchResult = result
                 lootDrops = result.loot
                 computeRewardsPreview(player: player, opponent: opponent, result: result)
+            }
+
+            // Animate via SpriteKit scene or fall back to fixed delay
+            if let courtScene, useSpriteVisualization {
+                await courtScene.animate(event: event)
+            } else {
+                try? await Task.sleep(for: .milliseconds(150))
+            }
+
+            // Transition to finished after match end animation completes
+            if case .matchEnd = event {
                 matchState = .finished
             }
-            // Small delay between events for visual pacing
-            try? await Task.sleep(for: .milliseconds(150))
         }
     }
 
@@ -165,6 +179,7 @@ final class MatchViewModel {
         matchResult = nil
         selectedNPC = nil
         currentScore = nil
+        courtScene = nil
         lootDrops = []
         lootDecisions = [:]
         levelUpRewards = []

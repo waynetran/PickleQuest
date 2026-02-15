@@ -10,7 +10,7 @@
 | 2.6 | Match History, Rep, Durability, Energy | **Complete** |
 | 3 | Map + Location + NPC World | **Complete** |
 | 3.1 | Economy, Rep & Loot UX Fixes | **Complete** |
-| 4 | SpriteKit Match Visualization | Planned |
+| 4 | SpriteKit Match Visualization | **Complete** |
 | 5 | Doubles, Team Synergy, Tournaments | Planned |
 | 6 | Training, Coaching, Energy + Economy | Planned |
 | 7 | Persistence, Polish, Multiplayer Prep | Planned |
@@ -187,15 +187,51 @@
 
 ---
 
-## Milestone 4: SpriteKit Match Visualization (Planned)
+## Milestone 4: SpriteKit Match Visualization
 
-### Goals
-- Replace text-based match simulation log with animated SpriteKit court view
-- Render player and opponent sprites on a pickleball court
-- Animate serve, rally shots, aces, winners, errors
-- Ball trajectory visualization
-- Score overlay synced with engine events
-- Smooth transitions between points
+### What was built
+- **SpriteKit court scene**: behind-the-baseline broadcast camera perspective with trapezoid court, kitchen zones, net, and court lines
+- **Pixel art sprites**: programmatically generated via UIGraphicsImageRenderer — 16x24 back-view player (4x scale), 12x18 front-view opponent (3x scale), 6x6 wiffle ball, all with `.nearest` filtering for crisp pixel art
+- **Perspective system**: `CourtRenderer.courtPoint(nx:ny:)` maps normalized court coords to screen points with depth-based width interpolation; `perspectiveScale(ny:)` shrinks far objects
+- **Full animation system**: `MatchAnimator` maps every `MatchEvent` to SKAction sequences
+  - **Match start**: players slide in from off-screen, "VS" text flash
+  - **Point played**: serve swing → ball arc (parabolic `sin(π*t)` trajectory) → rally bounces (up to 5) → outcome animation
+  - **Outcome types**: ace (ball whizzes past + flinch), winner (ground hit + pump + dust), unforced error (net/out callout), forced error (ball wide), rally (final shot + rally length callout)
+  - **Streak**: orange glow ring expansion on streaking player
+  - **Fatigue**: player dim + sweat drop particle
+  - **Ability**: purple flash ring + ability name callout
+  - **Game end**: winner celebration jump
+  - **Match end**: bigger jump + scale pulse, "VICTORY!"/"DEFEAT" overlay
+- **Async bridge**: `SKNode.runAsync(_:)` using `withCheckedContinuation` for clean async/await integration with SKAction completion handlers
+- **SwiftUI integration**: `MatchSpriteView` wraps `SpriteView` + `ScoreHeaderView` in ZStack overlay
+- **Fallback**: `useSpriteVisualization` flag on ViewModel preserves text-based `MatchSimulationView` as fallback
+- **No engine changes**: all existing tests pass (80/80)
+
+### Architecture
+```
+MatchEngine (actor) → AsyncStream<MatchEvent> → MatchViewModel (@MainActor)
+                                                       ↓
+                                              courtScene.animate(event:) async
+                                                       ↓
+                                              MatchCourtScene (SKScene, @MainActor)
+                                                       ↓
+                                              MatchAnimator runs SKAction sequences
+                                                       ↓
+                                              returns when animation completes
+```
+
+### New files
+- `Views/Match/SpriteKit/MatchAnimationConstants.swift` — all timing, sizing, color, z-position constants
+- `Views/Match/SpriteKit/SpriteFactory.swift` — programmatic pixel art texture generation
+- `Views/Match/SpriteKit/CourtRenderer.swift` — perspective court drawing with trapezoid projection
+- `Views/Match/SpriteKit/MatchCourtScene.swift` — SKScene subclass, node setup, announcement helpers
+- `Views/Match/SpriteKit/MatchAnimator.swift` — event-to-animation sequencer with all event types
+- `Views/Match/MatchSpriteView.swift` — SwiftUI wrapper (SpriteView + score overlay)
+- `Extensions/SKNode+Async.swift` — async/await bridge for SKActions
+
+### Modified files
+- `ViewModels/MatchViewModel.swift` — `courtScene` property, `useSpriteVisualization` flag, async animation in event loop
+- `Views/Match/MatchHubView.swift` — routes to `MatchSpriteView` when sprite visualization enabled
 
 ---
 

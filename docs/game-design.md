@@ -13,7 +13,7 @@ A Pokemon Go-like pickleball RPG where players physically explore their city to 
 | 2.6 | Match History, Rep, Durability, Energy | **Complete** |
 | 3 | Map + Location + NPC World | **Complete** |
 | 3.1 | Economy, Rep & Loot UX Fixes | **Complete** |
-| 4 | SpriteKit Match Visualization | Planned |
+| 4 | SpriteKit Match Visualization | **Complete** |
 | 5 | Doubles, Team Synergy, Tournaments | Planned |
 | 6 | Training, Coaching, Energy + Economy | Planned |
 | 7 | Persistence, Polish, Multiplayer Prep | Planned |

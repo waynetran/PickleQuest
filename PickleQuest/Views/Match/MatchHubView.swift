@@ -50,7 +50,11 @@ struct MatchHubView: View {
                 .navigationBarTitleDisplayMode(.inline)
 
         case .simulating:
-            MatchSimulationView(viewModel: matchVM)
+            if matchVM.useSpriteVisualization {
+                MatchSpriteView(viewModel: matchVM)
+            } else {
+                MatchSimulationView(viewModel: matchVM)
+            }
 
         case .finished:
             if let result = matchVM.matchResult {
