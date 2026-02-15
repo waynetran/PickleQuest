@@ -15,6 +15,7 @@ struct MapContentView: View {
     @State private var showTrainingView = false
     @State private var playerAnimationState: CharacterAnimationState = .idleBack
     @State private var walkResetTask: Task<Void, Never>?
+    @State private var discoveredCourtName: String?
 
     var body: some View {
         @Bindable var mapState = mapVM
@@ -30,32 +31,6 @@ struct MapContentView: View {
                     proxy: proxy,
                     region: region
                 )
-
-                // "?" markers for undiscovered courts in fog-cleared areas
-                // Rendered ABOVE fog so they're always visible
-                ForEach(mapVM.courts) { court in
-                    let discovered = appState.player.discoveredCourtIDs.contains(court.id)
-                    let fogRevealed = appState.revealedFogCells.contains(FogOfWar.cell(for: court.coordinate))
-                    if !discovered && fogRevealed {
-                        if let screenPoint = proxy.convert(court.coordinate, to: .local) {
-                            Button {
-                                undiscoveredCourt = court
-                            } label: {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.gray.opacity(0.7))
-                                        .frame(width: 36, height: 36)
-                                        .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
-                                    Text("?")
-                                        .font(.system(size: 18, weight: .bold))
-                                        .foregroundStyle(.white)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                            .position(x: screenPoint.x, y: screenPoint.y)
-                        }
-                    }
-                }
             }
 
             // Dev mode movement controls
@@ -101,6 +76,27 @@ struct MapContentView: View {
                     .padding(.top, 8)
                 }
                 Spacer()
+            }
+
+            // Court discovery notification
+            if let courtName = discoveredCourtName {
+                VStack {
+                    Spacer()
+                    HStack(spacing: 8) {
+                        Image(systemName: "mappin.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("Discovered \(courtName)!")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(.black.opacity(0.8))
+                    .clipShape(Capsule())
+                    .padding(.bottom, 80)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.easeInOut(duration: 0.4), value: discoveredCourtName)
             }
 
             // Bottom overlay: court count + energy
@@ -236,10 +232,11 @@ struct MapContentView: View {
                 UserAnnotation()
             }
 
-            // Court annotations (discovered courts, or all when fog is off)
+            // Court annotations — show discovered courts and fog-revealed courts ("?")
             ForEach(mapVM.courts) { court in
                 let discovered = appState.player.discoveredCourtIDs.contains(court.id)
-                let visible = discovered || !appState.fogOfWarEnabled
+                let fogRevealed = appState.revealedFogCells.contains(FogOfWar.cell(for: court.coordinate))
+                let visible = discovered || !appState.fogOfWarEnabled || fogRevealed
                 if visible {
                     Annotation(
                         discovered ? court.name : "???",
@@ -251,10 +248,10 @@ struct MapContentView: View {
                         ) {
                             if discovered {
                                 Task { await mapVM.selectCourt(court) }
-                            } else {
-                                undiscoveredCourt = court
                             }
+                            // Undiscovered courts are not tappable
                         }
+                        .disabled(!discovered)
                     }
                     .annotationTitles(.hidden)
                 }
@@ -337,6 +334,16 @@ struct MapContentView: View {
         for id in newIDs {
             appState.player.discoveredCourtIDs.insert(id)
             appState.player.dailyChallengeState?.incrementProgress(for: .visitCourts)
+            // Show discovery notification
+            if let court = mapVM.courts.first(where: { $0.id == id }) {
+                discoveredCourtName = court.name
+                Task {
+                    try? await Task.sleep(for: .seconds(3))
+                    if discoveredCourtName == court.name {
+                        discoveredCourtName = nil
+                    }
+                }
+            }
         }
     }
 
