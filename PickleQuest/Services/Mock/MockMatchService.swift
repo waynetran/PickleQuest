@@ -69,8 +69,7 @@ final class MockMatchService: MatchService {
         let repChange = RepCalculator.calculateRepChange(
             didWin: result.didPlayerWin,
             playerSUPR: player.duprRating,
-            opponentSUPR: opponent.duprRating,
-            opponentDifficulty: opponent.difficulty
+            opponentSUPR: opponent.duprRating
         )
         player.repProfile.applyRepChange(repChange)
 

@@ -8,6 +8,14 @@ final class MatchViewModel {
     private let matchService: MatchService
     private let npcService: NPCService
 
+    // Loot decisions
+    enum LootDecision { case equip, keep }
+    var lootDecisions: [UUID: LootDecision] = [:]
+
+    var hasUnhandledLoot: Bool {
+        lootDrops.contains { lootDecisions[$0.id] == nil }
+    }
+
     // State
     var availableNPCs: [NPC] = []
     var selectedNPC: NPC?
@@ -59,6 +67,7 @@ final class MatchViewModel {
         matchResult = nil
         currentScore = nil
         lootDrops = []
+        lootDecisions = [:]
         levelUpRewards = []
         duprChange = nil
         potentialDuprChange = 0
@@ -125,8 +134,7 @@ final class MatchViewModel {
         repChange = RepCalculator.calculateRepChange(
             didWin: result.didPlayerWin,
             playerSUPR: player.duprRating,
-            opponentSUPR: opponent.duprRating,
-            opponentDifficulty: opponent.difficulty
+            opponentSUPR: opponent.duprRating
         )
 
         if !result.didPlayerWin {
@@ -158,6 +166,7 @@ final class MatchViewModel {
         selectedNPC = nil
         currentScore = nil
         lootDrops = []
+        lootDecisions = [:]
         levelUpRewards = []
         isRated = true
         duprChange = nil

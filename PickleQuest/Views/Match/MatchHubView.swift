@@ -57,6 +57,7 @@ struct MatchHubView: View {
                 MatchResultView(
                     result: result,
                     opponent: matchVM.selectedNPC,
+                    matchVM: matchVM,
                     levelUpRewards: matchVM.levelUpRewards,
                     duprChange: matchVM.duprChange,
                     potentialDuprChange: matchVM.potentialDuprChange,
@@ -113,9 +114,17 @@ struct MatchHubView: View {
             }
         }
 
-        // Add loot to inventory
-        if !matchVM.lootDrops.isEmpty {
-            await container.inventoryService.addEquipmentBatch(matchVM.lootDrops)
+        // Add loot to inventory (only items the player chose to keep or equip)
+        let keptLoot = matchVM.lootDrops.filter { matchVM.lootDecisions[$0.id] != nil }
+        if !keptLoot.isEmpty {
+            await container.inventoryService.addEquipmentBatch(keptLoot)
+        }
+
+        // Equip items marked for equip
+        for item in matchVM.lootDrops {
+            if matchVM.lootDecisions[item.id] == .equip {
+                player.equippedItems[item.slot] = item.id
+            }
         }
 
         // Record match history

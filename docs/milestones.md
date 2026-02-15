@@ -9,6 +9,7 @@
 | 2.5 | SUPR Rating System | **Complete** |
 | 2.6 | Match History, Rep, Durability, Energy | **Complete** |
 | 3 | Map + Location + NPC World | **Complete** |
+| 3.1 | Economy, Rep & Loot UX Fixes | **Complete** |
 | 4 | SpriteKit Match Visualization | Planned |
 | 5 | Doubles, Team Synergy, Tournaments | Planned |
 | 6 | Training, Coaching, Energy + Economy | Planned |
@@ -157,6 +158,32 @@
 ### Post-milestone patches
 - Smart court placement: MKLocalSearch POI queries + CLGeocoder safety validation
 - Dev mode movement: D-pad (N/S/E/W ~50m steps) + sticky mode (pan to move player)
+
+---
+
+## Milestone 3.1: Economy, Rep & Loot UX Fixes
+
+### What was built
+- **No coins on loss**: `matchLossBaseReward` set to 0; coins are win-only (wager system planned for future milestone)
+- **Rep formula overhaul**: new SUPR-gap-based formula replacing flat gain/loss
+  - Upset win (beating stronger): big rep gain (+10 base + gap * 15)
+  - Expected win (beating weaker): diminished gain (min +3)
+  - Loss to much stronger (gap >= 0.5): small respect gain (+1 to +3)
+  - Loss to slightly stronger or equal: 0 change
+  - Loss to weaker: rep penalty (-5 base - gap * 10, capped at -30)
+- **Loot equip/discard on results screen**: each loot item has Equip and Keep buttons; unhandled items trigger a discard confirmation dialog on Continue
+- **Selective loot processing**: only kept/equipped items are added to inventory; equipped items auto-equip in their slot
+- **Wager/hustler design doc**: documented planned wager and hustler NPC systems in game-design.md
+
+### Files modified
+- `GameConstants.swift` — coins + rep constants
+- `RepCalculator.swift` — new formula, removed unused difficulty param
+- `MockMatchService.swift` — updated rep call site
+- `MatchViewModel.swift` — loot decisions state, updated rep call
+- `LootDropRow.swift` — equip/keep buttons
+- `MatchResultView.swift` — loot interaction, discard confirmation, hide 0 coins
+- `MatchHubView.swift` — selective loot processing + equip
+- `docs/game-design.md` — updated economy, rep, loot, added wager/hustler section
 
 ---
 

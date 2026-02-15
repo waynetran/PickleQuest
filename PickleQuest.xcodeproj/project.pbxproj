@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -125,7 +125,7 @@
 		1B134E5A041B5743FC9C0BBC /* MomentumTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentumTrackerTests.swift; sourceTree = "<group>"; };
 		1C16E89037C904100D1C317F /* MatchHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchHistoryEntry.swift; sourceTree = "<group>"; };
 		1D8901DF47B273A28A842991 /* EquipmentSetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentSetTests.swift; sourceTree = "<group>"; };
-		1EA16300A59A2F1C52C8B9CF /* PickleQuest.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PickleQuest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EA16300A59A2F1C52C8B9CF /* PickleQuest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PickleQuest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		20C3B07BE8F5AC941C995746 /* MatchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchViewModel.swift; sourceTree = "<group>"; };
 		2718E94C057C8A67B15C822B /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewModel.swift; sourceTree = "<group>"; };
 		2F1DCE8C0C6EC3452588B923 /* PickleQuestUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PickleQuestUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -644,7 +644,6 @@
 			);
 			mainGroup = F9F39E0BB7BEEF7255D7B746;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -819,6 +818,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 69F6RR9M5J;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "PickleQuest uses your location to show nearby pickleball courts and opponents on the map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -845,6 +845,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 69F6RR9M5J;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "PickleQuest uses your location to show nearby pickleball courts and opponents on the map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

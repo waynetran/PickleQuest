@@ -12,6 +12,7 @@ A Pokemon Go-like pickleball RPG where players physically explore their city to 
 | 2.5 | SUPR Rating System | **Complete** |
 | 2.6 | Match History, Rep, Durability, Energy | **Complete** |
 | 3 | Map + Location + NPC World | **Complete** |
+| 3.1 | Economy, Rep & Loot UX Fixes | **Complete** |
 | 4 | SpriteKit Match Visualization | Planned |
 | 5 | Doubles, Team Synergy, Tournaments | Planned |
 | 6 | Training, Coaching, Energy + Economy | Planned |
@@ -89,6 +90,13 @@ Effects: stat boost (temporary), energy restore, momentum boost
 - Higher difficulty opponents boost rare+ drop rates (beginner +0%, master +25%)
 - **SUPR-scaled loot** (Milestone 2.6): Beating stronger opponents (positive SUPR gap) boosts rare drop rate by +10% per 1.0 SUPR gap (capped at +25%)
 
+### Loot Decisions (Post-Match)
+- Each loot item shows **Equip** and **Keep** buttons on the results screen
+- **Equip**: adds to inventory and auto-equips in that slot (replacing current item, which stays in inventory)
+- **Keep**: adds to inventory without equipping
+- Unhandled items (neither Equip nor Keep chosen) are discarded
+- Pressing Continue with unhandled loot shows a confirmation dialog: "X item(s) will be discarded."
+
 ### Stat Bonuses per Rarity
 | Rarity | Bonus Stats | Range |
 |--------|------------|-------|
@@ -144,7 +152,7 @@ Each item gets a rarity-appropriate prefix + slot-appropriate base name (e.g., "
 ## Economy
 - Starting coins: 500
 - Match win: 100 base + difficulty bonus
-- Match loss: 25 base
+- Match loss: 0 (coins are win-only; wagers planned for future milestone)
 - XP per match: 50 base + 30 win bonus
 - Level-up: exponential curve (base 100, growth 1.3x), 3 stat points per level
 - Equipment sell prices: 15-600+ base (scales with rarity + bonus value)
@@ -179,8 +187,25 @@ Performance-based rating using margin-of-victory Elo. See [docs/supr-algorithm.m
 Social currency earned through competitive play. Foundation for future NPC relationships, store sponsorships, tournament invites, and secret court access.
 
 ### Rep Gain/Loss
-- **Win**: +10 base + bonus for beating stronger opponents (SUPR gap * 10, min +5)
-- **Loss**: -10 base - penalty for losing to weaker opponents (SUPR gap * 10, max -30)
+
+**On Win:**
+- Upset win (opponent stronger): +10 base + SUPR gap * 15 (e.g., +40 for beating someone 2.0 higher)
+- Expected win (opponent weaker): +10 base - abs(gap) * 5 (min +3, e.g., +5 for beating someone 1.0 lower)
+
+**On Loss:**
+- Lost to much stronger (gap >= 0.5): small respect gain, +1 to +3 (gap * 2.0, capped at 3)
+- Lost to slightly stronger or equal (0 <= gap < 0.5): 0 rep change
+- Lost to weaker (gap < 0): -5 base - abs(gap) * 10 (capped at -30)
+
+| Scenario | SUPR Gap | Rep Change |
+|----------|----------|------------|
+| Beat someone 2.0 higher | +2.0 | +40 |
+| Beat equal opponent | 0 | +10 |
+| Beat someone 1.0 lower | -1.0 | +5 |
+| Lose to someone 2.0 higher | +2.0 | +3 (respect) |
+| Lose to someone 0.3 higher | +0.3 | 0 |
+| Lose to someone 1.0 lower | -1.0 | -15 |
+| Lose to someone 3.0 lower | -3.0 | -30 (capped) |
 
 ### Rep Titles
 | Rep Range | Title |
@@ -286,3 +311,31 @@ NPCs are distributed to courts via round-robin within their difficulty tier (2 p
 - Dev mode stats/rating overrides work with map-based matches
 - **D-pad movement**: Arrow buttons on map move player ~50m per tap (N/S/E/W)
 - **Sticky mode**: Toggle in D-pad center — panning the map moves the player location to the camera center
+
+## Wager & Hustler System (Planned)
+
+### Money Wagers
+- NPCs can wager coins on matches (future milestone)
+- Only NPCs with higher SUPR will initiate wagers — they won't bet against someone they'd obviously beat
+- Regular NPCs reject wager challenges after too many consecutive losses to the player
+- Winner takes the wagered amount
+
+### Hustler NPCs
+Special NPC archetype with unique behaviors:
+- **Hidden stats**: their true SUPR and stats are concealed until after you play them
+- **Scouting ability**: hustlers can see your stats and SUPR before agreeing to play
+- **Selective opponents**: hustlers reject challenges if they think they'll lose (outmatched by your stats)
+- **Sore losers**: hustlers leave the court after losing — they won't rematch immediately
+- **Negative reputation**: hustlers have bad rep in the community; beating them earns bonus rep
+- **Premium loot**: hustlers carry epic/legendary equipment that drops on defeat
+- **Money matches**: hustlers always wager coins, with higher stakes than regular NPCs
+
+### Equipment Wagering
+- Loser forfeits equipped items (planned for high-stakes matches)
+- Equipment wagering requires mutual agreement
+- Items wagered are shown before match starts
+
+### Tournament Coins
+- Future milestone: tournaments award coins based on placement
+- Entry fees create coin sinks
+- Prize pools scale with tournament tier

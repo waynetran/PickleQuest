@@ -152,11 +152,21 @@ enum GameConstants {
 
     // MARK: - Reputation
     enum Reputation {
+        // Win constants
         static let baseWinRep = 10
-        static let baseLossRep = 10
-        static let suprGapMultiplier = 10.0  // rep per 1.0 SUPR gap
-        static let minWinRep = 5
-        static let maxLossRep = 30
+        static let upsetWinBonus = 15.0        // per 1.0 SUPR gap (beating stronger)
+        static let expectedWinReduction = 5.0  // per 1.0 SUPR gap (beating weaker, reduces gain)
+        static let minWinRep = 3               // always some rep for winning
+
+        // Loss: respect gain (lost to much stronger)
+        static let respectThreshold = 0.5      // SUPR gap where respect kicks in on loss
+        static let respectGainRate = 2.0       // per 1.0 SUPR gap
+        static let maxRespectGain = 3          // cap on respect gain
+
+        // Loss: rep penalty (lost to weaker)
+        static let baseLossRep = 5             // base loss when losing to weaker
+        static let upsetLossMultiplier = 10.0  // per 1.0 SUPR gap (losing to weaker)
+        static let maxLossRep = 30             // cap
     }
 
     // MARK: - Durability
@@ -201,7 +211,7 @@ enum GameConstants {
     enum Economy {
         static let startingCoins: Int = 500
         static let matchWinBaseReward: Int = 100
-        static let matchLossBaseReward: Int = 25
+        static let matchLossBaseReward: Int = 0
         static let difficultyBonusMultiplier: Double = 0.5
     }
 

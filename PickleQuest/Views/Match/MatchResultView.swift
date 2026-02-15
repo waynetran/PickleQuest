@@ -3,6 +3,7 @@ import SwiftUI
 struct MatchResultView: View {
     let result: MatchResult
     let opponent: NPC?
+    var matchVM: MatchViewModel
     let levelUpRewards: [LevelUpReward]
     let duprChange: Double?
     let potentialDuprChange: Double
@@ -10,6 +11,8 @@ struct MatchResultView: View {
     let brokenEquipment: [Equipment]
     let energyDrain: Double
     let onDismiss: () -> Void
+
+    @State private var showDiscardAlert = false
 
     var body: some View {
         ScrollView {
@@ -35,7 +38,9 @@ struct MatchResultView: View {
                 // Rewards
                 HStack(spacing: 24) {
                     RewardBadge(icon: "star.fill", label: "XP", value: "+\(result.xpEarned)", color: .blue)
-                    RewardBadge(icon: "dollarsign.circle.fill", label: "Coins", value: "+\(result.coinsEarned)", color: .yellow)
+                    if result.coinsEarned > 0 {
+                        RewardBadge(icon: "dollarsign.circle.fill", label: "Coins", value: "+\(result.coinsEarned)", color: .yellow)
+                    }
                     suprBadge
                     repBadge
                 }
@@ -89,7 +94,13 @@ struct MatchResultView: View {
                             .font(.headline)
 
                         ForEach(result.loot) { item in
-                            LootDropRow(equipment: item)
+                            LootDropRow(
+                                equipment: item,
+                                decision: Binding(
+                                    get: { matchVM.lootDecisions[item.id] },
+                                    set: { matchVM.lootDecisions[item.id] = $0 }
+                                )
+                            )
                         }
                     }
                     .padding()
@@ -128,7 +139,13 @@ struct MatchResultView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
                 // Continue button
-                Button(action: onDismiss) {
+                Button {
+                    if matchVM.hasUnhandledLoot {
+                        showDiscardAlert = true
+                    } else {
+                        onDismiss()
+                    }
+                } label: {
                     Text("Continue")
                         .font(.title3.bold())
                         .frame(maxWidth: .infinity)
@@ -136,6 +153,15 @@ struct MatchResultView: View {
                         .background(.green)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+                .alert("Discard Loot?", isPresented: $showDiscardAlert) {
+                    Button("Go Back", role: .cancel) { }
+                    Button("Discard & Continue", role: .destructive) {
+                        onDismiss()
+                    }
+                } message: {
+                    let count = matchVM.lootDrops.filter { matchVM.lootDecisions[$0.id] == nil }.count
+                    Text("\(count) item(s) will be discarded.")
                 }
             }
             .padding()
