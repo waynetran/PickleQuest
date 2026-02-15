@@ -594,6 +594,20 @@ All-3 bonus: +500 coins (claimed from banner)
 - `StoreView.swift` + `StoreViewModel.swift` — consumable section
 - `DevModeView.swift` — coaching record + daily challenge overrides
 
+### Post-milestone: Training System Redesign
+
+**Commit**: `8d35388`
+
+Replaced the drill grade system (S/A/B/C/D) with energy-based stat gains that always improve the player:
+- **Removed**: DrillGrade, DrillDifficulty enums, manual drill type picker
+- **Coach levels 1-5**: replaced tiers (1-4), with level-based fee table [200, 500, 1000, 2000, 3000]
+- **Daily specialty**: deterministic `hash(coachID + date) % 10` → one StatType per coach per day, coach determines drill type
+- **Stat gain formula**: `max(1, Int((energyPercent / 100.0) * Double(coachLevel)))` — always improves, scales with energy and coach level
+- **White coach sprite**: all-white `CharacterAppearance` on far side of drill scene feeding balls (forehand/backhand cycles)
+- **Fixed result timing**: overlay waits for 4s SpriteKit animation to complete via `onComplete` callback + `animationComplete` flag
+- **Unified training flow**: no separate drill picker — coach section in CourtDetailSheet shows daily specialty, fee, expected gain, single "Train" button
+- **Files changed**: 16 (6 model, 2 engine/service, 1 ViewModel, 4 views, 2 service implementations, 1 service protocol)
+
 ---
 
 ## Milestone 7a: Onboarding, Player Management & Basic Persistence
