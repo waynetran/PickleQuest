@@ -19,14 +19,19 @@ final class MatchCourtScene: SKScene {
     // Track serving side for animations
     private var lastServingSide: MatchSide = .player
 
-    override func didMove(to view: SKView) {
-        backgroundColor = UIColor(hex: "#1A1A2E") // dark bg behind court
+    override init(size: CGSize) {
+        super.init(size: size)
+        backgroundColor = UIColor(hex: "#1A1A2E")
         setupCourt()
         setupPlayers()
         setupBall()
         setupAnnouncementLabel()
-
         animator = MatchAnimator(scene: self)
+    }
+
+    @available(*, unavailable)
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) is not supported")
     }
 
     // MARK: - Public API
