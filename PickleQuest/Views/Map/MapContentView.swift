@@ -100,6 +100,12 @@ struct MapContentView: View {
                 )
             }
         }
+        .onChange(of: mapVM.locationManager.currentLocation?.coordinate) { _, _ in
+            // Continuous discovery check as real GPS updates
+            if appState.locationOverride == nil {
+                runDiscoveryCheck()
+            }
+        }
         .onChange(of: mapVM.showCourtDetail) { _, isPresented in
             if !isPresented, let npc = mapVM.pendingChallenge {
                 mapVM.pendingChallenge = nil
