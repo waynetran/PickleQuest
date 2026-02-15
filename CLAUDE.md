@@ -55,9 +55,10 @@ PickleQuest/
 - Match engine tests validate probability distributions over many simulations
 
 ### Build
-- Regenerate Xcode project: `xcodegen generate`
+- Regenerate Xcode project: `xcodegen generate` — **only needed when adding/removing files**, NOT for edits to existing files
 - Build: `xcodebuild -project PickleQuest.xcodeproj -scheme PickleQuest -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build`
 - Test: same command with `test` instead of `build`
+- Team ID `69F6RR9M5J` and bundle ID `tran.io.PickleQuest` are set in `project.yml` — persists across `xcodegen generate`
 
 ## Git Conventions
 - No Claude/Anthropic attribution in commits

@@ -1,6 +1,6 @@
 name: PickleQuest
 options:
-  bundleIdPrefix: com.waynetran
+  bundleIdPrefix: tran.io
   deploymentTarget:
     iOS: "18.0"
   xcodeVersion: "16.0"
@@ -10,6 +10,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: 69F6RR9M5J
 
 targets:
   PickleQuest:
@@ -26,7 +28,7 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait"
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "PickleQuest uses your location to show nearby pickleball courts and opponents on the map."
-        PRODUCT_BUNDLE_IDENTIFIER: com.waynetran.PickleQuest
+        PRODUCT_BUNDLE_IDENTIFIER: tran.io.PickleQuest
         PRODUCT_NAME: PickleQuest
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: 1
@@ -45,7 +47,7 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
-        PRODUCT_BUNDLE_IDENTIFIER: com.waynetran.PickleQuestTests
+        PRODUCT_BUNDLE_IDENTIFIER: tran.io.PickleQuestTests
 
   PickleQuestUITests:
     type: bundle.ui-testing
@@ -57,4 +59,4 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
-        PRODUCT_BUNDLE_IDENTIFIER: com.waynetran.PickleQuestUITests
+        PRODUCT_BUNDLE_IDENTIFIER: tran.io.PickleQuestUITests
