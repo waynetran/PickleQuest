@@ -41,6 +41,8 @@ final class MatchViewModel {
     var brokenEquipment: [Equipment] = []
     var energyDrain: Double = 0
     var matchConfig: MatchConfig = .quickMatch
+    var currentServingSide: MatchSide = .player
+    var courtName: String = ""
 
     enum MatchState: Equatable {
         case idle
@@ -69,12 +71,14 @@ final class MatchViewModel {
         isRated && !isAutoUnrated(playerRating: playerRating, opponentRating: opponentRating)
     }
 
-    func startMatch(player: Player, opponent: NPC) async {
+    func startMatch(player: Player, opponent: NPC, courtName: String = "") async {
         selectedNPC = opponent
+        self.courtName = courtName
         matchState = .simulating
         eventLog = []
         matchResult = nil
         currentScore = nil
+        currentServingSide = .player
         lootDrops = []
         lootDecisions = [:]
         levelUpRewards = []
@@ -113,6 +117,7 @@ final class MatchViewModel {
 
             if case .pointPlayed(let point) = event {
                 currentScore = point.scoreAfter
+                currentServingSide = point.servingSide
             }
             if case .matchEnd(let result) = event {
                 matchResult = result
@@ -197,6 +202,8 @@ final class MatchViewModel {
         repChange = nil
         brokenEquipment = []
         energyDrain = 0
+        courtName = ""
+        currentServingSide = .player
     }
 }
 

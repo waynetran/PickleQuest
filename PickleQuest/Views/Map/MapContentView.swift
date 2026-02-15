@@ -7,6 +7,7 @@ struct MapContentView: View {
     @Environment(AppState.self) private var appState
 
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
+    @State private var undiscoveredCourt: Court?
 
     var body: some View {
         @Bindable var mapState = mapVM
@@ -34,7 +35,11 @@ struct MapContentView: View {
                             court: court,
                             isDiscovered: discovered
                         ) {
-                            Task { await mapVM.selectCourt(court) }
+                            if discovered {
+                                Task { await mapVM.selectCourt(court) }
+                            } else {
+                                undiscoveredCourt = court
+                            }
                         }
                     }
                     .annotationTitles(.hidden)
@@ -106,11 +111,38 @@ struct MapContentView: View {
                 runDiscoveryCheck()
             }
         }
+        .confirmationDialog(
+            "Undiscovered Court",
+            isPresented: Binding(
+                get: { undiscoveredCourt != nil },
+                set: { if !$0 { undiscoveredCourt = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let court = undiscoveredCourt {
+                Button("Directions in Apple Maps") {
+                    openInAppleMaps(court: court)
+                    undiscoveredCourt = nil
+                }
+                if canOpenGoogleMaps {
+                    Button("Directions in Google Maps") {
+                        openInGoogleMaps(court: court)
+                        undiscoveredCourt = nil
+                    }
+                }
+                Button("Cancel", role: .cancel) {
+                    undiscoveredCourt = nil
+                }
+            }
+        } message: {
+            Text("Walk within 200m to discover this court and challenge its players.")
+        }
         .onChange(of: mapVM.showCourtDetail) { _, isPresented in
             if !isPresented, let npc = mapVM.pendingChallenge {
+                let courtNameForMatch = mapVM.selectedCourt?.name ?? ""
                 mapVM.pendingChallenge = nil
                 Task {
-                    await matchVM.startMatch(player: appState.player, opponent: npc)
+                    await matchVM.startMatch(player: appState.player, opponent: npc, courtName: courtNameForMatch)
                 }
             }
         }
@@ -196,6 +228,28 @@ struct MapContentView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .padding(.horizontal)
         .padding(.bottom, 8)
+    }
+
+    // MARK: - Directions
+
+    private var canOpenGoogleMaps: Bool {
+        UIApplication.shared.canOpenURL(URL(string: "comgooglemaps://")!)
+    }
+
+    private func openInAppleMaps(court: Court) {
+        let placemark = MKPlacemark(coordinate: court.coordinate)
+        let mapItem = MKMapItem(placemark: placemark)
+        mapItem.name = "Undiscovered Court"
+        mapItem.openInMaps(launchOptions: [
+            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeWalking
+        ])
+    }
+
+    private func openInGoogleMaps(court: Court) {
+        let urlString = "comgooglemaps://?daddr=\(court.latitude),\(court.longitude)&directionsmode=walking"
+        if let url = URL(string: urlString) {
+            UIApplication.shared.open(url)
+        }
     }
 
     private var energyColor: Color {

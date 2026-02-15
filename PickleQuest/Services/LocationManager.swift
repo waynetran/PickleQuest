@@ -21,6 +21,8 @@ final class LocationManager: NSObject {
     }
 
     func startUpdates() {
+        manager.allowsBackgroundLocationUpdates = true
+        manager.showsBackgroundLocationIndicator = true
         manager.startUpdatingLocation()
     }
 

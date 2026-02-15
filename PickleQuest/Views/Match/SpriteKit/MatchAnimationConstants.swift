@@ -9,10 +9,10 @@ enum MatchAnimationConstants {
 
     enum Court {
         // Trapezoid: near baseline wider, far baseline narrower (low court-level perspective)
-        static let nearBaselineWidth: CGFloat = 360
-        static let farBaselineWidth: CGFloat = 140
-        static let courtHeight: CGFloat = 460
-        static let courtBottomY: CGFloat = 100
+        static let nearBaselineWidth: CGFloat = 340
+        static let farBaselineWidth: CGFloat = 130
+        static let courtHeight: CGFloat = 370
+        static let courtBottomY: CGFloat = 185
         static let courtTopY: CGFloat = courtBottomY + courtHeight
 
         // Perspective foreshortening (far court appears shorter)
@@ -36,10 +36,10 @@ enum MatchAnimationConstants {
         // Sprite sheet frame size
         static let frameSize: CGFloat = 64
 
-        // Scale factors for display
-        static let nearPlayerScale: CGFloat = 1.6   // 64×1.6 ≈ 102pt (perspective-adjusted)
-        static let farPlayerScale: CGFloat = 1.4    // 64×1.4 ≈ 90pt (× perspectiveScale)
-        static let ballScale: CGFloat = 2.5         // 16×2.5 = 40pt, clearly visible
+        // Scale factors for display (2.5× oversized for cartoony look)
+        static let nearPlayerScale: CGFloat = 4.0   // 64×4.0 ≈ 256pt (cartoony)
+        static let farPlayerScale: CGFloat = 3.5    // 64×3.5 ≈ 224pt (× perspectiveScale)
+        static let ballScale: CGFloat = 3.0         // 16×3 = 48pt, visible against characters
 
         // Display sizes (approximate, for layout calculations)
         static let nearPlayerWidth: CGFloat = frameSize * nearPlayerScale
@@ -80,7 +80,7 @@ enum MatchAnimationConstants {
         static let pointPause: TimeInterval = 0.3
 
         // Ball arc
-        static let arcPeak: CGFloat = 60            // max height of ball arc in points
+        static let arcPeak: CGFloat = 48            // max height of ball arc in points
 
         // Event animations
         static let matchStartDuration: TimeInterval = 2.0

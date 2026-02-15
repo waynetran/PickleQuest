@@ -7,12 +7,15 @@ struct MatchSimulationView: View {
         VStack(spacing: 0) {
             // Score header
             if let score = viewModel.currentScore {
-                ScoreHeaderView(
+                BroadcastScoreOverlay(
+                    playerName: "You",
+                    opponentName: viewModel.selectedNPC?.name ?? "Opponent",
                     playerScore: score.playerPoints,
                     opponentScore: score.opponentPoints,
                     playerGames: score.playerGames,
                     opponentGames: score.opponentGames,
-                    opponentName: viewModel.selectedNPC?.name ?? "Opponent"
+                    servingSide: viewModel.currentServingSide,
+                    courtName: viewModel.courtName
                 )
             }
 
@@ -41,47 +44,133 @@ struct MatchSimulationView: View {
     }
 }
 
-struct ScoreHeaderView: View {
+// MARK: - Broadcast Score Overlay (PPA/PBTV style)
+
+struct BroadcastScoreOverlay: View {
+    let playerName: String
+    let opponentName: String
     let playerScore: Int
     let opponentScore: Int
     let playerGames: Int
     let opponentGames: Int
-    let opponentName: String
+    let servingSide: MatchSide
+    let courtName: String
+
+    private var tournamentName: String {
+        TournamentNameGenerator.generate(from: courtName)
+    }
 
     var body: some View {
-        VStack(spacing: 4) {
-            HStack {
-                VStack {
-                    Text("You")
-                        .font(.caption.bold())
-                    Text("\(playerScore)")
-                        .font(.system(size: 48, weight: .bold, design: .rounded))
-                        .contentTransition(.numericText())
-                }
-                .frame(maxWidth: .infinity)
+        VStack(alignment: .leading, spacing: 0) {
+            // Tournament header
+            Text(tournamentName.uppercased())
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.green.opacity(0.85))
 
-                VStack(spacing: 2) {
-                    Text("Games")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Text("\(playerGames) - \(opponentGames)")
-                        .font(.callout.bold())
-                }
-
-                VStack {
-                    Text(opponentName)
-                        .font(.caption.bold())
-                    Text("\(opponentScore)")
-                        .font(.system(size: 48, weight: .bold, design: .rounded))
-                        .contentTransition(.numericText())
-                }
-                .frame(maxWidth: .infinity)
+            // Player rows
+            VStack(spacing: 0) {
+                playerRow(
+                    name: playerName,
+                    score: playerScore,
+                    games: playerGames,
+                    isServing: servingSide == .player
+                )
+                Divider().background(Color.gray.opacity(0.3))
+                playerRow(
+                    name: opponentName,
+                    score: opponentScore,
+                    games: opponentGames,
+                    isServing: servingSide == .opponent
+                )
             }
+            .background(Color.black.opacity(0.85))
+
+            // Event info footer
+            Text("SINGLES  \u{2022}  RD 1")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.9))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.gray.opacity(0.6))
         }
-        .padding()
-        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .frame(width: 200)
+    }
+
+    private func playerRow(name: String, score: Int, games: Int, isServing: Bool) -> some View {
+        HStack(spacing: 0) {
+            // Server indicator
+            Circle()
+                .fill(isServing ? Color.green : Color.clear)
+                .frame(width: 6, height: 6)
+                .padding(.leading, 6)
+
+            // Player name
+            Text(name.uppercased())
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .padding(.leading, 6)
+
+            Spacer()
+
+            // Points score
+            Text("\(score)")
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundStyle(.white)
+                .frame(width: 24)
+                .contentTransition(.numericText())
+
+            // Games score
+            Text("\(games)")
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundStyle(.green)
+                .frame(width: 24)
+                .background(Color.white.opacity(0.08))
+                .contentTransition(.numericText())
+        }
+        .padding(.vertical, 5)
     }
 }
+
+// MARK: - Tournament Name Generator
+
+enum TournamentNameGenerator {
+    private static let suffixes = [
+        "Classic", "Open", "Invitational", "Masters",
+        "Championship", "Showdown", "Cup", "Grand Prix"
+    ]
+
+    private static let prefixes = [
+        "The", "The Annual", "The Legendary", "The Grand"
+    ]
+
+    static func generate(from courtName: String) -> String {
+        guard !courtName.isEmpty else {
+            return "The PickleQuest Open"
+        }
+
+        // Use a deterministic hash so the same court always gets the same name
+        let hash = abs(courtName.hashValue)
+        let prefix = prefixes[hash % prefixes.count]
+        let suffix = suffixes[(hash / prefixes.count) % suffixes.count]
+
+        // Clean up the court name — remove common suffixes like "Park", "Center", "Courts"
+        let cleanName = courtName
+            .replacingOccurrences(of: " Courts", with: "")
+            .replacingOccurrences(of: " Court", with: "")
+            .replacingOccurrences(of: " Recreation Center", with: "")
+            .replacingOccurrences(of: " Rec Center", with: "")
+
+        return "\(prefix) \(cleanName) \(suffix)"
+    }
+}
+
+// MARK: - Event Row
 
 struct EventRow: View {
     let entry: MatchEventEntry

@@ -6,7 +6,7 @@ struct MatchSpriteView: View {
     @State private var scene: MatchCourtScene?
 
     var body: some View {
-        ZStack(alignment: .top) {
+        ZStack(alignment: .topLeading) {
             if let scene {
                 SpriteView(scene: scene)
                     .ignoresSafeArea()
@@ -17,15 +17,20 @@ struct MatchSpriteView: View {
                     .tint(.white)
             }
 
-            // Score overlay
+            // Broadcast score overlay (top-left, PPA style)
             if let score = viewModel.currentScore {
-                ScoreHeaderView(
+                BroadcastScoreOverlay(
+                    playerName: "You",
+                    opponentName: viewModel.selectedNPC?.name ?? "Opponent",
                     playerScore: score.playerPoints,
                     opponentScore: score.opponentPoints,
                     playerGames: score.playerGames,
                     opponentGames: score.opponentGames,
-                    opponentName: viewModel.selectedNPC?.name ?? "Opponent"
+                    servingSide: viewModel.currentServingSide,
+                    courtName: viewModel.courtName
                 )
+                .padding(.leading, 12)
+                .padding(.top, 8)
             }
         }
         .task {

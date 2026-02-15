@@ -36,7 +36,7 @@ struct MatchHubView: View {
 
     private var navigationTitle: String {
         switch matchVM?.matchState {
-        case .simulating: return "Match"
+        case .simulating: return ""
         case .finished: return "Results"
         default: return "Map"
         }
@@ -52,6 +52,7 @@ struct MatchHubView: View {
         case .simulating:
             if matchVM.useSpriteVisualization {
                 MatchSpriteView(viewModel: matchVM)
+                    .toolbar(.hidden, for: .navigationBar)
             } else {
                 MatchSimulationView(viewModel: matchVM)
             }
