@@ -28,37 +28,20 @@ enum MatchAnimationConstants {
     }
 
     enum Sprites {
-        // Pixel canvas sizes (drawn at this resolution)
-        static let nearPlayerCanvasWidth = 16
-        static let nearPlayerCanvasHeight = 24
-        static let farPlayerCanvasWidth = 12
-        static let farPlayerCanvasHeight = 18
-        static let ballCanvasSize = 6
+        // Sprite sheet frame size
+        static let frameSize: CGFloat = 64
 
         // Scale factors for display
-        static let nearPlayerScale: CGFloat = 4    // 16x24 → 64x96pt
-        static let farPlayerScale: CGFloat = 3     // 12x18 → 36x54pt
-        static let ballScale: CGFloat = 3          // 6x6 → 18x18pt
+        static let nearPlayerScale: CGFloat = 1.5   // 64×1.5 = 96pt
+        static let farPlayerScale: CGFloat = 1.4    // 64×1.4 ≈ 90pt (× perspectiveScale)
+        static let ballScale: CGFloat = 1.0         // 16×16 at 1:1
 
-        // Display sizes
-        static let nearPlayerWidth: CGFloat = CGFloat(nearPlayerCanvasWidth) * nearPlayerScale
-        static let nearPlayerHeight: CGFloat = CGFloat(nearPlayerCanvasHeight) * nearPlayerScale
-        static let farPlayerWidth: CGFloat = CGFloat(farPlayerCanvasWidth) * farPlayerScale
-        static let farPlayerHeight: CGFloat = CGFloat(farPlayerCanvasHeight) * farPlayerScale
-        static let ballSize: CGFloat = CGFloat(ballCanvasSize) * ballScale
-
-        // Colors (pixel palette)
-        static let playerShirtColor = "#3498DB"    // blue
-        static let playerSkinColor = "#F5CBA7"
-        static let playerShortsColor = "#2C3E50"
-        static let playerHairColor = "#5D4037"
-        static let opponentShirtColor = "#E74C3C"  // red
-        static let opponentSkinColor = "#F5CBA7"
-        static let opponentShortsColor = "#2C3E50"
-        static let opponentHairColor = "#212121"
-        static let ballColor = "#CDDC39"           // yellow-green wiffle
-        static let ballDotColor = "#8BC34A"
-        static let paddleColor = "#37474F"
+        // Display sizes (approximate, for layout calculations)
+        static let nearPlayerWidth: CGFloat = frameSize * nearPlayerScale
+        static let nearPlayerHeight: CGFloat = frameSize * nearPlayerScale
+        static let farPlayerWidth: CGFloat = frameSize * farPlayerScale
+        static let farPlayerHeight: CGFloat = frameSize * farPlayerScale
+        static let ballSize: CGFloat = 16 * ballScale
     }
 
     enum Positions {

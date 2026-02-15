@@ -11,6 +11,7 @@
 | 3 | Map + Location + NPC World | **Complete** |
 | 3.1 | Economy, Rep & Loot UX Fixes | **Complete** |
 | 4 | SpriteKit Match Visualization | **Complete** |
+| 4.1 | Sprite Sheet + Character Customization | **Complete** |
 | 5 | Doubles, Team Synergy, Tournaments | Planned |
 | 6 | Training, Coaching, Energy + Economy | Planned |
 | 7 | Persistence, Polish, Multiplayer Prep | Planned |
@@ -232,6 +233,55 @@ MatchEngine (actor) → AsyncStream<MatchEvent> → MatchViewModel (@MainActor)
 ### Modified files
 - `ViewModels/MatchViewModel.swift` — `courtScene` property, `useSpriteVisualization` flag, async animation in event loop
 - `Views/Match/MatchHubView.swift` — routes to `MatchSpriteView` when sprite visualization enabled
+
+---
+
+## Milestone 4.1: Sprite Sheet + Character Customization
+
+### What was built
+- **Sprite sheet integration**: replaced programmatic pixel art (UIGraphicsImageRenderer) with real sprite sheets from "Aces in Pixel" asset pack (character1-Sheet.png 640x832, ball.png 32x16)
+- **13 animation states**: idleBack, idleFront, walkToward, walkAway, walkLeft, walkRight, ready, servePrep, serveSwing, forehand, backhand, runDive, celebrate — sliced from 10x13 grid of 64x64px cells
+- **Color replacement pipeline**: luminance-preserving pixel-level color swap — maps source palette (11 body-part colors) to target appearance, preserving artist's shading via `blendChannel(original/sourceBase * target)`
+- **CharacterAppearance model**: 7-field struct (hair, skin, shirt, shorts, headband, shoes, paddle) with hex color strings, Codable/Hashable/Sendable
+- **Deterministic NPC appearances**: `AppearanceGenerator` hashes NPC UUID to stable color indices — personality drives shirt palette (aggressive=reds, defensive=blues, etc.), difficulty boosts saturation
+- **Equipment visual influence**: `Equipment.visualColor` optional field — equipped items override corresponding appearance slot colors (paddle→paddleColor, shirt→shirtColor, etc.)
+- **SpriteSheetAnimator**: manages frame cycling on SKSpriteNode — fire-and-forget `play()` for loops, async `playAsync()` for one-shots that return on completion, static frame display for frozen poses
+- **Animation integration in MatchAnimator**: walkAway/walkToward during match start slide-in, ready stance between points, servePrep→serveSwing sequence, walkLeft/walkRight during lateral movement, forehand/backhand on hits, runDive for flinches, celebrate for point/game/match wins
+- **Preloaded texture cache**: color replacement runs once per appearance (~530K pixels), cached by CharacterAppearance hash — subsequent matches reuse cached textures
+- **Ball sprite**: sliced from ball.png (2 frames at 16x16)
+- **Fallback system**: if sprite sheet fails to load, falls back to programmatic pixel art
+
+### Architecture
+```
+CharacterAppearance → ColorReplacer.buildMappings() → ColorReplacer.replaceColors()
+                                                              ↓
+SpriteSheetLoader.loadSheet() → recolored CGImage → sliceFrames() per row
+                                                              ↓
+SpriteFactory.loadTextures() → [CharacterAnimationState: [SKTexture]] (cached)
+                                                              ↓
+SpriteSheetAnimator(node, textures) → play(state) / playAsync(state)
+```
+
+### New files
+- `Models/Player/CharacterAppearance.swift` — appearance data model
+- `Models/Player/AppearanceGenerator.swift` — deterministic NPC appearance generation
+- `Views/Match/SpriteKit/SpriteSheetLoader.swift` — PNG loading, frame slicing, frame count detection
+- `Views/Match/SpriteKit/ColorReplacer.swift` — pixel-level color replacement with luminance preservation
+- `Views/Match/SpriteKit/CharacterAnimationState.swift` — animation state enum (row, frame count, loop, timing)
+- `Views/Match/SpriteKit/SpriteSheetAnimator.swift` — frame animation controller for SKSpriteNode
+- `Extensions/UIColor+Hex.swift` — extracted hex init + hexString property
+- `Resources/SpriteSheets/character1-Sheet.png` — base character template (640x832)
+- `Resources/SpriteSheets/ball.png` — ball sprite (32x16, 2 frames)
+
+### Modified files
+- `Models/Player/Player.swift` — added `appearance: CharacterAppearance` field
+- `Models/Equipment/Equipment.swift` — added `visualColor: String?` field
+- `Views/Match/SpriteKit/SpriteFactory.swift` — sprite sheet pipeline (makeCharacterNode, makeBallTextures, loadTextures with cache); old programmatic methods kept as private fallbacks
+- `Views/Match/SpriteKit/MatchAnimationConstants.swift` — updated Sprites section for 64x64 frames (frameSize, nearPlayerScale 1.5, farPlayerScale 1.4, ballScale 1.0)
+- `Views/Match/SpriteKit/MatchCourtScene.swift` — accepts player/opponent appearances, creates SpriteSheetAnimators, exposes nearAnimator/farAnimator
+- `Views/Match/SpriteKit/MatchAnimator.swift` — frame animation triggers alongside position animations for all match events
+- `ViewModels/MatchViewModel.swift` — playerAppearance/opponentAppearance properties, appearance resolution in startMatch()
+- `Views/Match/MatchSpriteView.swift` — passes appearances to MatchCourtScene init
 
 ---
 

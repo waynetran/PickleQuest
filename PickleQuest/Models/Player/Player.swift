@@ -9,6 +9,7 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
     var wallet: Wallet
     var duprProfile: DUPRProfile
     var matchHistory: [MatchHistoryEntry] = []
+    var appearance: CharacterAppearance = .defaultPlayer
     var repProfile: RepProfile = .starter
     var energy: Double = GameConstants.PersistentEnergy.maxEnergy
     var lastMatchDate: Date? = nil

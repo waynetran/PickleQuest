@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -11,6 +11,9 @@
 		023992AA330250878468D1C3 /* MatchAnimationConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B645A22F0D9CDF3E5A80D89D /* MatchAnimationConstants.swift */; };
 		030053C44EF48B07E766AD2B /* PlayerProgression.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52C2A0413DC0CD20FB85994C /* PlayerProgression.swift */; };
 		048DBBBFE296E9B444059160 /* CLLocationCoordinate2D+Sendable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2A0910DA48FBCFB568311B /* CLLocationCoordinate2D+Sendable.swift */; };
+		04E498BB1ED53A774576B7CE /* ColorReplacer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 935402BCE85914A3F49418A7 /* ColorReplacer.swift */; };
+		0B5219D488C98B0A9D7888EA /* CharacterAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9B6786F66B8934634A8830A /* CharacterAppearance.swift */; };
+		0B5CF73ACAEE1A68C32D5EEF /* SpriteSheetAnimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1189DB1F3E1BDB85799DBDD7 /* SpriteSheetAnimator.swift */; };
 		0D504017AD0F443740F26367 /* DUPRProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51DD3F8872DF216E539BB427 /* DUPRProfile.swift */; };
 		0D9B2D6B41077877A74F860C /* LootGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FE0743BF162137BA3E922FE /* LootGeneratorTests.swift */; };
 		0DFA243D216FD16F1255A3EC /* NPC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1675D372694A305F611FE32D /* NPC.swift */; };
@@ -35,6 +38,7 @@
 		473BB098A5401D2799FD9521 /* CourtDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0A3F5F877F307464FDF9F72 /* CourtDetailSheet.swift */; };
 		49657DCD34805C399017F8FA /* FatigueModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549DF67C3EB0E36D696AE3EA /* FatigueModelTests.swift */; };
 		4DAD72FBC09DA09E916FEB5B /* InventoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0E26D687250C76182C3D4C /* InventoryService.swift */; };
+		500C63BE9013D7DBB0CF32EE /* SpriteSheetLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11A0AC7AEE35D805C2CD630 /* SpriteSheetLoader.swift */; };
 		51BC3FD6F41FDF4EDFE95E3C /* MatchHistoryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DC83A9B8FA7C9441534B175 /* MatchHistoryRow.swift */; };
 		5CC05AE0BF17214046CCAFD1 /* StoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0752261B8ED02D534503C85 /* StoreView.swift */; };
 		5F0BAB40AD8F1693B19EA076 /* SKNode+Async.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D4DA40EDD426D2F7E3FE0E5 /* SKNode+Async.swift */; };
@@ -65,6 +69,7 @@
 		A5120AA31F0A8AEBBBFC9900 /* EquipmentSetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D8901DF47B273A28A842991 /* EquipmentSetTests.swift */; };
 		A59A00DD59A508DD8118D1B7 /* MockStoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7AEE335773012DD0EA1E5EF /* MockStoreService.swift */; };
 		A626669F5ACFF89A909F5072 /* StatBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A76446B9A2021FE2A0668EC0 /* StatBar.swift */; };
+		AA8CE763EB065822FA23CCA0 /* CharacterAnimationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5DFB7311C2DB71DFA7ADED7 /* CharacterAnimationState.swift */; };
 		AFADB2EE7CFC9A8B6114BF26 /* RallySimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F35FD040AF4661A856F9D6FA /* RallySimulator.swift */; };
 		B04EDE991297618814A545E4 /* StatCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 840065301D6F3845B7E589EA /* StatCalculator.swift */; };
 		B26771FE90898DD826D9B56D /* EquipmentSlot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0D6A9C6DD259AB87FE0D21 /* EquipmentSlot.swift */; };
@@ -72,7 +77,9 @@
 		B926619285D7778F1326F291 /* EquipmentRarity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DE2F3174E21AC04B25ECDDA /* EquipmentRarity.swift */; };
 		BAA582D6CAEDE37C2893C67B /* MockCourtService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F39ADA4591D8FEDB86F5DAE7 /* MockCourtService.swift */; };
 		BD107C1E7156DC796543C80E /* MatchAnimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B97CA559D005D19373B923E /* MatchAnimator.swift */; };
+		BDC86FDAA4439CFE42A0F107 /* ball.png in Resources */ = {isa = PBXBuildFile; fileRef = CCDA3BA6ED33B0BCB7D1E92D /* ball.png */; };
 		C043BA9B8317B6BC00C438D6 /* DUPRCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93674CFBCAE7C8A5EB63610 /* DUPRCalculatorTests.swift */; };
+		C31CD5CA9BE818B447085B10 /* character1-Sheet.png in Resources */ = {isa = PBXBuildFile; fileRef = 0E3B9DA82455DDC9859651BB /* character1-Sheet.png */; };
 		C42CE90D2DA3273949387E7D /* MatchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 912C27A2B8A18DDDEDA05D69 /* MatchEngine.swift */; };
 		C568849F3E7E70B323E268D6 /* DependencyContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C7DF57C299CE8D8DF73B080 /* DependencyContainer.swift */; };
 		C59FDDAFB1C1E9CE54336D15 /* MatchCourtScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DF9A9414A06C483D6964FE9 /* MatchCourtScene.swift */; };
@@ -81,10 +88,12 @@
 		CDB582B28BCB65C90D6A3E06 /* RepProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87E6BC2CEDE4611F9F591DD0 /* RepProfile.swift */; };
 		CDBE28F6BF3462D4396D9340 /* RepCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1AE74519D395EBC944F80F /* RepCalculator.swift */; };
 		CDD6F64EBB582172E07C0CD1 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 626A44F16E3DD96990C0879B /* LocationManager.swift */; };
+		D05971C85E3233F7F3A7421A /* UIColor+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = B85291B7FDEBBCCCD587FAC6 /* UIColor+Hex.swift */; };
 		D0867DCDFEE42EB11B8FFF3D /* MatchHistoryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C16E89037C904100D1C317F /* MatchHistoryEntry.swift */; };
 		D0DB3E7B604374E484843D56 /* StoreItemCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0D6102CDEE0226239FB7ED /* StoreItemCard.swift */; };
 		D1C34495E0D732C0A1341776 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5EA4DC48371B4ABC65DBEA0 /* ContentView.swift */; };
 		D726C1B09F3C251DB2798EBB /* MockNPCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE09A927C4E070179DA2B55B /* MockNPCService.swift */; };
+		D8C4B3036E5214BAE018D4BD /* AppearanceGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8643BD07D4ED9ECD24B2D8EC /* AppearanceGenerator.swift */; };
 		D94A60FDE166721728A7C6FD /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584959296BFD092ED3EE3FD8 /* PlayerService.swift */; };
 		DB1E24C03C5CA4CDFAA83ABD /* MatchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 784E4E44166C3416091BA7E0 /* MatchResult.swift */; };
 		DBE5F18AC6CBE4C42E7A712E /* StatCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */; };
@@ -123,7 +132,9 @@
 		01992CB63887808953615677 /* StoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreService.swift; sourceTree = "<group>"; };
 		02FF717F7DEC1E46AC1C7912 /* PlayerProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProfileView.swift; sourceTree = "<group>"; };
 		0C2A0910DA48FBCFB568311B /* CLLocationCoordinate2D+Sendable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLLocationCoordinate2D+Sendable.swift"; sourceTree = "<group>"; };
+		0E3B9DA82455DDC9859651BB /* character1-Sheet.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "character1-Sheet.png"; sourceTree = "<group>"; };
 		113D32D22345163D83B3B9D9 /* MatchPoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPoint.swift; sourceTree = "<group>"; };
+		1189DB1F3E1BDB85799DBDD7 /* SpriteSheetAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteSheetAnimator.swift; sourceTree = "<group>"; };
 		13D27DD38A3C07AF3DC1F5AF /* EquipmentAbility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentAbility.swift; sourceTree = "<group>"; };
 		144F008DAAEF10FB97289E80 /* DevModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevModeView.swift; sourceTree = "<group>"; };
 		14730B939773D5593EEF66F9 /* PlayerProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProfileViewModel.swift; sourceTree = "<group>"; };
@@ -132,7 +143,7 @@
 		1B134E5A041B5743FC9C0BBC /* MomentumTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentumTrackerTests.swift; sourceTree = "<group>"; };
 		1C16E89037C904100D1C317F /* MatchHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchHistoryEntry.swift; sourceTree = "<group>"; };
 		1D8901DF47B273A28A842991 /* EquipmentSetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentSetTests.swift; sourceTree = "<group>"; };
-		1EA16300A59A2F1C52C8B9CF /* PickleQuest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PickleQuest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EA16300A59A2F1C52C8B9CF /* PickleQuest.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PickleQuest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		20C3B07BE8F5AC941C995746 /* MatchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchViewModel.swift; sourceTree = "<group>"; };
 		20CB71F51995E7A0C850F231 /* CourtRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtRenderer.swift; sourceTree = "<group>"; };
 		2718E94C057C8A67B15C822B /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewModel.swift; sourceTree = "<group>"; };
@@ -173,10 +184,12 @@
 		7C1AE74519D395EBC944F80F /* RepCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepCalculator.swift; sourceTree = "<group>"; };
 		7E2060A9BBEF6769156A056F /* MatchEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchEvent.swift; sourceTree = "<group>"; };
 		840065301D6F3845B7E589EA /* StatCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCalculator.swift; sourceTree = "<group>"; };
+		8643BD07D4ED9ECD24B2D8EC /* AppearanceGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceGenerator.swift; sourceTree = "<group>"; };
 		87E6BC2CEDE4611F9F591DD0 /* RepProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepProfile.swift; sourceTree = "<group>"; };
 		8D4DA40EDD426D2F7E3FE0E5 /* SKNode+Async.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SKNode+Async.swift"; sourceTree = "<group>"; };
 		8DC83A9B8FA7C9441534B175 /* MatchHistoryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchHistoryRow.swift; sourceTree = "<group>"; };
 		912C27A2B8A18DDDEDA05D69 /* MatchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchEngine.swift; sourceTree = "<group>"; };
+		935402BCE85914A3F49418A7 /* ColorReplacer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorReplacer.swift; sourceTree = "<group>"; };
 		9D397036B916DEC1B19A645F /* MatchHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchHubView.swift; sourceTree = "<group>"; };
 		9D9C040E3A053E3DAC2DD0AC /* PickleQuestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickleQuestApp.swift; sourceTree = "<group>"; };
 		9F69B4AC575F890472955931 /* RarityBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RarityBadge.swift; sourceTree = "<group>"; };
@@ -194,11 +207,14 @@
 		B619B590B70982D275E99B1B /* EquipmentCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentCardView.swift; sourceTree = "<group>"; };
 		B645A22F0D9CDF3E5A80D89D /* MatchAnimationConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchAnimationConstants.swift; sourceTree = "<group>"; };
 		B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCalculatorTests.swift; sourceTree = "<group>"; };
+		B85291B7FDEBBCCCD587FAC6 /* UIColor+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIColor+Hex.swift"; sourceTree = "<group>"; };
 		BE3FB9F0A9E372A5A0CB3D66 /* Equipment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Equipment.swift; sourceTree = "<group>"; };
 		C0752261B8ED02D534503C85 /* StoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreView.swift; sourceTree = "<group>"; };
+		C11A0AC7AEE35D805C2CD630 /* SpriteSheetLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteSheetLoader.swift; sourceTree = "<group>"; };
 		C45FB6A27A9A3E5D0D9E080C /* DUPRCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DUPRCalculator.swift; sourceTree = "<group>"; };
 		CB744DF042767593746C101B /* MatchEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchEngineTests.swift; sourceTree = "<group>"; };
 		CC56C33DEA89A36C94D6A5DE /* EquipmentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentDetailView.swift; sourceTree = "<group>"; };
+		CCDA3BA6ED33B0BCB7D1E92D /* ball.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = ball.png; sourceTree = "<group>"; };
 		CCDD3AF27C7FE92C46AD5297 /* InventoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryViewModel.swift; sourceTree = "<group>"; };
 		CDABEB3FE4D53ECE0EF7759B /* EquipmentNameGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentNameGenerator.swift; sourceTree = "<group>"; };
 		CE09A927C4E070179DA2B55B /* MockNPCService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNPCService.swift; sourceTree = "<group>"; };
@@ -206,11 +222,13 @@
 		D3105ACD6B6235A1CE3055FC /* Court.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Court.swift; sourceTree = "<group>"; };
 		D7AEE335773012DD0EA1E5EF /* MockStoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockStoreService.swift; sourceTree = "<group>"; };
 		D93674CFBCAE7C8A5EB63610 /* DUPRCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DUPRCalculatorTests.swift; sourceTree = "<group>"; };
+		D9B6786F66B8934634A8830A /* CharacterAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterAppearance.swift; sourceTree = "<group>"; };
 		E37015A94BA1E07BCD8C05A5 /* MatchResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchResultView.swift; sourceTree = "<group>"; };
 		E5CEC35A0CEB4D245BCFE7C6 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
 		ECEA1686848E23241264008F /* MatchConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchConfig.swift; sourceTree = "<group>"; };
 		F35FD040AF4661A856F9D6FA /* RallySimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RallySimulator.swift; sourceTree = "<group>"; };
 		F39ADA4591D8FEDB86F5DAE7 /* MockCourtService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockCourtService.swift; sourceTree = "<group>"; };
+		F5DFB7311C2DB71DFA7ADED7 /* CharacterAnimationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterAnimationState.swift; sourceTree = "<group>"; };
 		F75BF66C5ABC414685644FB7 /* LevelUpBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelUpBanner.swift; sourceTree = "<group>"; };
 		F78EDF9FACA3C6EB32CC7BAF /* Consumable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Consumable.swift; sourceTree = "<group>"; };
 		FA01C280E5F28D53830ED79E /* PlayerStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerStats.swift; sourceTree = "<group>"; };
@@ -298,6 +316,7 @@
 			children = (
 				0C2A0910DA48FBCFB568311B /* CLLocationCoordinate2D+Sendable.swift */,
 				8D4DA40EDD426D2F7E3FE0E5 /* SKNode+Async.swift */,
+				B85291B7FDEBBCCCD587FAC6 /* UIColor+Hex.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -345,11 +364,15 @@
 		66F18C0FBB5A3037C8671C46 /* SpriteKit */ = {
 			isa = PBXGroup;
 			children = (
+				F5DFB7311C2DB71DFA7ADED7 /* CharacterAnimationState.swift */,
+				935402BCE85914A3F49418A7 /* ColorReplacer.swift */,
 				20CB71F51995E7A0C850F231 /* CourtRenderer.swift */,
 				B645A22F0D9CDF3E5A80D89D /* MatchAnimationConstants.swift */,
 				3B97CA559D005D19373B923E /* MatchAnimator.swift */,
 				6DF9A9414A06C483D6964FE9 /* MatchCourtScene.swift */,
 				A98EFC913DC82F82C6459DF1 /* SpriteFactory.swift */,
+				1189DB1F3E1BDB85799DBDD7 /* SpriteSheetAnimator.swift */,
+				C11A0AC7AEE35D805C2CD630 /* SpriteSheetLoader.swift */,
 			);
 			path = SpriteKit;
 			sourceTree = "<group>";
@@ -500,6 +523,7 @@
 			isa = PBXGroup;
 			children = (
 				629F8845B7EE41F1934A1746 /* MockData */,
+				EEB40D2250A9785A88611B87 /* SpriteSheets */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -542,6 +566,8 @@
 		E609B018CF2E8783A97E52E3 /* Player */ = {
 			isa = PBXGroup;
 			children = (
+				8643BD07D4ED9ECD24B2D8EC /* AppearanceGenerator.swift */,
+				D9B6786F66B8934634A8830A /* CharacterAppearance.swift */,
 				51DD3F8872DF216E539BB427 /* DUPRProfile.swift */,
 				FF93932170EAA8760BA56E83 /* Player.swift */,
 				52C2A0413DC0CD20FB85994C /* PlayerProgression.swift */,
@@ -574,6 +600,15 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
+		EEB40D2250A9785A88611B87 /* SpriteSheets */ = {
+			isa = PBXGroup;
+			children = (
+				CCDA3BA6ED33B0BCB7D1E92D /* ball.png */,
+				0E3B9DA82455DDC9859651BB /* character1-Sheet.png */,
+			);
+			path = SpriteSheets;
+			sourceTree = "<group>";
+		};
 		F9F39E0BB7BEEF7255D7B746 = {
 			isa = PBXGroup;
 			children = (
@@ -601,6 +636,7 @@
 			buildConfigurationList = 5A2D019CB42F308265969937 /* Build configuration list for PBXNativeTarget "PickleQuest" */;
 			buildPhases = (
 				CFBDA8597763D58545F89F89 /* Sources */,
+				21F84EB5CBEBD8C07B0360DD /* Resources */,
 			);
 			buildRules = (
 			);
@@ -673,6 +709,7 @@
 			);
 			mainGroup = F9F39E0BB7BEEF7255D7B746;
 			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -682,6 +719,18 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		21F84EB5CBEBD8C07B0360DD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BDC86FDAA4439CFE42A0F107 /* ball.png in Resources */,
+				C31CD5CA9BE818B447085B10 /* character1-Sheet.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		190C8C26CAE1E0807F3D3E73 /* Sources */ = {
@@ -712,7 +761,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				9082675C17CCC084A5BEDBB1 /* AppState.swift in Sources */,
+				D8C4B3036E5214BAE018D4BD /* AppearanceGenerator.swift in Sources */,
 				048DBBBFE296E9B444059160 /* CLLocationCoordinate2D+Sendable.swift in Sources */,
+				AA8CE763EB065822FA23CCA0 /* CharacterAnimationState.swift in Sources */,
+				0B5219D488C98B0A9D7888EA /* CharacterAppearance.swift in Sources */,
+				04E498BB1ED53A774576B7CE /* ColorReplacer.swift in Sources */,
 				7D38D7EB38143D8854EE48C0 /* Consumable.swift in Sources */,
 				D1C34495E0D732C0A1341776 /* ContentView.swift in Sources */,
 				EE2059E8882E44409C0B7255 /* Court.swift in Sources */,
@@ -786,6 +839,8 @@
 				CDB582B28BCB65C90D6A3E06 /* RepProfile.swift in Sources */,
 				5F0BAB40AD8F1693B19EA076 /* SKNode+Async.swift in Sources */,
 				7705B9AD737067D549D42B48 /* SpriteFactory.swift in Sources */,
+				0B5CF73ACAEE1A68C32D5EEF /* SpriteSheetAnimator.swift in Sources */,
+				500C63BE9013D7DBB0CF32EE /* SpriteSheetLoader.swift in Sources */,
 				412DC22F0B76ED5957269316 /* StatAllocationView.swift in Sources */,
 				A626669F5ACFF89A909F5072 /* StatBar.swift in Sources */,
 				B04EDE991297618814A545E4 /* StatCalculator.swift in Sources */,
@@ -794,6 +849,7 @@
 				F389FCF6873F6777A0D4B3C5 /* StoreService.swift in Sources */,
 				5CC05AE0BF17214046CCAFD1 /* StoreView.swift in Sources */,
 				61ABDD9DBF6C28F76F3D5E5F /* StoreViewModel.swift in Sources */,
+				D05971C85E3233F7F3A7421A /* UIColor+Hex.swift in Sources */,
 				26134A1B57938FFC3E195A26 /* Wallet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -854,7 +910,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 69F6RR9M5J;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "PickleQuest uses your location to show nearby pickleball courts and opponents on the map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -881,7 +936,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 69F6RR9M5J;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "PickleQuest uses your location to show nearby pickleball courts and opponents on the map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

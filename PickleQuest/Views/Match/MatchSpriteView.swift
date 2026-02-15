@@ -34,7 +34,9 @@ struct MatchSpriteView: View {
                 size: CGSize(
                     width: MatchAnimationConstants.sceneWidth,
                     height: MatchAnimationConstants.sceneHeight
-                )
+                ),
+                playerAppearance: viewModel.playerAppearance,
+                opponentAppearance: viewModel.opponentAppearance
             )
             newScene.scaleMode = .aspectFill
             newScene.anchorPoint = CGPoint(x: 0, y: 0)

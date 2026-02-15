@@ -11,6 +11,7 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
     let setName: String?
     let ability: EquipmentAbility?
     let sellPrice: Int
+    let visualColor: String?
     var condition: Double
 
     var totalBonusPoints: Int {
@@ -38,6 +39,7 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
         setName: String? = nil,
         ability: EquipmentAbility?,
         sellPrice: Int,
+        visualColor: String? = nil,
         condition: Double = 1.0
     ) {
         self.id = id
@@ -50,6 +52,7 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
         self.setName = setName
         self.ability = ability
         self.sellPrice = sellPrice
+        self.visualColor = visualColor
         self.condition = condition
     }
 }

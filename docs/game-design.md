@@ -14,6 +14,7 @@ A Pokemon Go-like pickleball RPG where players physically explore their city to 
 | 3 | Map + Location + NPC World | **Complete** |
 | 3.1 | Economy, Rep & Loot UX Fixes | **Complete** |
 | 4 | SpriteKit Match Visualization | **Complete** |
+| 4.1 | Sprite Sheet + Character Customization | **Complete** |
 | 5 | Doubles, Team Synergy, Tournaments | Planned |
 | 6 | Training, Coaching, Energy + Economy | Planned |
 | 7 | Persistence, Polish, Multiplayer Prep | Planned |
@@ -311,6 +312,38 @@ NPCs are distributed to courts via round-robin within their difficulty tier (2 p
 - Dev mode stats/rating overrides work with map-based matches
 - **D-pad movement**: Arrow buttons on map move player ~50m per tap (N/S/E/W)
 - **Sticky mode**: Toggle in D-pad center — panning the map moves the player location to the camera center
+
+## Character Appearance System (Milestone 4.1)
+
+### Overview
+Every character (player and NPCs) has a unique visual appearance driven by a `CharacterAppearance` model with 7 color fields: hair, skin, shirt, shorts, headband, shoes, paddle. Sprites are rendered from a single template sprite sheet with runtime color replacement.
+
+### Sprite Sheet
+- Base template: `character1-Sheet.png` (640x832, 10x13 grid of 64x64px cells)
+- 13 animation rows: idle (back/front), walk (4 directions), ready, serve prep, serve swing, forehand, backhand, run/dive, celebrate
+- Ball: `ball.png` (32x16, 2 frames of 16x16)
+
+### Color Replacement Pipeline
+1. Load template sprite sheet as CGImage
+2. Build color mappings from CharacterAppearance (11 source→target pairs covering hair, skin, shirt, shorts, shoes, paddle)
+3. Replace pixels using luminance-preserving blend: `target * (original / sourceBase)` — preserves the artist's shading/highlights
+4. Slice recolored sheet into per-row frame arrays
+5. Cache by CharacterAppearance hash (~50ms first load, instant on cache hit)
+
+### NPC Appearance Generation
+- Deterministic: UUID hash → stable indices into color palette arrays
+- Personality-driven shirts: aggressive=reds, defensive=blues, speedster=yellows, strategist=purples, allRounder=greens
+- Difficulty affects saturation: expert+ NPCs get more vivid colors
+- 8 hair colors, 6 skin tones, 8 shorts colors, 8 shoe colors, 8 paddle colors
+
+### Equipment Visual Influence
+- Equipment items can have an optional `visualColor` hex string
+- Equipped items override the corresponding appearance slot:
+  - Paddle → paddleColor
+  - Shirt → shirtColor
+  - Shoes → shoeColor
+  - Bottoms → shortsColor
+  - Headwear → headbandColor
 
 ## Wager & Hustler System (Planned)
 

@@ -51,10 +51,17 @@ final class MatchAnimator {
         scene.nearPlayer.alpha = 1
         scene.farPlayer.alpha = 1
 
-        // Slide both in simultaneously using runAsync
+        // Start walk animations during slide-in
+        scene.nearAnimator?.play(.walkAway)
+        scene.farAnimator?.play(.walkToward)
+
+        // Slide both in simultaneously
         await scene.nearPlayer.runAsync(.move(to: nearTarget, duration: 0.6))
-        // Far player slides in too — the 0.6s overlap from near is close enough
-        await scene.farPlayer.runAsync(.move(to: farTarget, duration: 0.1)) // catch up (already mostly there from near anim)
+        await scene.farPlayer.runAsync(.move(to: farTarget, duration: 0.1))
+
+        // Switch to idle after arriving
+        scene.nearAnimator?.play(.idleBack)
+        scene.farAnimator?.play(.idleFront)
 
         // "VS" text
         await scene.showAnnouncement("VS")
@@ -67,6 +74,11 @@ final class MatchAnimator {
         scene.resetPlayerPositions()
         scene.ball.alpha = 0
         scene.ballShadow.alpha = 0
+
+        // Ready stance between games
+        scene.nearAnimator?.play(.ready)
+        scene.farAnimator?.play(.ready)
+
         await scene.showAnnouncement("Game \(gameNumber)", fontSize: AC.Text.calloutFontSize)
     }
 
@@ -78,6 +90,8 @@ final class MatchAnimator {
         let serverIsNear = point.servingSide == .player
         let serverNode = serverIsNear ? scene.nearPlayer! : scene.farPlayer!
         let receiverNode = serverIsNear ? scene.farPlayer! : scene.nearPlayer!
+        let serverAnimator = serverIsNear ? scene.nearAnimator : scene.farAnimator
+        let receiverAnimator = serverIsNear ? scene.farAnimator : scene.nearAnimator
 
         let serverNY = serverIsNear ? Pos.nearPlayerNY : Pos.farPlayerNY
         let receiverNY = serverIsNear ? Pos.farPlayerNY : Pos.nearPlayerNY
@@ -88,14 +102,18 @@ final class MatchAnimator {
         serverNode.position = serverPos
         receiverNode.position = receiverPos
 
+        // Ready stance before serve
+        serverAnimator?.play(.ready)
+        receiverAnimator?.play(.ready)
+
         // Show ball at server
         scene.ball.position = serverPos
         scene.ball.alpha = 1
         scene.ballShadow.position = serverPos
         scene.ballShadow.alpha = 0.5
 
-        // Phase 1: Serve (swing then ball arc)
-        await animateServe(from: serverPos, to: receiverPos, serverNY: serverNY, receiverNY: receiverNY, serverNode: serverNode)
+        // Phase 1: Serve (animation then ball arc)
+        await animateServe(from: serverPos, to: receiverPos, serverNY: serverNY, receiverNY: receiverNY, serverNode: serverNode, serverAnimator: serverAnimator)
 
         // Phase 2: Rally bounces (if rally length > 1)
         let bounces = min(point.rallyLength - 1, T.maxVisualBounces)
@@ -108,6 +126,10 @@ final class MatchAnimator {
 
         // Phase 3: Outcome
         await animateOutcome(point: point, serverIsNear: serverIsNear)
+
+        // Between points: ready stance
+        scene.nearAnimator?.play(.ready)
+        scene.farAnimator?.play(.ready)
 
         // Brief pause between points
         try? await Task.sleep(for: .milliseconds(Int(T.pointPause * 1000)))
@@ -122,16 +144,21 @@ final class MatchAnimator {
         to: CGPoint,
         serverNY: CGFloat,
         receiverNY: CGFloat,
-        serverNode: SKSpriteNode
+        serverNode: SKSpriteNode,
+        serverAnimator: SpriteSheetAnimator?
     ) async {
-        // Server swing animation (quick scale pulse, then ball follows)
-        await serverNode.runAsync(.sequence([
-            .scaleX(by: 1.2, y: 1.0, duration: 0.08),
-            .scaleX(by: 1.0 / 1.2, y: 1.0, duration: 0.08)
-        ]))
+        // Serve prep animation
+        await serverAnimator?.playAsync(.servePrep)
+
+        // Serve swing (fire-and-forget, ball follows)
+        serverAnimator?.play(.serveSwing)
 
         // Ball arc from server to receiver
         await animateBallArc(from: from, to: to, duration: T.serveDuration, arcHeight: T.arcPeak)
+
+        // Return server to idle
+        let isNear = serverNode === scene?.nearPlayer
+        serverAnimator?.play(.idle(isNear: isNear))
     }
 
     private func animateRally(
@@ -140,32 +167,44 @@ final class MatchAnimator {
     ) async {
         guard let scene else { return }
 
-        var goingToFar = !serverIsNear // after serve, ball goes to receiver; next bounce goes other way
+        var goingToFar = !serverIsNear
         for _ in 0..<bounces {
-            // Randomize lateral position for variety
             let lateralOffset = CGFloat.random(in: -Pos.lateralRangeNX...Pos.lateralRangeNX)
             let nx = 0.5 + lateralOffset
 
             let targetNY: CGFloat
             let hitter: SKSpriteNode
+            let hitterAnimator: SpriteSheetAnimator?
             if goingToFar {
                 targetNY = Pos.farPlayerNY - 0.05
                 hitter = scene.farPlayer
+                hitterAnimator = scene.farAnimator
             } else {
                 targetNY = Pos.nearPlayerNY + 0.05
                 hitter = scene.nearPlayer
+                hitterAnimator = scene.nearAnimator
             }
 
             let target = CourtRenderer.courtPoint(nx: nx, ny: targetNY)
             let current = scene.ball.position
 
-            // Move hitter toward ball (short move, then ball arc)
+            // Move hitter laterally with walk animation
             let hitterTarget = CGPoint(x: target.x, y: hitter.position.y)
+            let movingLeft = target.x < hitter.position.x
+            hitterAnimator?.play(movingLeft ? .walkLeft : .walkRight)
             await hitter.runAsync(.move(to: hitterTarget, duration: T.bounceDuration * 0.3))
 
+            // Hit animation (forehand or backhand based on direction)
+            let hitAnim: CharacterAnimationState = movingLeft ? .backhand : .forehand
+            hitterAnimator?.play(hitAnim)
+
             // Ball arc
-            let arcHeight = T.arcPeak * 0.6 // lower arc for rallies
+            let arcHeight = T.arcPeak * 0.6
             await animateBallArc(from: current, to: target, duration: T.bounceDuration, arcHeight: arcHeight)
+
+            // Return to idle
+            let isNear = hitter === scene.nearPlayer
+            hitterAnimator?.play(.idle(isNear: isNear))
 
             goingToFar.toggle()
         }
@@ -177,6 +216,8 @@ final class MatchAnimator {
         let winnerIsNear = point.winnerSide == .player
         let winnerNode = winnerIsNear ? scene.nearPlayer! : scene.farPlayer!
         let loserNode = winnerIsNear ? scene.farPlayer! : scene.nearPlayer!
+        let winnerAnimator = winnerIsNear ? scene.nearAnimator : scene.farAnimator
+        let loserAnimator = winnerIsNear ? scene.farAnimator : scene.nearAnimator
 
         switch point.pointType {
         case .ace:
@@ -190,43 +231,52 @@ final class MatchAnimator {
             }
             await animateBallArc(from: scene.ball.position, to: missPos, duration: 0.3, arcHeight: 10)
 
-            // Receiver flinch
+            // Receiver dive/flinch
+            loserAnimator?.showStaticFrame(.runDive, frameIndex: 3)
             await loserNode.runAsync(.sequence([
                 .moveBy(x: -5, y: 0, duration: 0.05),
                 .moveBy(x: 10, y: 0, duration: 0.05),
                 .moveBy(x: -5, y: 0, duration: 0.05)
             ]))
 
+            // Server celebrate
+            winnerAnimator?.play(.celebrate)
+
             await scene.showCallout("ACE!", at: scene.ball.position, color: .yellow)
 
         case .winner:
-            // Emphatic winning shot — ball hits ground hard
+            // Emphatic winning shot
             let groundPos = CourtRenderer.courtPoint(
                 nx: CGFloat.random(in: 0.2...0.8),
                 ny: winnerIsNear ? Pos.farPlayerNY - 0.1 : Pos.nearPlayerNY + 0.1
             )
+
+            // Winner hits forehand
+            winnerAnimator?.play(.forehand)
             await animateBallArc(from: scene.ball.position, to: groundPos, duration: 0.3, arcHeight: T.arcPeak * 0.4)
 
-            // Winner pump
+            // Celebrate
+            winnerAnimator?.play(.celebrate)
             await winnerNode.runAsync(.sequence([
                 .moveBy(x: 0, y: 8, duration: 0.1),
                 .moveBy(x: 0, y: -8, duration: 0.15)
             ]))
 
-            // Dust effect
             spawnDustParticle(at: groundPos)
-
             await scene.showCallout("WINNER!", at: groundPos, color: .green)
 
         case .unforcedError:
             // Ball into net or out
             let isNetError = Bool.random()
+
+            // Error maker stumbles
+            loserAnimator?.showStaticFrame(.runDive, frameIndex: 2)
+
             if isNetError {
                 let netPos = CourtRenderer.courtPoint(nx: 0.5, ny: 0.5)
                 await animateBallArc(from: scene.ball.position, to: netPos, duration: 0.3, arcHeight: 5)
                 await scene.showCallout("NET", at: netPos, color: .red)
             } else {
-                // Out of bounds
                 let outX = Bool.random() ? AC.sceneWidth + 20 : -20
                 let outPos = CGPoint(x: outX, y: scene.ball.position.y)
                 await animateBallArc(from: scene.ball.position, to: outPos, duration: 0.3, arcHeight: T.arcPeak * 0.3)
@@ -237,9 +287,14 @@ final class MatchAnimator {
             // Aggressive shot forces ball wide
             let wideX: CGFloat = Bool.random() ? AC.sceneWidth + 20 : -20
             let errorPos = CGPoint(x: wideX, y: scene.ball.position.y)
+
+            // Winner hits forehand, loser dives
+            winnerAnimator?.play(.forehand)
             await animateBallArc(from: scene.ball.position, to: errorPos, duration: 0.35, arcHeight: T.arcPeak * 0.5)
 
-            // Winner slight pump
+            loserAnimator?.showStaticFrame(.runDive, frameIndex: 3)
+            winnerAnimator?.play(.celebrate)
+
             await winnerNode.runAsync(.sequence([
                 .moveBy(x: 0, y: 5, duration: 0.08),
                 .moveBy(x: 0, y: -5, duration: 0.12)
@@ -251,9 +306,13 @@ final class MatchAnimator {
                 nx: CGFloat.random(in: 0.15...0.85),
                 ny: winnerIsNear ? Pos.farPlayerNY - 0.08 : Pos.nearPlayerNY + 0.08
             )
+
+            winnerAnimator?.play(.forehand)
             await animateBallArc(from: scene.ball.position, to: winPos, duration: 0.35, arcHeight: T.arcPeak * 0.5)
 
             spawnDustParticle(at: winPos)
+
+            winnerAnimator?.play(.celebrate)
 
             if point.rallyLength >= 8 {
                 await scene.showCallout("\(point.rallyLength) shots!", at: winPos, color: .cyan)
@@ -266,14 +325,14 @@ final class MatchAnimator {
     private func animateBallArc(from: CGPoint, to: CGPoint, duration: TimeInterval, arcHeight: CGFloat) async {
         guard let scene else { return }
 
-        let steps = max(Int(duration / 0.016), 4) // ~60fps steps
+        let steps = max(Int(duration / 0.016), 4)
         let dt = duration / Double(steps)
 
         for i in 1...steps {
             let t = CGFloat(i) / CGFloat(steps)
             let x = from.x + (to.x - from.x) * t
             let baseY = from.y + (to.y - from.y) * t
-            let arcOffset = arcHeight * sin(.pi * t) // parabolic arc
+            let arcOffset = arcHeight * sin(.pi * t)
             let y = baseY + arcOffset
 
             scene.ball.position = CGPoint(x: x, y: y)
@@ -283,7 +342,7 @@ final class MatchAnimator {
             scene.ballShadow.position = CGPoint(x: x, y: baseY)
             scene.ballShadow.setScale(max(0.3, shadowScale))
 
-            // Scale ball slightly by perspective (approximate depth from y position)
+            // Scale ball by perspective
             let ny = (baseY - AC.Court.courtBottomY) / AC.Court.courtHeight
             let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, ny)))
             scene.ball.setScale(AC.Sprites.ballScale * pScale)
@@ -381,9 +440,12 @@ final class MatchAnimator {
     private func animateGameEnd(gameNumber: Int, winnerSide: MatchSide) async {
         guard let scene else { return }
 
+        let winnerAnimator = winnerSide == .player ? scene.nearAnimator : scene.farAnimator
         let winnerNode = winnerSide == .player ? scene.nearPlayer! : scene.farPlayer!
 
-        // Small celebration jump
+        // Celebrate animation
+        winnerAnimator?.play(.celebrate)
+
         await winnerNode.runAsync(
             .sequence([
                 .moveBy(x: 0, y: 15, duration: 0.15),
@@ -392,14 +454,21 @@ final class MatchAnimator {
         )
 
         await scene.showAnnouncement("Game Over")
+
+        // Return to idle
+        scene.nearAnimator?.stop()
+        scene.farAnimator?.stop()
     }
 
     private func animateMatchEnd(didPlayerWin: Bool) async {
         guard let scene else { return }
 
         let winnerNode = didPlayerWin ? scene.nearPlayer! : scene.farPlayer!
+        let winnerAnimator = didPlayerWin ? scene.nearAnimator : scene.farAnimator
 
-        // Winner celebration — bigger jump + scale pulse
+        // Winner celebration
+        winnerAnimator?.play(.celebrate)
+
         await winnerNode.runAsync(
             .sequence([
                 .group([
@@ -422,7 +491,6 @@ final class MatchAnimator {
 
     // MARK: - Particles
 
-    /// Fire-and-forget dust particles — uses SKAction system so no async needed
     private func spawnDustParticle(at position: CGPoint) {
         guard let scene else { return }
 
@@ -436,7 +504,6 @@ final class MatchAnimator {
 
             let dx = CGFloat.random(in: -15...15)
             let dy = CGFloat.random(in: 5...15)
-            // Use scene.run with an action that runs the dust animation to avoid async requirement
             let dustAction = SKAction.sequence([
                 .group([
                     .moveBy(x: dx, y: dy, duration: 0.3),

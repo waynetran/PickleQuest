@@ -21,6 +21,10 @@ final class MatchViewModel {
     var courtScene: MatchCourtScene?
     var useSpriteVisualization = true
 
+    // Character appearances
+    var playerAppearance: CharacterAppearance = .defaultPlayer
+    var opponentAppearance: CharacterAppearance = .defaultOpponent
+
     // State
     var availableNPCs: [NPC] = []
     var selectedNPC: NPC?
@@ -79,6 +83,10 @@ final class MatchViewModel {
         repChange = nil
         brokenEquipment = []
         energyDrain = 0
+
+        // Resolve appearances
+        playerAppearance = player.appearance
+        opponentAppearance = AppearanceGenerator.appearance(for: opponent)
 
         let effectiveRated = effectiveIsRated(
             playerRating: player.duprRating,

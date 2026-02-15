@@ -13,13 +13,23 @@ final class MatchCourtScene: SKScene {
     private(set) var ballShadow: SKShapeNode!
     private(set) var announcementLabel: SKLabelNode!
 
+    // Animators
+    private(set) var nearAnimator: SpriteSheetAnimator?
+    private(set) var farAnimator: SpriteSheetAnimator?
+
+    // Ball textures for future animation
+    private(set) var ballTextures: [SKTexture] = []
+
     // Animator
     private var animator: MatchAnimator!
 
-    // Track serving side for animations
-    private var lastServingSide: MatchSide = .player
+    // Appearances
+    private let playerAppearance: CharacterAppearance
+    private let opponentAppearance: CharacterAppearance
 
-    override init(size: CGSize) {
+    init(size: CGSize, playerAppearance: CharacterAppearance = .defaultPlayer, opponentAppearance: CharacterAppearance = .defaultOpponent) {
+        self.playerAppearance = playerAppearance
+        self.opponentAppearance = opponentAppearance
         super.init(size: size)
         backgroundColor = UIColor(hex: "#1A1A2E")
         setupCourt()
@@ -49,8 +59,11 @@ final class MatchCourtScene: SKScene {
 
     private func setupPlayers() {
         // Near player (us, bottom of court, back view)
-        let nearTexture = SpriteFactory.makeNearPlayer()
-        nearPlayer = SKSpriteNode(texture: nearTexture)
+        let (nearNode, nearTextures) = SpriteFactory.makeCharacterNode(
+            appearance: playerAppearance,
+            isNearPlayer: true
+        )
+        nearPlayer = nearNode
         nearPlayer.name = "nearPlayer"
         nearPlayer.setScale(AC.Sprites.nearPlayerScale)
         nearPlayer.zPosition = AC.ZPositions.nearPlayer
@@ -58,17 +71,23 @@ final class MatchCourtScene: SKScene {
         nearPlayer.position = nearPos
         addChild(nearPlayer)
 
+        nearAnimator = SpriteSheetAnimator(node: nearPlayer, textures: nearTextures, isNear: true)
+
         // Far player (opponent, top of court, front view)
-        let farTexture = SpriteFactory.makeFarPlayer()
-        farPlayer = SKSpriteNode(texture: farTexture)
+        let (farNode, farTextures) = SpriteFactory.makeCharacterNode(
+            appearance: opponentAppearance,
+            isNearPlayer: false
+        )
+        farPlayer = farNode
         farPlayer.name = "farPlayer"
-        farPlayer.setScale(AC.Sprites.farPlayerScale)
-        farPlayer.zPosition = AC.ZPositions.farPlayer
         let farScale = CourtRenderer.perspectiveScale(ny: Pos.farPlayerNY)
         farPlayer.setScale(AC.Sprites.farPlayerScale * farScale)
+        farPlayer.zPosition = AC.ZPositions.farPlayer
         let farPos = CourtRenderer.courtPoint(nx: Pos.playerCenterNX, ny: Pos.farPlayerNY)
         farPlayer.position = farPos
         addChild(farPlayer)
+
+        farAnimator = SpriteSheetAnimator(node: farPlayer, textures: farTextures, isNear: false)
 
         // Hide players initially — match start animation will bring them in
         nearPlayer.alpha = 0
@@ -76,8 +95,10 @@ final class MatchCourtScene: SKScene {
     }
 
     private func setupBall() {
-        let ballTexture = SpriteFactory.makeBall()
-        ball = SKSpriteNode(texture: ballTexture)
+        ballTextures = SpriteFactory.makeBallTextures()
+        let firstBallTexture = ballTextures.first ?? SpriteFactory.makeBall()
+
+        ball = SKSpriteNode(texture: firstBallTexture)
         ball.name = "ball"
         ball.setScale(AC.Sprites.ballScale)
         ball.zPosition = AC.ZPositions.ball
