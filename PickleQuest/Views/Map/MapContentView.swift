@@ -69,7 +69,6 @@ struct MapContentView: View {
                     proxy: proxy,
                     region: region
                 )
-                .ignoresSafeArea()
             }
 
             // Dev mode movement controls
