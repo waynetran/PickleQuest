@@ -13,6 +13,7 @@
 | 4 | SpriteKit Match Visualization | **Complete** |
 | 4.1 | Sprite Sheet + Character Customization | **Complete** |
 | 4.2 | Court Realism + Player Positioning | **Complete** |
+| 4.3 | Match Actions, Consumables, Character2 | **Complete** |
 | 5 | Doubles, Team Synergy, Tournaments | Planned |
 | 6 | Training, Coaching, Energy + Economy | Planned |
 | 7 | Persistence, Polish, Multiplayer Prep | Planned |
@@ -310,6 +311,62 @@ SpriteSheetAnimator(node, textures) → play(state) / playAsync(state)
 
 ### New files
 - `docs/pickleball-rules-reference.md` — comprehensive pickleball rules, scoring, positioning, and strategy reference
+
+---
+
+## Milestone 4.3: Match Actions, Consumables, Character2
+
+### What was built
+- **Match action buttons**: interactive overlay on right side of match screen with Timeout, Item, Hook Call, and Resign buttons; Skip button at bottom
+- **Skip/Fast-forward**: sets `skipRequested` flag on engine — engine continues simulation but filters non-critical events (pointPlayed, streakAlert, fatigueWarning), ViewModel skips animations
+- **Resign**: confirmation dialog, engine stops early via `resignRequested` flag, result has `wasResigned = true`, no DUPR change, frequent resign (3+ in last 10 matches) penalizes reputation
+- **Timeout**: available when opponent has 2+ point streak, 1 per game; restores 15% energy via `FatigueModel.restore()`, resets opponent streak via `MomentumTracker.resetOpponentStreak()`; clock emoji + "TIMEOUT!" callout animation
+- **Consumables**: `Consumable` model integrated into match flow — energy drinks, protein bars, focus gummies as starter items; max 3 per match; consumable picker sheet in UI; green sparkle animation
+- **Hook a Line Call**: gamble mechanic — 30% base + 0.1%/rep chance of success (capped 80%); success = free point −5 rep, failure = opponent gets point −20 rep; 1 per game; yellow/red flash animation
+- **Bidirectional engine communication**: MatchViewModel stores engine ref, calls actor methods directly (`await engine.requestSkip()` etc.); engine processes actions between points via pending event queue
+- **Character2 sprite integration**: `character2-Sheet.png` copied from asset pack, `spriteSheet` field added to `CharacterAppearance`, `SpriteFactory.loadTextures()` uses dynamic sheet name, `AppearanceGenerator` randomly assigns sheets (~50/50) based on NPC UUID hash
+- **Consumable inventory**: `consumables: [Consumable]` on Player model, `getConsumables/addConsumable/removeConsumable` on InventoryService, MockInventoryService seeds 3 starter consumables
+- **MatchResult.wasResigned**: new field propagated through MatchHistoryEntry, MatchHubView processResult (skips durability wear on resign), MatchViewModel computeRewardsPreview
+- **GameConstants.MatchActions**: all tuning constants (timeout energy, hook call chances, resign thresholds, max consumables)
+- **Test suite**: 9 new tests covering skip, resign, timeout, consumable usage/limits, hook call availability/scaling, wasResigned flag, MomentumTracker.resetOpponentStreak
+
+### Architecture
+```
+MatchViewModel (@MainActor) → await engine.requestSkip() / .requestResign() / .requestTimeout() / etc.
+                                          ↓
+MatchEngine (actor) — sets flags, processes actions, queues MatchEvents
+                                          ↓
+AsyncStream<MatchEvent> → MatchViewModel → courtScene.animate() → MatchAnimator
+                                                                          ↓
+                                                   timeout/consumable/hookCall animations
+```
+
+### New files
+- `Models/Match/MatchAction.swift` — MatchAction enum + MatchActionResult
+- `Views/Match/MatchActionButtons.swift` — SwiftUI overlay (ActionButton, ConsumablePickerSheet)
+- `Resources/character2-Sheet.png` — second character sprite sheet
+- `PickleQuestTests/Engine/MatchActionTests.swift` — 9 tests
+
+### Modified files
+- `MatchEngine.swift` — action flags, state tracking, init params, action methods (requestSkip/Resign/Timeout, useConsumable, requestHookCall), skip filtering, resign check, pending event queue
+- `MomentumTracker.swift` — resetOpponentStreak()
+- `MatchEvent.swift` — 4 new cases (timeoutCalled, consumableUsed, hookCallAttempt, resigned)
+- `GameConstants.swift` — MatchActions section
+- `MatchResult.swift` — wasResigned field
+- `MatchHistoryEntry.swift` — wasResigned field + explicit init with default
+- `MatchViewModel.swift` — engine ref, action state, action methods, skip/resign handling, refreshActionState
+- `MatchSpriteView.swift` — MatchActionButtons overlay
+- `MatchAnimator.swift` — timeout/consumable/hookCall/resigned animations
+- `MatchSimulationView.swift` — new event cases in switch
+- `MatchHubView.swift` — wasResigned in processResult, skip durability on resign, consumable removal
+- `CharacterAppearance.swift` — spriteSheet field, defaultOpponent uses character2-Sheet
+- `SpriteFactory.swift` — dynamic sheet name from appearance.spriteSheet
+- `AppearanceGenerator.swift` — random spriteSheet assignment
+- `Player.swift` — consumables array
+- `InventoryService.swift` — consumable methods
+- `MockInventoryService.swift` — consumable storage + starter items
+- `MatchService.swift` — createMatch params (consumables, reputation)
+- `MockMatchService.swift` — passes consumables/reputation to engine
 
 ---
 
