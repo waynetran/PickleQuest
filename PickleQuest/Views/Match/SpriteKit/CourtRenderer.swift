@@ -197,8 +197,8 @@ enum CourtRenderer {
         let left = courtPoint(nx: 0, ny: 0.5)
         let right = courtPoint(nx: 1, ny: 0.5)
 
-        // Net slightly above the line to show height (2× tall for visibility)
-        let netHeight: CGFloat = 16 * perspectiveScale(ny: 0.5)
+        // Net above the line (4× tall for visibility)
+        let netHeight: CGFloat = 32 * perspectiveScale(ny: 0.5)
         let netPath = CGMutablePath()
         netPath.move(to: CGPoint(x: left.x - 6, y: left.y))
         netPath.addLine(to: CGPoint(x: right.x + 6, y: right.y))

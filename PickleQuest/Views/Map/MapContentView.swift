@@ -326,6 +326,18 @@ struct MapContentView: View {
     private func runDiscoveryCheck() {
         guard let loc = mapVM.effectiveLocation(devOverride: appState.locationOverride) else { return }
         appState.revealFog(around: loc.coordinate)
+
+        // DEBUG: Log court visibility state
+        for court in mapVM.courts {
+            let discovered = appState.player.discoveredCourtIDs.contains(court.id)
+            let courtCell = FogOfWar.cell(for: court.coordinate)
+            let fogRevealed = appState.revealedFogCells.contains(courtCell)
+            let dist = loc.distance(from: CLLocation(latitude: court.latitude, longitude: court.longitude))
+            if !discovered {
+                print("[FOG DEBUG] Court '\(court.name)' dist=\(Int(dist))m discovered=\(discovered) fogRevealed=\(fogRevealed) cell=(\(courtCell.row),\(courtCell.col)) totalRevealed=\(appState.revealedFogCells.count)")
+            }
+        }
+
         let newIDs = mapVM.checkDiscovery(
             playerLocation: loc,
             discoveredIDs: appState.player.discoveredCourtIDs,
@@ -336,6 +348,7 @@ struct MapContentView: View {
             appState.player.dailyChallengeState?.incrementProgress(for: .visitCourts)
             // Show discovery notification
             if let court = mapVM.courts.first(where: { $0.id == id }) {
+                print("[FOG DEBUG] >>> DISCOVERED '\(court.name)'!")
                 discoveredCourtName = court.name
                 Task {
                     try? await Task.sleep(for: .seconds(3))
