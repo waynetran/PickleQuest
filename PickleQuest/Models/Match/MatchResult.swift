@@ -11,6 +11,7 @@ struct MatchResult: Sendable {
     let coinsEarned: Int
     let loot: [Equipment]
     let duration: TimeInterval // simulated match duration
+    let wasResigned: Bool
     let duprChange: Double? // nil for unrated matches
 
     var formattedScore: String {

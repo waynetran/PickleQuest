@@ -200,6 +200,10 @@ struct EventRow: View {
         case .streakAlert: return .orange
         case .fatigueWarning: return .yellow
         case .abilityTriggered: return .purple
+        case .timeoutCalled: return .cyan
+        case .consumableUsed: return .green
+        case .hookCallAttempt(_, let success, _): return success ? .yellow : .red
+        case .resigned: return .red
         }
     }
 

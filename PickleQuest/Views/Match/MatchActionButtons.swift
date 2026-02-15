@@ -1,0 +1,175 @@
+import SwiftUI
+
+struct MatchActionButtons: View {
+    let viewModel: MatchViewModel
+    @State private var showResignConfirm = false
+    @State private var showConsumablePicker = false
+
+    var body: some View {
+        VStack {
+            // Right-side action buttons
+            HStack {
+                Spacer()
+                VStack(spacing: 12) {
+                    // Timeout
+                    ActionButton(
+                        icon: "clock.arrow.circlepath",
+                        label: "Timeout",
+                        enabled: viewModel.canUseTimeout
+                    ) {
+                        Task { await viewModel.callTimeout() }
+                    }
+
+                    // Consumable
+                    ActionButton(
+                        icon: "cup.and.saucer.fill",
+                        label: "Item",
+                        enabled: viewModel.canUseConsumable
+                    ) {
+                        showConsumablePicker = true
+                    }
+
+                    // Hook a Line Call
+                    ActionButton(
+                        icon: "eye.trianglebadge.exclamationmark",
+                        label: "Hook",
+                        enabled: viewModel.canHookCall
+                    ) {
+                        Task { await viewModel.hookLineCall() }
+                    }
+
+                    // Resign
+                    ActionButton(
+                        icon: "flag.fill",
+                        label: "Resign",
+                        enabled: true,
+                        tint: .red
+                    ) {
+                        showResignConfirm = true
+                    }
+                }
+                .padding(.trailing, 12)
+            }
+
+            Spacer()
+
+            // Skip button at bottom
+            if !viewModel.isSkipping {
+                Button {
+                    Task { await viewModel.skipMatch() }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "forward.fill")
+                        Text("Skip")
+                    }
+                    .font(.caption.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(.black.opacity(0.6))
+                    .clipShape(Capsule())
+                }
+                .padding(.bottom, 16)
+            }
+        }
+        .alert("Resign Match?", isPresented: $showResignConfirm) {
+            Button("Resign", role: .destructive) {
+                Task { await viewModel.resignMatch() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You'll take the loss. No DUPR change. Frequent resigns may cost reputation.")
+        }
+        .sheet(isPresented: $showConsumablePicker) {
+            ConsumablePickerSheet(viewModel: viewModel)
+                .presentationDetents([.medium])
+        }
+    }
+}
+
+// MARK: - Action Button
+
+private struct ActionButton: View {
+    let icon: String
+    let label: String
+    let enabled: Bool
+    var tint: Color = .white
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                Text(label)
+                    .font(.system(size: 9, weight: .medium))
+            }
+            .foregroundStyle(enabled ? tint : .gray)
+            .frame(width: 50, height: 50)
+            .background(.black.opacity(0.5))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .disabled(!enabled)
+    }
+}
+
+// MARK: - Consumable Picker
+
+private struct ConsumablePickerSheet: View {
+    let viewModel: MatchViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if viewModel.playerConsumables.isEmpty {
+                    Text("No consumables available")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(viewModel.playerConsumables) { consumable in
+                        Button {
+                            Task {
+                                await viewModel.useConsumable(consumable)
+                                dismiss()
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: consumable.iconName)
+                                    .foregroundStyle(.green)
+                                VStack(alignment: .leading) {
+                                    Text(consumable.name)
+                                        .font(.headline)
+                                    Text(consumable.description)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Text(effectDescription(consumable.effect))
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Use Item")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func effectDescription(_ effect: ConsumableEffect) -> String {
+        switch effect {
+        case .energyRestore(let amount):
+            return "+\(Int(amount))% energy"
+        case .statBoost(let stat, let amount, _):
+            return "+\(amount) \(stat.rawValue)"
+        case .xpMultiplier(let mult, _):
+            return "\(mult)x XP"
+        }
+    }
+}

@@ -8,6 +8,7 @@ struct CharacterAppearance: Codable, Equatable, Hashable, Sendable {
     var headbandColor: String
     var shoeColor: String
     var paddleColor: String
+    var spriteSheet: String = "character1-Sheet"
 
     static let defaultPlayer = CharacterAppearance(
         hairColor: "#5D4037",
@@ -16,7 +17,8 @@ struct CharacterAppearance: Codable, Equatable, Hashable, Sendable {
         shortsColor: "#2C3E50",
         headbandColor: "#3498DB",
         shoeColor: "#ECEFF1",
-        paddleColor: "#37474F"
+        paddleColor: "#37474F",
+        spriteSheet: "character1-Sheet"
     )
 
     static let defaultOpponent = CharacterAppearance(
@@ -26,6 +28,7 @@ struct CharacterAppearance: Codable, Equatable, Hashable, Sendable {
         shortsColor: "#2C3E50",
         headbandColor: "#E74C3C",
         shoeColor: "#ECEFF1",
-        paddleColor: "#37474F"
+        paddleColor: "#37474F",
+        spriteSheet: "character2-Sheet"
     )
 }

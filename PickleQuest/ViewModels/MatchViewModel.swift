@@ -21,6 +21,17 @@ final class MatchViewModel {
     var courtScene: MatchCourtScene?
     var useSpriteVisualization = true
 
+    // Engine reference for actions
+    private var engine: MatchEngine?
+
+    // Action state
+    var isSkipping = false
+    var timeoutsAvailable: Int = 1
+    var consumablesUsedCount: Int = 0
+    var hookCallsAvailable: Int = 1
+    var playerConsumables: [Consumable] = []
+    var opponentStreak: Int = 0
+
     // Character appearances
     var playerAppearance: CharacterAppearance = .defaultPlayer
     var opponentAppearance: CharacterAppearance = .defaultOpponent
@@ -43,6 +54,18 @@ final class MatchViewModel {
     var matchConfig: MatchConfig = .quickMatch
     var currentServingSide: MatchSide = .player
     var courtName: String = ""
+
+    var canUseTimeout: Bool {
+        matchState == .simulating && !isSkipping && timeoutsAvailable > 0 && opponentStreak >= GameConstants.MatchActions.timeoutMinOpponentStreak
+    }
+
+    var canUseConsumable: Bool {
+        matchState == .simulating && !isSkipping && consumablesUsedCount < GameConstants.MatchActions.maxConsumablesPerMatch && !playerConsumables.isEmpty
+    }
+
+    var canHookCall: Bool {
+        matchState == .simulating && !isSkipping && hookCallsAvailable > 0
+    }
 
     enum MatchState: Equatable {
         case idle
@@ -87,6 +110,11 @@ final class MatchViewModel {
         repChange = nil
         brokenEquipment = []
         energyDrain = 0
+        isSkipping = false
+        timeoutsAvailable = 1
+        consumablesUsedCount = 0
+        hookCallsAvailable = 1
+        opponentStreak = 0
 
         // Resolve appearances
         playerAppearance = player.appearance
@@ -104,13 +132,16 @@ final class MatchViewModel {
             isRated: effectiveRated
         )
 
-        let engine = await matchService.createMatch(
+        let newEngine = await matchService.createMatch(
             player: player,
             opponent: opponent,
-            config: matchConfig
+            config: matchConfig,
+            playerConsumables: player.consumables,
+            playerReputation: player.repProfile.reputation
         )
+        self.engine = newEngine
 
-        let stream = await engine.simulate()
+        let stream = await newEngine.simulate()
         for await event in stream {
             let entry = MatchEventEntry(event: event)
             eventLog.append(entry)
@@ -118,6 +149,13 @@ final class MatchViewModel {
             if case .pointPlayed(let point) = event {
                 currentScore = point.scoreAfter
                 currentServingSide = point.servingSide
+                // Update action availability from engine
+                await refreshActionState()
+            }
+            if case .gameStart = event {
+                // Reset per-game action counters
+                timeoutsAvailable = 1
+                hookCallsAvailable = 1
             }
             if case .matchEnd(let result) = event {
                 matchResult = result
@@ -125,21 +163,89 @@ final class MatchViewModel {
                 computeRewardsPreview(player: player, opponent: opponent, result: result)
             }
 
-            // Animate via SpriteKit scene or fall back to fixed delay
-            if let courtScene, useSpriteVisualization {
-                await courtScene.animate(event: event)
-            } else {
-                try? await Task.sleep(for: .milliseconds(150))
+            // Animate via SpriteKit scene or fall back to fixed delay (skip if skipping)
+            if !isSkipping {
+                if let courtScene, useSpriteVisualization {
+                    await courtScene.animate(event: event)
+                } else {
+                    try? await Task.sleep(for: .milliseconds(150))
+                }
             }
 
             // Transition to finished after match end animation completes
             if case .matchEnd = event {
                 matchState = .finished
+                self.engine = nil
             }
         }
     }
 
+    private func refreshActionState() async {
+        guard let engine else { return }
+        opponentStreak = await engine.opponentCurrentStreak
+        timeoutsAvailable = await engine.canTimeout ? 1 : 0
+        hookCallsAvailable = await engine.canHookCall ? 1 : 0
+        let remaining = await engine.remainingConsumables
+        playerConsumables = remaining
+        let usedCount = await engine.canUseConsumable ? consumablesUsedCount : GameConstants.MatchActions.maxConsumablesPerMatch
+        _ = usedCount // consumablesUsedCount already tracked locally
+    }
+
+    // MARK: - Actions
+
+    func skipMatch() async {
+        guard let engine else { return }
+        isSkipping = true
+        await engine.requestSkip()
+    }
+
+    func resignMatch() async {
+        guard let engine else { return }
+        await engine.requestResign()
+    }
+
+    func callTimeout() async {
+        guard let engine else { return }
+        let result = await engine.requestTimeout()
+        if case .timeoutUsed = result {
+            timeoutsAvailable = 0
+        }
+    }
+
+    func useConsumable(_ consumable: Consumable) async {
+        guard let engine else { return }
+        let result = await engine.useConsumable(consumable)
+        if case .consumableUsed = result {
+            consumablesUsedCount += 1
+            playerConsumables.removeAll { $0.id == consumable.id }
+        }
+    }
+
+    func hookLineCall() async {
+        guard let engine else { return }
+        let result = await engine.requestHookCall()
+        if case .hookCallResult = result {
+            hookCallsAvailable = 0
+        }
+    }
+
     private func computeRewardsPreview(player: Player, opponent: NPC, result: MatchResult) {
+        // Resigned matches: no DUPR change, check frequent resign penalty
+        if result.wasResigned {
+            potentialDuprChange = 0
+            duprChange = nil
+
+            // Check frequent resign for rep penalty
+            let recentHistory = player.matchHistory.suffix(GameConstants.MatchActions.resignCheckWindow)
+            let recentResigns = recentHistory.filter(\.wasResigned).count
+            if recentResigns >= GameConstants.MatchActions.resignFrequentThreshold {
+                repChange = -GameConstants.MatchActions.resignFrequentRepPenalty
+            } else {
+                repChange = 0
+            }
+            return
+        }
+
         let lastGame = result.gameScores.last ?? result.finalScore
         let change = DUPRCalculator.calculateRatingChange(
             playerRating: player.duprRating,
@@ -193,6 +299,7 @@ final class MatchViewModel {
         selectedNPC = nil
         currentScore = nil
         courtScene = nil
+        engine = nil
         lootDrops = []
         lootDecisions = [:]
         levelUpRewards = []
@@ -204,6 +311,12 @@ final class MatchViewModel {
         energyDrain = 0
         courtName = ""
         currentServingSide = .player
+        isSkipping = false
+        timeoutsAvailable = 1
+        consumablesUsedCount = 0
+        hookCallsAvailable = 1
+        playerConsumables = []
+        opponentStreak = 0
     }
 }
 

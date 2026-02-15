@@ -89,9 +89,9 @@ struct MatchHubView: View {
         var player = appState.player
         let rewards = matchVM.processResult(player: &player)
 
-        // Equipment durability on loss
+        // Equipment durability on loss (skip for resigned matches)
         var brokenItems: [Equipment] = []
-        if !result.didPlayerWin {
+        if !result.didPlayerWin && !result.wasResigned {
             let suprGap = npc.duprRating - player.duprRating
             let baseWear = GameConstants.Durability.baseLossWear
             let gapBonus = suprGap > 0
@@ -133,6 +133,16 @@ struct MatchHubView: View {
             }
         }
 
+        // Remove used consumables from player inventory
+        if matchVM.consumablesUsedCount > 0 {
+            // consumables were consumed in the engine; remove from player's inventory
+            let usedIDs = Set(player.consumables.prefix(matchVM.consumablesUsedCount).map(\.id))
+            for id in usedIDs {
+                await container.inventoryService.removeConsumable(id)
+            }
+            player.consumables.removeAll { usedIDs.contains($0.id) }
+        }
+
         // Record match history
         let historyEntry = MatchHistoryEntry(
             id: UUID(),
@@ -149,7 +159,8 @@ struct MatchHubView: View {
             repChange: rewards.repChange,
             xpEarned: result.xpEarned,
             coinsEarned: result.coinsEarned,
-            equipmentBroken: brokenItems.map(\.name)
+            equipmentBroken: brokenItems.map(\.name),
+            wasResigned: result.wasResigned
         )
         player.matchHistory.append(historyEntry)
 

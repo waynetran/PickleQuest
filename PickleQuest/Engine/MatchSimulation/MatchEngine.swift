@@ -9,6 +9,8 @@ actor MatchEngine {
     private let playerLevel: Int
     private let startingEnergy: Double
     private let suprGap: Double
+    private let playerConsumables: [Consumable]
+    private let playerReputation: Int
 
     // Participant data
     private let playerStats: PlayerStats
@@ -42,6 +44,20 @@ actor MatchEngine {
     private var playerTotalRally = 0, opponentTotalRally = 0
     private var playerPointsWon = 0, opponentPointsWon = 0
 
+    // Action flags
+    private var skipRequested = false
+    private var resignRequested = false
+
+    // Action state per game
+    private var timeoutsUsedThisGame = 0
+    private var hookCallsUsedThisGame = 0
+    private var consumablesUsedCount = 0
+    private var availableConsumables: [Consumable]
+    private var currentReputation: Int
+
+    // Pending action events to emit between points
+    private var pendingActionEvents: [MatchEvent] = []
+
     init(
         playerStats: PlayerStats,
         opponentStats: PlayerStats,
@@ -55,7 +71,9 @@ actor MatchEngine {
         opponentDifficulty: NPCDifficulty = .beginner,
         playerLevel: Int = 1,
         startingEnergy: Double = GameConstants.PersistentEnergy.maxEnergy,
-        suprGap: Double = 0
+        suprGap: Double = 0,
+        playerConsumables: [Consumable] = [],
+        playerReputation: Int = 0
     ) {
         self.playerStats = playerStats
         self.opponentStats = opponentStats
@@ -70,8 +88,12 @@ actor MatchEngine {
         self.playerLevel = playerLevel
         self.startingEnergy = startingEnergy
         self.suprGap = suprGap
+        self.playerConsumables = playerConsumables
+        self.playerReputation = playerReputation
         self.playerFatigue = FatigueModel(stamina: playerStats.stamina, startingEnergy: startingEnergy)
         self.opponentFatigue = FatigueModel(stamina: opponentStats.stamina)
+        self.availableConsumables = playerConsumables
+        self.currentReputation = playerReputation
     }
 
     /// Run the full match simulation, returning an AsyncStream of events.
@@ -101,6 +123,12 @@ actor MatchEngine {
         continuation.yield(.matchStart(playerName: playerName, opponentName: opponentName))
 
         while playerGames < config.gamesToWin && opponentGames < config.gamesToWin {
+            if resignRequested {
+                continuation.yield(.resigned)
+                let result = buildResult(resigned: true)
+                continuation.yield(.matchEnd(result: result))
+                return
+            }
             runGame(continuation: continuation)
         }
 
@@ -109,12 +137,17 @@ actor MatchEngine {
     }
 
     private func runGame(continuation: AsyncStream<MatchEvent>.Continuation) {
-        continuation.yield(.gameStart(gameNumber: currentGame))
+        if !skipRequested {
+            continuation.yield(.gameStart(gameNumber: currentGame))
+        }
         playerPoints = 0
         opponentPoints = 0
         momentum.resetForNewGame()
+        timeoutsUsedThisGame = 0
+        hookCallsUsedThisGame = 0
 
         while !isGameOver() {
+            if resignRequested { return }
             pointNumber += 1
             let isClutch = isClutchSituation()
 
@@ -167,24 +200,36 @@ actor MatchEngine {
             // Track stats
             trackStats(point: point)
 
-            // Emit events
-            continuation.yield(.pointPlayed(point))
+            // Emit pending action events (timeout, consumable, hook call)
+            for actionEvent in pendingActionEvents {
+                if !skipRequested {
+                    continuation.yield(actionEvent)
+                }
+            }
+            pendingActionEvents.removeAll()
+
+            // Emit events (skip filtering for non-critical events)
+            if !skipRequested {
+                continuation.yield(.pointPlayed(point))
+            }
 
             // Momentum
             if let streak = momentum.recordPoint(winner: winner) {
-                if streak >= 3 {
+                if streak >= 3 && !skipRequested {
                     continuation.yield(.streakAlert(side: winner, count: streak))
                 }
             }
 
             // Fatigue warnings
-            if resolved.playerEnergyAfter <= GameConstants.Fatigue.threshold1 &&
-               resolved.playerEnergyAfter > GameConstants.Fatigue.threshold1 - 5 {
-                continuation.yield(.fatigueWarning(side: .player, energyPercent: resolved.playerEnergyAfter))
-            }
-            if resolved.opponentEnergyAfter <= GameConstants.Fatigue.threshold1 &&
-               resolved.opponentEnergyAfter > GameConstants.Fatigue.threshold1 - 5 {
-                continuation.yield(.fatigueWarning(side: .opponent, energyPercent: resolved.opponentEnergyAfter))
+            if !skipRequested {
+                if resolved.playerEnergyAfter <= GameConstants.Fatigue.threshold1 &&
+                   resolved.playerEnergyAfter > GameConstants.Fatigue.threshold1 - 5 {
+                    continuation.yield(.fatigueWarning(side: .player, energyPercent: resolved.playerEnergyAfter))
+                }
+                if resolved.opponentEnergyAfter <= GameConstants.Fatigue.threshold1 &&
+                   resolved.opponentEnergyAfter > GameConstants.Fatigue.threshold1 - 5 {
+                    continuation.yield(.fatigueWarning(side: .opponent, energyPercent: resolved.opponentEnergyAfter))
+                }
             }
 
             // Switch serve
@@ -209,7 +254,9 @@ actor MatchEngine {
             opponentGames: opponentGames
         )
         gameScores.append(gameScore)
-        continuation.yield(.gameEnd(gameNumber: currentGame, winnerSide: gameWinner, score: gameScore))
+        if !skipRequested {
+            continuation.yield(.gameEnd(gameNumber: currentGame, winnerSide: gameWinner, score: gameScore))
+        }
 
         // Rest between games
         playerFatigue.restBetweenGames()
@@ -268,8 +315,8 @@ actor MatchEngine {
 
     // MARK: - Result
 
-    private func buildResult() -> MatchResult {
-        let didWin = playerGames > opponentGames
+    private func buildResult(resigned: Bool = false) -> MatchResult {
+        let didWin = resigned ? false : playerGames > opponentGames
         let totalPts = allPoints.count
 
         let xp = calculateXP(didWin: didWin)
@@ -321,6 +368,7 @@ actor MatchEngine {
             coinsEarned: coins,
             loot: loot,
             duration: Double(totalPts) * 1.5, // rough simulated time
+            wasResigned: resigned,
             duprChange: nil
         )
     }
@@ -337,5 +385,121 @@ actor MatchEngine {
         } else {
             return GameConstants.Economy.matchLossBaseReward
         }
+    }
+
+    // MARK: - Action Methods
+
+    func requestSkip() {
+        skipRequested = true
+    }
+
+    func requestResign() {
+        resignRequested = true
+    }
+
+    func requestTimeout() -> MatchActionResult {
+        // Check if timeout already used this game
+        guard timeoutsUsedThisGame == 0 else {
+            return .timeoutUnavailable(reason: "Already used timeout this game")
+        }
+        // Check opponent streak
+        let opponentStreak = momentum.opponentStreak
+        guard opponentStreak >= GameConstants.MatchActions.timeoutMinOpponentStreak else {
+            return .timeoutUnavailable(reason: "Opponent needs \(GameConstants.MatchActions.timeoutMinOpponentStreak)+ streak")
+        }
+
+        timeoutsUsedThisGame += 1
+        let restoreAmount = GameConstants.MatchActions.timeoutEnergyRestore
+        playerFatigue.restore(amount: restoreAmount)
+        let hadStreak = opponentStreak >= 2
+        momentum.resetOpponentStreak()
+
+        pendingActionEvents.append(.timeoutCalled(side: .player, energyRestored: restoreAmount, streakBroken: hadStreak))
+        return .timeoutUsed(energyRestored: restoreAmount, streakBroken: hadStreak)
+    }
+
+    func useConsumable(_ consumable: Consumable) -> MatchActionResult {
+        guard consumablesUsedCount < GameConstants.MatchActions.maxConsumablesPerMatch else {
+            return .consumableUnavailable(reason: "Max consumables per match reached")
+        }
+        guard let index = availableConsumables.firstIndex(where: { $0.id == consumable.id }) else {
+            return .consumableUnavailable(reason: "Consumable not available")
+        }
+
+        availableConsumables.remove(at: index)
+        consumablesUsedCount += 1
+
+        let effectDesc: String
+        switch consumable.effect {
+        case .energyRestore(let amount):
+            playerFatigue.restore(amount: amount)
+            effectDesc = "+\(Int(amount))% energy"
+        case .statBoost(let stat, let amount, _):
+            effectDesc = "+\(amount) \(stat.rawValue) this match"
+        case .xpMultiplier(let mult, _):
+            effectDesc = "\(mult)x XP"
+        }
+
+        pendingActionEvents.append(.consumableUsed(side: .player, name: consumable.name, effect: effectDesc))
+        return .consumableUsed(name: consumable.name, effect: effectDesc)
+    }
+
+    func requestHookCall() -> MatchActionResult {
+        guard hookCallsUsedThisGame == 0 else {
+            return .hookCallUnavailable(reason: "Already used hook call this game")
+        }
+        guard pointNumber > 0 else {
+            return .hookCallUnavailable(reason: "Can only hook after a point is played")
+        }
+
+        hookCallsUsedThisGame += 1
+
+        let baseChance = GameConstants.MatchActions.hookCallBaseChance
+        let repBonus = Double(currentReputation) * GameConstants.MatchActions.hookCallRepBonusPerPoint
+        let successChance = min(GameConstants.MatchActions.hookCallMaxChance, baseChance + repBonus)
+
+        let roll = Double.random(in: 0..<1.0)
+        let success = roll < successChance
+
+        let repChange: Int
+        if success {
+            // Player wins the point, small rep penalty
+            playerPoints += 1
+            playerPointsWon += 1
+            repChange = -GameConstants.MatchActions.hookCallSuccessRepPenalty
+        } else {
+            // Opponent gets the point, large rep penalty
+            opponentPoints += 1
+            opponentPointsWon += 1
+            repChange = -GameConstants.MatchActions.hookCallCaughtRepPenalty
+        }
+        currentReputation += repChange
+
+        pendingActionEvents.append(.hookCallAttempt(side: .player, success: success, repChange: repChange))
+        return .hookCallResult(success: success, repChange: repChange)
+    }
+
+    // MARK: - Action State Queries
+
+    var isSkipping: Bool { skipRequested }
+
+    var canTimeout: Bool {
+        timeoutsUsedThisGame == 0 && momentum.opponentStreak >= GameConstants.MatchActions.timeoutMinOpponentStreak
+    }
+
+    var canHookCall: Bool {
+        hookCallsUsedThisGame == 0 && pointNumber > 0
+    }
+
+    var canUseConsumable: Bool {
+        consumablesUsedCount < GameConstants.MatchActions.maxConsumablesPerMatch && !availableConsumables.isEmpty
+    }
+
+    var remainingConsumables: [Consumable] {
+        availableConsumables
+    }
+
+    var opponentCurrentStreak: Int {
+        momentum.opponentStreak
     }
 }

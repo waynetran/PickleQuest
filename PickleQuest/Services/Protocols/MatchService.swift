@@ -4,7 +4,9 @@ protocol MatchService: Sendable {
     func createMatch(
         player: Player,
         opponent: NPC,
-        config: MatchConfig
+        config: MatchConfig,
+        playerConsumables: [Consumable],
+        playerReputation: Int
     ) async -> MatchEngine
 
     func processMatchResult(

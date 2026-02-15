@@ -32,6 +32,14 @@ final class MatchAnimator {
             await animateAbility(side: side, name: abilityName)
         case .gameEnd(let gameNumber, let winnerSide, _):
             await animateGameEnd(gameNumber: gameNumber, winnerSide: winnerSide)
+        case .timeoutCalled(let side, _, _):
+            await animateTimeout(side: side)
+        case .consumableUsed(let side, let name, _):
+            await animateConsumable(side: side, name: name)
+        case .hookCallAttempt(let side, let success, _):
+            await animateHookCall(side: side, success: success)
+        case .resigned:
+            break // no animation needed, match ends
         case .matchEnd(let result):
             await animateMatchEnd(didPlayerWin: result.didPlayerWin)
         }
@@ -509,6 +517,88 @@ final class MatchAnimator {
         scene.announcementLabel.fontColor = color
         await scene.showAnnouncement(text)
         scene.announcementLabel.fontColor = .white
+    }
+
+    // MARK: - Action Animations
+
+    private func animateTimeout(side: MatchSide) async {
+        guard let scene else { return }
+
+        let node = side == .player ? scene.nearPlayer! : scene.farPlayer!
+
+        // Clock emoji callout
+        let clock = SKLabelNode(text: "\u{23F0}")
+        clock.fontSize = 24
+        clock.position = CGPoint(x: node.position.x, y: node.position.y + 40)
+        clock.zPosition = AC.ZPositions.effects
+        scene.addChild(clock)
+
+        await clock.runAsync(
+            .sequence([
+                .group([
+                    .moveBy(x: 0, y: 20, duration: 0.5),
+                    .scale(to: 1.5, duration: 0.3)
+                ]),
+                .fadeOut(withDuration: 0.3),
+                .removeFromParent()
+            ])
+        )
+
+        await scene.showCallout("TIMEOUT!", at: CGPoint(x: node.position.x, y: node.position.y + 50), color: .cyan)
+    }
+
+    private func animateConsumable(side: MatchSide, name: String) async {
+        guard let scene else { return }
+
+        let node = side == .player ? scene.nearPlayer! : scene.farPlayer!
+
+        // Green sparkle ring
+        let ring = SKShapeNode(circleOfRadius: 15)
+        ring.fillColor = UIColor.green.withAlphaComponent(0.3)
+        ring.strokeColor = UIColor.green.withAlphaComponent(0.7)
+        ring.lineWidth = 2
+        ring.position = node.position
+        ring.zPosition = AC.ZPositions.effects
+        scene.addChild(ring)
+
+        await ring.runAsync(
+            .sequence([
+                .group([
+                    .scale(to: 3.0, duration: 0.4),
+                    .fadeOut(withDuration: 0.5)
+                ]),
+                .removeFromParent()
+            ])
+        )
+
+        await scene.showCallout(name, at: CGPoint(x: node.position.x, y: node.position.y + 50), color: .green)
+    }
+
+    private func animateHookCall(side: MatchSide, success: Bool) async {
+        guard let scene else { return }
+
+        let node = side == .player ? scene.nearPlayer! : scene.farPlayer!
+
+        // Flash effect
+        let flash = SKShapeNode(rectOf: CGSize(width: AC.sceneWidth, height: AC.sceneHeight))
+        flash.fillColor = success
+            ? UIColor.yellow.withAlphaComponent(0.3)
+            : UIColor.red.withAlphaComponent(0.3)
+        flash.strokeColor = .clear
+        flash.position = CGPoint(x: AC.sceneWidth / 2, y: AC.sceneHeight / 2)
+        flash.zPosition = AC.ZPositions.effects
+        scene.addChild(flash)
+
+        await flash.runAsync(
+            .sequence([
+                .fadeOut(withDuration: 0.3),
+                .removeFromParent()
+            ])
+        )
+
+        let text = success ? "OVERTURNED!" : "CAUGHT!"
+        let color: UIColor = success ? .yellow : .red
+        await scene.showCallout(text, at: CGPoint(x: node.position.x, y: node.position.y + 50), color: color)
     }
 
     // MARK: - Particles

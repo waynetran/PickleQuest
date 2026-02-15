@@ -8,6 +8,10 @@ enum MatchEvent: Sendable {
     case fatigueWarning(side: MatchSide, energyPercent: Double)
     case abilityTriggered(side: MatchSide, abilityName: String, effectDescription: String)
     case gameEnd(gameNumber: Int, winnerSide: MatchSide, score: MatchScore)
+    case timeoutCalled(side: MatchSide, energyRestored: Double, streakBroken: Bool)
+    case consumableUsed(side: MatchSide, name: String, effect: String)
+    case hookCallAttempt(side: MatchSide, success: Bool, repChange: Int)
+    case resigned
     case matchEnd(result: MatchResult)
 
     var narration: String {
@@ -44,6 +48,22 @@ enum MatchEvent: Sendable {
         case .gameEnd(let num, let winner, let score):
             let who = winner == .player ? "You win" : "Opponent wins"
             return "\(who) Game \(num)! (Games: \(score.playerGames)-\(score.opponentGames))"
+        case .timeoutCalled(let side, let energyRestored, let streakBroken):
+            let who = side == .player ? "You call" : "Opponent calls"
+            let streakText = streakBroken ? " Streak broken!" : ""
+            return "\(who) a timeout! (+\(Int(energyRestored))% energy)\(streakText)"
+        case .consumableUsed(let side, let name, let effect):
+            let who = side == .player ? "You use" : "Opponent uses"
+            return "\(who) \(name)! \(effect)"
+        case .hookCallAttempt(let side, let success, let repChange):
+            let who = side == .player ? "You" : "Opponent"
+            if success {
+                return "\(who) challenged the line call and won! (\(repChange) rep)"
+            } else {
+                return "\(who) challenged the line call and got caught! (\(repChange) rep)"
+            }
+        case .resigned:
+            return "Match resigned."
         case .matchEnd(let result):
             let who = result.didPlayerWin ? "Victory!" : "Defeat!"
             return "\(who) Final: \(result.formattedScore)"

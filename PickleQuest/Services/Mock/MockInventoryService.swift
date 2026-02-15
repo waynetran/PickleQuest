@@ -2,9 +2,11 @@ import Foundation
 
 actor MockInventoryService: InventoryService {
     private var inventory: [Equipment]
+    private var consumables: [Consumable]
 
     init() {
         self.inventory = MockInventoryService.createStarterInventory()
+        self.consumables = MockInventoryService.createStarterConsumables()
     }
 
     func getInventory() async -> [Equipment] {
@@ -43,6 +45,20 @@ actor MockInventoryService: InventoryService {
         }
     }
 
+    // MARK: - Consumables
+
+    func getConsumables() async -> [Consumable] {
+        consumables
+    }
+
+    func addConsumable(_ consumable: Consumable) async {
+        consumables.append(consumable)
+    }
+
+    func removeConsumable(_ id: UUID) async {
+        consumables.removeAll { $0.id == id }
+    }
+
     // MARK: - Starter Equipment
 
     private static func createStarterInventory() -> [Equipment] {
@@ -76,6 +92,35 @@ actor MockInventoryService: InventoryService {
                 flavorText: "100% cotton, 0% aerodynamics. But hey, it's comfortable.",
                 ability: nil,
                 sellPrice: 15
+            )
+        ]
+    }
+
+    private static func createStarterConsumables() -> [Consumable] {
+        [
+            Consumable(
+                id: UUID(uuidString: "20000001-0000-0000-0000-000000000001")!,
+                name: "Energy Drink",
+                description: "Restores 20% energy during a match.",
+                effect: .energyRestore(amount: 20.0),
+                price: 50,
+                iconName: "bolt.fill"
+            ),
+            Consumable(
+                id: UUID(uuidString: "20000002-0000-0000-0000-000000000002")!,
+                name: "Protein Bar",
+                description: "Restores 10% energy during a match.",
+                effect: .energyRestore(amount: 10.0),
+                price: 25,
+                iconName: "leaf.fill"
+            ),
+            Consumable(
+                id: UUID(uuidString: "20000003-0000-0000-0000-000000000003")!,
+                name: "Focus Gummies",
+                description: "+5 accuracy for the rest of the match.",
+                effect: .statBoost(stat: .accuracy, amount: 5, matchDuration: true),
+                price: 75,
+                iconName: "brain.head.profile"
             )
         ]
     }

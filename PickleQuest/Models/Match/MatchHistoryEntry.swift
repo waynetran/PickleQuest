@@ -16,4 +16,41 @@ struct MatchHistoryEntry: Identifiable, Codable, Equatable, Sendable {
     let xpEarned: Int
     let coinsEarned: Int
     let equipmentBroken: [String] // names of items that broke
+    let wasResigned: Bool
+
+    init(
+        id: UUID,
+        date: Date,
+        opponentName: String,
+        opponentDifficulty: NPCDifficulty,
+        opponentDUPR: Double,
+        didWin: Bool,
+        scoreString: String,
+        isRated: Bool,
+        duprChange: Double?,
+        suprBefore: Double,
+        suprAfter: Double,
+        repChange: Int,
+        xpEarned: Int,
+        coinsEarned: Int,
+        equipmentBroken: [String],
+        wasResigned: Bool = false
+    ) {
+        self.id = id
+        self.date = date
+        self.opponentName = opponentName
+        self.opponentDifficulty = opponentDifficulty
+        self.opponentDUPR = opponentDUPR
+        self.didWin = didWin
+        self.scoreString = scoreString
+        self.isRated = isRated
+        self.duprChange = duprChange
+        self.suprBefore = suprBefore
+        self.suprAfter = suprAfter
+        self.repChange = repChange
+        self.xpEarned = xpEarned
+        self.coinsEarned = coinsEarned
+        self.equipmentBroken = equipmentBroken
+        self.wasResigned = wasResigned
+    }
 }

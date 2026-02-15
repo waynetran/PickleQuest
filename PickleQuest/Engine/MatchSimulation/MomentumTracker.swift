@@ -51,6 +51,11 @@ struct MomentumTracker: Sendable {
         opponentStreak = 0
     }
 
+    /// Reset only the opponent's current streak (e.g., timeout).
+    mutating func resetOpponentStreak() {
+        opponentStreak = 0
+    }
+
     // MARK: - Private
 
     private func momentumBonus(streak: Int) -> Double {

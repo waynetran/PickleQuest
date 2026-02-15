@@ -32,6 +32,12 @@ struct MatchSpriteView: View {
                 .padding(.leading, 12)
                 .padding(.top, 8)
             }
+
+            // Action buttons overlay
+            if viewModel.matchState == .simulating {
+                MatchActionButtons(viewModel: viewModel)
+                    .padding(.top, 60)
+            }
         }
         .task {
             guard scene == nil else { return }

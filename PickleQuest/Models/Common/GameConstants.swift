@@ -215,6 +215,21 @@ enum GameConstants {
         static let difficultyBonusMultiplier: Double = 0.5
     }
 
+    // MARK: - Match Actions
+    enum MatchActions {
+        static let timeoutEnergyRestore: Double = 15.0
+        static let timeoutMinOpponentStreak: Int = 2
+        static let hookCallBaseChance: Double = 0.3
+        static let hookCallRepBonusPerPoint: Double = 0.001
+        static let hookCallMaxChance: Double = 0.8
+        static let hookCallSuccessRepPenalty: Int = 5
+        static let hookCallCaughtRepPenalty: Int = 20
+        static let maxConsumablesPerMatch: Int = 3
+        static let resignFrequentThreshold: Int = 3
+        static let resignFrequentRepPenalty: Int = 10
+        static let resignCheckWindow: Int = 10
+    }
+
     // MARK: - XP
     enum XP {
         static let baseXPPerMatch: Int = 50

@@ -46,7 +46,7 @@ enum SpriteFactory {
             return cached
         }
 
-        guard let sheet = SpriteSheetLoader.loadSheet(named: "character1-Sheet") else {
+        guard let sheet = SpriteSheetLoader.loadSheet(named: appearance.spriteSheet) else {
             // Fallback: return empty dict, callers use fallback textures
             return [:]
         }

@@ -10,7 +10,9 @@ final class MockMatchService: MatchService {
     func createMatch(
         player: Player,
         opponent: NPC,
-        config: MatchConfig
+        config: MatchConfig,
+        playerConsumables: [Consumable] = [],
+        playerReputation: Int = 0
     ) async -> MatchEngine {
         let equippedItems = await inventoryService.getEquippedItems(for: player.equippedItems)
         let suprGap = opponent.duprRating - player.duprRating
@@ -26,7 +28,9 @@ final class MockMatchService: MatchService {
             opponentDifficulty: opponent.difficulty,
             playerLevel: player.progression.level,
             startingEnergy: player.currentEnergy,
-            suprGap: suprGap
+            suprGap: suprGap,
+            playerConsumables: playerConsumables,
+            playerReputation: playerReputation
         )
     }
 

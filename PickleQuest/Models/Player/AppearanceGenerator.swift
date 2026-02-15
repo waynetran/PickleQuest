@@ -64,6 +64,10 @@ enum AppearanceGenerator {
         let shirtIndex = hash[5] % shirtPalette.count
         let shirtColor = shirtPalette[shirtIndex]
 
+        // Assign sprite sheet based on hash (roughly 50/50 split)
+        let spriteSheetIndex = hash[6] % 2
+        let spriteSheet = spriteSheetIndex == 0 ? "character1-Sheet" : "character2-Sheet"
+
         var appearance = CharacterAppearance(
             hairColor: hairColors[hairIndex],
             skinTone: skinTones[skinIndex],
@@ -71,7 +75,8 @@ enum AppearanceGenerator {
             shortsColor: shortsColors[shortsIndex],
             headbandColor: shirtColor,
             shoeColor: shoeColors[shoeIndex],
-            paddleColor: paddleColors[paddleIndex]
+            paddleColor: paddleColors[paddleIndex],
+            spriteSheet: spriteSheet
         )
 
         // Higher difficulty → more vivid colors (increase saturation)
