@@ -13,6 +13,7 @@ struct DevModeView: View {
             List {
                 devModeToggleSection
                 if appState.isDevMode {
+                    fogOfWarSection
                     statsSection
                     ratingSection
                     progressionSection
@@ -54,6 +55,29 @@ struct DevModeView: View {
             ))
         } footer: {
             Text("Override player stats, rating, and location for testing. A snapshot is saved when enabled so you can reset later.")
+        }
+    }
+
+    private var fogOfWarSection: some View {
+        Section("Fog of War") {
+            Toggle("Fog of War", isOn: Binding(
+                get: { appState.fogOfWarEnabled },
+                set: { appState.fogOfWarEnabled = $0 }
+            ))
+
+            HStack {
+                Text("Revealed cells")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(appState.revealedFogCells.count)")
+                    .font(.subheadline.monospacedDigit())
+            }
+
+            Button("Clear Fog (Reveal All)", role: .destructive) {
+                appState.fogOfWarEnabled = false
+            }
+            .font(.subheadline)
         }
     }
 

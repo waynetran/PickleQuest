@@ -9,12 +9,22 @@ final class AppState {
     var selectedTab: AppTab = .match
 
     // Dev mode
-    var isDevMode: Bool = false
+    var isDevMode: Bool = true
     var devModeSnapshot: Player?
     var locationOverride: CLLocationCoordinate2D?
 
+    // Fog of war
+    var fogOfWarEnabled: Bool = true
+    var revealedFogCells: Set<FogCell> = []
+
     init(player: Player = Player.newPlayer(name: "Rookie")) {
         self.player = player
+        self.devModeSnapshot = player
+    }
+
+    func revealFog(around coordinate: CLLocationCoordinate2D) {
+        let newCells = FogOfWar.cellsToReveal(around: coordinate)
+        revealedFogCells.formUnion(newCells)
     }
 
     func enableDevMode() {

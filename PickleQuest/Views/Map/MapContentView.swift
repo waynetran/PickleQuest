@@ -8,10 +8,15 @@ struct MapContentView: View {
 
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var undiscoveredCourt: Court?
+    @State private var isDoublesMode = false
+    @State private var pendingDoublesOpp1: NPC?
+    @State private var pendingDoublesOpp2: NPC?
+    @State private var visibleRegion: MKCoordinateRegion?
 
     var body: some View {
         @Bindable var mapState = mapVM
 
+        MapReader { proxy in
         ZStack {
             Map(position: $cameraPosition) {
                 // Player location (dev override or real)
@@ -49,10 +54,20 @@ struct MapContentView: View {
                 MapCompass()
                 MapScaleView()
             }
-            .onMapCameraChange(frequency: .onEnd) { context in
+            .onMapCameraChange(frequency: .continuous) { context in
+                visibleRegion = context.region
                 mapVM.updateStickyLocation(
                     center: context.camera.centerCoordinate,
                     appState: appState
+                )
+            }
+
+            // Fog of war overlay
+            if appState.fogOfWarEnabled, let region = visibleRegion {
+                FogOfWarOverlay(
+                    revealedCells: appState.revealedFogCells,
+                    proxy: proxy,
+                    region: region
                 )
             }
 
@@ -75,6 +90,7 @@ struct MapContentView: View {
                 bottomBar
             }
         }
+        } // MapReader
         .task {
             await setupMap()
         }
@@ -98,12 +114,24 @@ struct MapContentView: View {
                     npcs: mapVM.npcsAtSelectedCourt,
                     playerRating: appState.player.duprRating,
                     ladder: mapVM.currentLadder,
+                    doublesLadder: nil, // Phase 6: doubles ladder
                     courtPerk: mapVM.currentCourtPerk,
                     alphaNPC: mapVM.alphaNPC,
+                    doublesAlphaNPC: nil, // Phase 6: doubles alpha
+                    playerPersonality: appState.player.personality,
                     isRated: Bindable(matchVM).isRated,
+                    isDoublesMode: $isDoublesMode,
                     onChallenge: { npc in
                         mapVM.pendingChallenge = npc
                         mapVM.showCourtDetail = false
+                    },
+                    onDoublesChallenge: { opp1, opp2 in
+                        pendingDoublesOpp1 = opp1
+                        pendingDoublesOpp2 = opp2
+                        mapVM.showCourtDetail = false
+                    },
+                    onTournament: {
+                        // Phase 5: tournament flow
                     }
                 )
             }
@@ -141,11 +169,22 @@ struct MapContentView: View {
             Text("Walk within 200m to discover this court and challenge its players.")
         }
         .onChange(of: mapVM.showCourtDetail) { _, isPresented in
-            if !isPresented, let npc = mapVM.pendingChallenge {
-                let courtNameForMatch = mapVM.selectedCourt?.name ?? ""
-                mapVM.pendingChallenge = nil
-                Task {
-                    await matchVM.startMatch(player: appState.player, opponent: npc, courtName: courtNameForMatch)
+            if !isPresented {
+                if let npc = mapVM.pendingChallenge {
+                    // Singles challenge
+                    let courtNameForMatch = mapVM.selectedCourt?.name ?? ""
+                    mapVM.pendingChallenge = nil
+                    Task {
+                        await matchVM.startMatch(player: appState.player, opponent: npc, courtName: courtNameForMatch)
+                    }
+                } else if let opp1 = pendingDoublesOpp1, let opp2 = pendingDoublesOpp2 {
+                    // Doubles challenge → enter partner selection
+                    pendingDoublesOpp1 = nil
+                    pendingDoublesOpp2 = nil
+                    matchVM.selectedNPC = opp1
+                    matchVM.opponentPartner = opp2
+                    matchVM.isDoublesMode = true
+                    matchVM.matchState = .selectingPartner
                 }
             }
         }
@@ -179,6 +218,7 @@ struct MapContentView: View {
 
     private func runDiscoveryCheck() {
         guard let loc = mapVM.effectiveLocation(devOverride: appState.locationOverride) else { return }
+        appState.revealFog(around: loc.coordinate)
         let newIDs = mapVM.checkDiscovery(
             playerLocation: loc,
             discoveredIDs: appState.player.discoveredCourtIDs,
