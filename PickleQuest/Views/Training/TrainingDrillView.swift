@@ -8,11 +8,7 @@ struct TrainingDrillView: View {
     @State private var showScene = false
     @Environment(\.dismiss) private var dismiss
 
-    let initialDrillType: DrillType?
-
-    init(initialDrillType: DrillType? = nil) {
-        self.initialDrillType = initialDrillType
-    }
+    let coach: Coach
 
     var body: some View {
         NavigationStack {
@@ -21,7 +17,7 @@ struct TrainingDrillView: View {
                     if showScene, let result = vm.trainingResult {
                         drillSceneView(result: result, vm: vm)
                     } else {
-                        drillPickerView(vm: vm)
+                        coachTrainingView(vm: vm)
                     }
                 } else {
                     ProgressView()
@@ -36,74 +32,29 @@ struct TrainingDrillView: View {
             }
             .task {
                 if viewModel == nil {
-                    let vm = TrainingViewModel(
+                    viewModel = TrainingViewModel(
                         trainingService: container.trainingService,
-                        inventoryService: container.inventoryService
+                        coach: coach
                     )
-                    if let initial = initialDrillType {
-                        vm.selectedDrillType = initial
-                    }
-                    viewModel = vm
                 }
             }
         }
     }
 
-    // MARK: - Drill Picker
+    // MARK: - Coach Training View
 
     @ViewBuilder
-    private func drillPickerView(vm: TrainingViewModel) -> some View {
+    private func coachTrainingView(vm: TrainingViewModel) -> some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Drill type grid
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    ForEach(DrillType.allCases, id: \.self) { type in
-                        drillTypeCard(type: type, vm: vm)
-                    }
-                }
+                // Coach info
+                coachInfoSection(vm: vm)
 
-                // Difficulty picker
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Difficulty")
-                        .font(.headline)
-                    Picker("Difficulty", selection: Binding(
-                        get: { vm.selectedDifficulty },
-                        set: { vm.selectedDifficulty = $0 }
-                    )) {
-                        ForEach(DrillDifficulty.allCases, id: \.self) { diff in
-                            Text(diff.displayName).tag(diff)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
+                // Daily specialty
+                dailySpecialtySection(vm: vm)
 
-                // Cost display
-                let drill = vm.currentDrill
-                HStack(spacing: 20) {
-                    Label("\(drill.coinCost) coins", systemImage: "dollarsign.circle")
-                        .font(.subheadline)
-                        .foregroundStyle(.yellow)
-                    Label("\(Int(drill.energyCost))% energy", systemImage: "bolt.fill")
-                        .font(.subheadline)
-                        .foregroundStyle(.orange)
-                }
-
-                // Target stats
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Target Stats")
-                        .font(.caption.bold())
-                        .foregroundStyle(.secondary)
-                    HStack(spacing: 8) {
-                        ForEach(vm.selectedDrillType.targetStats, id: \.self) { stat in
-                            Text(stat.displayName)
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(.blue.opacity(0.15))
-                                .clipShape(Capsule())
-                        }
-                    }
-                }
+                // Training preview
+                trainingPreviewSection(vm: vm)
 
                 // Error message
                 if let error = vm.errorMessage {
@@ -114,74 +65,197 @@ struct TrainingDrillView: View {
                 }
 
                 // Start button
-                Button {
-                    Task {
-                        var player = appState.player
-                        await vm.startDrill(player: &player)
-                        if let result = vm.trainingResult {
-                            // Track daily challenge progress
-                            player.dailyChallengeState?.incrementProgress(for: .completeDrills)
-                            if result.grade <= .B {
-                                player.dailyChallengeState?.incrementProgress(for: .earnGrade)
-                            }
-                        }
-                        appState.player = player
-                        if vm.trainingResult != nil {
-                            showScene = true
-                        }
-                    }
-                } label: {
-                    HStack {
-                        if vm.isSimulating {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            Image(systemName: "play.fill")
-                        }
-                        Text("Start Drill")
-                            .font(.headline)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(canStartDrill(vm: vm) ? .green : .gray)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .disabled(!canStartDrill(vm: vm) || vm.isSimulating)
+                startTrainingButton(vm: vm)
             }
             .padding()
         }
     }
 
-    private func drillTypeCard(type: DrillType, vm: TrainingViewModel) -> some View {
-        let isSelected = vm.selectedDrillType == type
-        return Button {
-            vm.selectedDrillType = type
-        } label: {
-            VStack(spacing: 8) {
-                Image(systemName: type.iconName)
+    private func coachInfoSection(vm: TrainingViewModel) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(.blue.opacity(0.2))
+                    .frame(width: 56, height: 56)
+                Image(systemName: "figure.run")
                     .font(.title2)
-                    .foregroundStyle(isSelected ? .white : .blue)
-                Text(type.displayName)
-                    .font(.caption.bold())
-                    .foregroundStyle(isSelected ? .white : .primary)
-                Text(type.description)
-                    .font(.caption2)
-                    .foregroundStyle(isSelected ? .white.opacity(0.8) : .secondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
+                    .foregroundStyle(.blue)
             }
-            .frame(maxWidth: .infinity)
-            .padding(12)
-            .background(isSelected ? .blue : Color(.systemGray6))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(coach.name)
+                    .font(.headline)
+                Text(coach.title)
+                    .font(.caption)
+                    .foregroundStyle(.blue)
+
+                // Level stars
+                HStack(spacing: 2) {
+                    ForEach(1...5, id: \.self) { star in
+                        Image(systemName: star <= coach.level ? "star.fill" : "star")
+                            .font(.caption2)
+                            .foregroundStyle(star <= coach.level ? .yellow : .gray.opacity(0.4))
+                    }
+                    Text("Lv.\(coach.level)")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+
+            if coach.isAlphaCoach && coach.alphaDefeated {
+                Label("50% Off", systemImage: "tag.fill")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.orange)
+            }
+        }
+        .padding()
+        .background(.blue.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(.blue.opacity(0.2), lineWidth: 1)
+        )
+    }
+
+    private func dailySpecialtySection(vm: TrainingViewModel) -> some View {
+        let stat = coach.dailySpecialtyStat
+        let drillType = coach.dailyDrillType
+
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("Today's Specialty")
+                .font(.headline)
+
+            HStack(spacing: 12) {
+                Image(systemName: drillType.iconName)
+                    .font(.title2)
+                    .foregroundStyle(.green)
+                    .frame(width: 40)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(stat.displayName)
+                        .font(.subheadline.bold())
+                    Text(drillType.displayName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(drillType.description)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.green.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }
 
-    private func canStartDrill(vm: TrainingViewModel) -> Bool {
-        let drill = vm.currentDrill
-        return appState.player.wallet.coins >= drill.coinCost
-            && appState.player.currentEnergy >= drill.energyCost
+    private func trainingPreviewSection(vm: TrainingViewModel) -> some View {
+        let stat = coach.dailySpecialtyStat
+        let fee = appState.player.coachingRecord.fee(for: coach)
+        let expectedGain = vm.expectedGain(energy: appState.player.currentEnergy)
+        let currentBoost = appState.player.coachingRecord.currentBoost(for: stat)
+        let hasSession = appState.player.coachingRecord.hasSessionToday(coachID: coach.id)
+
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Training Details")
+                .font(.headline)
+
+            HStack(spacing: 20) {
+                // Cost
+                Label("\(fee) coins", systemImage: "dollarsign.circle")
+                    .font(.subheadline)
+                    .foregroundStyle(.yellow)
+
+                // Energy cost
+                Label("\(Int(GameConstants.Training.drillEnergyCost))% energy", systemImage: "bolt.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.orange)
+            }
+
+            // Expected gain
+            HStack {
+                Text("Expected Gain")
+                    .font(.subheadline)
+                Spacer()
+                Text("+\(expectedGain) \(stat.displayName)")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.green)
+            }
+
+            // Energy bar
+            HStack {
+                Text("Energy")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(Int(appState.player.currentEnergy))%")
+                    .font(.caption.bold().monospacedDigit())
+            }
+
+            // Coaching progress
+            HStack {
+                Text("Coaching Boosts")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(currentBoost)/\(GameConstants.Coaching.maxCoachingBoostPerStat)")
+                    .font(.caption.bold())
+                    .foregroundStyle(currentBoost >= GameConstants.Coaching.maxCoachingBoostPerStat ? .red : .secondary)
+            }
+
+            if hasSession {
+                Label("Already trained today", systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func startTrainingButton(vm: TrainingViewModel) -> some View {
+        Button {
+            Task {
+                var player = appState.player
+                await vm.startDrill(player: &player)
+                if vm.trainingResult != nil {
+                    player.dailyChallengeState?.incrementProgress(for: .completeDrills)
+                }
+                appState.player = player
+                if vm.trainingResult != nil {
+                    showScene = true
+                }
+            }
+        } label: {
+            HStack {
+                if vm.isSimulating {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Image(systemName: "play.fill")
+                }
+                Text("Start Training")
+                    .font(.headline)
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(canStart(vm: vm) ? .green : .gray)
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .disabled(!canStart(vm: vm) || vm.isSimulating)
+    }
+
+    private func canStart(vm: TrainingViewModel) -> Bool {
+        let stat = coach.dailySpecialtyStat
+        let fee = appState.player.coachingRecord.fee(for: coach)
+        return appState.player.wallet.coins >= fee
+            && appState.player.currentEnergy >= GameConstants.Training.drillEnergyCost
+            && !appState.player.coachingRecord.hasSessionToday(coachID: coach.id)
+            && appState.player.coachingRecord.canTrain(stat: stat)
     }
 
     // MARK: - Drill Scene + Results
@@ -192,29 +266,33 @@ struct TrainingDrillView: View {
             // SpriteKit scene
             SpriteView(scene: TrainingDrillScene(
                 drillType: result.drill.type,
-                grade: result.grade,
-                appearance: appState.player.appearance
+                statGained: result.statGained,
+                statGainAmount: result.statGainAmount,
+                appearance: appState.player.appearance,
+                onComplete: { [weak vm] in
+                    vm?.onAnimationComplete()
+                }
             ))
             .ignoresSafeArea()
 
-            // Results overlay
-            VStack {
-                Spacer()
-                resultOverlay(result: result, vm: vm)
+            // Results overlay — only after animation completes
+            if vm.animationComplete {
+                VStack {
+                    Spacer()
+                    resultOverlay(result: result, vm: vm)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .animation(.easeInOut(duration: 0.3), value: vm.animationComplete)
     }
 
     private func resultOverlay(result: TrainingResult, vm: TrainingViewModel) -> some View {
         VStack(spacing: 12) {
-            // Grade
-            Text(result.grade.rawValue)
-                .font(.system(size: 48, weight: .heavy, design: .rounded))
-                .foregroundStyle(result.grade.color)
-
-            Text("Grade")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            // Stat gain
+            Text("+\(result.statGainAmount) \(result.statGained.displayName)")
+                .font(.system(size: 36, weight: .heavy, design: .rounded))
+                .foregroundStyle(.green)
 
             Divider()
 
@@ -223,21 +301,16 @@ struct TrainingDrillView: View {
                 .font(.headline)
                 .foregroundStyle(.yellow)
 
-            // Target stat breakdown
-            ForEach(Array(result.targetStatScores.sorted(by: { $0.key.rawValue < $1.key.rawValue })), id: \.key) { stat, score in
-                HStack {
-                    Text(stat.displayName)
-                        .font(.subheadline)
-                    Spacer()
-                    Text("\(Int(score * 100))%")
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(score >= 0.7 ? .green : score >= 0.4 ? .orange : .red)
-                }
-            }
+            // Coach dialogue
+            Text(coach.dialogue.onSession)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .italic()
 
             Button {
                 showScene = false
                 vm.clearResult()
+                dismiss()
             } label: {
                 Text("Done")
                     .font(.headline)

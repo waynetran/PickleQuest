@@ -17,8 +17,7 @@ struct CourtDetailSheet: View {
     let onChallenge: (NPC) -> Void
     let onDoublesChallenge: (NPC, NPC) -> Void
     let onTournament: () -> Void
-    let onStartDrill: (DrillType) -> Void
-    let onCoachSession: (StatType) -> Void
+    let onCoachTraining: () -> Void
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -30,7 +29,6 @@ struct CourtDetailSheet: View {
                     matchModeToggle
                     ratedToggle
                     perkBadges
-                    trainingSection
                     coachSection
                     tournamentButton
                     if isDoublesMode {
@@ -163,43 +161,14 @@ struct CourtDetailSheet: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - Training Section
-
-    private var trainingSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Train Here")
-                .font(.headline)
-
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                ForEach(DrillType.allCases, id: \.self) { type in
-                    Button {
-                        dismiss()
-                        onStartDrill(type)
-                    } label: {
-                        VStack(spacing: 4) {
-                            Image(systemName: type.iconName)
-                                .font(.title3)
-                            Text(type.displayName)
-                                .font(.caption2.bold())
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(.green.opacity(0.1))
-                        .foregroundStyle(.green)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-                }
-            }
-        }
-    }
-
     // MARK: - Coach Section
 
     @ViewBuilder
     private var coachSection: some View {
         if let coach {
-            CoachView(coach: coach, player: player) { stat in
-                onCoachSession(stat)
+            CoachView(coach: coach, player: player) {
+                dismiss()
+                onCoachTraining()
             }
         }
     }

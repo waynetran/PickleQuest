@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 enum DrillType: String, CaseIterable, Codable, Sendable {
     case servePractice
@@ -42,54 +41,29 @@ enum DrillType: String, CaseIterable, Codable, Sendable {
         case .footworkTraining: return "Quick lateral movements across the court."
         }
     }
-}
 
-enum DrillDifficulty: String, CaseIterable, Codable, Sendable {
-    case easy
-    case medium
-    case hard
-
-    var displayName: String {
-        rawValue.capitalized
-    }
-}
-
-enum DrillGrade: String, CaseIterable, Codable, Comparable, Sendable {
-    case S, A, B, C, D
-
-    var color: Color {
-        switch self {
-        case .S: return .yellow
-        case .A: return .green
-        case .B: return .blue
-        case .C: return .orange
-        case .D: return .red
+    /// Maps a stat to the most appropriate drill type for training it.
+    static func forStat(_ stat: StatType) -> DrillType {
+        switch stat {
+        case .power, .accuracy, .spin: return .servePractice
+        case .consistency, .positioning: return .rallyDrill
+        case .defense, .reflexes: return .defenseDrill
+        case .speed, .stamina: return .footworkTraining
+        case .clutch: return .rallyDrill
         }
-    }
-
-    static func < (lhs: DrillGrade, rhs: DrillGrade) -> Bool {
-        let order: [DrillGrade] = [.S, .A, .B, .C, .D]
-        guard let l = order.firstIndex(of: lhs), let r = order.firstIndex(of: rhs) else { return false }
-        return l < r // S is "best" so S < A means S comes first
     }
 }
 
 struct TrainingDrill: Sendable {
     let id: UUID
     let type: DrillType
-    let difficulty: DrillDifficulty
-
-    var coinCost: Int {
-        GameConstants.Training.drillCoinCost[difficulty] ?? 15
-    }
 
     var energyCost: Double {
         GameConstants.Training.drillEnergyCost
     }
 
-    init(type: DrillType, difficulty: DrillDifficulty) {
+    init(type: DrillType) {
         self.id = UUID()
         self.type = type
-        self.difficulty = difficulty
     }
 }

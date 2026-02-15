@@ -10,9 +10,7 @@ actor MockCoachService: CoachService {
             id: UUID(uuidString: "C0AC0001-0000-0000-0000-000000000001")!,
             name: "Maria Santos",
             title: "Serve Specialist",
-            specialtyStats: [.power, .accuracy],
-            tier: 1,
-            baseFee: 200,
+            level: 1,
             dialogue: CoachDialogue(
                 greeting: "Ready to work on that serve? Let's make it untouchable!",
                 onSession: "Great improvement! Your serve is getting sharper.",
@@ -24,9 +22,7 @@ actor MockCoachService: CoachService {
             id: UUID(uuidString: "C0AC0002-0000-0000-0000-000000000002")!,
             name: "Darius Cole",
             title: "Movement Coach",
-            specialtyStats: [.speed, .positioning],
-            tier: 2,
-            baseFee: 500,
+            level: 2,
             dialogue: CoachDialogue(
                 greeting: "Court movement is everything. Let's get those feet moving!",
                 onSession: "You're covering the court much better now!",
@@ -38,9 +34,7 @@ actor MockCoachService: CoachService {
             id: UUID(uuidString: "C0AC0003-0000-0000-0000-000000000003")!,
             name: "Yuki Tanaka",
             title: "Spin Master",
-            specialtyStats: [.spin, .accuracy],
-            tier: 2,
-            baseFee: 500,
+            level: 2,
             dialogue: CoachDialogue(
                 greeting: "Spin changes everything. Let me show you the angles.",
                 onSession: "Beautiful! That spin will confuse your opponents.",
@@ -52,9 +46,7 @@ actor MockCoachService: CoachService {
             id: UUID(uuidString: "C0AC0004-0000-0000-0000-000000000004")!,
             name: "Reginald \"The Wall\" Brooks",
             title: "Defensive Expert",
-            specialtyStats: [.defense, .reflexes],
-            tier: 3,
-            baseFee: 1000,
+            level: 3,
             dialogue: CoachDialogue(
                 greeting: "Defense wins championships. Let's build that wall.",
                 onSession: "Nothing's getting past you now!",
@@ -66,9 +58,7 @@ actor MockCoachService: CoachService {
             id: UUID(uuidString: "C0AC0005-0000-0000-0000-000000000005")!,
             name: "Zen Masters",
             title: "Mental Game Guru",
-            specialtyStats: [.clutch, .consistency],
-            tier: 3,
-            baseFee: 1000,
+            level: 4,
             dialogue: CoachDialogue(
                 greeting: "The mind controls the paddle. Let's sharpen your focus.",
                 onSession: "You're finding that inner calm. Keep it up.",
@@ -80,9 +70,7 @@ actor MockCoachService: CoachService {
             id: UUID(uuidString: "C0AC0006-0000-0000-0000-000000000006")!,
             name: "Sofia Reyes",
             title: "Tactical Genius",
-            specialtyStats: [.positioning, .consistency],
-            tier: 4,
-            baseFee: 2000,
+            level: 5,
             dialogue: CoachDialogue(
                 greeting: "Every shot is a choice. Let's make every choice count.",
                 onSession: "Your court IQ just went up a level!",
@@ -130,9 +118,9 @@ actor MockCoachService: CoachService {
                 }
 
                 let courtDifficulty = courtDifficulties[courtID] ?? .beginner
-                let targetTier = tierForDifficulty(courtDifficulty)
+                let targetLevel = levelForDifficulty(courtDifficulty)
 
-                if let matchIdx = availableCoaches.firstIndex(where: { $0.tier == targetTier }) {
+                if let matchIdx = availableCoaches.firstIndex(where: { $0.level == targetLevel }) {
                     courtCoaches[courtID] = availableCoaches.remove(at: matchIdx)
                 } else {
                     courtCoaches[courtID] = availableCoaches.removeFirst()
@@ -141,12 +129,13 @@ actor MockCoachService: CoachService {
         }
     }
 
-    private func tierForDifficulty(_ difficulty: NPCDifficulty) -> Int {
+    private func levelForDifficulty(_ difficulty: NPCDifficulty) -> Int {
         switch difficulty {
         case .beginner: return 1
         case .intermediate: return 2
         case .advanced: return 3
-        case .expert, .master: return 4
+        case .expert: return 4
+        case .master: return 5
         }
     }
 }

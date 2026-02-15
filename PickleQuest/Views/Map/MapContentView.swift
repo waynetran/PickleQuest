@@ -13,7 +13,6 @@ struct MapContentView: View {
     @State private var pendingDoublesOpp2: NPC?
     @State private var visibleRegion: MKCoordinateRegion?
     @State private var showTrainingView = false
-    @State private var selectedDrillType: DrillType?
 
     var body: some View {
         @Bindable var mapState = mapVM
@@ -111,24 +110,8 @@ struct MapContentView: View {
                     onTournament: {
                         // Phase 5: tournament flow
                     },
-                    onStartDrill: { drillType in
-                        selectedDrillType = drillType
+                    onCoachTraining: {
                         showTrainingView = true
-                    },
-                    onCoachSession: { stat in
-                        guard let coach = mapVM.coachAtSelectedCourt else { return }
-                        var player = appState.player
-                        // Check limits
-                        guard !player.coachingRecord.hasSessionToday(coachID: coach.id) else { return }
-                        guard player.coachingRecord.canTrain(stat: stat) else { return }
-                        let fee = player.coachingRecord.fee(for: coach, stat: stat)
-                        guard player.wallet.coins >= fee else { return }
-                        // Apply
-                        player.wallet.coins -= fee
-                        player.stats.setStat(stat, value: player.stats.stat(stat) + GameConstants.Coaching.baseStatBoost)
-                        player.coachingRecord.recordSession(coachID: coach.id, stat: stat)
-                        player.progression.currentXP += GameConstants.Coaching.baseBonusXP
-                        appState.player = player
                     }
                 )
             }
@@ -166,8 +149,10 @@ struct MapContentView: View {
             Text("Walk within 200m to discover this court and challenge its players.")
         }
         .sheet(isPresented: $showTrainingView) {
-            TrainingDrillView(initialDrillType: selectedDrillType)
-                .environment(appState)
+            if let coach = mapVM.coachAtSelectedCourt {
+                TrainingDrillView(coach: coach)
+                    .environment(appState)
+            }
         }
         .onChange(of: mapVM.showCourtDetail) { _, isPresented in
             if !isPresented {

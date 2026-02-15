@@ -7,7 +7,6 @@ enum ChallengeType: String, Codable, CaseIterable, Sendable {
     case beatStrongerNPC
     case winWithoutConsumables
     case playDoublesMatch
-    case earnGrade
 
     var displayName: String {
         switch self {
@@ -17,7 +16,6 @@ enum ChallengeType: String, Codable, CaseIterable, Sendable {
         case .beatStrongerNPC: return "Beat Stronger NPC"
         case .winWithoutConsumables: return "Win Clean"
         case .playDoublesMatch: return "Play Doubles"
-        case .earnGrade: return "Earn Drill Grade"
         }
     }
 
@@ -29,7 +27,6 @@ enum ChallengeType: String, Codable, CaseIterable, Sendable {
         case .beatStrongerNPC: return "bolt.fill"
         case .winWithoutConsumables: return "hand.raised.fill"
         case .playDoublesMatch: return "person.2.fill"
-        case .earnGrade: return "star.fill"
         }
     }
 
@@ -42,7 +39,6 @@ enum ChallengeType: String, Codable, CaseIterable, Sendable {
         case .beatStrongerNPC: return "Beat an NPC with higher SUPR"
         case .winWithoutConsumables: return "Win a match without using consumables"
         case .playDoublesMatch: return "Play a doubles match"
-        case .earnGrade: return "Earn a B or better grade in a drill"
         }
     }
 

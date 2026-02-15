@@ -1,5 +1,5 @@
 import Foundation
 
 protocol TrainingService: Sendable {
-    func performDrill(_ drill: TrainingDrill, effectiveStats: PlayerStats) async -> TrainingResult
+    func performDrill(_ drill: TrainingDrill, stat: StatType, coachLevel: Int, playerEnergy: Double) async -> TrainingResult
 }

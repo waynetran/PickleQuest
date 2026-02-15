@@ -4,27 +4,29 @@ import Foundation
 @Observable
 final class TrainingViewModel {
     private let trainingService: TrainingService
-    private let inventoryService: InventoryService
-    private let statCalculator = StatCalculator()
 
-    var selectedDrillType: DrillType = .servePractice
-    var selectedDifficulty: DrillDifficulty = .medium
+    let coach: Coach
     var trainingResult: TrainingResult?
     var isSimulating = false
     var errorMessage: String?
+    var animationComplete = false
 
-    init(trainingService: TrainingService, inventoryService: InventoryService) {
+    init(trainingService: TrainingService, coach: Coach) {
         self.trainingService = trainingService
-        self.inventoryService = inventoryService
+        self.coach = coach
     }
 
-    var currentDrill: TrainingDrill {
-        TrainingDrill(type: selectedDrillType, difficulty: selectedDifficulty)
+    /// Expected stat gain based on current energy and coach level.
+    func expectedGain(energy: Double) -> Int {
+        max(1, Int((energy / 100.0) * Double(coach.level)))
     }
 
     func startDrill(player: inout Player) async {
-        let drill = currentDrill
+        let stat = coach.dailySpecialtyStat
+        let drillType = coach.dailyDrillType
+        let drill = TrainingDrill(type: drillType)
         errorMessage = nil
+        animationComplete = false
 
         // Check energy
         guard player.currentEnergy >= drill.energyCost else {
@@ -32,28 +34,47 @@ final class TrainingViewModel {
             return
         }
 
-        // Check coins
-        guard player.wallet.coins >= drill.coinCost else {
-            errorMessage = "Not enough coins (\(drill.coinCost) needed)"
+        // Check daily limit
+        guard !player.coachingRecord.hasSessionToday(coachID: coach.id) else {
+            errorMessage = coach.dialogue.onDailyLimit
+            return
+        }
+
+        // Check stat cap
+        guard player.coachingRecord.canTrain(stat: stat) else {
+            errorMessage = "Max coaching reached for \(stat.displayName) (+\(GameConstants.Coaching.maxCoachingBoostPerStat))"
+            return
+        }
+
+        // Check cost
+        let fee = player.coachingRecord.fee(for: coach)
+        guard player.wallet.coins >= fee else {
+            errorMessage = "Not enough coins (\(fee) needed)"
             return
         }
 
         // Deduct costs
-        player.wallet.coins -= drill.coinCost
+        player.wallet.coins -= fee
         player.energy = max(
             GameConstants.PersistentEnergy.minEnergy,
             player.currentEnergy - drill.energyCost
         )
         player.lastMatchDate = Date()
 
-        // Calculate effective stats
-        let equipped = await inventoryService.getEquippedItems(for: player.equippedItems)
-        let effectiveStats = statCalculator.effectiveStats(base: player.stats, equipment: equipped)
-
         isSimulating = true
 
         // Run simulation
-        let result = await trainingService.performDrill(drill, effectiveStats: effectiveStats)
+        let result = await trainingService.performDrill(
+            drill,
+            stat: stat,
+            coachLevel: coach.level,
+            playerEnergy: player.currentEnergy
+        )
+
+        // Apply stat gain
+        let currentValue = player.stats.stat(stat)
+        player.stats.setStat(stat, value: min(currentValue + result.statGainAmount, GameConstants.Stats.maxValue))
+        player.coachingRecord.recordSession(coachID: coach.id, stat: stat, amount: result.statGainAmount)
 
         // Award XP
         player.progression.currentXP += result.xpEarned
@@ -68,46 +89,13 @@ final class TrainingViewModel {
         isSimulating = false
     }
 
-    func coachSession(coach: Coach, stat: StatType, player: inout Player) -> Bool {
-        // Check daily limit
-        guard !player.coachingRecord.hasSessionToday(coachID: coach.id) else {
-            errorMessage = coach.dialogue.onDailyLimit
-            return false
-        }
-
-        // Check stat cap
-        guard player.coachingRecord.canTrain(stat: stat) else {
-            errorMessage = "Max coaching reached for \(stat.displayName) (+\(GameConstants.Coaching.maxCoachingBoostPerStat))"
-            return false
-        }
-
-        // Check cost
-        let fee = player.coachingRecord.fee(for: coach, stat: stat)
-        guard player.wallet.coins >= fee else {
-            errorMessage = "Not enough coins (\(fee) needed)"
-            return false
-        }
-
-        // Apply
-        player.wallet.coins -= fee
-        player.stats.setStat(stat, value: player.stats.stat(stat) + GameConstants.Coaching.baseStatBoost)
-        player.coachingRecord.recordSession(coachID: coach.id, stat: stat)
-
-        // Bonus XP
-        player.progression.currentXP += GameConstants.Coaching.baseBonusXP
-        while player.progression.currentXP >= GameConstants.XP.xpRequired(forLevel: player.progression.level + 1),
-              player.progression.level < GameConstants.Stats.maxLevel {
-            player.progression.currentXP -= GameConstants.XP.xpRequired(forLevel: player.progression.level + 1)
-            player.progression.level += 1
-            player.progression.availableStatPoints += GameConstants.Stats.statPointsPerLevel
-        }
-
-        errorMessage = nil
-        return true
+    func onAnimationComplete() {
+        animationComplete = true
     }
 
     func clearResult() {
         trainingResult = nil
         errorMessage = nil
+        animationComplete = false
     }
 }

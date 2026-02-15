@@ -8,6 +8,13 @@ struct PickleQuestApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        // Ensure Application Support directory exists before SwiftData tries to create the store,
+        // avoiding noisy CoreData recovery logs and a startup delay on first launch.
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        if !FileManager.default.fileExists(atPath: appSupport.path()) {
+            try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        }
+
         let schema = Schema([SavedPlayer.self])
         let config = ModelConfiguration(schema: schema)
         let modelContainer: ModelContainer

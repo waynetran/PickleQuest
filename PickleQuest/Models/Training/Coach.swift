@@ -4,9 +4,7 @@ struct Coach: Identifiable, Sendable {
     let id: UUID
     let name: String
     let title: String
-    let specialtyStats: [StatType]
-    let tier: Int // 1-4
-    let baseFee: Int
+    let level: Int // 1-5
     let dialogue: CoachDialogue
     let portraitName: String
     let isAlphaCoach: Bool
@@ -16,9 +14,7 @@ struct Coach: Identifiable, Sendable {
         id: UUID,
         name: String,
         title: String,
-        specialtyStats: [StatType],
-        tier: Int,
-        baseFee: Int,
+        level: Int,
         dialogue: CoachDialogue,
         portraitName: String,
         isAlphaCoach: Bool = false,
@@ -27,17 +23,38 @@ struct Coach: Identifiable, Sendable {
         self.id = id
         self.name = name
         self.title = title
-        self.specialtyStats = specialtyStats
-        self.tier = tier
-        self.baseFee = baseFee
+        self.level = min(max(level, 1), 5)
         self.dialogue = dialogue
         self.portraitName = portraitName
         self.isAlphaCoach = isAlphaCoach
         self.alphaDefeated = alphaDefeated
     }
 
-    func feeForStat(_ stat: StatType, existingBoosts: Int) -> Int {
-        guard specialtyStats.contains(stat) else { return baseFee * 3 }
+    /// Base fee derived from coach level.
+    var baseFee: Int {
+        GameConstants.Coaching.coachLevelFees[level] ?? 500
+    }
+
+    /// Deterministic daily specialty stat based on coach ID + date.
+    var dailySpecialtyStat: StatType {
+        let dateString = {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            return formatter.string(from: Date())
+        }()
+        let combined = id.uuidString + dateString
+        let hash = abs(combined.hashValue)
+        let allStats = StatType.allCases
+        return allStats[hash % allStats.count]
+    }
+
+    /// The drill type for today's specialty stat.
+    var dailyDrillType: DrillType {
+        DrillType.forStat(dailySpecialtyStat)
+    }
+
+    /// Training fee accounting for existing boosts (diminishing returns).
+    func trainingFee(existingBoosts: Int) -> Int {
         let multiplier = pow(GameConstants.Coaching.feeDoublePerExistingBoost, Double(existingBoosts))
         var fee = Int(Double(baseFee) * multiplier)
         if isAlphaCoach && alphaDefeated {
@@ -47,20 +64,14 @@ struct Coach: Identifiable, Sendable {
     }
 
     /// Create a coach from the alpha NPC at a court.
-    /// Derives specialty stats from the NPC's top 2 stats.
     static func fromAlphaNPC(_ npc: NPC, alphaDefeated: Bool) -> Coach {
-        let sorted = npc.stats.allStats.sorted { $0.value > $1.value }
-        let topStats = Array(sorted.prefix(2).map(\.key))
-        let tier = tierForDifficulty(npc.difficulty)
-        let baseFee = GameConstants.Coaching.baseFees[tier] ?? 500
+        let level = levelForDifficulty(npc.difficulty)
 
         return Coach(
             id: npc.id,
             name: npc.name,
             title: "\(npc.title) (Coach)",
-            specialtyStats: topStats,
-            tier: tier,
-            baseFee: baseFee,
+            level: level,
             dialogue: CoachDialogue(
                 greeting: alphaDefeated
                     ? "You beat me fair and square. Let me teach you what I know — at a discount."
@@ -74,14 +85,26 @@ struct Coach: Identifiable, Sendable {
         )
     }
 
-    private static func tierForDifficulty(_ difficulty: NPCDifficulty) -> Int {
+    private static func levelForDifficulty(_ difficulty: NPCDifficulty) -> Int {
         switch difficulty {
         case .beginner: return 1
         case .intermediate: return 2
         case .advanced: return 3
-        case .expert, .master: return 4
+        case .expert: return 4
+        case .master: return 5
         }
     }
+
+    /// All-white appearance for coach sprites in drill scenes.
+    static let coachAppearance = CharacterAppearance(
+        hairColor: "#FFFFFF",
+        skinTone: "#FFFFFF",
+        shirtColor: "#FFFFFF",
+        shortsColor: "#FFFFFF",
+        headbandColor: "#FFFFFF",
+        shoeColor: "#FFFFFF",
+        paddleColor: "#FFFFFF"
+    )
 }
 
 struct CoachDialogue: Sendable {
@@ -105,22 +128,22 @@ struct CoachingRecord: Codable, Equatable, Sendable {
         statBoosts[stat] ?? 0
     }
 
-    func fee(for coach: Coach, stat: StatType) -> Int {
-        let existing = currentBoost(for: stat)
-        return coach.feeForStat(stat, existingBoosts: existing)
+    /// Fee for training with a coach (uses coach's daily specialty stat).
+    func fee(for coach: Coach) -> Int {
+        let existing = currentBoost(for: coach.dailySpecialtyStat)
+        return coach.trainingFee(existingBoosts: existing)
     }
 
     func canTrain(stat: StatType) -> Bool {
         currentBoost(for: stat) < GameConstants.Coaching.maxCoachingBoostPerStat
     }
 
-    mutating func recordSession(coachID: UUID, stat: StatType) {
+    mutating func recordSession(coachID: UUID, stat: StatType, amount: Int) {
         sessionsToday[coachID.uuidString] = Date()
-        statBoosts[stat, default: 0] += GameConstants.Coaching.baseStatBoost
+        statBoosts[stat, default: 0] += amount
     }
 
     mutating func resetDailySessions() {
-        // Remove sessions that aren't from today
         let calendar = Calendar.current
         sessionsToday = sessionsToday.filter { _, date in
             calendar.isDateInToday(date)

@@ -2,7 +2,7 @@ import Foundation
 
 struct TrainingResult: Sendable {
     let drill: TrainingDrill
-    let grade: DrillGrade
+    let statGained: StatType
+    let statGainAmount: Int
     let xpEarned: Int
-    let targetStatScores: [StatType: Double]
 }

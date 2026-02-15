@@ -4,17 +4,28 @@ import UIKit
 @MainActor
 final class TrainingDrillScene: SKScene {
     private var playerNode: SKSpriteNode?
+    private var coachNode: SKSpriteNode?
     private var playerTextures: [CharacterAnimationState: [SKTexture]] = [:]
+    private var coachTextures: [CharacterAnimationState: [SKTexture]] = [:]
     private var ballTextures: [SKTexture] = []
     private let drillType: DrillType
-    private let grade: DrillGrade
+    private let statGained: StatType
+    private let statGainAmount: Int
     private let appearance: CharacterAppearance
-    private var animationComplete = false
+    private let onComplete: () -> Void
 
-    init(drillType: DrillType, grade: DrillGrade, appearance: CharacterAppearance) {
+    init(
+        drillType: DrillType,
+        statGained: StatType,
+        statGainAmount: Int,
+        appearance: CharacterAppearance,
+        onComplete: @escaping () -> Void
+    ) {
         self.drillType = drillType
-        self.grade = grade
+        self.statGained = statGained
+        self.statGainAmount = statGainAmount
         self.appearance = appearance
+        self.onComplete = onComplete
         super.init(size: CGSize(
             width: MatchAnimationConstants.sceneWidth,
             height: MatchAnimationConstants.sceneHeight
@@ -49,32 +60,75 @@ final class TrainingDrillScene: SKScene {
         node.zPosition = MatchAnimationConstants.ZPositions.nearPlayer
         addChild(node)
 
+        // Coach sprite (far side, all-white, feeding balls)
+        let (cNode, cTextures) = SpriteFactory.makeCharacterNode(appearance: Coach.coachAppearance, isNearPlayer: false)
+        coachTextures = cTextures
+        coachNode = cNode
+        let farScale = MatchAnimationConstants.Sprites.farPlayerScale * CourtRenderer.perspectiveScale(ny: 0.92)
+        cNode.setScale(farScale)
+
+        let coachPos = CourtRenderer.courtPoint(nx: 0.5, ny: 0.92)
+        cNode.position = coachPos
+        cNode.zPosition = MatchAnimationConstants.ZPositions.farPlayer
+        addChild(cNode)
+
         // Ball textures
         ballTextures = SpriteFactory.makeBallTextures()
     }
 
     private func runDrillAnimation() {
-        guard let player = playerNode else { return }
+        guard let player = playerNode, let coach = coachNode else { return }
 
         let duration = GameConstants.Training.drillAnimationDuration
 
         switch drillType {
         case .servePractice:
             runServeAnimation(player: player, duration: duration)
+            runCoachFeedingAnimation(coach: coach, duration: duration)
         case .rallyDrill:
             runRallyAnimation(player: player, duration: duration)
+            runCoachFeedingAnimation(coach: coach, duration: duration)
         case .defenseDrill:
-            runDefenseAnimation(player: player, duration: duration)
+            runDefenseAnimation(player: player, coach: coach, duration: duration)
         case .footworkTraining:
             runFootworkAnimation(player: player, duration: duration)
+            runCoachFeedingAnimation(coach: coach, duration: duration)
         }
 
-        // Show grade at end
-        let gradeDelay = SKAction.wait(forDuration: duration + 0.5)
-        let showGrade = SKAction.run { [weak self] in
-            self?.showGradeLabel()
+        // Show stat gain label at end, then call onComplete
+        let showDelay = SKAction.wait(forDuration: duration + 0.5)
+        let showLabel = SKAction.run { [weak self] in
+            self?.showStatGainLabel()
         }
-        run(SKAction.sequence([gradeDelay, showGrade]))
+        let completeDelay = SKAction.wait(forDuration: 1.0)
+        let complete = SKAction.run { [weak self] in
+            self?.onComplete()
+        }
+        run(SKAction.sequence([showDelay, showLabel, completeDelay, complete]))
+    }
+
+    // MARK: - Coach Feeding Animation
+
+    private func runCoachFeedingAnimation(coach: SKSpriteNode, duration: Double) {
+        let forehandFrames = coachTextures[.forehand] ?? []
+        let backhandFrames = coachTextures[.backhand] ?? []
+
+        let forehandAction = forehandFrames.isEmpty
+            ? SKAction.wait(forDuration: 0.3)
+            : SKAction.animate(with: forehandFrames, timePerFrame: 0.06)
+        let backhandAction = backhandFrames.isEmpty
+            ? SKAction.wait(forDuration: 0.3)
+            : SKAction.animate(with: backhandFrames, timePerFrame: 0.06)
+
+        let feedCycle = SKAction.sequence([
+            forehandAction,
+            SKAction.wait(forDuration: 0.7),
+            backhandAction,
+            SKAction.wait(forDuration: 0.7)
+        ])
+
+        let repeatFeed = SKAction.repeat(feedCycle, count: Int(duration / 1.7))
+        coach.run(repeatFeed)
     }
 
     // MARK: - Drill Animations
@@ -150,11 +204,14 @@ final class TrainingDrillScene: SKScene {
         player.run(SKAction.sequence([SKAction.move(to: centerPos, duration: 0.3), repeatRally]))
     }
 
-    private func runDefenseAnimation(player: SKSpriteNode, duration: Double) {
+    private func runDefenseAnimation(player: SKSpriteNode, coach: SKSpriteNode, duration: Double) {
         let centerPos = CourtRenderer.courtPoint(nx: 0.5, ny: 0.20)
         let forehandFrames = playerTextures[.forehand] ?? []
         let backhandFrames = playerTextures[.backhand] ?? []
         let diveFrames = playerTextures[.runDive] ?? []
+
+        let coachForehand = coachTextures[.forehand] ?? []
+        let coachBackhand = coachTextures[.backhand] ?? []
 
         let forehandAction = forehandFrames.isEmpty
             ? SKAction.wait(forDuration: 0.3)
@@ -166,10 +223,18 @@ final class TrainingDrillScene: SKScene {
             ? SKAction.wait(forDuration: 0.3)
             : SKAction.animate(with: diveFrames, timePerFrame: 0.08)
 
+        let coachForehandAction = coachForehand.isEmpty
+            ? SKAction.wait(forDuration: 0.3)
+            : SKAction.animate(with: coachForehand, timePerFrame: 0.06)
+        let coachBackhandAction = coachBackhand.isEmpty
+            ? SKAction.wait(forDuration: 0.3)
+            : SKAction.animate(with: coachBackhand, timePerFrame: 0.06)
+
+        // Coach feeds balls, player reacts
         let defenseSeq = SKAction.sequence([
             SKAction.move(to: centerPos, duration: 0.2),
-            // Ball comes from far side, player reacts
             SKAction.run { [weak self] in
+                coach.run(coachForehandAction)
                 self?.launchBall(from: CourtRenderer.courtPoint(nx: 0.7, ny: 0.85), to: CourtRenderer.courtPoint(nx: 0.7, ny: 0.20), duration: 0.4)
             },
             SKAction.wait(forDuration: 0.3),
@@ -177,14 +242,15 @@ final class TrainingDrillScene: SKScene {
             forehandAction,
             SKAction.wait(forDuration: 0.3),
             SKAction.run { [weak self] in
+                coach.run(coachBackhandAction)
                 self?.launchBall(from: CourtRenderer.courtPoint(nx: 0.3, ny: 0.85), to: CourtRenderer.courtPoint(nx: 0.3, ny: 0.15), duration: 0.4)
             },
             SKAction.wait(forDuration: 0.3),
             SKAction.move(to: CourtRenderer.courtPoint(nx: 0.3, ny: 0.15), duration: 0.3),
             backhandAction,
             SKAction.wait(forDuration: 0.3),
-            // Dive save
             SKAction.run { [weak self] in
+                coach.run(coachForehandAction)
                 self?.launchBall(from: CourtRenderer.courtPoint(nx: 0.5, ny: 0.9), to: CourtRenderer.courtPoint(nx: 0.2, ny: 0.10), duration: 0.3)
             },
             SKAction.wait(forDuration: 0.2),
@@ -257,26 +323,25 @@ final class TrainingDrillScene: SKScene {
         ball.run(SKAction.group([arc, fadeOut]))
     }
 
-    // MARK: - Grade Display
+    // MARK: - Stat Gain Display
 
-    private func showGradeLabel() {
-        animationComplete = true
-
-        let gradeLabel = SKLabelNode(text: grade.rawValue)
-        gradeLabel.fontName = MatchAnimationConstants.Text.fontName
-        gradeLabel.fontSize = 72
-        gradeLabel.fontColor = UIColor(grade.color)
-        gradeLabel.position = CGPoint(
+    private func showStatGainLabel() {
+        let text = "+\(statGainAmount) \(statGained.displayName)"
+        let label = SKLabelNode(text: text)
+        label.fontName = MatchAnimationConstants.Text.fontName
+        label.fontSize = 48
+        label.fontColor = .green
+        label.position = CGPoint(
             x: MatchAnimationConstants.sceneWidth / 2,
             y: MatchAnimationConstants.sceneHeight / 2
         )
-        gradeLabel.zPosition = MatchAnimationConstants.ZPositions.text
-        gradeLabel.setScale(0.1)
-        addChild(gradeLabel)
+        label.zPosition = MatchAnimationConstants.ZPositions.text
+        label.setScale(0.1)
+        addChild(label)
 
         let scaleUp = SKAction.scale(to: 1.5, duration: 0.3)
         scaleUp.timingMode = .easeOut
         let scaleDown = SKAction.scale(to: 1.0, duration: 0.15)
-        gradeLabel.run(SKAction.sequence([scaleUp, scaleDown]))
+        label.run(SKAction.sequence([scaleUp, scaleDown]))
     }
 }
