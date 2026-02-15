@@ -19,6 +19,7 @@ final class MatchViewModel {
     var levelUpRewards: [LevelUpReward] = []
     var isRated: Bool = true
     var duprChange: Double?
+    var potentialDuprChange: Double = 0
     var repChange: Int?
     var brokenEquipment: [Equipment] = []
     var energyDrain: Double = 0
@@ -60,6 +61,7 @@ final class MatchViewModel {
         lootDrops = []
         levelUpRewards = []
         duprChange = nil
+        potentialDuprChange = 0
         repChange = nil
         brokenEquipment = []
         energyDrain = 0
@@ -93,6 +95,7 @@ final class MatchViewModel {
             if case .matchEnd(let result) = event {
                 matchResult = result
                 lootDrops = result.loot
+                computeRewardsPreview(player: player, opponent: opponent, result: result)
                 matchState = .finished
             }
             // Small delay between events for visual pacing
@@ -100,13 +103,48 @@ final class MatchViewModel {
         }
     }
 
+    private func computeRewardsPreview(player: Player, opponent: NPC, result: MatchResult) {
+        let lastGame = result.gameScores.last ?? result.finalScore
+        let change = DUPRCalculator.calculateRatingChange(
+            playerRating: player.duprRating,
+            opponentRating: opponent.duprRating,
+            playerPoints: lastGame.playerPoints,
+            opponentPoints: lastGame.opponentPoints,
+            pointsToWin: matchConfig.pointsToWin,
+            kFactor: player.duprProfile.kFactor
+        )
+        potentialDuprChange = change
+
+        if matchConfig.isRated && !DUPRCalculator.shouldAutoUnrate(
+            playerRating: player.duprRating,
+            opponentRating: opponent.duprRating
+        ) {
+            duprChange = change
+        }
+
+        repChange = RepCalculator.calculateRepChange(
+            didWin: result.didPlayerWin,
+            playerSUPR: player.duprRating,
+            opponentSUPR: opponent.duprRating,
+            opponentDifficulty: opponent.difficulty
+        )
+
+        if !result.didPlayerWin {
+            let suprGap = opponent.duprRating - player.duprRating
+            let baseDrain = GameConstants.PersistentEnergy.baseLossDrain
+            let gapDrain = suprGap > 0 ? suprGap * GameConstants.PersistentEnergy.suprGapDrainBonus : 0
+            energyDrain = min(GameConstants.PersistentEnergy.maxDrainPerMatch, baseDrain + gapDrain)
+        }
+    }
+
     func processResult(player: inout Player) -> MatchRewards {
         guard let result = matchResult, let npc = selectedNPC else {
-            return MatchRewards(levelUpRewards: [], duprChange: nil, repChange: 0, energyDrain: 0, brokenEquipment: [])
+            return MatchRewards(levelUpRewards: [], duprChange: nil, potentialDuprChange: 0, repChange: 0, energyDrain: 0, brokenEquipment: [])
         }
         let rewards = matchService.processMatchResult(result, for: &player, opponent: npc, config: matchConfig)
         levelUpRewards = rewards.levelUpRewards
         duprChange = rewards.duprChange
+        potentialDuprChange = rewards.potentialDuprChange
         repChange = rewards.repChange
         brokenEquipment = rewards.brokenEquipment
         energyDrain = rewards.energyDrain
@@ -123,6 +161,7 @@ final class MatchViewModel {
         levelUpRewards = []
         isRated = true
         duprChange = nil
+        potentialDuprChange = 0
         repChange = nil
         brokenEquipment = []
         energyDrain = 0

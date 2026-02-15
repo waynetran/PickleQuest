@@ -43,7 +43,17 @@ final class MockMatchService: MatchService {
         let bonus = Int(Double(result.coinsEarned) * opponent.rewardMultiplier)
         player.wallet.add(result.coinsEarned + bonus)
 
-        // Calculate DUPR change for rated matches
+        // Calculate DUPR change
+        let lastGame = result.gameScores.last ?? result.finalScore
+        let potentialChange = DUPRCalculator.calculateRatingChange(
+            playerRating: player.duprRating,
+            opponentRating: opponent.duprRating,
+            playerPoints: lastGame.playerPoints,
+            opponentPoints: lastGame.opponentPoints,
+            pointsToWin: config.pointsToWin,
+            kFactor: player.duprProfile.kFactor
+        )
+
         var duprChange: Double? = nil
         let isRated = config.isRated && !DUPRCalculator.shouldAutoUnrate(
             playerRating: player.duprRating,
@@ -51,17 +61,8 @@ final class MockMatchService: MatchService {
         )
 
         if isRated {
-            let lastGame = result.gameScores.last ?? result.finalScore
-            let change = DUPRCalculator.calculateRatingChange(
-                playerRating: player.duprRating,
-                opponentRating: opponent.duprRating,
-                playerPoints: lastGame.playerPoints,
-                opponentPoints: lastGame.opponentPoints,
-                pointsToWin: config.pointsToWin,
-                kFactor: player.duprProfile.kFactor
-            )
-            player.duprProfile.recordRatedMatch(opponentID: opponent.id, ratingChange: change)
-            duprChange = change
+            player.duprProfile.recordRatedMatch(opponentID: opponent.id, ratingChange: potentialChange)
+            duprChange = potentialChange
         }
 
         // Reputation
@@ -116,6 +117,7 @@ final class MockMatchService: MatchService {
         return MatchRewards(
             levelUpRewards: levelUpRewards,
             duprChange: duprChange,
+            potentialDuprChange: potentialChange,
             repChange: repChange,
             energyDrain: energyDrain,
             brokenEquipment: brokenEquipment
@@ -126,6 +128,7 @@ final class MockMatchService: MatchService {
 struct MatchRewards: Sendable {
     let levelUpRewards: [LevelUpReward]
     let duprChange: Double?
+    let potentialDuprChange: Double
     let repChange: Int
     let energyDrain: Double
     let brokenEquipment: [Equipment]

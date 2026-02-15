@@ -104,6 +104,7 @@ struct MatchHubView: View {
                     opponent: vm.selectedNPC,
                     levelUpRewards: vm.levelUpRewards,
                     duprChange: vm.duprChange,
+                    potentialDuprChange: vm.potentialDuprChange,
                     repChange: vm.repChange,
                     brokenEquipment: vm.brokenEquipment,
                     energyDrain: vm.energyDrain

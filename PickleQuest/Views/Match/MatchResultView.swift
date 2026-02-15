@@ -5,6 +5,7 @@ struct MatchResultView: View {
     let opponent: NPC?
     let levelUpRewards: [LevelUpReward]
     let duprChange: Double?
+    let potentialDuprChange: Double
     let repChange: Int?
     let brokenEquipment: [Equipment]
     let energyDrain: Double
@@ -165,10 +166,11 @@ struct MatchResultView: View {
                 color: isPositive ? .green : .red
             )
         } else {
+            let isPositive = potentialDuprChange >= 0
             RewardBadge(
                 icon: "chart.line.uptrend.xyaxis",
                 label: "SUPR",
-                value: "Unrated",
+                value: String(format: "(%@%.2f)", isPositive ? "+" : "", potentialDuprChange),
                 color: .gray
             )
         }
