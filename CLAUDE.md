@@ -63,3 +63,4 @@ PickleQuest/
 - No Claude/Anthropic attribution in commits
 - Commit at each milestone completion
 - Keep `docs/` updated with architecture and design decisions
+- Keep `docs/milestones.md` synced — update plan/summary when completing milestones or adding new ones
