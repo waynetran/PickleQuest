@@ -6,7 +6,7 @@ struct MapContentView: View {
     let matchVM: MatchViewModel
     @Environment(AppState.self) private var appState
 
-    @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
+    @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var undiscoveredCourt: Court?
     @State private var isDoublesMode = false
     @State private var pendingDoublesOpp1: NPC?
@@ -93,7 +93,7 @@ struct MapContentView: View {
                 if !mapVM.isStickyMode {
                     cameraPosition = .region(MKCoordinateRegion(
                         center: coord,
-                        span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
+                        span: MKCoordinateSpan(latitudeDelta: 0.015, longitudeDelta: 0.015)
                     ))
                 }
                 Task { await mapVM.generateCourtsIfNeeded(around: coord) }
@@ -213,7 +213,9 @@ struct MapContentView: View {
             // Court annotations
             ForEach(mapVM.courts) { court in
                 let discovered = appState.player.discoveredCourtIDs.contains(court.id)
-                let visible = discovered || !appState.fogOfWarEnabled
+                // Show court if: discovered, fog is off, or fog has been cleared at this location
+                let fogRevealed = appState.revealedFogCells.contains(FogOfWar.cell(for: court.coordinate))
+                let visible = discovered || !appState.fogOfWarEnabled || fogRevealed
                 if visible {
                     Annotation(
                         discovered ? court.name : "???",
@@ -265,6 +267,16 @@ struct MapContentView: View {
     // MARK: - Setup
 
     private func setupMap() async {
+        // Set camera position immediately so the player annotation is visible
+        if let override = appState.locationOverride {
+            cameraPosition = .region(MKCoordinateRegion(
+                center: override,
+                span: MKCoordinateSpan(latitudeDelta: 0.015, longitudeDelta: 0.015)
+            ))
+        } else {
+            cameraPosition = .userLocation(fallback: .automatic)
+        }
+
         mapVM.requestLocationPermission()
         mapVM.startLocationUpdates()
 
@@ -275,10 +287,6 @@ struct MapContentView: View {
         appState.player.coachingRecord.resetDailySessions()
 
         if let override = appState.locationOverride {
-            cameraPosition = .region(MKCoordinateRegion(
-                center: override,
-                span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
-            ))
             await mapVM.generateCourtsIfNeeded(around: override)
             runDiscoveryCheck()
         } else {
