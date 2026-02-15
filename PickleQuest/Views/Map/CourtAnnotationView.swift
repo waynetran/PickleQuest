@@ -8,29 +8,38 @@ struct CourtAnnotationView: View {
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 2) {
-                ZStack {
-                    Circle()
-                        .fill(isDiscovered ? difficultyColor.opacity(0.9) : Color.gray.opacity(0.7))
-                        .frame(width: 36, height: 36)
-                        .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+                if isDiscovered {
+                    ZStack {
+                        Circle()
+                            .fill(difficultyColor.opacity(0.9))
+                            .frame(width: 36, height: 36)
+                            .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
 
-                    if isDiscovered {
                         Image(systemName: "sportscourt.fill")
                             .font(.system(size: 16))
                             .foregroundStyle(.white)
-                    } else {
-                        Text("?")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(.white)
                     }
-                }
 
-                if isDiscovered {
                     Text(court.name)
                         .font(.caption2.bold())
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                         .fixedSize()
+                } else {
+                    ZStack {
+                        Circle()
+                            .fill(Color.yellow)
+                            .frame(width: 40, height: 40)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.orange, lineWidth: 2.5)
+                            )
+                            .shadow(color: .yellow.opacity(0.6), radius: 6)
+
+                        Text("?")
+                            .font(.system(size: 22, weight: .black))
+                            .foregroundStyle(.black)
+                    }
                 }
             }
         }

@@ -16,6 +16,7 @@ struct MapContentView: View {
     @State private var playerAnimationState: CharacterAnimationState = .idleBack
     @State private var walkResetTask: Task<Void, Never>?
     @State private var discoveredCourtName: String?
+    @State private var showChallenges = false
 
     var body: some View {
         @Bindable var mapState = mapVM
@@ -62,20 +63,36 @@ struct MapContentView: View {
                 }
             }
 
-            // Daily challenge banner
-            VStack {
-                if let challengeState = mapVM.dailyChallengeState, !challengeState.challenges.isEmpty {
-                    DailyChallengeBanner(state: challengeState) {
-                        // Claim completion bonus
-                        if challengeState.allCompleted && !challengeState.bonusClaimed {
-                            appState.player.wallet.coins += GameConstants.DailyChallenge.completionBonusCoins
-                            mapVM.dailyChallengeState?.bonusClaimed = true
-                            appState.player.dailyChallengeState = mapVM.dailyChallengeState
+            // Daily challenge icon (top right)
+            if let challengeState = mapVM.dailyChallengeState, !challengeState.challenges.isEmpty {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button {
+                            showChallenges = true
+                        } label: {
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: "star.circle.fill")
+                                    .font(.system(size: 36))
+                                    .foregroundStyle(.yellow)
+                                    .shadow(color: .black.opacity(0.3), radius: 3, y: 1)
+
+                                // Progress badge
+                                Text("\(challengeState.completedCount)/\(challengeState.challenges.count)")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(challengeState.allCompleted ? .green : .red)
+                                    .clipShape(Capsule())
+                                    .offset(x: 4, y: -4)
+                            }
                         }
+                        .padding(.trailing, 16)
+                        .padding(.top, 8)
                     }
-                    .padding(.top, 8)
+                    Spacer()
                 }
-                Spacer()
             }
 
             // Court discovery notification
@@ -115,7 +132,7 @@ struct MapContentView: View {
                 if !mapVM.isStickyMode {
                     cameraPosition = .region(MKCoordinateRegion(
                         center: coord,
-                        span: MKCoordinateSpan(latitudeDelta: 0.009, longitudeDelta: 0.009)
+                        span: MKCoordinateSpan(latitudeDelta: 0.004, longitudeDelta: 0.004)
                     ))
                 }
                 Task { await mapVM.generateCourtsIfNeeded(around: coord) }
@@ -194,6 +211,27 @@ struct MapContentView: View {
                     .environment(appState)
             }
         }
+        .sheet(isPresented: $showChallenges) {
+            if let challengeState = mapVM.dailyChallengeState {
+                NavigationStack {
+                    DailyChallengeBanner(state: challengeState) {
+                        if challengeState.allCompleted && !challengeState.bonusClaimed {
+                            appState.player.wallet.coins += GameConstants.DailyChallenge.completionBonusCoins
+                            mapVM.dailyChallengeState?.bonusClaimed = true
+                            appState.player.dailyChallengeState = mapVM.dailyChallengeState
+                        }
+                    }
+                    .navigationTitle("Daily Challenges")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { showChallenges = false }
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
+            }
+        }
         .onChange(of: mapVM.showCourtDetail) { _, isPresented in
             if !isPresented {
                 if let npc = mapVM.pendingChallenge {
@@ -222,7 +260,7 @@ struct MapContentView: View {
         Map(position: $cameraPosition, interactionModes: [.pan]) {
             // Player location (dev override, real GPS, or fallback)
             if let playerCoord = appState.locationOverride ?? mapVM.locationManager.currentLocation?.coordinate {
-                Annotation("You", coordinate: playerCoord) {
+                Annotation(appState.player.name, coordinate: playerCoord) {
                     MapPlayerAnnotation(
                         appearance: appState.player.appearance,
                         animationState: playerAnimationState
@@ -232,32 +270,27 @@ struct MapContentView: View {
                 UserAnnotation()
             }
 
-            // Court annotations — show discovered courts and fog-revealed courts ("?")
+            // Court annotations — all courts always visible; undiscovered show "?"
             ForEach(mapVM.courts) { court in
                 let discovered = appState.player.discoveredCourtIDs.contains(court.id)
-                let fogRevealed = appState.revealedFogCells.contains(FogOfWar.cell(for: court.coordinate))
-                let visible = discovered || !appState.fogOfWarEnabled || fogRevealed
-                if visible {
-                    Annotation(
-                        discovered ? court.name : "???",
-                        coordinate: court.coordinate
+                Annotation(
+                    discovered ? court.name : "???",
+                    coordinate: court.coordinate
+                ) {
+                    CourtAnnotationView(
+                        court: court,
+                        isDiscovered: discovered
                     ) {
-                        CourtAnnotationView(
-                            court: court,
-                            isDiscovered: discovered
-                        ) {
-                            if discovered {
-                                Task { await mapVM.selectCourt(court) }
-                            }
-                            // Undiscovered courts are not tappable
+                        if discovered {
+                            Task { await mapVM.selectCourt(court) }
                         }
-                        .disabled(!discovered)
                     }
-                    .annotationTitles(.hidden)
+                    .disabled(!discovered)
                 }
+                .annotationTitles(.hidden)
             }
 
-            // Coach sprites at courts (full-size, separate annotations)
+            // Coach sprites at courts (full-size, tapping opens court detail)
             ForEach(mapVM.courts) { court in
                 let discovered = appState.player.discoveredCourtIDs.contains(court.id)
                 if discovered && mapVM.courtIDsWithCoaches.contains(court.id) {
@@ -267,7 +300,9 @@ struct MapContentView: View {
                             size: 160,
                             animationState: .idleBack
                         )
-                        .allowsHitTesting(false)
+                        .onTapGesture {
+                            Task { await mapVM.selectCourt(court) }
+                        }
                     }
                     .annotationTitles(.hidden)
                 }
@@ -327,17 +362,6 @@ struct MapContentView: View {
         guard let loc = mapVM.effectiveLocation(devOverride: appState.locationOverride) else { return }
         appState.revealFog(around: loc.coordinate)
 
-        // DEBUG: Log court visibility state
-        for court in mapVM.courts {
-            let discovered = appState.player.discoveredCourtIDs.contains(court.id)
-            let courtCell = FogOfWar.cell(for: court.coordinate)
-            let fogRevealed = appState.revealedFogCells.contains(courtCell)
-            let dist = loc.distance(from: CLLocation(latitude: court.latitude, longitude: court.longitude))
-            if !discovered {
-                print("[FOG DEBUG] Court '\(court.name)' dist=\(Int(dist))m discovered=\(discovered) fogRevealed=\(fogRevealed) cell=(\(courtCell.row),\(courtCell.col)) totalRevealed=\(appState.revealedFogCells.count)")
-            }
-        }
-
         let newIDs = mapVM.checkDiscovery(
             playerLocation: loc,
             discoveredIDs: appState.player.discoveredCourtIDs,
@@ -346,9 +370,8 @@ struct MapContentView: View {
         for id in newIDs {
             appState.player.discoveredCourtIDs.insert(id)
             appState.player.dailyChallengeState?.incrementProgress(for: .visitCourts)
-            // Show discovery notification
+            // Show discovery notification and auto-open court details
             if let court = mapVM.courts.first(where: { $0.id == id }) {
-                print("[FOG DEBUG] >>> DISCOVERED '\(court.name)'!")
                 discoveredCourtName = court.name
                 Task {
                     try? await Task.sleep(for: .seconds(3))
@@ -356,6 +379,8 @@ struct MapContentView: View {
                         discoveredCourtName = nil
                     }
                 }
+                // Auto-open the newly discovered court
+                Task { await mapVM.selectCourt(court) }
             }
         }
     }

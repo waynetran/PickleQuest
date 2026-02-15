@@ -16,6 +16,11 @@ enum MatchEvent: Sendable {
     case matchEnd(result: MatchResult)
 
     var narration: String {
+        narration(playerName: "You")
+    }
+
+    func narration(playerName: String) -> String {
+        let opponentLabel = "Opponent"
         switch self {
         case .matchStart(let player, let opponent, let partner, let opponent2):
             if let partner, let opponent2 {
@@ -25,7 +30,7 @@ enum MatchEvent: Sendable {
         case .gameStart(let num):
             return "Game \(num) starting!"
         case .pointPlayed(let point):
-            let winner = point.winnerSide == .player ? "You" : "Opponent"
+            let winner = point.winnerSide == .player ? playerName : opponentLabel
             let score = "\(point.scoreAfter.playerPoints)-\(point.scoreAfter.opponentPoints)"
             switch point.pointType {
             case .ace:
@@ -33,7 +38,7 @@ enum MatchEvent: Sendable {
             case .winner:
                 return "\(winner) hits a clean winner after \(point.rallyLength) shots! (\(score))"
             case .unforcedError:
-                let loser = point.winnerSide == .player ? "Opponent" : "You"
+                let loser = point.winnerSide == .player ? opponentLabel : playerName
                 return "\(loser) commits an unforced error. \(winner) takes the point. (\(score))"
             case .forcedError:
                 return "\(winner) forces an error after \(point.rallyLength) shots! (\(score))"
@@ -41,33 +46,33 @@ enum MatchEvent: Sendable {
                 return "\(winner) wins a \(point.rallyLength)-shot rally! (\(score))"
             }
         case .streakAlert(let side, let count):
-            let who = side == .player ? "You're" : "Opponent is"
+            let who = side == .player ? "\(playerName) is" : "\(opponentLabel) is"
             return "\(who) on a \(count)-point streak!"
         case .fatigueWarning(let side, let pct):
-            let who = side == .player ? "You're" : "Opponent is"
+            let who = side == .player ? "\(playerName) is" : "\(opponentLabel) is"
             return "\(who) getting tired (\(Int(pct))% energy)"
         case .abilityTriggered(let side, let name, let effect):
-            let who = side == .player ? "Your" : "Opponent's"
+            let who = side == .player ? "\(playerName)'s" : "\(opponentLabel)'s"
             return "\(who) \(name) activates! \(effect)"
         case .gameEnd(let num, let winner, let score):
-            let who = winner == .player ? "You win" : "Opponent wins"
+            let who = winner == .player ? "\(playerName) wins" : "\(opponentLabel) wins"
             return "\(who) Game \(num)! (Games: \(score.playerGames)-\(score.opponentGames))"
         case .timeoutCalled(let side, let energyRestored, let streakBroken):
-            let who = side == .player ? "You call" : "Opponent calls"
+            let who = side == .player ? "\(playerName) calls" : "\(opponentLabel) calls"
             let streakText = streakBroken ? " Streak broken!" : ""
             return "\(who) a timeout! (+\(Int(energyRestored))% energy)\(streakText)"
         case .consumableUsed(let side, let name, let effect):
-            let who = side == .player ? "You use" : "Opponent uses"
+            let who = side == .player ? "\(playerName) uses" : "\(opponentLabel) uses"
             return "\(who) \(name)! \(effect)"
         case .hookCallAttempt(let side, let success, let repChange):
-            let who = side == .player ? "You" : "Opponent"
+            let who = side == .player ? playerName : opponentLabel
             if success {
                 return "\(who) challenged the line call and won! (\(repChange) rep)"
             } else {
                 return "\(who) challenged the line call and got caught! (\(repChange) rep)"
             }
         case .sideOut(let newServingTeam, let serverNumber):
-            let who = newServingTeam == .player ? "Your team" : "Opponent's team"
+            let who = newServingTeam == .player ? "\(playerName)'s team" : "\(opponentLabel)'s team"
             return "Side out! \(who) serves (Server \(serverNumber))"
         case .resigned:
             return "Match resigned."

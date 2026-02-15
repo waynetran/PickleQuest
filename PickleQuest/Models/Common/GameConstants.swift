@@ -234,7 +234,7 @@ enum GameConstants {
 
     // MARK: - Court Progression
     enum CourtProgression {
-        static let singlesNPCRange: ClosedRange<Int> = 2...4
+        static let singlesNPCRange: ClosedRange<Int> = 6...8
         static let alphaStatScale: Double = 1.3
         static let alphaStatCap: Int = 75
         static let alphaRewardMultiplier: Double = 5.0

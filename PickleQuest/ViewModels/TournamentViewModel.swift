@@ -193,7 +193,7 @@ final class TournamentViewModel {
 
         let stream = await engine.simulate()
         for await event in stream {
-            let entry = MatchEventEntry(event: event)
+            let entry = MatchEventEntry(event: event, playerName: player.name)
             matchVM.eventLog.append(entry)
 
             if case .pointPlayed(let point) = event {

@@ -166,9 +166,15 @@ struct CourtDetailSheet: View {
     @ViewBuilder
     private var coachSection: some View {
         if let coach {
-            CoachView(coach: coach, player: player) {
-                dismiss()
-                onCoachTraining()
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Coach")
+                    .font(.headline)
+                    .padding(.horizontal)
+
+                CoachView(coach: coach, player: player) {
+                    dismiss()
+                    onCoachTraining()
+                }
             }
         }
     }

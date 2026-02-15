@@ -63,6 +63,7 @@ final class MatchViewModel {
     var matchConfig: MatchConfig = .quickMatch
     var currentServingSide: MatchSide = .player
     var courtName: String = ""
+    var playerName: String = "You"
 
     var canUseTimeout: Bool {
         matchState == .simulating && !isSkipping && timeoutsAvailable > 0
@@ -107,6 +108,7 @@ final class MatchViewModel {
     func startMatch(player: Player, opponent: NPC, courtName: String = "") async {
         selectedNPC = opponent
         self.courtName = courtName
+        self.playerName = player.name
         isDoublesMode = false
         resetMatchState()
 
@@ -147,6 +149,7 @@ final class MatchViewModel {
         selectedPartner = partner
         opponentPartner = opponent2
         self.courtName = courtName
+        self.playerName = player.name
         isDoublesMode = true
         resetMatchState()
 
@@ -207,7 +210,7 @@ final class MatchViewModel {
     private func runEngineStream(engine: MatchEngine, player: Player, opponent: NPC) async {
         let stream = await engine.simulate()
         for await event in stream {
-            let entry = MatchEventEntry(event: event)
+            let entry = MatchEventEntry(event: event, playerName: playerName)
             eventLog.append(entry)
 
             if case .pointPlayed(let point) = event {
@@ -391,9 +394,10 @@ final class MatchViewModel {
 struct MatchEventEntry: Identifiable {
     let id = UUID()
     let event: MatchEvent
+    let playerName: String
     let timestamp = Date()
 
     var narration: String {
-        event.narration
+        event.narration(playerName: playerName)
     }
 }

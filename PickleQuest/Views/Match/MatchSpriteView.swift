@@ -21,7 +21,7 @@ struct MatchSpriteView: View {
                 // Broadcast score overlay (top-left, PPA style)
                 if let score = viewModel.currentScore {
                     BroadcastScoreOverlay(
-                        playerName: viewModel.isDoublesMode ? "Your Team" : "You",
+                        playerName: viewModel.isDoublesMode ? "\(viewModel.playerName)'s Team" : viewModel.playerName,
                         opponentName: viewModel.selectedNPC?.name ?? "Opponent",
                         playerScore: score.playerPoints,
                         opponentScore: score.opponentPoints,
@@ -83,9 +83,9 @@ private struct EventLogOverlay: View {
         VStack(alignment: .leading, spacing: 3) {
             ForEach(Array(recentEvents.enumerated()), id: \.element.id) { index, entry in
                 Text(entry.narration)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.white)
-                    .lineLimit(1)
+                    .lineLimit(2)
                     .opacity(entryOpacity(index: index))
             }
         }

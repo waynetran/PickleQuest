@@ -8,7 +8,7 @@ struct MatchSimulationView: View {
             // Score header
             if let score = viewModel.currentScore {
                 BroadcastScoreOverlay(
-                    playerName: viewModel.isDoublesMode ? "Your Team" : "You",
+                    playerName: viewModel.isDoublesMode ? "\(viewModel.playerName)'s Team" : viewModel.playerName,
                     opponentName: viewModel.selectedNPC?.name ?? "Opponent",
                     playerScore: score.playerPoints,
                     opponentScore: score.opponentPoints,
@@ -114,7 +114,7 @@ struct BroadcastScoreOverlay: View {
             .background(Color.gray.opacity(0.6))
         }
         .clipShape(RoundedRectangle(cornerRadius: 4))
-        .frame(width: 240)
+        .frame(width: 280)
     }
 
     private func playerRow(name: String, score: Int, games: Int, isServing: Bool) -> some View {
@@ -129,7 +129,8 @@ struct BroadcastScoreOverlay: View {
             Text(name.uppercased())
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.white)
-                .lineLimit(1)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
                 .padding(.leading, 8)
 
             Spacer()
@@ -199,7 +200,7 @@ struct EventRow: View {
                 .padding(.top, 6)
 
             Text(entry.narration)
-                .font(.subheadline)
+                .font(.body)
                 .foregroundStyle(eventTextColor)
         }
     }
