@@ -12,13 +12,27 @@ actor MatchEngine {
     private let playerConsumables: [Consumable]
     private let playerReputation: Int
 
-    // Participant data
+    // Participant data — player side
     private let playerStats: PlayerStats
-    private let opponentStats: PlayerStats
     private let playerEquipment: [Equipment]
-    private let opponentEquipment: [Equipment]
     private let playerName: String
+
+    // Participant data — opponent side
+    private let opponentStats: PlayerStats
+    private let opponentEquipment: [Equipment]
     private let opponentName: String
+
+    // Doubles partner data (nil for singles)
+    private let partnerStats: PlayerStats?
+    private let partnerEquipment: [Equipment]?
+    private let partnerName: String?
+    private let opponent2Stats: PlayerStats?
+    private let opponent2Equipment: [Equipment]?
+    private let opponent2Name: String?
+
+    // Doubles synergy
+    private let teamSynergy: TeamSynergy?
+    private let opponentSynergy: TeamSynergy?
 
     // Match state
     private var playerPoints: Int = 0
@@ -30,10 +44,15 @@ actor MatchEngine {
     private var servingSide: MatchSide = .player
     private var totalServeCount: Int = 0
 
+    // Doubles scoring
+    private var doublesScoreTracker: DoublesScoreTracker?
+
     // Tracking
     private var momentum = MomentumTracker()
     private var playerFatigue: FatigueModel
     private var opponentFatigue: FatigueModel
+    private var partnerFatigue: FatigueModel?
+    private var opponent2Fatigue: FatigueModel?
     private var allPoints: [MatchPoint] = []
     private var gameScores: [MatchScore] = []
 
@@ -58,6 +77,8 @@ actor MatchEngine {
     // Pending action events to emit between points
     private var pendingActionEvents: [MatchEvent] = []
 
+    private var isDoubles: Bool { config.matchType == .doubles }
+
     init(
         playerStats: PlayerStats,
         opponentStats: PlayerStats,
@@ -73,7 +94,16 @@ actor MatchEngine {
         startingEnergy: Double = GameConstants.PersistentEnergy.maxEnergy,
         suprGap: Double = 0,
         playerConsumables: [Consumable] = [],
-        playerReputation: Int = 0
+        playerReputation: Int = 0,
+        // Doubles-only parameters
+        partnerStats: PlayerStats? = nil,
+        partnerEquipment: [Equipment]? = nil,
+        partnerName: String? = nil,
+        opponent2Stats: PlayerStats? = nil,
+        opponent2Equipment: [Equipment]? = nil,
+        opponent2Name: String? = nil,
+        teamSynergy: TeamSynergy? = nil,
+        opponentSynergy: TeamSynergy? = nil
     ) {
         self.playerStats = playerStats
         self.opponentStats = opponentStats
@@ -90,10 +120,29 @@ actor MatchEngine {
         self.suprGap = suprGap
         self.playerConsumables = playerConsumables
         self.playerReputation = playerReputation
+        self.partnerStats = partnerStats
+        self.partnerEquipment = partnerEquipment
+        self.partnerName = partnerName
+        self.opponent2Stats = opponent2Stats
+        self.opponent2Equipment = opponent2Equipment
+        self.opponent2Name = opponent2Name
+        self.teamSynergy = teamSynergy
+        self.opponentSynergy = opponentSynergy
+
         self.playerFatigue = FatigueModel(stamina: playerStats.stamina, startingEnergy: startingEnergy)
         self.opponentFatigue = FatigueModel(stamina: opponentStats.stamina)
+        if let pStats = partnerStats {
+            self.partnerFatigue = FatigueModel(stamina: pStats.stamina)
+        }
+        if let o2Stats = opponent2Stats {
+            self.opponent2Fatigue = FatigueModel(stamina: o2Stats.stamina)
+        }
         self.availableConsumables = playerConsumables
         self.currentReputation = playerReputation
+
+        if config.matchType == .doubles {
+            self.doublesScoreTracker = DoublesScoreTracker()
+        }
     }
 
     /// Run the full match simulation, returning an AsyncStream of events.
@@ -120,7 +169,12 @@ actor MatchEngine {
     // MARK: - Match Loop
 
     private func runMatch(continuation: AsyncStream<MatchEvent>.Continuation) {
-        continuation.yield(.matchStart(playerName: playerName, opponentName: opponentName))
+        continuation.yield(.matchStart(
+            playerName: playerName,
+            opponentName: opponentName,
+            partnerName: partnerName,
+            opponent2Name: opponent2Name
+        ))
 
         while playerGames < config.gamesToWin && opponentGames < config.gamesToWin {
             if resignRequested {
@@ -145,7 +199,47 @@ actor MatchEngine {
         momentum.resetForNewGame()
         timeoutsUsedThisGame = 0
         hookCallsUsedThisGame = 0
+        doublesScoreTracker?.resetForNewGame()
 
+        if isDoubles {
+            runDoublesGame(continuation: continuation)
+        } else {
+            runSinglesGame(continuation: continuation)
+        }
+
+        // Game over
+        let gameWinner: MatchSide = playerPoints > opponentPoints ? .player : .opponent
+        if gameWinner == .player {
+            playerGames += 1
+        } else {
+            opponentGames += 1
+        }
+
+        let gameScore = MatchScore(
+            playerPoints: playerPoints,
+            opponentPoints: opponentPoints,
+            playerGames: playerGames,
+            opponentGames: opponentGames,
+            doublesScoreDisplay: doublesScoreTracker?.scoreDisplay
+        )
+        gameScores.append(gameScore)
+        if !skipRequested {
+            continuation.yield(.gameEnd(gameNumber: currentGame, winnerSide: gameWinner, score: gameScore))
+        }
+
+        // Rest between games
+        playerFatigue.restBetweenGames()
+        opponentFatigue.restBetweenGames()
+        partnerFatigue?.restBetweenGames()
+        opponent2Fatigue?.restBetweenGames()
+
+        currentGame += 1
+        totalServeCount = 0
+    }
+
+    // MARK: - Singles Game Loop
+
+    private func runSinglesGame(continuation: AsyncStream<MatchEvent>.Continuation) {
         while !isGameOver() {
             if resignRequested { return }
             pointNumber += 1
@@ -196,41 +290,8 @@ actor MatchEngine {
                 scoreAfter: score
             )
             allPoints.append(point)
-
-            // Track stats
             trackStats(point: point)
-
-            // Emit pending action events (timeout, consumable, hook call)
-            for actionEvent in pendingActionEvents {
-                if !skipRequested {
-                    continuation.yield(actionEvent)
-                }
-            }
-            pendingActionEvents.removeAll()
-
-            // Emit events (skip filtering for non-critical events)
-            if !skipRequested {
-                continuation.yield(.pointPlayed(point))
-            }
-
-            // Momentum
-            if let streak = momentum.recordPoint(winner: winner) {
-                if streak >= 3 && !skipRequested {
-                    continuation.yield(.streakAlert(side: winner, count: streak))
-                }
-            }
-
-            // Fatigue warnings
-            if !skipRequested {
-                if resolved.playerEnergyAfter <= GameConstants.Fatigue.threshold1 &&
-                   resolved.playerEnergyAfter > GameConstants.Fatigue.threshold1 - 5 {
-                    continuation.yield(.fatigueWarning(side: .player, energyPercent: resolved.playerEnergyAfter))
-                }
-                if resolved.opponentEnergyAfter <= GameConstants.Fatigue.threshold1 &&
-                   resolved.opponentEnergyAfter > GameConstants.Fatigue.threshold1 - 5 {
-                    continuation.yield(.fatigueWarning(side: .opponent, energyPercent: resolved.opponentEnergyAfter))
-                }
-            }
+            emitPointEvents(point: point, resolved: resolved, continuation: continuation)
 
             // Switch serve
             totalServeCount += 1
@@ -238,32 +299,176 @@ actor MatchEngine {
                 servingSide = servingSide == .player ? .opponent : .player
             }
         }
+    }
 
-        // Game over
-        let gameWinner: MatchSide = playerPoints > opponentPoints ? .player : .opponent
-        if gameWinner == .player {
-            playerGames += 1
-        } else {
-            opponentGames += 1
+    // MARK: - Doubles Game Loop
+
+    private func runDoublesGame(continuation: AsyncStream<MatchEvent>.Continuation) {
+        guard var tracker = doublesScoreTracker else { return }
+
+        while !tracker.isGameOver {
+            if resignRequested { return }
+            pointNumber += 1
+            let isClutch = isDoublesClutchSituation(tracker: tracker)
+
+            // Composite team stats with fatigue applied
+            let playerTeamStats = compositePlayerTeamStats()
+            let opponentTeamStats = compositeOpponentTeamStats()
+
+            // Average fatigue for composite
+            var teamPlayerFatigue = averageFatigue(playerFatigue, partnerFatigue)
+            var teamOpponentFatigue = averageFatigue(opponentFatigue, opponent2Fatigue)
+
+            let resolved = pointResolver.resolvePoint(
+                playerBaseStats: playerTeamStats,
+                opponentBaseStats: opponentTeamStats,
+                playerEquipment: [],  // already composited
+                opponentEquipment: [], // already composited
+                playerFatigue: &teamPlayerFatigue,
+                opponentFatigue: &teamOpponentFatigue,
+                momentum: momentum,
+                servingSide: tracker.servingTeam,
+                isClutch: isClutch
+            )
+
+            // Drain individual fatigue models
+            drainDoublesEnergy(rallyLength: resolved.result.rallyLength)
+
+            // Determine rally winner
+            let rallyWinner = resolved.result.winnerSide
+            let winnerIsServingTeam = rallyWinner == tracker.servingTeam
+
+            // Apply doubles scoring
+            let outcome = tracker.recordPoint(winnerIsServingTeam: winnerIsServingTeam)
+
+            // Sync points for result tracking
+            playerPoints = tracker.playerScore
+            opponentPoints = tracker.opponentScore
+            servingSide = tracker.servingTeam
+
+            let isSideOut: Bool
+            switch outcome {
+            case .scored:
+                if rallyWinner == .player { playerPointsWon += 1 } else { opponentPointsWon += 1 }
+                isSideOut = false
+            case .serverRotation:
+                isSideOut = false
+            case .sideOut(let newServingTeam, _):
+                isSideOut = true
+                if !skipRequested {
+                    continuation.yield(.sideOut(newServingTeam: newServingTeam, serverNumber: tracker.serverNumber))
+                }
+            }
+
+            let score = MatchScore(
+                playerPoints: playerPoints,
+                opponentPoints: opponentPoints,
+                playerGames: playerGames,
+                opponentGames: opponentGames,
+                doublesScoreDisplay: tracker.scoreDisplay
+            )
+
+            let point = MatchPoint(
+                gameNumber: currentGame,
+                pointNumber: pointNumber,
+                winnerSide: rallyWinner,
+                pointType: resolved.result.pointType,
+                rallyLength: resolved.result.rallyLength,
+                servingSide: servingSide,
+                scoreAfter: score,
+                serverNumber: tracker.serverNumber,
+                isSideOut: isSideOut
+            )
+            allPoints.append(point)
+            trackStats(point: point)
+            emitPointEvents(point: point, resolved: resolved, continuation: continuation)
         }
 
-        let gameScore = MatchScore(
-            playerPoints: playerPoints,
-            opponentPoints: opponentPoints,
-            playerGames: playerGames,
-            opponentGames: opponentGames
+        doublesScoreTracker = tracker
+    }
+
+    // MARK: - Doubles Helpers
+
+    private func compositePlayerTeamStats() -> PlayerStats {
+        guard let pStats = partnerStats, let synergy = teamSynergy else {
+            return playerStats // fallback to singles if no partner
+        }
+        return TeamStatCompositor.compositeEffectiveStats(
+            p1Effective: playerStats,
+            p2Effective: pStats,
+            synergy: synergy
         )
-        gameScores.append(gameScore)
+    }
+
+    private func compositeOpponentTeamStats() -> PlayerStats {
+        guard let o2Stats = opponent2Stats, let synergy = opponentSynergy else {
+            return opponentStats
+        }
+        return TeamStatCompositor.compositeEffectiveStats(
+            p1Effective: opponentStats,
+            p2Effective: o2Stats,
+            synergy: synergy
+        )
+    }
+
+    private func averageFatigue(_ f1: FatigueModel, _ f2: FatigueModel?) -> FatigueModel {
+        guard let f2 else { return f1 }
+        let avgEnergy = (f1.energy + f2.energy) / 2.0
+        let avgStamina = (f1.stamina + f2.stamina) / 2
+        return FatigueModel(stamina: avgStamina, startingEnergy: avgEnergy)
+    }
+
+    private func drainDoublesEnergy(rallyLength: Int) {
+        _ = playerFatigue.drainEnergy(rallyLength: rallyLength)
+        _ = opponentFatigue.drainEnergy(rallyLength: rallyLength)
+        if var pf = partnerFatigue {
+            _ = pf.drainEnergy(rallyLength: rallyLength)
+            partnerFatigue = pf
+        }
+        if var o2f = opponent2Fatigue {
+            _ = o2f.drainEnergy(rallyLength: rallyLength)
+            opponent2Fatigue = o2f
+        }
+    }
+
+    private func isDoublesClutchSituation(tracker: DoublesScoreTracker) -> Bool {
+        let target = config.pointsToWin
+        return tracker.playerScore >= target - 2 && tracker.opponentScore >= target - 2
+    }
+
+    // MARK: - Shared Point Emission
+
+    private func emitPointEvents(point: MatchPoint, resolved: PointResolver.ResolvedPoint, continuation: AsyncStream<MatchEvent>.Continuation) {
+        // Emit pending action events
+        for actionEvent in pendingActionEvents {
+            if !skipRequested {
+                continuation.yield(actionEvent)
+            }
+        }
+        pendingActionEvents.removeAll()
+
         if !skipRequested {
-            continuation.yield(.gameEnd(gameNumber: currentGame, winnerSide: gameWinner, score: gameScore))
+            continuation.yield(.pointPlayed(point))
         }
 
-        // Rest between games
-        playerFatigue.restBetweenGames()
-        opponentFatigue.restBetweenGames()
+        // Momentum
+        if let streak = momentum.recordPoint(winner: point.winnerSide) {
+            if streak >= 3 && !skipRequested {
+                continuation.yield(.streakAlert(side: point.winnerSide, count: streak))
+            }
+        }
 
-        currentGame += 1
-        totalServeCount = 0
+        // Fatigue warnings
+        if !skipRequested {
+            if resolved.playerEnergyAfter <= GameConstants.Fatigue.threshold1 &&
+               resolved.playerEnergyAfter > GameConstants.Fatigue.threshold1 - 5 {
+                continuation.yield(.fatigueWarning(side: .player, energyPercent: resolved.playerEnergyAfter))
+            }
+            if resolved.opponentEnergyAfter <= GameConstants.Fatigue.threshold1 &&
+               resolved.opponentEnergyAfter > GameConstants.Fatigue.threshold1 - 5 {
+                continuation.yield(.fatigueWarning(side: .opponent, energyPercent: resolved.opponentEnergyAfter))
+            }
+        }
     }
 
     // MARK: - Game State
@@ -296,7 +501,6 @@ actor MatchEngine {
         case .winner:
             if isPlayerPoint { playerWinners += 1 } else { opponentWinners += 1 }
         case .unforcedError:
-            // Winner gets the point from opponent's error
             if isPlayerPoint { opponentUEs += 1 } else { playerUEs += 1 }
         case .forcedError:
             if isPlayerPoint { playerFEs += 1 } else { opponentFEs += 1 }
@@ -340,7 +544,8 @@ actor MatchEngine {
                 playerPoints: playerPoints,
                 opponentPoints: opponentPoints,
                 playerGames: playerGames,
-                opponentGames: opponentGames
+                opponentGames: opponentGames,
+                doublesScoreDisplay: doublesScoreTracker?.scoreDisplay
             ),
             gameScores: gameScores,
             totalPoints: totalPts,
@@ -367,9 +572,13 @@ actor MatchEngine {
             xpEarned: xp,
             coinsEarned: coins,
             loot: loot,
-            duration: Double(totalPts) * 1.5, // rough simulated time
+            duration: Double(totalPts) * 1.5,
             wasResigned: resigned,
-            duprChange: nil
+            duprChange: nil,
+            partnerName: partnerName,
+            opponent2Name: opponent2Name,
+            teamSynergy: teamSynergy,
+            isDoubles: isDoubles
         )
     }
 
@@ -398,11 +607,9 @@ actor MatchEngine {
     }
 
     func requestTimeout() -> MatchActionResult {
-        // Check if timeout already used this game
         guard timeoutsUsedThisGame == 0 else {
             return .timeoutUnavailable(reason: "Already used timeout this game")
         }
-        // Check opponent streak
         let opponentStreak = momentum.opponentStreak
         guard opponentStreak >= GameConstants.MatchActions.timeoutMinOpponentStreak else {
             return .timeoutUnavailable(reason: "Opponent needs \(GameConstants.MatchActions.timeoutMinOpponentStreak)+ streak")
@@ -463,12 +670,10 @@ actor MatchEngine {
 
         let repChange: Int
         if success {
-            // Player wins the point, small rep penalty
             playerPoints += 1
             playerPointsWon += 1
             repChange = -GameConstants.MatchActions.hookCallSuccessRepPenalty
         } else {
-            // Opponent gets the point, large rep penalty
             opponentPoints += 1
             opponentPointsWon += 1
             repChange = -GameConstants.MatchActions.hookCallCaughtRepPenalty

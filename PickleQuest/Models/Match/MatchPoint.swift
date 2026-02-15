@@ -9,6 +9,8 @@ struct MatchPoint: Identifiable, Sendable {
     let rallyLength: Int
     let servingSide: MatchSide
     let scoreAfter: MatchScore
+    let serverNumber: Int?     // doubles only: which server (1 or 2)
+    let isSideOut: Bool        // doubles only: did this point cause a side-out
 
     init(
         gameNumber: Int,
@@ -17,7 +19,9 @@ struct MatchPoint: Identifiable, Sendable {
         pointType: PointType,
         rallyLength: Int,
         servingSide: MatchSide,
-        scoreAfter: MatchScore
+        scoreAfter: MatchScore,
+        serverNumber: Int? = nil,
+        isSideOut: Bool = false
     ) {
         self.id = UUID()
         self.gameNumber = gameNumber
@@ -27,6 +31,8 @@ struct MatchPoint: Identifiable, Sendable {
         self.rallyLength = rallyLength
         self.servingSide = servingSide
         self.scoreAfter = scoreAfter
+        self.serverNumber = serverNumber
+        self.isSideOut = isSideOut
     }
 }
 
@@ -58,4 +64,19 @@ struct MatchScore: Sendable {
     let opponentPoints: Int
     let playerGames: Int
     let opponentGames: Int
+    let doublesScoreDisplay: String?  // e.g. "4-2-1" for doubles
+
+    init(
+        playerPoints: Int,
+        opponentPoints: Int,
+        playerGames: Int,
+        opponentGames: Int,
+        doublesScoreDisplay: String? = nil
+    ) {
+        self.playerPoints = playerPoints
+        self.opponentPoints = opponentPoints
+        self.playerGames = playerGames
+        self.opponentGames = opponentGames
+        self.doublesScoreDisplay = doublesScoreDisplay
+    }
 }

@@ -34,6 +34,47 @@ final class MockMatchService: MatchService {
         )
     }
 
+    func createDoublesMatch(
+        player: Player,
+        partner: NPC,
+        opponent1: NPC,
+        opponent2: NPC,
+        config: MatchConfig,
+        playerConsumables: [Consumable] = [],
+        playerReputation: Int = 0
+    ) async -> MatchEngine {
+        let equippedItems = await inventoryService.getEquippedItems(for: player.equippedItems)
+        let avgOpponentDUPR = (opponent1.duprRating + opponent2.duprRating) / 2.0
+        let suprGap = avgOpponentDUPR - player.duprRating
+
+        let teamSynergy = TeamSynergy.calculate(p1: player.personality, p2: partner.personality)
+        let opponentSynergy = TeamSynergy.calculate(p1: opponent1.personality, p2: opponent2.personality)
+
+        return MatchEngine(
+            playerStats: player.stats,
+            opponentStats: opponent1.stats,
+            playerEquipment: equippedItems,
+            playerName: player.name,
+            opponentName: opponent1.name,
+            config: config,
+            lootGenerator: LootGenerator(),
+            opponentDifficulty: opponent1.difficulty,
+            playerLevel: player.progression.level,
+            startingEnergy: player.currentEnergy,
+            suprGap: suprGap,
+            playerConsumables: playerConsumables,
+            playerReputation: playerReputation,
+            partnerStats: partner.stats,
+            partnerEquipment: [],
+            partnerName: partner.name,
+            opponent2Stats: opponent2.stats,
+            opponent2Equipment: [],
+            opponent2Name: opponent2.name,
+            teamSynergy: teamSynergy,
+            opponentSynergy: opponentSynergy
+        )
+    }
+
     func processMatchResult(
         _ result: MatchResult,
         for player: inout Player,

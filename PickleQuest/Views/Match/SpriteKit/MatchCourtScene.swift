@@ -9,6 +9,8 @@ final class MatchCourtScene: SKScene {
     private(set) var courtNode: SKNode!
     private(set) var nearPlayer: SKSpriteNode!
     private(set) var farPlayer: SKSpriteNode!
+    private(set) var nearPartner: SKSpriteNode?
+    private(set) var farPartner: SKSpriteNode?
     private(set) var ball: SKSpriteNode!
     private(set) var ballShadow: SKShapeNode!
     private(set) var announcementLabel: SKLabelNode!
@@ -16,6 +18,8 @@ final class MatchCourtScene: SKScene {
     // Animators
     private(set) var nearAnimator: SpriteSheetAnimator?
     private(set) var farAnimator: SpriteSheetAnimator?
+    private(set) var nearPartnerAnimator: SpriteSheetAnimator?
+    private(set) var farPartnerAnimator: SpriteSheetAnimator?
 
     // Ball textures for future animation
     private(set) var ballTextures: [SKTexture] = []
@@ -26,14 +30,30 @@ final class MatchCourtScene: SKScene {
     // Appearances
     private let playerAppearance: CharacterAppearance
     private let opponentAppearance: CharacterAppearance
+    private let partnerAppearance: CharacterAppearance?
+    private let opponent2Appearance: CharacterAppearance?
 
-    init(size: CGSize, playerAppearance: CharacterAppearance = .defaultPlayer, opponentAppearance: CharacterAppearance = .defaultOpponent) {
+    /// Whether this is a doubles match (4 players).
+    var isDoubles: Bool { partnerAppearance != nil }
+
+    init(
+        size: CGSize,
+        playerAppearance: CharacterAppearance = .defaultPlayer,
+        opponentAppearance: CharacterAppearance = .defaultOpponent,
+        partnerAppearance: CharacterAppearance? = nil,
+        opponent2Appearance: CharacterAppearance? = nil
+    ) {
         self.playerAppearance = playerAppearance
         self.opponentAppearance = opponentAppearance
+        self.partnerAppearance = partnerAppearance
+        self.opponent2Appearance = opponent2Appearance
         super.init(size: size)
         backgroundColor = UIColor(hex: "#1A1A2E")
         setupCourt()
         setupPlayers()
+        if partnerAppearance != nil {
+            setupDoublesPartners()
+        }
         setupBall()
         setupAnnouncementLabel()
         animator = MatchAnimator(scene: self)
@@ -92,6 +112,50 @@ final class MatchCourtScene: SKScene {
         // Hide players initially — match start animation will bring them in
         nearPlayer.alpha = 0
         farPlayer.alpha = 0
+    }
+
+    private func setupDoublesPartners() {
+        guard let partnerApp = partnerAppearance,
+              let opp2App = opponent2Appearance else { return }
+
+        // Near partner (player's teammate, bottom-right of court)
+        let (npNode, npTextures) = SpriteFactory.makeCharacterNode(
+            appearance: partnerApp,
+            isNearPlayer: true
+        )
+        nearPartner = npNode
+        nearPartner?.name = "nearPartner"
+        nearPartner?.setScale(AC.Sprites.nearPlayerScale * CourtRenderer.perspectiveScale(ny: Pos.nearPlayerNY))
+        nearPartner?.zPosition = AC.ZPositions.nearPlayer
+        let nearPartnerPos = CourtRenderer.courtPoint(nx: Pos.doublesRightNX, ny: Pos.nearPlayerNY)
+        nearPartner?.position = nearPartnerPos
+        if let np = nearPartner { addChild(np) }
+        nearPartnerAnimator = SpriteSheetAnimator(node: npNode, textures: npTextures, isNear: true)
+
+        // Far partner (opponent's teammate, top-right of court)
+        let (fpNode, fpTextures) = SpriteFactory.makeCharacterNode(
+            appearance: opp2App,
+            isNearPlayer: false
+        )
+        farPartner = fpNode
+        farPartner?.name = "farPartner"
+        let farScale = CourtRenderer.perspectiveScale(ny: Pos.farPlayerNY)
+        farPartner?.setScale(AC.Sprites.farPlayerScale * farScale)
+        farPartner?.zPosition = AC.ZPositions.farPlayer
+        let farPartnerPos = CourtRenderer.courtPoint(nx: Pos.doublesRightNX, ny: Pos.farPlayerNY)
+        farPartner?.position = farPartnerPos
+        if let fp = farPartner { addChild(fp) }
+        farPartnerAnimator = SpriteSheetAnimator(node: fpNode, textures: fpTextures, isNear: false)
+
+        // Hide doubles partners initially
+        nearPartner?.alpha = 0
+        farPartner?.alpha = 0
+
+        // Move main players to left positions for doubles
+        let nearLeftPos = CourtRenderer.courtPoint(nx: Pos.doublesLeftNX, ny: Pos.nearPlayerNY)
+        nearPlayer.position = nearLeftPos
+        let farLeftPos = CourtRenderer.courtPoint(nx: Pos.doublesLeftNX, ny: Pos.farPlayerNY)
+        farPlayer.position = farLeftPos
     }
 
     private func setupBall() {
@@ -177,13 +241,23 @@ final class MatchCourtScene: SKScene {
     }
 
     func resetPlayerPositions() {
-        let nearPos = CourtRenderer.courtPoint(nx: Pos.playerCenterNX, ny: Pos.nearPlayerNY)
-        let farPos = CourtRenderer.courtPoint(nx: Pos.playerCenterNX, ny: Pos.farPlayerNY)
-        nearPlayer.position = nearPos
-        farPlayer.position = farPos
+        let nearScale = AC.Sprites.nearPlayerScale * CourtRenderer.perspectiveScale(ny: Pos.nearPlayerNY)
+        let farScale = AC.Sprites.farPlayerScale * CourtRenderer.perspectiveScale(ny: Pos.farPlayerNY)
 
-        // Reset scales after rally movements
-        nearPlayer.setScale(AC.Sprites.nearPlayerScale * CourtRenderer.perspectiveScale(ny: Pos.nearPlayerNY))
-        farPlayer.setScale(AC.Sprites.farPlayerScale * CourtRenderer.perspectiveScale(ny: Pos.farPlayerNY))
+        if isDoubles {
+            // Doubles: side-by-side positions
+            nearPlayer.position = CourtRenderer.courtPoint(nx: Pos.doublesLeftNX, ny: Pos.nearPlayerNY)
+            farPlayer.position = CourtRenderer.courtPoint(nx: Pos.doublesLeftNX, ny: Pos.farPlayerNY)
+            nearPartner?.position = CourtRenderer.courtPoint(nx: Pos.doublesRightNX, ny: Pos.nearPlayerNY)
+            farPartner?.position = CourtRenderer.courtPoint(nx: Pos.doublesRightNX, ny: Pos.farPlayerNY)
+            nearPartner?.setScale(nearScale)
+            farPartner?.setScale(farScale)
+        } else {
+            nearPlayer.position = CourtRenderer.courtPoint(nx: Pos.playerCenterNX, ny: Pos.nearPlayerNY)
+            farPlayer.position = CourtRenderer.courtPoint(nx: Pos.playerCenterNX, ny: Pos.farPlayerNY)
+        }
+
+        nearPlayer.setScale(nearScale)
+        farPlayer.setScale(farScale)
     }
 }

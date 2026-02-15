@@ -17,6 +17,7 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
     var discoveredCourtIDs: Set<UUID> = []
     var courtLadders: [CourtLadder] = []
     var courtPerks: [CourtPerk] = []
+    var personality: NPCPersonality = .allRounder
 
     var duprRating: Double {
         duprProfile.rating

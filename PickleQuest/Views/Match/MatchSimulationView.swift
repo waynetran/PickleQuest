@@ -8,14 +8,16 @@ struct MatchSimulationView: View {
             // Score header
             if let score = viewModel.currentScore {
                 BroadcastScoreOverlay(
-                    playerName: "You",
+                    playerName: viewModel.isDoublesMode ? "Your Team" : "You",
                     opponentName: viewModel.selectedNPC?.name ?? "Opponent",
                     playerScore: score.playerPoints,
                     opponentScore: score.opponentPoints,
                     playerGames: score.playerGames,
                     opponentGames: score.opponentGames,
                     servingSide: viewModel.currentServingSide,
-                    courtName: viewModel.courtName
+                    courtName: viewModel.courtName,
+                    isDoubles: viewModel.isDoublesMode,
+                    doublesScoreDisplay: viewModel.doublesScoreDisplay
                 )
             }
 
@@ -55,6 +57,8 @@ struct BroadcastScoreOverlay: View {
     let opponentGames: Int
     let servingSide: MatchSide
     let courtName: String
+    var isDoubles: Bool = false
+    var doublesScoreDisplay: String? = nil
 
     private var tournamentName: String {
         TournamentNameGenerator.generate(from: courtName)
@@ -92,13 +96,22 @@ struct BroadcastScoreOverlay: View {
             .background(Color.black.opacity(0.85))
 
             // Event info footer
-            Text("SINGLES  \u{2022}  RD 1")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.9))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.gray.opacity(0.6))
+            HStack(spacing: 6) {
+                Text(isDoubles ? "DOUBLES" : "SINGLES")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.9))
+                if let dsd = doublesScoreDisplay {
+                    Text("\u{2022}")
+                        .foregroundStyle(.white.opacity(0.5))
+                    Text(dsd)
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.9))
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.gray.opacity(0.6))
         }
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .frame(width: 240)
@@ -203,6 +216,7 @@ struct EventRow: View {
         case .timeoutCalled: return .cyan
         case .consumableUsed: return .green
         case .hookCallAttempt(_, let success, _): return success ? .yellow : .red
+        case .sideOut: return .cyan
         case .resigned: return .red
         }
     }

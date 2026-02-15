@@ -18,7 +18,7 @@ final class MatchAnimator {
         guard scene != nil else { return }
 
         switch event {
-        case .matchStart(let playerName, let opponentName):
+        case .matchStart(let playerName, let opponentName, _, _):
             await animateMatchStart(playerName: playerName, opponentName: opponentName)
         case .gameStart(let gameNumber):
             await animateGameStart(gameNumber: gameNumber)
@@ -38,6 +38,8 @@ final class MatchAnimator {
             await animateConsumable(side: side, name: name)
         case .hookCallAttempt(let side, let success, _):
             await animateHookCall(side: side, success: success)
+        case .sideOut(let newServingTeam, let serverNumber):
+            await animateSideOut(newServingTeam: newServingTeam, serverNumber: serverNumber)
         case .resigned:
             break // no animation needed, match ends
         case .matchEnd(let result):
@@ -50,7 +52,16 @@ final class MatchAnimator {
     private func animateMatchStart(playerName: String, opponentName: String) async {
         guard let scene else { return }
 
-        // Slide players in from off-screen
+        if scene.isDoubles {
+            await animateDoublesMatchStart()
+        } else {
+            await animateSinglesMatchStart()
+        }
+    }
+
+    private func animateSinglesMatchStart() async {
+        guard let scene else { return }
+
         let nearTarget = CourtRenderer.courtPoint(nx: Pos.playerCenterNX, ny: Pos.nearPlayerNY)
         let farTarget = CourtRenderer.courtPoint(nx: Pos.playerCenterNX, ny: Pos.farPlayerNY)
 
@@ -59,20 +70,61 @@ final class MatchAnimator {
         scene.nearPlayer.alpha = 1
         scene.farPlayer.alpha = 1
 
-        // Start walk animations during slide-in
         scene.nearAnimator?.play(.walkAway)
         scene.farAnimator?.play(.walkToward)
 
-        // Slide both in simultaneously
         await scene.nearPlayer.runAsync(.move(to: nearTarget, duration: 0.6))
         await scene.farPlayer.runAsync(.move(to: farTarget, duration: 0.1))
 
-        // Switch to idle after arriving
         scene.nearAnimator?.play(.idleBack)
         scene.farAnimator?.play(.idleFront)
 
-        // "VS" text
         await scene.showAnnouncement("VS")
+    }
+
+    private func animateDoublesMatchStart() async {
+        guard let scene else { return }
+
+        // Near team: player (left) and partner (right)
+        let nearLeftTarget = CourtRenderer.courtPoint(nx: Pos.doublesLeftNX, ny: Pos.nearPlayerNY)
+        let nearRightTarget = CourtRenderer.courtPoint(nx: Pos.doublesRightNX, ny: Pos.nearPlayerNY)
+        // Far team: opponent (left) and opponent2 (right)
+        let farLeftTarget = CourtRenderer.courtPoint(nx: Pos.doublesLeftNX, ny: Pos.farPlayerNY)
+        let farRightTarget = CourtRenderer.courtPoint(nx: Pos.doublesRightNX, ny: Pos.farPlayerNY)
+
+        scene.nearPlayer.position = CGPoint(x: nearLeftTarget.x, y: -100)
+        scene.farPlayer.position = CGPoint(x: farLeftTarget.x, y: AC.sceneHeight + 100)
+        scene.nearPlayer.alpha = 1
+        scene.farPlayer.alpha = 1
+
+        if let np = scene.nearPartner {
+            np.position = CGPoint(x: nearRightTarget.x, y: -100)
+            np.alpha = 1
+        }
+        if let fp = scene.farPartner {
+            fp.position = CGPoint(x: farRightTarget.x, y: AC.sceneHeight + 100)
+            fp.alpha = 1
+        }
+
+        // Walk animations
+        scene.nearAnimator?.play(.walkAway)
+        scene.nearPartnerAnimator?.play(.walkAway)
+        scene.farAnimator?.play(.walkToward)
+        scene.farPartnerAnimator?.play(.walkToward)
+
+        // Slide all 4 in (fire-and-forget for partners, await primary players)
+        if let np = scene.nearPartner { fireAction(np, .move(to: nearRightTarget, duration: 0.55)) }
+        await scene.nearPlayer.runAsync(.move(to: nearLeftTarget, duration: 0.6))
+        if let fp = scene.farPartner { fireAction(fp, .move(to: farRightTarget, duration: 0.1)) }
+        await scene.farPlayer.runAsync(.move(to: farLeftTarget, duration: 0.1))
+
+        // Idle
+        scene.nearAnimator?.play(.idleBack)
+        scene.nearPartnerAnimator?.play(.idleBack)
+        scene.farAnimator?.play(.idleFront)
+        scene.farPartnerAnimator?.play(.idleFront)
+
+        await scene.showAnnouncement("DOUBLES")
     }
 
     // MARK: - Game Start
@@ -86,6 +138,8 @@ final class MatchAnimator {
         // Ready stance between games
         scene.nearAnimator?.play(.ready)
         scene.farAnimator?.play(.ready)
+        scene.nearPartnerAnimator?.play(.ready)
+        scene.farPartnerAnimator?.play(.ready)
 
         await scene.showAnnouncement("Game \(gameNumber)", fontSize: AC.Text.calloutFontSize)
     }
@@ -145,6 +199,8 @@ final class MatchAnimator {
         // Between points: ready stance
         scene.nearAnimator?.play(.ready)
         scene.farAnimator?.play(.ready)
+        scene.nearPartnerAnimator?.play(.ready)
+        scene.farPartnerAnimator?.play(.ready)
 
         // Brief pause between points
         try? await Task.sleep(for: .milliseconds(Int(T.pointPause * 1000)))
@@ -183,16 +239,20 @@ final class MatchAnimator {
         guard let scene else { return }
 
         var goingToFar = !serverIsNear
+        // Track which team member hits in doubles (alternates each bounce)
+        var nearHitCount = 0
+        var farHitCount = 0
+
         for bounceIndex in 0..<bounces {
             let lateralOffset = CGFloat.random(in: -Pos.lateralRangeNX...Pos.lateralRangeNX)
             let nx = 0.5 + lateralOffset
 
-            // Progressive kitchen approach: returner advances fast, server slow
+            // Progressive kitchen approach
             let isServer: Bool
             if goingToFar {
-                isServer = !serverIsNear // far player is server when server is not near
+                isServer = !serverIsNear
             } else {
-                isServer = serverIsNear  // near player is server when server is near
+                isServer = serverIsNear
             }
             let approachRate: CGFloat = isServer ? 6.0 : 3.0
             let approachProgress = min(1.0, CGFloat(bounceIndex + 1) / approachRate)
@@ -200,32 +260,68 @@ final class MatchAnimator {
             let targetNY: CGFloat
             let hitter: SKSpriteNode
             let hitterAnimator: SpriteSheetAnimator?
+            let isNearSide: Bool
+
             if goingToFar {
                 let baseNY = Pos.farPlayerNY - 0.05
                 targetNY = baseNY + (Pos.kitchenApproachFarNY - baseNY) * approachProgress
-                hitter = scene.farPlayer
-                hitterAnimator = scene.farAnimator
+                isNearSide = false
+
+                // In doubles, alternate between far team members
+                if scene.isDoubles, let fp = scene.farPartner, farHitCount % 2 == 1 {
+                    hitter = fp
+                    hitterAnimator = scene.farPartnerAnimator
+                } else {
+                    hitter = scene.farPlayer
+                    hitterAnimator = scene.farAnimator
+                }
+                farHitCount += 1
             } else {
                 let baseNY = Pos.nearPlayerNY + 0.05
                 targetNY = baseNY + (Pos.kitchenApproachNearNY - baseNY) * approachProgress
-                hitter = scene.nearPlayer
-                hitterAnimator = scene.nearAnimator
+                isNearSide = true
+
+                // In doubles, alternate between near team members
+                if scene.isDoubles, let np = scene.nearPartner, nearHitCount % 2 == 1 {
+                    hitter = np
+                    hitterAnimator = scene.nearPartnerAnimator
+                } else {
+                    hitter = scene.nearPlayer
+                    hitterAnimator = scene.nearAnimator
+                }
+                nearHitCount += 1
             }
 
             let target = CourtRenderer.courtPoint(nx: nx, ny: targetNY)
             let current = scene.ball.position
 
-            // Move hitter to position (lateral + forward approach)
+            // Move hitter to position
             let movingLeft = target.x < hitter.position.x
             hitterAnimator?.play(movingLeft ? .walkLeft : .walkRight)
             await hitter.runAsync(.move(to: target, duration: T.bounceDuration * 0.4))
 
+            // In doubles, also advance the teammate forward
+            if scene.isDoubles {
+                let teammateNX = nx > 0.5 ? Pos.doublesLeftNX : Pos.doublesRightNX
+                let teammateTarget = CourtRenderer.courtPoint(nx: teammateNX, ny: targetNY)
+                if isNearSide {
+                    if let teammate = (hitter === scene.nearPlayer) ? scene.nearPartner : scene.nearPlayer {
+                        fireAction(teammate, .move(to: teammateTarget, duration: T.bounceDuration * 0.5))
+                        teammate.setScale(AC.Sprites.nearPlayerScale * CourtRenderer.perspectiveScale(ny: targetNY))
+                    }
+                } else {
+                    if let teammate = (hitter === scene.farPlayer) ? scene.farPartner : scene.farPlayer {
+                        fireAction(teammate, .move(to: teammateTarget, duration: T.bounceDuration * 0.5))
+                        teammate.setScale(AC.Sprites.farPlayerScale * CourtRenderer.perspectiveScale(ny: targetNY))
+                    }
+                }
+            }
+
             // Update hitter scale for new perspective position
-            let isNear = hitter === scene.nearPlayer
-            let baseScale = isNear ? AC.Sprites.nearPlayerScale : AC.Sprites.farPlayerScale
+            let baseScale = isNearSide ? AC.Sprites.nearPlayerScale : AC.Sprites.farPlayerScale
             hitter.setScale(baseScale * CourtRenderer.perspectiveScale(ny: targetNY))
 
-            // Hit animation (forehand or backhand based on direction)
+            // Hit animation
             let hitAnim: CharacterAnimationState = movingLeft ? .backhand : .forehand
             hitterAnimator?.play(hitAnim)
 
@@ -234,7 +330,7 @@ final class MatchAnimator {
             await animateBallArc(from: current, to: target, duration: T.bounceDuration, arcHeight: arcHeight)
 
             // Return to idle
-            hitterAnimator?.play(.idle(isNear: isNear))
+            hitterAnimator?.play(.idle(isNear: isNearSide))
 
             goingToFar.toggle()
         }
@@ -488,6 +584,8 @@ final class MatchAnimator {
         // Return to idle
         scene.nearAnimator?.stop()
         scene.farAnimator?.stop()
+        scene.nearPartnerAnimator?.stop()
+        scene.farPartnerAnimator?.stop()
     }
 
     private func animateMatchEnd(didPlayerWin: Bool) async {
@@ -499,18 +597,38 @@ final class MatchAnimator {
         // Winner celebration
         winnerAnimator?.play(.celebrate)
 
-        await winnerNode.runAsync(
-            .sequence([
-                .group([
-                    .moveBy(x: 0, y: 25, duration: 0.2),
-                    .scale(by: 1.15, duration: 0.2)
-                ]),
-                .group([
-                    .moveBy(x: 0, y: -25, duration: 0.25),
-                    .scale(by: 1.0 / 1.15, duration: 0.25)
-                ])
+        let jumpAction = SKAction.sequence([
+            .group([
+                .moveBy(x: 0, y: 25, duration: 0.2),
+                .scale(by: 1.15, duration: 0.2)
+            ]),
+            .group([
+                .moveBy(x: 0, y: -25, duration: 0.25),
+                .scale(by: 1.0 / 1.15, duration: 0.25)
             ])
-        )
+        ])
+
+        await winnerNode.runAsync(jumpAction)
+
+        // In doubles, also celebrate with partner
+        if scene.isDoubles {
+            let winnerPartner = didPlayerWin ? scene.nearPartner : scene.farPartner
+            let winnerPartnerAnimator = didPlayerWin ? scene.nearPartnerAnimator : scene.farPartnerAnimator
+
+            winnerPartnerAnimator?.play(.celebrate)
+            if let wp = winnerPartner {
+                fireAction(wp, .sequence([
+                    .group([
+                        .moveBy(x: 0, y: 20, duration: 0.2),
+                        .scale(by: 1.1, duration: 0.2)
+                    ]),
+                    .group([
+                        .moveBy(x: 0, y: -20, duration: 0.25),
+                        .scale(by: 1.0 / 1.1, duration: 0.25)
+                    ])
+                ]))
+            }
+        }
 
         let text = didPlayerWin ? "VICTORY!" : "DEFEAT"
         let color: UIColor = didPlayerWin ? .green : .red
@@ -599,6 +717,21 @@ final class MatchAnimator {
         let text = success ? "OVERTURNED!" : "CAUGHT!"
         let color: UIColor = success ? .yellow : .red
         await scene.showCallout(text, at: CGPoint(x: node.position.x, y: node.position.y + 50), color: color)
+    }
+
+    // MARK: - Side Out
+
+    private func animateSideOut(newServingTeam: MatchSide, serverNumber: Int) async {
+        guard let scene else { return }
+
+        let text = "SIDE OUT!"
+        await scene.showCallout(text, at: CGPoint(x: AC.sceneWidth / 2, y: AC.Court.courtBottomY + AC.Court.courtHeight / 2), color: .cyan)
+    }
+
+    // MARK: - Fire-and-forget SKAction helper (sync call to avoid async hop)
+
+    nonisolated private func fireAction(_ node: SKNode, _ action: sending SKAction) {
+        node.run(action)
     }
 
     // MARK: - Particles

@@ -35,6 +35,15 @@ final class MatchViewModel {
     // Character appearances
     var playerAppearance: CharacterAppearance = .defaultPlayer
     var opponentAppearance: CharacterAppearance = .defaultOpponent
+    var partnerAppearance: CharacterAppearance?
+    var opponent2Appearance: CharacterAppearance?
+
+    // Doubles state
+    var selectedPartner: NPC?
+    var opponentPartner: NPC?
+    var teamSynergy: TeamSynergy?
+    var doublesScoreDisplay: String?
+    var isDoublesMode = false
 
     // State
     var availableNPCs: [NPC] = []
@@ -70,6 +79,7 @@ final class MatchViewModel {
     enum MatchState: Equatable {
         case idle
         case selectingOpponent
+        case selectingPartner
         case simulating
         case finished
     }
@@ -97,26 +107,9 @@ final class MatchViewModel {
     func startMatch(player: Player, opponent: NPC, courtName: String = "") async {
         selectedNPC = opponent
         self.courtName = courtName
-        matchState = .simulating
-        eventLog = []
-        matchResult = nil
-        currentScore = nil
-        currentServingSide = .player
-        lootDrops = []
-        lootDecisions = [:]
-        levelUpRewards = []
-        duprChange = nil
-        potentialDuprChange = 0
-        repChange = nil
-        brokenEquipment = []
-        energyDrain = 0
-        isSkipping = false
-        timeoutsAvailable = 1
-        consumablesUsedCount = 0
-        hookCallsAvailable = 1
-        opponentStreak = 0
+        isDoublesMode = false
+        resetMatchState()
 
-        // Resolve appearances
         playerAppearance = player.appearance
         opponentAppearance = AppearanceGenerator.appearance(for: opponent)
 
@@ -140,8 +133,79 @@ final class MatchViewModel {
             playerReputation: player.repProfile.reputation
         )
         self.engine = newEngine
+        await runEngineStream(engine: newEngine, player: player, opponent: opponent)
+    }
 
-        let stream = await newEngine.simulate()
+    func startDoublesMatch(
+        player: Player,
+        partner: NPC,
+        opponent1: NPC,
+        opponent2: NPC,
+        courtName: String = ""
+    ) async {
+        selectedNPC = opponent1
+        selectedPartner = partner
+        opponentPartner = opponent2
+        self.courtName = courtName
+        isDoublesMode = true
+        resetMatchState()
+
+        playerAppearance = player.appearance
+        opponentAppearance = AppearanceGenerator.appearance(for: opponent1)
+        partnerAppearance = AppearanceGenerator.appearance(for: partner)
+        opponent2Appearance = AppearanceGenerator.appearance(for: opponent2)
+
+        teamSynergy = TeamSynergy.calculate(p1: player.personality, p2: partner.personality)
+
+        let effectiveRated = effectiveIsRated(
+            playerRating: player.duprRating,
+            opponentRating: (opponent1.duprRating + opponent2.duprRating) / 2.0
+        )
+        matchConfig = MatchConfig(
+            matchType: .doubles,
+            pointsToWin: GameConstants.Match.defaultPointsToWin,
+            gamesToWin: 1,
+            winByTwo: GameConstants.Match.winByTwo,
+            isRated: effectiveRated
+        )
+
+        let newEngine = await matchService.createDoublesMatch(
+            player: player,
+            partner: partner,
+            opponent1: opponent1,
+            opponent2: opponent2,
+            config: matchConfig,
+            playerConsumables: player.consumables,
+            playerReputation: player.repProfile.reputation
+        )
+        self.engine = newEngine
+        await runEngineStream(engine: newEngine, player: player, opponent: opponent1)
+    }
+
+    private func resetMatchState() {
+        matchState = .simulating
+        eventLog = []
+        matchResult = nil
+        currentScore = nil
+        currentServingSide = .player
+        lootDrops = []
+        lootDecisions = [:]
+        levelUpRewards = []
+        duprChange = nil
+        potentialDuprChange = 0
+        repChange = nil
+        brokenEquipment = []
+        energyDrain = 0
+        isSkipping = false
+        timeoutsAvailable = 1
+        consumablesUsedCount = 0
+        hookCallsAvailable = 1
+        opponentStreak = 0
+        doublesScoreDisplay = nil
+    }
+
+    private func runEngineStream(engine: MatchEngine, player: Player, opponent: NPC) async {
+        let stream = await engine.simulate()
         for await event in stream {
             let entry = MatchEventEntry(event: event)
             eventLog.append(entry)
@@ -149,11 +213,10 @@ final class MatchViewModel {
             if case .pointPlayed(let point) = event {
                 currentScore = point.scoreAfter
                 currentServingSide = point.servingSide
-                // Update action availability from engine
+                doublesScoreDisplay = point.scoreAfter.doublesScoreDisplay
                 await refreshActionState()
             }
             if case .gameStart = event {
-                // Reset per-game action counters
                 timeoutsAvailable = 1
                 hookCallsAvailable = 1
             }
@@ -163,7 +226,6 @@ final class MatchViewModel {
                 computeRewardsPreview(player: player, opponent: opponent, result: result)
             }
 
-            // Animate via SpriteKit scene or fall back to fixed delay (skip if skipping)
             if !isSkipping {
                 if let courtScene, useSpriteVisualization {
                     await courtScene.animate(event: event)
@@ -172,7 +234,6 @@ final class MatchViewModel {
                 }
             }
 
-            // Transition to finished after match end animation completes
             if case .matchEnd = event {
                 matchState = .finished
                 self.engine = nil
@@ -317,6 +378,13 @@ final class MatchViewModel {
         hookCallsAvailable = 1
         playerConsumables = []
         opponentStreak = 0
+        selectedPartner = nil
+        opponentPartner = nil
+        teamSynergy = nil
+        doublesScoreDisplay = nil
+        isDoublesMode = false
+        partnerAppearance = nil
+        opponent2Appearance = nil
     }
 }
 

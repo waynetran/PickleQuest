@@ -29,6 +29,34 @@ struct MatchResultView: View {
                     Text(result.formattedScore)
                         .font(.title2)
                         .foregroundStyle(.secondary)
+
+                    // Doubles info
+                    if result.isDoubles {
+                        VStack(spacing: 4) {
+                            if let partner = result.partnerName {
+                                Text("Partner: \(partner)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if let opp2 = result.opponent2Name, let opp = opponent {
+                                Text("vs \(opp.name) & \(opp2)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if let synergy = result.teamSynergy {
+                                Text(synergy.description)
+                                    .font(.caption.bold())
+                                    .foregroundStyle(synergy.multiplier >= 1.0 ? .green : .orange)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        (synergy.multiplier >= 1.0 ? Color.green : Color.orange)
+                                            .opacity(0.15)
+                                    )
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
                 }
                 .padding(.top, 24)
 

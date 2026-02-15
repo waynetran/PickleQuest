@@ -34,6 +34,17 @@ struct MatchConfig: Sendable {
         gamesToWin: 1,
         winByTwo: GameConstants.Match.winByTwo
     )
+
+    static let defaultDoubles = MatchConfig(
+        matchType: .doubles,
+        pointsToWin: GameConstants.Match.defaultPointsToWin,
+        gamesToWin: GameConstants.Match.defaultGamesToWin,
+        winByTwo: GameConstants.Match.winByTwo
+    )
+
+    var isSideOutScoring: Bool {
+        matchType == .doubles
+    }
 }
 
 enum MatchType: String, Codable, Sendable {

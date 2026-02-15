@@ -71,6 +71,10 @@ enum MatchAnimationConstants {
 
         // Lateral movement range
         static let lateralRangeNX: CGFloat = 0.35   // max offset from center
+
+        // Doubles: side-by-side positions
+        static let doublesLeftNX: CGFloat = 0.35
+        static let doublesRightNX: CGFloat = 0.65
     }
 
     enum Timing {

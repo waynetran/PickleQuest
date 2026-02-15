@@ -40,8 +40,14 @@ struct MatchHubView: View {
         switch matchVM?.matchState {
         case .simulating: return ""
         case .finished: return "Results"
+        case .selectingPartner: return "Pick Your Partner"
         default: return "Map"
         }
+    }
+
+    private func partnerCandidates(mapVM: MapViewModel, matchVM: MatchViewModel) -> [NPC] {
+        let excludeIDs = Set([matchVM.selectedNPC?.id, matchVM.opponentPartner?.id].compactMap { $0 })
+        return mapVM.npcsAtSelectedCourt.filter { !excludeIDs.contains($0.id) }
     }
 
     @ViewBuilder
@@ -50,6 +56,31 @@ struct MatchHubView: View {
         case .idle, .selectingOpponent:
             MapContentView(mapVM: mapVM, matchVM: matchVM)
                 .navigationBarTitleDisplayMode(.inline)
+
+        case .selectingPartner:
+            PartnerPickerView(
+                availableNPCs: partnerCandidates(mapVM: mapVM, matchVM: matchVM),
+                playerPersonality: appState.player.personality,
+                opponent1: matchVM.selectedNPC,
+                opponent2: matchVM.opponentPartner,
+                onSelect: { partner in
+                    guard let opp1 = matchVM.selectedNPC,
+                          let opp2 = matchVM.opponentPartner else { return }
+                    let courtName = mapVM.selectedCourt?.name ?? ""
+                    Task {
+                        await matchVM.startDoublesMatch(
+                            player: appState.player,
+                            partner: partner,
+                            opponent1: opp1,
+                            opponent2: opp2,
+                            courtName: courtName
+                        )
+                    }
+                },
+                onCancel: {
+                    matchVM.reset()
+                }
+            )
 
         case .simulating:
             if matchVM.useSpriteVisualization {
@@ -172,7 +203,10 @@ struct MatchHubView: View {
             xpEarned: result.xpEarned,
             coinsEarned: result.coinsEarned,
             equipmentBroken: brokenItems.map(\.name),
-            wasResigned: result.wasResigned
+            wasResigned: result.wasResigned,
+            matchType: matchVM.isDoublesMode ? .doubles : .singles,
+            partnerName: matchVM.selectedPartner?.name,
+            opponent2Name: matchVM.opponentPartner?.name
         )
         player.matchHistory.append(historyEntry)
 

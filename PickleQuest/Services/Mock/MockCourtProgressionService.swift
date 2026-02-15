@@ -5,15 +5,15 @@ actor MockCourtProgressionService: CourtProgressionService {
     private var perks: [UUID: CourtPerk] = [:]
     private var alphaNPCs: [String: NPC] = [:]
 
-    private func key(courtID: UUID, gameType: GameType) -> String {
+    private func key(courtID: UUID, gameType: MatchType) -> String {
         "\(courtID.uuidString)-\(gameType.rawValue)"
     }
 
-    func getLadder(courtID: UUID, gameType: GameType) async -> CourtLadder? {
+    func getLadder(courtID: UUID, gameType: MatchType) async -> CourtLadder? {
         ladders[key(courtID: courtID, gameType: gameType)]
     }
 
-    func initializeLadder(courtID: UUID, gameType: GameType, npcIDs: [UUID]) async {
+    func initializeLadder(courtID: UUID, gameType: MatchType, npcIDs: [UUID]) async {
         let k = key(courtID: courtID, gameType: gameType)
         guard ladders[k] == nil else { return }
         ladders[k] = CourtLadder(
@@ -29,7 +29,7 @@ actor MockCourtProgressionService: CourtProgressionService {
 
     func recordDefeat(
         courtID: UUID,
-        gameType: GameType,
+        gameType: MatchType,
         npcID: UUID,
         court: Court,
         npcService: NPCService
@@ -103,7 +103,7 @@ actor MockCourtProgressionService: CourtProgressionService {
         Array(ladders.values)
     }
 
-    func getAlphaNPC(courtID: UUID, gameType: GameType) async -> NPC? {
+    func getAlphaNPC(courtID: UUID, gameType: MatchType) async -> NPC? {
         alphaNPCs[key(courtID: courtID, gameType: gameType)]
     }
 

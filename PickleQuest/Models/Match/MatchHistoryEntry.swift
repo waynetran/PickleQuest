@@ -17,6 +17,9 @@ struct MatchHistoryEntry: Identifiable, Codable, Equatable, Sendable {
     let coinsEarned: Int
     let equipmentBroken: [String] // names of items that broke
     let wasResigned: Bool
+    let matchType: MatchType
+    let partnerName: String?
+    let opponent2Name: String?
 
     init(
         id: UUID,
@@ -34,7 +37,10 @@ struct MatchHistoryEntry: Identifiable, Codable, Equatable, Sendable {
         xpEarned: Int,
         coinsEarned: Int,
         equipmentBroken: [String],
-        wasResigned: Bool = false
+        wasResigned: Bool = false,
+        matchType: MatchType = .singles,
+        partnerName: String? = nil,
+        opponent2Name: String? = nil
     ) {
         self.id = id
         self.date = date
@@ -52,5 +58,8 @@ struct MatchHistoryEntry: Identifiable, Codable, Equatable, Sendable {
         self.coinsEarned = coinsEarned
         self.equipmentBroken = equipmentBroken
         self.wasResigned = wasResigned
+        self.matchType = matchType
+        self.partnerName = partnerName
+        self.opponent2Name = opponent2Name
     }
 }

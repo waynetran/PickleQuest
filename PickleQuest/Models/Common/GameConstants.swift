@@ -240,6 +240,22 @@ enum GameConstants {
         static let storeDiscountPercent: Double = 0.20
     }
 
+    // MARK: - Doubles
+    enum Doubles {
+        static let compositeStatWeight: Double = 0.5  // equal weight per partner
+        static let startServerNumber: Int = 2         // game starts "0-0-2"
+    }
+
+    // MARK: - Tournament
+    enum Tournament {
+        static let bracketSize: Int = 4
+        static let xpMultiplier: Double = 1.5
+        static let coinMultiplier: Double = 2.0
+        static let winnerLegendaryCount: Int = 1
+        static let winnerEpicCount: Int = 2
+        static let participationLootCount: Int = 1
+    }
+
     // MARK: - XP
     enum XP {
         static let baseXPPerMatch: Int = 50

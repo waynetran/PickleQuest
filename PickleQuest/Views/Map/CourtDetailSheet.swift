@@ -5,10 +5,16 @@ struct CourtDetailSheet: View {
     let npcs: [NPC]
     let playerRating: Double
     let ladder: CourtLadder?
+    let doublesLadder: CourtLadder?
     let courtPerk: CourtPerk?
     let alphaNPC: NPC?
+    let doublesAlphaNPC: NPC?
+    let playerPersonality: NPCPersonality
     @Binding var isRated: Bool
+    @Binding var isDoublesMode: Bool
     let onChallenge: (NPC) -> Void
+    let onDoublesChallenge: (NPC, NPC) -> Void
+    let onTournament: () -> Void
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -17,9 +23,15 @@ struct CourtDetailSheet: View {
                 VStack(spacing: 20) {
                     courtHeader
                     Divider()
+                    matchModeToggle
                     ratedToggle
                     perkBadges
-                    ladderSection
+                    tournamentButton
+                    if isDoublesMode {
+                        doublesSection
+                    } else {
+                        ladderSection
+                    }
                 }
                 .padding()
             }
@@ -83,6 +95,17 @@ struct CourtDetailSheet: View {
             }
         }
         .padding(.top)
+    }
+
+    // MARK: - Match Mode Toggle
+
+    private var matchModeToggle: some View {
+        Picker("Mode", selection: $isDoublesMode) {
+            Text("Singles").tag(false)
+            Text("Doubles").tag(true)
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
     }
 
     // MARK: - Rated Toggle
@@ -411,6 +434,192 @@ struct CourtDetailSheet: View {
             .padding(.horizontal, 12)
             .padding(.bottom, 8)
         }
+    }
+
+    // MARK: - Tournament Button
+
+    @ViewBuilder
+    private var tournamentButton: some View {
+        if courtPerk?.isFullyDominated == true {
+            Button {
+                dismiss()
+                onTournament()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "trophy.fill")
+                        .font(.title3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Enter Tournament")
+                            .font(.subheadline.bold())
+                        Text(isDoublesMode ? "Doubles bracket" : "Singles bracket")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity)
+                .background(.yellow.gradient)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+    }
+
+    // MARK: - Doubles Section
+
+    private var doublesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Opponent Pairs")
+                    .font(.headline)
+                Spacer()
+            }
+            .padding(.horizontal)
+
+            if npcs.count < 2 {
+                Text("Not enough opponents for doubles.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal)
+            } else {
+                ForEach(doublesOpponentPairs, id: \.0.id) { pair in
+                    doublesTeamCard(npc1: pair.0, npc2: pair.1, synergy: pair.2)
+                }
+            }
+        }
+    }
+
+    private var doublesOpponentPairs: [(NPC, NPC, TeamSynergy)] {
+        // Pair available NPCs by best synergy (greedy algorithm)
+        var remaining = npcs
+        var pairs: [(NPC, NPC, TeamSynergy)] = []
+
+        while remaining.count >= 2 {
+            let anchor = remaining.removeFirst()
+            var bestIdx = 0
+            var bestSynergy = TeamSynergy.calculate(p1: anchor.personality, p2: remaining[0].personality)
+
+            for (idx, candidate) in remaining.enumerated().dropFirst() {
+                let syn = TeamSynergy.calculate(p1: anchor.personality, p2: candidate.personality)
+                if syn.multiplier > bestSynergy.multiplier {
+                    bestSynergy = syn
+                    bestIdx = idx
+                }
+            }
+
+            let partner = remaining.remove(at: bestIdx)
+            pairs.append((anchor, partner, bestSynergy))
+        }
+
+        return pairs
+    }
+
+    private func doublesTeamCard(npc1: NPC, npc2: NPC, synergy: TeamSynergy) -> some View {
+        let avgDUPR = (npc1.duprRating + npc2.duprRating) / 2.0
+        let playerSynergy = bestPlayerSynergy(with: [npc1, npc2])
+
+        return VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                // Team portraits
+                HStack(spacing: -8) {
+                    ZStack {
+                        Circle()
+                            .fill(npcDifficultyColor(npc1).opacity(0.2))
+                            .frame(width: 38, height: 38)
+                        Text(String(npc1.name.prefix(1)))
+                            .font(.caption.bold())
+                            .foregroundStyle(npcDifficultyColor(npc1))
+                    }
+                    ZStack {
+                        Circle()
+                            .fill(npcDifficultyColor(npc2).opacity(0.2))
+                            .frame(width: 38, height: 38)
+                        Text(String(npc2.name.prefix(1)))
+                            .font(.caption.bold())
+                            .foregroundStyle(npcDifficultyColor(npc2))
+                    }
+                    .overlay(
+                        Circle()
+                            .stroke(.background, lineWidth: 2)
+                            .frame(width: 38, height: 38)
+                    )
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(npc1.name) & \(npc2.name)")
+                        .font(.subheadline.bold())
+                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        Text(synergy.description)
+                            .font(.caption)
+                            .foregroundStyle(synergyColor(synergy))
+                        Text("Avg SUPR \(String(format: "%.2f", avgDUPR))")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                Button {
+                    dismiss()
+                    onDoublesChallenge(npc1, npc2)
+                } label: {
+                    Text("Challenge")
+                        .font(.caption.bold())
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(.green)
+                        .foregroundStyle(.white)
+                        .clipShape(Capsule())
+                }
+            }
+            .padding(12)
+
+            // Player synergy preview
+            if let bestPartnerName = playerSynergy?.0 {
+                HStack(spacing: 4) {
+                    Image(systemName: "person.2.fill")
+                        .font(.caption2)
+                    Text("Best partner: \(bestPartnerName)")
+                        .font(.caption2)
+                    if let syn = playerSynergy?.1 {
+                        Text("(\(syn.description))")
+                            .font(.caption2)
+                            .foregroundStyle(synergyColor(syn))
+                    }
+                }
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+            }
+        }
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    /// Find best potential partner for the player from NPCs not in the opponent pair.
+    private func bestPlayerSynergy(with opponents: [NPC]) -> (String, TeamSynergy)? {
+        let opponentIDs = Set(opponents.map(\.id))
+        let availablePartners = npcs.filter { !opponentIDs.contains($0.id) }
+
+        var best: (String, TeamSynergy)?
+        for npc in availablePartners {
+            let syn = TeamSynergy.calculate(p1: playerPersonality, p2: npc.personality)
+            if best == nil || syn.multiplier > (best?.1.multiplier ?? 0) {
+                best = (npc.name, syn)
+            }
+        }
+        return best
+    }
+
+    private func synergyColor(_ synergy: TeamSynergy) -> Color {
+        if synergy.multiplier >= 1.06 { return .green }
+        if synergy.multiplier >= 1.03 { return .mint }
+        if synergy.multiplier >= 0.97 { return .secondary }
+        return .orange
     }
 
     // MARK: - Helpers

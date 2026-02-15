@@ -16,7 +16,7 @@
 | 4.3 | Match Actions, Consumables, Character2 | **Complete** |
 | 4.4 | Court Ladder Progression System | **Complete** |
 | 4.5 | Fog of War Map Exploration | **Complete** |
-| 5 | Doubles, Team Synergy, Tournaments | Planned |
+| 5 | Doubles, Team Synergy, Tournaments | **Complete** |
 | 6 | Training, Coaching, Energy + Economy | Planned |
 | 7 | Persistence, Polish, Multiplayer Prep | Planned |
 
@@ -445,14 +445,86 @@ MatchHubView processResult — calls mapVM.recordMatchResult on win, handles alp
 
 ---
 
-## Milestone 5: Doubles, Team Synergy, Tournaments (Planned)
+## Milestone 5: Doubles, Team Synergy, Tournaments
 
-### Goals
-- 2v2 doubles matches with partner NPC
-- Team synergy bonuses between compatible personalities
-- Tournament brackets (single elimination, round robin)
-- Tournament-exclusive rewards and loot
-- Leaderboard tracking
+### What was built
+- **2v2 doubles matches**: full doubles mode with partner NPC selection from court roster, 4-player composite stats feeding into existing rally/point engine
+- **Team synergy system**: 5×5 personality matrix (0.90–1.10 multiplier) — aggressive+defensive is best pairing (1.08), same-personality overlaps penalized; synergy badge shown on partner picker and result screen
+- **TeamStatCompositor**: averages both partners' effective stats (after equipment bonuses), applies synergy multiplier — existing `PointResolver` → `RallySimulator` pipeline unchanged
+- **Authentic doubles scoring**: side-out scoring (only serving team scores), three-number format "4-2-1" (serving score, receiving score, server number), both servers serve before side-out, "0-0-2" start
+- **DoublesScoreTracker**: manages server rotation, side-out logic, both-serve-before-switch rule, win-by-2 at 11 points
+- **4-player SpriteKit rendering**: near/far partner sprites at doublesLeft (0.35) and doublesRight (0.65) positions, perspective-correct scaling, all 4 players animate with sprite sheet animations
+- **Doubles animations**: 4-player slide-in at match start, active hitter alternation within each team during rallies, teammate advance toward kitchen alongside active player, team celebrations on match end
+- **Singles/doubles toggle**: segmented picker on CourtDetailSheet, doubles shows NPC pairs with synergy info and "Challenge Pair" buttons
+- **Partner picker**: dedicated PartnerPickerView sorted by synergy with player (best first), opponent pair info at top, synergy badge per candidate
+- **Tournament system**: single-elimination 4-player/team brackets, seeded by DUPR, NPC-vs-NPC auto-simulated, player matches with full SpriteKit
+- **TournamentEngine**: actor orchestrating bracket flow via AsyncStream, uses CheckedContinuation for player match handoff
+- **TournamentGenerator**: seeds bracket by DUPR, pairs NPC doubles teams by synergy
+- **TournamentBracketView**: visual bracket with round progression, match cards, current match highlighting, all tournament states
+- **Tournament rewards**: 1.5x XP, 2x coins for tournament matches; winner gets 1 legendary + 2 epic drops
+- **MatchType unification**: replaced duplicate `GameType` enum with `MatchType` across all code (CourtLadder, MatchConfig, MatchHistoryEntry)
+- **Broadcast overlay**: doubles-aware score overlay showing "DOUBLES" label and three-number score display
+- **Doubles result screen**: partner name, opponent team, synergy badge with colored percentage
+
+### Architecture
+```
+CourtDetailSheet (singles/doubles toggle)
+    ↓ doubles challenge
+MapContentView → MatchHubView → PartnerPickerView
+    ↓ partner selected
+MatchViewModel.startDoublesMatch()
+    ↓
+MockMatchService.createDoublesMatch() → TeamStatCompositor (composite stats) → MatchEngine (with doubles params)
+    ↓
+MatchEngine uses DoublesScoreTracker for side-out scoring
+    ↓
+AsyncStream<MatchEvent> → MatchViewModel → MatchCourtScene (4 sprites) → MatchAnimator (4-player animations)
+
+TournamentGenerator.generate() → Tournament bracket
+    ↓
+TournamentEngine.simulate() → AsyncStream<TournamentEvent>
+    ↓
+TournamentViewModel (state machine) → TournamentBracketView
+    ↓ player match
+MatchViewModel (reused for player's tournament matches)
+```
+
+### New files
+- `Models/Match/TeamSynergy.swift` — 5×5 personality synergy matrix with multiplier and description
+- `Models/Match/DoublesScoreTracker.swift` — side-out scoring, server rotation, three-number format
+- `Models/Match/Tournament.swift` — Tournament, TournamentBracket, TournamentMatch, TournamentSeed, TournamentStatus, TournamentRewards
+- `Engine/MatchSimulation/TeamStatCompositor.swift` — composite team stats from 2 players + synergy
+- `Engine/Tournament/TournamentEngine.swift` — actor orchestrating bracket via AsyncStream + CheckedContinuation
+- `Engine/Tournament/TournamentGenerator.swift` — bracket seeding by DUPR, NPC pair generation
+- `Services/Protocols/TournamentService.swift` — tournament CRUD protocol
+- `Services/Mock/MockTournamentService.swift` — in-memory actor implementation
+- `ViewModels/TournamentViewModel.swift` — tournament state machine (idle → bracketPreview → roundInProgress → playerMatch → roundResults → finished)
+- `Views/Tournament/TournamentBracketView.swift` — visual bracket UI with all tournament states
+- `Views/Match/PartnerPickerView.swift` — partner selection with synergy sorting
+
+### Modified files
+- `GameConstants.swift` — Doubles section (compositeStatWeight, startServerNumber) + Tournament section (bracketSize, xp/coin multipliers, loot counts)
+- `MatchConfig.swift` — `defaultDoubles` config, `isSideOutScoring` computed property
+- `MatchEvent.swift` — doubles-aware matchStart (partnerName, opponent2Name), sideOut event, tournament events, updated narration
+- `MatchPoint.swift` — optional serverNumber, isSideOut; doublesScoreDisplay on MatchScore
+- `MatchResult.swift` — partnerName, opponent2Name, teamSynergy, isDoubles fields
+- `MatchHistoryEntry.swift` — matchType, partnerName, opponent2Name
+- `Player.swift` — personality field (defaults to .allRounder)
+- `CourtLadder.swift` — unified GameType → MatchType
+- `MatchEngine.swift` — optional partner fields for all 4 participants, doublesScoreTracker, team synergy, composite stats per point, 4-player fatigue tracking, side-out scoring branch
+- `MatchService.swift` — createDoublesMatch protocol method
+- `MockMatchService.swift` — createDoublesMatch implementation with synergy + composite stats
+- `MatchViewModel.swift` — doubles state (selectedPartner, opponentPartner, teamSynergy, doublesScoreDisplay, isDoublesMode), selectingPartner state, startDoublesMatch, partner/opponent2 appearances
+- `CourtDetailSheet.swift` — singles/doubles toggle, doubles NPC pair cards with synergy, tournament button
+- `MapContentView.swift` — doubles state, doubles challenge flow through CourtDetailSheet
+- `MatchHubView.swift` — partner picker integration, doubles match creation, doubles match history
+- `MatchResultView.swift` — doubles info display (partner, opponent team, synergy badge)
+- `MatchSimulationView.swift` — doubles-aware broadcast overlay
+- `MatchSpriteView.swift` — passes 4 appearances, doubles score display
+- `MatchAnimationConstants.swift` — doublesLeftNX/doublesRightNX positions
+- `MatchCourtScene.swift` — nearPartner/farPartner nodes and animators, 4-appearance init, setupDoublesPartners, doubles resetPlayerPositions
+- `MatchAnimator.swift` — 4-player match start/rally/match end animations, fireAction helper for Swift 6 sendability
+- `DependencyContainer.swift` — tournamentService dependency
 
 ---
 

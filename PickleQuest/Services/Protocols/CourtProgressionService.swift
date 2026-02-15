@@ -8,10 +8,10 @@ enum LadderAdvanceResult: Sendable {
 }
 
 protocol CourtProgressionService: Sendable {
-    func getLadder(courtID: UUID, gameType: GameType) async -> CourtLadder?
-    func initializeLadder(courtID: UUID, gameType: GameType, npcIDs: [UUID]) async
-    func recordDefeat(courtID: UUID, gameType: GameType, npcID: UUID, court: Court, npcService: NPCService) async -> LadderAdvanceResult
+    func getLadder(courtID: UUID, gameType: MatchType) async -> CourtLadder?
+    func initializeLadder(courtID: UUID, gameType: MatchType, npcIDs: [UUID]) async
+    func recordDefeat(courtID: UUID, gameType: MatchType, npcID: UUID, court: Court, npcService: NPCService) async -> LadderAdvanceResult
     func getCourtPerk(courtID: UUID) async -> CourtPerk?
     func getAllLadders() async -> [CourtLadder]
-    func getAlphaNPC(courtID: UUID, gameType: GameType) async -> NPC?
+    func getAlphaNPC(courtID: UUID, gameType: MatchType) async -> NPC?
 }

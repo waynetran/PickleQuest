@@ -21,14 +21,16 @@ struct MatchSpriteView: View {
                 // Broadcast score overlay (top-left, PPA style)
                 if let score = viewModel.currentScore {
                     BroadcastScoreOverlay(
-                        playerName: "You",
+                        playerName: viewModel.isDoublesMode ? "Your Team" : "You",
                         opponentName: viewModel.selectedNPC?.name ?? "Opponent",
                         playerScore: score.playerPoints,
                         opponentScore: score.opponentPoints,
                         playerGames: score.playerGames,
                         opponentGames: score.opponentGames,
                         servingSide: viewModel.currentServingSide,
-                        courtName: viewModel.courtName
+                        courtName: viewModel.courtName,
+                        isDoubles: viewModel.isDoublesMode,
+                        doublesScoreDisplay: viewModel.doublesScoreDisplay
                     )
                     .padding(.leading, 12)
                     .padding(.top, 8)
@@ -55,7 +57,9 @@ struct MatchSpriteView: View {
                     height: MatchAnimationConstants.sceneHeight
                 ),
                 playerAppearance: viewModel.playerAppearance,
-                opponentAppearance: viewModel.opponentAppearance
+                opponentAppearance: viewModel.opponentAppearance,
+                partnerAppearance: viewModel.partnerAppearance,
+                opponent2Appearance: viewModel.opponent2Appearance
             )
             newScene.scaleMode = .aspectFill
             newScene.anchorPoint = CGPoint(x: 0, y: 0)

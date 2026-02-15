@@ -1,13 +1,8 @@
 import Foundation
 
-enum GameType: String, Codable, Sendable {
-    case singles
-    case doubles
-}
-
 struct CourtLadder: Codable, Equatable, Sendable {
     let courtID: UUID
-    let gameType: GameType
+    let gameType: MatchType
     var rankedNPCIDs: [UUID]       // ordered weakest → strongest
     var defeatedNPCIDs: Set<UUID>  // NPCs beaten (they "go home")
     var alphaUnlocked: Bool        // true after all regulars beaten
@@ -39,8 +34,7 @@ struct CourtPerk: Codable, Equatable, Sendable {
     var doublesAlphaDefeated: Bool = false
 
     /// Full domination requires both alphas beaten.
-    /// For now, only singles exists — singlesAlphaDefeated alone triggers perks.
     var isFullyDominated: Bool {
-        singlesAlphaDefeated // && doublesAlphaDefeated (when doubles is added)
+        singlesAlphaDefeated && doublesAlphaDefeated
     }
 }

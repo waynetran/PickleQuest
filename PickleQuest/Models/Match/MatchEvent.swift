@@ -1,7 +1,7 @@
 import Foundation
 
 enum MatchEvent: Sendable {
-    case matchStart(playerName: String, opponentName: String)
+    case matchStart(playerName: String, opponentName: String, partnerName: String? = nil, opponent2Name: String? = nil)
     case gameStart(gameNumber: Int)
     case pointPlayed(MatchPoint)
     case streakAlert(side: MatchSide, count: Int)
@@ -11,12 +11,16 @@ enum MatchEvent: Sendable {
     case timeoutCalled(side: MatchSide, energyRestored: Double, streakBroken: Bool)
     case consumableUsed(side: MatchSide, name: String, effect: String)
     case hookCallAttempt(side: MatchSide, success: Bool, repChange: Int)
+    case sideOut(newServingTeam: MatchSide, serverNumber: Int)
     case resigned
     case matchEnd(result: MatchResult)
 
     var narration: String {
         switch self {
-        case .matchStart(let player, let opponent):
+        case .matchStart(let player, let opponent, let partner, let opponent2):
+            if let partner, let opponent2 {
+                return "\(player) & \(partner) vs \(opponent) & \(opponent2) — Match begins!"
+            }
             return "\(player) vs \(opponent) — Match begins!"
         case .gameStart(let num):
             return "Game \(num) starting!"
@@ -62,6 +66,9 @@ enum MatchEvent: Sendable {
             } else {
                 return "\(who) challenged the line call and got caught! (\(repChange) rep)"
             }
+        case .sideOut(let newServingTeam, let serverNumber):
+            let who = newServingTeam == .player ? "Your team" : "Opponent's team"
+            return "Side out! \(who) serves (Server \(serverNumber))"
         case .resigned:
             return "Match resigned."
         case .matchEnd(let result):

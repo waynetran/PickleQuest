@@ -9,6 +9,16 @@ protocol MatchService: Sendable {
         playerReputation: Int
     ) async -> MatchEngine
 
+    func createDoublesMatch(
+        player: Player,
+        partner: NPC,
+        opponent1: NPC,
+        opponent2: NPC,
+        config: MatchConfig,
+        playerConsumables: [Consumable],
+        playerReputation: Int
+    ) async -> MatchEngine
+
     func processMatchResult(
         _ result: MatchResult,
         for player: inout Player,
