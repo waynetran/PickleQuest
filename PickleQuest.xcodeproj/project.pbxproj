@@ -12,6 +12,7 @@
 		030053C44EF48B07E766AD2B /* PlayerProgression.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52C2A0413DC0CD20FB85994C /* PlayerProgression.swift */; };
 		048DBBBFE296E9B444059160 /* CLLocationCoordinate2D+Sendable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2A0910DA48FBCFB568311B /* CLLocationCoordinate2D+Sendable.swift */; };
 		04E498BB1ED53A774576B7CE /* ColorReplacer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 935402BCE85914A3F49418A7 /* ColorReplacer.swift */; };
+		0AFD27EDFF7CA4308C8471FB /* CourtLadder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB2870DBB7DBD09CB6D576DD /* CourtLadder.swift */; };
 		0B5219D488C98B0A9D7888EA /* CharacterAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9B6786F66B8934634A8830A /* CharacterAppearance.swift */; };
 		0B5CF73ACAEE1A68C32D5EEF /* SpriteSheetAnimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1189DB1F3E1BDB85799DBDD7 /* SpriteSheetAnimator.swift */; };
 		0D504017AD0F443740F26367 /* DUPRProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51DD3F8872DF216E539BB427 /* DUPRProfile.swift */; };
@@ -22,6 +23,7 @@
 		1F1A8B0C4EAA874288A018B5 /* EquipmentSlotsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C7D0E4AD263AFFDB2620896 /* EquipmentSlotsView.swift */; };
 		1F3D155A28F61DE864369D26 /* DUPRProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 665DD2E2381E8DAD0E1A31C3 /* DUPRProfileTests.swift */; };
 		21A8FEC6BE691264FAE691E7 /* MatchEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB744DF042767593746C101B /* MatchEngineTests.swift */; };
+		226884E62658075562C0DB9F /* AlphaNPCGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD07BCE35CB5A979F86D4A2F /* AlphaNPCGenerator.swift */; };
 		25BCE5BEB1E98890F051A673 /* EquipmentSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F96F8D08C8F4FC655940785 /* EquipmentSet.swift */; };
 		26134A1B57938FFC3E195A26 /* Wallet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775C461714AC3A47F1E99E0B /* Wallet.swift */; };
 		2839DF2A3E920AD06E50AAA3 /* PlayerProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14730B939773D5593EEF66F9 /* PlayerProfileViewModel.swift */; };
@@ -49,6 +51,7 @@
 		64AC9A5DACABD53728F0D8A3 /* CourtRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20CB71F51995E7A0C850F231 /* CourtRenderer.swift */; };
 		66DE4973BD9BED0C2197BD50 /* EquipmentAbility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13D27DD38A3C07AF3DC1F5AF /* EquipmentAbility.swift */; };
 		694E9D55D983B6A7B17E33F3 /* EquipmentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC56C33DEA89A36C94D6A5DE /* EquipmentDetailView.swift */; };
+		6BA89A76AD013E7FE476EFDA /* CourtProgressionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207E9AC418A76077A2A4CC2B /* CourtProgressionService.swift */; };
 		6EC9B25135C35C3965C18609 /* MatchActionButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C109738393E6303B611E62 /* MatchActionButtons.swift */; };
 		72218CB4A65BD13B1CE5DDD9 /* MomentumTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B134E5A041B5743FC9C0BBC /* MomentumTrackerTests.swift */; };
 		72B54FB6B5F49BBA080E5BB7 /* LootDropRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5408E905229A627A3B5BAA80 /* LootDropRow.swift */; };
@@ -91,6 +94,7 @@
 		CD7F3AAC4180F9ECBFCA635D /* EquipmentCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B619B590B70982D275E99B1B /* EquipmentCardView.swift */; };
 		CDB582B28BCB65C90D6A3E06 /* RepProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87E6BC2CEDE4611F9F591DD0 /* RepProfile.swift */; };
 		CDBE28F6BF3462D4396D9340 /* RepCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1AE74519D395EBC944F80F /* RepCalculator.swift */; };
+		CDC370E8A960436CE37C8B5C /* AlphaLootGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BA4A9EC594E96B9B74A293F /* AlphaLootGenerator.swift */; };
 		CDD6F64EBB582172E07C0CD1 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 626A44F16E3DD96990C0879B /* LocationManager.swift */; };
 		D05971C85E3233F7F3A7421A /* UIColor+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = B85291B7FDEBBCCCD587FAC6 /* UIColor+Hex.swift */; };
 		D0867DCDFEE42EB11B8FFF3D /* MatchHistoryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C16E89037C904100D1C317F /* MatchHistoryEntry.swift */; };
@@ -101,6 +105,7 @@
 		D94A60FDE166721728A7C6FD /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584959296BFD092ED3EE3FD8 /* PlayerService.swift */; };
 		DB1E24C03C5CA4CDFAA83ABD /* MatchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 784E4E44166C3416091BA7E0 /* MatchResult.swift */; };
 		DBE5F18AC6CBE4C42E7A712E /* StatCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */; };
+		E14F4B323AD9C0761829F96F /* MockCourtProgressionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C77694636A45688609F6B51 /* MockCourtProgressionService.swift */; };
 		E4717F50B056288CFD1D8397 /* MapContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9E31089B41F8413BDA64BB1 /* MapContentView.swift */; };
 		E6F707FA78EEF37EBF192904 /* RarityBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F69B4AC575F890472955931 /* RarityBadge.swift */; };
 		EA2BB3213BC970E6160006AD /* DUPRCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C45FB6A27A9A3E5D0D9E080C /* DUPRCalculator.swift */; };
@@ -149,6 +154,7 @@
 		1D8901DF47B273A28A842991 /* EquipmentSetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentSetTests.swift; sourceTree = "<group>"; };
 		1EA16300A59A2F1C52C8B9CF /* PickleQuest.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PickleQuest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		202A83825C89EF08D54F91B4 /* MatchAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchAction.swift; sourceTree = "<group>"; };
+		207E9AC418A76077A2A4CC2B /* CourtProgressionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtProgressionService.swift; sourceTree = "<group>"; };
 		20C3B07BE8F5AC941C995746 /* MatchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchViewModel.swift; sourceTree = "<group>"; };
 		20CB71F51995E7A0C850F231 /* CourtRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtRenderer.swift; sourceTree = "<group>"; };
 		2718E94C057C8A67B15C822B /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewModel.swift; sourceTree = "<group>"; };
@@ -159,6 +165,7 @@
 		3AEAB8CBD3D6D5C1EBBECABA /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		3B97CA559D005D19373B923E /* MatchAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchAnimator.swift; sourceTree = "<group>"; };
 		3BFE0CBC43F0E6621040BFCB /* LootGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LootGenerator.swift; sourceTree = "<group>"; };
+		3C77694636A45688609F6B51 /* MockCourtProgressionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockCourtProgressionService.swift; sourceTree = "<group>"; };
 		3C7D0E4AD263AFFDB2620896 /* EquipmentSlotsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentSlotsView.swift; sourceTree = "<group>"; };
 		3C7DF57C299CE8D8DF73B080 /* DependencyContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DependencyContainer.swift; sourceTree = "<group>"; };
 		3FE0743BF162137BA3E922FE /* LootGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LootGeneratorTests.swift; sourceTree = "<group>"; };
@@ -174,6 +181,7 @@
 		596C158D03744C9EBA1A7870 /* MockInventoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockInventoryService.swift; sourceTree = "<group>"; };
 		5A0D6102CDEE0226239FB7ED /* StoreItemCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreItemCard.swift; sourceTree = "<group>"; };
 		5A0FFE7F286E16DF1CB68BDB /* FatigueModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FatigueModel.swift; sourceTree = "<group>"; };
+		5BA4A9EC594E96B9B74A293F /* AlphaLootGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphaLootGenerator.swift; sourceTree = "<group>"; };
 		5F96F8D08C8F4FC655940785 /* EquipmentSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentSet.swift; sourceTree = "<group>"; };
 		626A44F16E3DD96990C0879B /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		64FE8C463FC243A364CDD109 /* MomentumTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentumTracker.swift; sourceTree = "<group>"; };
@@ -241,6 +249,8 @@
 		F75BF66C5ABC414685644FB7 /* LevelUpBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LevelUpBanner.swift; sourceTree = "<group>"; };
 		F78EDF9FACA3C6EB32CC7BAF /* Consumable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Consumable.swift; sourceTree = "<group>"; };
 		FA01C280E5F28D53830ED79E /* PlayerStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerStats.swift; sourceTree = "<group>"; };
+		FB2870DBB7DBD09CB6D576DD /* CourtLadder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtLadder.swift; sourceTree = "<group>"; };
+		FD07BCE35CB5A979F86D4A2F /* AlphaNPCGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphaNPCGenerator.swift; sourceTree = "<group>"; };
 		FEB6871F2BC9AB0D6E1EBD19 /* PerformanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceView.swift; sourceTree = "<group>"; };
 		FF93932170EAA8760BA56E83 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -419,6 +429,8 @@
 		7536A6EDDE8E4DF812518979 /* LootGeneration */ = {
 			isa = PBXGroup;
 			children = (
+				5BA4A9EC594E96B9B74A293F /* AlphaLootGenerator.swift */,
+				FD07BCE35CB5A979F86D4A2F /* AlphaNPCGenerator.swift */,
 				CDABEB3FE4D53ECE0EF7759B /* EquipmentNameGenerator.swift */,
 				3BFE0CBC43F0E6621040BFCB /* LootGenerator.swift */,
 			);
@@ -503,6 +515,7 @@
 			isa = PBXGroup;
 			children = (
 				D3105ACD6B6235A1CE3055FC /* Court.swift */,
+				FB2870DBB7DBD09CB6D576DD /* CourtLadder.swift */,
 				761E0DC7B75C06D52FBD491E /* MapItem.swift */,
 				1675D372694A305F611FE32D /* NPC.swift */,
 			);
@@ -512,6 +525,7 @@
 		BBBBE45EE2CB1BDA94373679 /* Mock */ = {
 			isa = PBXGroup;
 			children = (
+				3C77694636A45688609F6B51 /* MockCourtProgressionService.swift */,
 				F39ADA4591D8FEDB86F5DAE7 /* MockCourtService.swift */,
 				596C158D03744C9EBA1A7870 /* MockInventoryService.swift */,
 				4DC470B6290926172C33A09F /* MockMatchService.swift */,
@@ -567,6 +581,7 @@
 		D9EDF630CF2FB3A1EF9E1B1D /* Protocols */ = {
 			isa = PBXGroup;
 			children = (
+				207E9AC418A76077A2A4CC2B /* CourtProgressionService.swift */,
 				9F80B1209767EBD9BA7EAC8D /* CourtService.swift */,
 				AF0E26D687250C76182C3D4C /* InventoryService.swift */,
 				46B06729836D2E4D76ECC28B /* MatchService.swift */,
@@ -786,6 +801,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CDC370E8A960436CE37C8B5C /* AlphaLootGenerator.swift in Sources */,
+				226884E62658075562C0DB9F /* AlphaNPCGenerator.swift in Sources */,
 				9082675C17CCC084A5BEDBB1 /* AppState.swift in Sources */,
 				D8C4B3036E5214BAE018D4BD /* AppearanceGenerator.swift in Sources */,
 				048DBBBFE296E9B444059160 /* CLLocationCoordinate2D+Sendable.swift in Sources */,
@@ -797,6 +814,8 @@
 				EE2059E8882E44409C0B7255 /* Court.swift in Sources */,
 				8CE2A745A019908957FED502 /* CourtAnnotationView.swift in Sources */,
 				473BB098A5401D2799FD9521 /* CourtDetailSheet.swift in Sources */,
+				0AFD27EDFF7CA4308C8471FB /* CourtLadder.swift in Sources */,
+				6BA89A76AD013E7FE476EFDA /* CourtProgressionService.swift in Sources */,
 				64AC9A5DACABD53728F0D8A3 /* CourtRenderer.swift in Sources */,
 				004F82EE3181237E32E907A2 /* CourtService.swift in Sources */,
 				EA2BB3213BC970E6160006AD /* DUPRCalculator.swift in Sources */,
@@ -842,6 +861,7 @@
 				1DFA20353BD0EAC474762221 /* MatchSimulationView.swift in Sources */,
 				9D439B12DA3E48072B924068 /* MatchSpriteView.swift in Sources */,
 				2EDA97EBB0A6E7B56999B34B /* MatchViewModel.swift in Sources */,
+				E14F4B323AD9C0761829F96F /* MockCourtProgressionService.swift in Sources */,
 				BAA582D6CAEDE37C2893C67B /* MockCourtService.swift in Sources */,
 				74E78A543C1A38A6C0C2CA25 /* MockInventoryService.swift in Sources */,
 				35CED6482D21AAD5F0F53425 /* MockMatchService.swift in Sources */,

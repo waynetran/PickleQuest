@@ -4,6 +4,9 @@ struct CourtDetailSheet: View {
     let court: Court
     let npcs: [NPC]
     let playerRating: Double
+    let ladder: CourtLadder?
+    let courtPerk: CourtPerk?
+    let alphaNPC: NPC?
     @Binding var isRated: Bool
     let onChallenge: (NPC) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -12,66 +15,11 @@ struct CourtDetailSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    // Court header
-                    VStack(spacing: 8) {
-                        ZStack {
-                            Circle()
-                                .fill(difficultyColor.opacity(0.2))
-                                .frame(width: 64, height: 64)
-                            Image(systemName: "sportscourt.fill")
-                                .font(.system(size: 28))
-                                .foregroundStyle(difficultyColor)
-                        }
-
-                        Text(court.name)
-                            .font(.title2.bold())
-
-                        Text(court.description)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-
-                        HStack(spacing: 8) {
-                            ForEach(court.difficultyTiers.sorted(), id: \.self) { tier in
-                                DifficultyBadge(difficulty: tier)
-                            }
-                            Label("\(court.courtCount) courts", systemImage: "rectangle.split.2x1")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.top)
-
+                    courtHeader
                     Divider()
-
-                    // Rated toggle
-                    Toggle(isOn: $isRated) {
-                        HStack(spacing: 6) {
-                            Image(systemName: isRated ? "chart.line.uptrend.xyaxis" : "minus.circle")
-                                .foregroundStyle(isRated ? .green : .secondary)
-                            Text(isRated ? "Rated Match" : "Unrated Match")
-                                .font(.subheadline)
-                        }
-                    }
-                    .padding(.horizontal)
-
-                    // NPC list
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Opponents")
-                            .font(.headline)
-                            .padding(.horizontal)
-
-                        if npcs.isEmpty {
-                            Text("No opponents at this court right now.")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal)
-                        } else {
-                            ForEach(npcs) { npc in
-                                courtNPCCard(npc)
-                            }
-                        }
-                    }
+                    ratedToggle
+                    perkBadges
+                    ladderSection
                 }
                 .padding()
             }
@@ -86,31 +34,320 @@ struct CourtDetailSheet: View {
         .presentationDetents([.medium, .large])
     }
 
-    @ViewBuilder
-    private func courtNPCCard(_ npc: NPC) -> some View {
-        let autoUnrated = DUPRCalculator.shouldAutoUnrate(
-            playerRating: playerRating,
-            opponentRating: npc.duprRating
-        )
+    // MARK: - Court Header
 
-        VStack(spacing: 0) {
+    private var courtHeader: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(difficultyColor.opacity(0.2))
+                    .frame(width: 64, height: 64)
+                Image(systemName: "sportscourt.fill")
+                    .font(.system(size: 28))
+                    .foregroundStyle(difficultyColor)
+
+                // King of the Court crown
+                if courtPerk?.isFullyDominated == true {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.yellow)
+                        .offset(y: -38)
+                }
+            }
+
+            Text(court.name)
+                .font(.title2.bold())
+
+            if ladder?.alphaDefeated == true {
+                Text("King of the Court")
+                    .font(.caption.bold())
+                    .foregroundStyle(.yellow)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(.yellow.opacity(0.15))
+                    .clipShape(Capsule())
+            }
+
+            Text(court.description)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            HStack(spacing: 8) {
+                ForEach(court.difficultyTiers.sorted(), id: \.self) { tier in
+                    DifficultyBadge(difficulty: tier)
+                }
+                Label("\(court.courtCount) courts", systemImage: "rectangle.split.2x1")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.top)
+    }
+
+    // MARK: - Rated Toggle
+
+    private var ratedToggle: some View {
+        Toggle(isOn: $isRated) {
+            HStack(spacing: 6) {
+                Image(systemName: isRated ? "chart.line.uptrend.xyaxis" : "minus.circle")
+                    .foregroundStyle(isRated ? .green : .secondary)
+                Text(isRated ? "Rated Match" : "Unrated Match")
+                    .font(.subheadline)
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    // MARK: - Perk Badges
+
+    @ViewBuilder
+    private var perkBadges: some View {
+        if let perk = courtPerk, perk.isFullyDominated {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Court Perks")
+                    .font(.headline)
+
+                HStack(spacing: 12) {
+                    perkBadge(icon: "trophy.fill", label: "Tournament Invite", color: .yellow)
+                    perkBadge(icon: "tag.fill", label: "20% Store Discount", color: .green)
+                    perkBadge(icon: "figure.run", label: "Coaching", color: .blue)
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.yellow.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    private func perkBadge(icon: String, label: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Ladder Section
+
+    private var ladderSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Court Ladder")
+                    .font(.headline)
+                Spacer()
+                if let ladder {
+                    Text("\(ladder.defeatedNPCIDs.count)/\(ladder.rankedNPCIDs.count)")
+                        .font(.caption.bold())
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal)
+
+            if npcs.isEmpty {
+                Text("No opponents at this court right now.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal)
+            } else {
+                // Alpha boss card (top of ladder)
+                alphaCard
+
+                // Regular NPCs in reverse order (strongest at top, weakest at bottom)
+                ForEach(Array(npcs.enumerated().reversed()), id: \.element.id) { index, npc in
+                    ladderRungCard(npc: npc, position: index)
+                }
+            }
+        }
+    }
+
+    // MARK: - Alpha Card
+
+    @ViewBuilder
+    private var alphaCard: some View {
+        if let ladder {
+            if ladder.alphaUnlocked, let alpha = alphaNPC {
+                // Alpha is unlocked
+                VStack(spacing: 0) {
+                    HStack(spacing: 12) {
+                        // Alpha portrait
+                        ZStack {
+                            Circle()
+                                .fill(.red.opacity(0.3))
+                                .frame(width: 52, height: 52)
+                            Image(systemName: "flame.fill")
+                                .font(.title2)
+                                .foregroundStyle(.red)
+                        }
+                        .overlay(
+                            Circle()
+                                .stroke(.red, lineWidth: 2)
+                                .frame(width: 52, height: 52)
+                        )
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "crown.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(.yellow)
+                                Text(alpha.name)
+                                    .font(.subheadline.bold())
+                            }
+                            Text(alpha.title)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                            HStack(spacing: 6) {
+                                DifficultyBadge(difficulty: alpha.difficulty)
+                                Text("SUPR \(String(format: "%.2f", alpha.duprRating))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        Spacer()
+
+                        if ladder.alphaDefeated {
+                            // Already beaten — show crown + re-challenge
+                            VStack(spacing: 4) {
+                                Image(systemName: "crown.fill")
+                                    .foregroundStyle(.yellow)
+                                Button {
+                                    dismiss()
+                                    onChallenge(alpha)
+                                } label: {
+                                    Text("Re-challenge")
+                                        .font(.caption2.bold())
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(.orange)
+                                        .foregroundStyle(.white)
+                                        .clipShape(Capsule())
+                                }
+                            }
+                        } else {
+                            Button {
+                                dismiss()
+                                onChallenge(alpha)
+                            } label: {
+                                Text("Challenge")
+                                    .font(.caption.bold())
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(.red)
+                                    .foregroundStyle(.white)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
+                    .padding(12)
+
+                    autoUnratedWarning(for: alpha)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(.red.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(.red.opacity(0.3), lineWidth: 1)
+                        )
+                )
+            } else {
+                // Alpha locked
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color(.systemGray5))
+                            .frame(width: 52, height: 52)
+                        Image(systemName: "lock.fill")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Court Alpha")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.secondary)
+                        Text("Beat all regulars to unlock")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    Spacer()
+                }
+                .padding(12)
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .opacity(0.7)
+            }
+        }
+    }
+
+    // MARK: - Ladder Rung Card
+
+    private func ladderRungCard(npc: NPC, position: Int) -> some View {
+        let isDefeated = ladder?.defeatedNPCIDs.contains(npc.id) ?? false
+        let isNextChallenger = ladder?.nextChallengerID == npc.id
+        let isLocked = !isDefeated && !isNextChallenger
+
+        return VStack(spacing: 0) {
             HStack(spacing: 12) {
+                // Ladder position number
+                ZStack {
+                    Circle()
+                        .fill(rungColor(isDefeated: isDefeated, isNextChallenger: isNextChallenger))
+                        .frame(width: 28, height: 28)
+
+                    if isDefeated {
+                        Image(systemName: "checkmark")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                    } else if isLocked {
+                        Image(systemName: "lock.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("\(position + 1)")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                    }
+                }
+
                 // Portrait
                 ZStack {
                     Circle()
-                        .fill(npcDifficultyColor(npc).opacity(0.2))
-                        .frame(width: 48, height: 48)
+                        .fill(npcDifficultyColor(npc).opacity(isDefeated ? 0.1 : 0.2))
+                        .frame(width: 44, height: 44)
                     Text(String(npc.name.prefix(1)))
-                        .font(.title3.bold())
-                        .foregroundStyle(npcDifficultyColor(npc))
+                        .font(.callout.bold())
+                        .foregroundStyle(isDefeated ? .secondary : npcDifficultyColor(npc))
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(npc.name)
                         .font(.subheadline.bold())
-                    Text(npc.title)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(isDefeated ? .secondary : .primary)
+
+                    if isDefeated {
+                        Text("Gone home")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                    } else if isLocked {
+                        if let prevName = previousNPCName(before: position) {
+                            Text("Beat \(prevName) first")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    } else {
+                        Text(npc.title)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
                     HStack(spacing: 6) {
                         DifficultyBadge(difficulty: npc.difficulty)
                         Text("SUPR \(String(format: "%.2f", npc.duprRating))")
@@ -121,35 +358,72 @@ struct CourtDetailSheet: View {
 
                 Spacer()
 
-                Button {
-                    dismiss()
-                    onChallenge(npc)
-                } label: {
-                    Text("Challenge")
-                        .font(.caption.bold())
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(.green)
-                        .foregroundStyle(.white)
-                        .clipShape(Capsule())
+                if isDefeated {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else if isNextChallenger {
+                    Button {
+                        dismiss()
+                        onChallenge(npc)
+                    } label: {
+                        Text("Challenge")
+                            .font(.caption.bold())
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(.green)
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
+                    }
+                } else {
+                    Image(systemName: "lock.fill")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
                 }
             }
             .padding(12)
 
-            if isRated && autoUnrated {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.caption2)
-                    Text("Rating gap > \(String(format: "%.1f", GameConstants.DUPRRating.maxRatedGap)) — auto-unrated")
-                        .font(.caption2)
-                }
-                .foregroundStyle(.orange)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
+            if isNextChallenger {
+                autoUnratedWarning(for: npc)
             }
         }
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .opacity(isLocked ? 0.6 : 1.0)
+    }
+
+    // MARK: - Auto Unrated Warning
+
+    @ViewBuilder
+    private func autoUnratedWarning(for npc: NPC) -> some View {
+        let autoUnrated = DUPRCalculator.shouldAutoUnrate(
+            playerRating: playerRating,
+            opponentRating: npc.duprRating
+        )
+
+        if isRated && autoUnrated {
+            HStack(spacing: 4) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.caption2)
+                Text("Rating gap > \(String(format: "%.1f", GameConstants.DUPRRating.maxRatedGap)) — auto-unrated")
+                    .font(.caption2)
+            }
+            .foregroundStyle(.orange)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func rungColor(isDefeated: Bool, isNextChallenger: Bool) -> Color {
+        if isDefeated { return .green }
+        if isNextChallenger { return .blue }
+        return Color(.systemGray4)
+    }
+
+    private func previousNPCName(before position: Int) -> String? {
+        guard position > 0, position - 1 < npcs.count else { return nil }
+        return npcs[position - 1].name
     }
 
     private var difficultyColor: Color {

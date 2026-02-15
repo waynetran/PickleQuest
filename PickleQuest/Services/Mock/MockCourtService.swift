@@ -58,6 +58,11 @@ actor MockCourtService: CourtService {
         courtNPCAssignments[courtID] ?? []
     }
 
+    func getLadderNPCs(courtID: UUID) async -> [NPC] {
+        let npcs = courtNPCAssignments[courtID] ?? []
+        return npcs.sorted { $0.duprRating < $1.duprRating }
+    }
+
     // MARK: - NPC Distribution
 
     private func distributeNPCs() async {
@@ -68,17 +73,28 @@ actor MockCourtService: CourtService {
         }
 
         var tierCursor: [NPCDifficulty: Int] = [:]
+        let npcRange = GameConstants.CourtProgression.singlesNPCRange
+
         for court in courts {
             var npcs: [NPC] = []
+            let targetCount = Int.random(in: npcRange)
+
             for tier in court.difficultyTiers.sorted() {
                 guard let pool = npcsByTier[tier], !pool.isEmpty else { continue }
                 let cursor = tierCursor[tier, default: 0]
-                let take = min(2, pool.count)
+                // Distribute evenly across tiers up to target
+                let remainingSlots = targetCount - npcs.count
+                let tiersLeft = court.difficultyTiers.sorted().drop(while: { $0 < tier }).count
+                let take = max(1, min(remainingSlots / max(1, tiersLeft) + 1, pool.count))
                 for i in 0..<take {
+                    if npcs.count >= targetCount { break }
                     npcs.append(pool[(cursor + i) % pool.count])
                 }
                 tierCursor[tier] = (cursor + take) % pool.count
             }
+
+            // Sort by DUPR rating (weakest → strongest) to form the ladder
+            npcs.sort { $0.duprRating < $1.duprRating }
             courtNPCAssignments[court.id] = npcs
         }
     }

@@ -9,6 +9,7 @@ final class DependencyContainer: ObservableObject {
     let inventoryService: InventoryService
     let storeService: StoreService
     let courtService: CourtService
+    let courtProgressionService: CourtProgressionService
     let locationManager: LocationManager
 
     init(
@@ -18,6 +19,7 @@ final class DependencyContainer: ObservableObject {
         inventoryService: InventoryService? = nil,
         storeService: StoreService? = nil,
         courtService: CourtService? = nil,
+        courtProgressionService: CourtProgressionService? = nil,
         locationManager: LocationManager? = nil
     ) {
         let inventory = inventoryService ?? MockInventoryService()
@@ -28,6 +30,7 @@ final class DependencyContainer: ObservableObject {
         self.npcService = npcs
         self.storeService = storeService ?? MockStoreService()
         self.courtService = courtService ?? MockCourtService(npcService: npcs)
+        self.courtProgressionService = courtProgressionService ?? MockCourtProgressionService()
         self.locationManager = locationManager ?? LocationManager()
     }
 

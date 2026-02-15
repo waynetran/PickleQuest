@@ -6,6 +6,8 @@ import SwiftUI
 @Observable
 final class MapViewModel {
     private let courtService: CourtService
+    private let courtProgressionService: CourtProgressionService
+    private let npcService: NPCService
     let locationManager: LocationManager
 
     var courts: [Court] = []
@@ -15,14 +17,27 @@ final class MapViewModel {
     var courtsLoaded = false
     var pendingChallenge: NPC?
 
+    // Court ladder state
+    var currentLadder: CourtLadder?
+    var currentCourtPerk: CourtPerk?
+    var alphaNPC: NPC?
+    var ladderAdvanceResult: LadderAdvanceResult?
+
     // Dev mode movement
     var isStickyMode = false
 
     static let discoveryRadius: CLLocationDistance = 200
     private static let moveStepMeters: Double = 50
 
-    init(courtService: CourtService, locationManager: LocationManager) {
+    init(
+        courtService: CourtService,
+        courtProgressionService: CourtProgressionService,
+        npcService: NPCService,
+        locationManager: LocationManager
+    ) {
         self.courtService = courtService
+        self.courtProgressionService = courtProgressionService
+        self.npcService = npcService
         self.locationManager = locationManager
     }
 
@@ -49,7 +64,18 @@ final class MapViewModel {
 
     func selectCourt(_ court: Court) async {
         selectedCourt = court
-        npcsAtSelectedCourt = await courtService.getNPCsAtCourt(court.id)
+        npcsAtSelectedCourt = await courtService.getLadderNPCs(courtID: court.id)
+
+        // Initialize ladder if needed
+        let npcIDs = npcsAtSelectedCourt.map(\.id)
+        await courtProgressionService.initializeLadder(courtID: court.id, gameType: .singles, npcIDs: npcIDs)
+
+        // Load ladder state
+        currentLadder = await courtProgressionService.getLadder(courtID: court.id, gameType: .singles)
+        currentCourtPerk = await courtProgressionService.getCourtPerk(courtID: court.id)
+        alphaNPC = await courtProgressionService.getAlphaNPC(courtID: court.id, gameType: .singles)
+        ladderAdvanceResult = nil
+
         showCourtDetail = true
     }
 
@@ -57,6 +83,35 @@ final class MapViewModel {
         showCourtDetail = false
         selectedCourt = nil
         npcsAtSelectedCourt = []
+        currentLadder = nil
+        currentCourtPerk = nil
+        alphaNPC = nil
+        ladderAdvanceResult = nil
+    }
+
+    /// Validate that an NPC can be challenged based on ladder position.
+    func canChallengeNPC(_ npc: NPC) -> Bool {
+        guard let ladder = currentLadder else { return true }
+        return ladder.canChallenge(npcID: npc.id)
+    }
+
+    /// Record a match win against an NPC, advancing the ladder.
+    func recordMatchResult(courtID: UUID, npcID: UUID, didWin: Bool) async {
+        guard didWin else { return }
+        guard let court = await courtService.getCourt(by: courtID) else { return }
+
+        ladderAdvanceResult = await courtProgressionService.recordDefeat(
+            courtID: courtID,
+            gameType: .singles,
+            npcID: npcID,
+            court: court,
+            npcService: npcService
+        )
+
+        // Refresh ladder state
+        currentLadder = await courtProgressionService.getLadder(courtID: courtID, gameType: .singles)
+        currentCourtPerk = await courtProgressionService.getCourtPerk(courtID: courtID)
+        alphaNPC = await courtProgressionService.getAlphaNPC(courtID: courtID, gameType: .singles)
     }
 
     func effectiveLocation(devOverride: CLLocationCoordinate2D?) -> CLLocation? {

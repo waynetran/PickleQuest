@@ -230,6 +230,16 @@ enum GameConstants {
         static let resignCheckWindow: Int = 10
     }
 
+    // MARK: - Court Progression
+    enum CourtProgression {
+        static let singlesNPCRange: ClosedRange<Int> = 2...4
+        static let alphaStatScale: Double = 1.3
+        static let alphaStatCap: Int = 75
+        static let alphaRewardMultiplier: Double = 5.0
+        static let alphaLootCount: Int = 3
+        static let storeDiscountPercent: Double = 0.20
+    }
+
     // MARK: - XP
     enum XP {
         static let baseXPPerMatch: Int = 50

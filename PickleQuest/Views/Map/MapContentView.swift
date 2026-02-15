@@ -97,6 +97,9 @@ struct MapContentView: View {
                     court: court,
                     npcs: mapVM.npcsAtSelectedCourt,
                     playerRating: appState.player.duprRating,
+                    ladder: mapVM.currentLadder,
+                    courtPerk: mapVM.currentCourtPerk,
+                    alphaNPC: mapVM.alphaNPC,
                     isRated: Bindable(matchVM).isRated,
                     onChallenge: { npc in
                         mapVM.pendingChallenge = npc

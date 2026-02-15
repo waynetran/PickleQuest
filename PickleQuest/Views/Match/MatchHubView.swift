@@ -27,6 +27,8 @@ struct MatchHubView: View {
                 if mapVM == nil {
                     mapVM = MapViewModel(
                         courtService: container.courtService,
+                        courtProgressionService: container.courtProgressionService,
+                        npcService: container.npcService,
                         locationManager: container.locationManager
                     )
                 }
@@ -141,6 +143,16 @@ struct MatchHubView: View {
                 await container.inventoryService.removeConsumable(id)
             }
             player.consumables.removeAll { usedIDs.contains($0.id) }
+        }
+
+        // Advance court ladder on win
+        if let mapVM, let court = mapVM.selectedCourt, result.didPlayerWin, !result.wasResigned {
+            await mapVM.recordMatchResult(courtID: court.id, npcID: npc.id, didWin: true)
+
+            // Handle alpha loot drops
+            if case .alphaDefeated(let alphaLoot) = mapVM.ladderAdvanceResult {
+                matchVM.lootDrops.append(contentsOf: alphaLoot)
+            }
         }
 
         // Record match history
