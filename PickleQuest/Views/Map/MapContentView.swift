@@ -13,7 +13,7 @@ struct MapContentView: View {
     @State private var pendingDoublesOpp2: NPC?
     @State private var visibleRegion: MKCoordinateRegion?
     @State private var showTrainingView = false
-    @State private var playerAnimationState: CharacterAnimationState = .idleFront
+    @State private var playerAnimationState: CharacterAnimationState = .idleBack
     @State private var walkResetTask: Task<Void, Never>?
 
     var body: some View {
@@ -30,6 +30,32 @@ struct MapContentView: View {
                     proxy: proxy,
                     region: region
                 )
+
+                // "?" markers for undiscovered courts in fog-cleared areas
+                // Rendered ABOVE fog so they're always visible
+                ForEach(mapVM.courts) { court in
+                    let discovered = appState.player.discoveredCourtIDs.contains(court.id)
+                    let fogRevealed = appState.revealedFogCells.contains(FogOfWar.cell(for: court.coordinate))
+                    if !discovered && fogRevealed {
+                        if let screenPoint = proxy.convert(court.coordinate, to: .local) {
+                            Button {
+                                undiscoveredCourt = court
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.gray.opacity(0.7))
+                                        .frame(width: 36, height: 36)
+                                        .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+                                    Text("?")
+                                        .font(.system(size: 18, weight: .bold))
+                                        .foregroundStyle(.white)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .position(x: screenPoint.x, y: screenPoint.y)
+                        }
+                    }
+                }
             }
 
             // Dev mode movement controls
@@ -50,7 +76,7 @@ struct MapContentView: View {
                             walkResetTask = Task {
                                 try? await Task.sleep(for: .milliseconds(600))
                                 if !Task.isCancelled {
-                                    playerAnimationState = .idleFront
+                                    playerAnimationState = .idleBack
                                 }
                             }
                         }
@@ -198,9 +224,9 @@ struct MapContentView: View {
 
     private var mapLayer: some View {
         Map(position: $cameraPosition, interactionModes: [.pan]) {
-            // Player location (dev override or real)
-            if let override = appState.locationOverride {
-                Annotation("You", coordinate: override) {
+            // Player location (dev override, real GPS, or fallback)
+            if let playerCoord = appState.locationOverride ?? mapVM.locationManager.currentLocation?.coordinate {
+                Annotation("You", coordinate: playerCoord) {
                     MapPlayerAnnotation(
                         appearance: appState.player.appearance,
                         animationState: playerAnimationState
@@ -210,12 +236,10 @@ struct MapContentView: View {
                 UserAnnotation()
             }
 
-            // Court annotations
+            // Court annotations (discovered courts, or all when fog is off)
             ForEach(mapVM.courts) { court in
                 let discovered = appState.player.discoveredCourtIDs.contains(court.id)
-                // Show court if: discovered, fog is off, or fog has been cleared at this location
-                let fogRevealed = appState.revealedFogCells.contains(FogOfWar.cell(for: court.coordinate))
-                let visible = discovered || !appState.fogOfWarEnabled || fogRevealed
+                let visible = discovered || !appState.fogOfWarEnabled
                 if visible {
                     Annotation(
                         discovered ? court.name : "???",
@@ -244,7 +268,7 @@ struct MapContentView: View {
                         AnimatedSpriteView(
                             appearance: Coach.coachAppearance,
                             size: 160,
-                            animationState: .idleFront
+                            animationState: .idleBack
                         )
                         .allowsHitTesting(false)
                     }
@@ -312,7 +336,6 @@ struct MapContentView: View {
         )
         for id in newIDs {
             appState.player.discoveredCourtIDs.insert(id)
-            // Track daily challenge progress
             appState.player.dailyChallengeState?.incrementProgress(for: .visitCourts)
         }
     }
