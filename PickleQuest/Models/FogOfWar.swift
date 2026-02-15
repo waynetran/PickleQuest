@@ -10,7 +10,7 @@ enum FogOfWar {
     /// Each grid cell is ~20m x 20m
     static let cellSizeMeters: Double = 20.0
     /// Reveal radius around the player in meters
-    static let revealRadiusMeters: Double = 20.0
+    static let revealRadiusMeters: Double = 50.0
     /// Degrees latitude per cell (~20m)
     static let degreesPerCell: Double = 20.0 / 111_000.0
 

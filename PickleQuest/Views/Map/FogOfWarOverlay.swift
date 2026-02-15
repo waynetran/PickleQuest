@@ -18,11 +18,10 @@ struct FogOfWarOverlay: View {
                   let p2 = proxy.convert(northCoord, to: .local) else { return }
 
             let pixelsPerCell = abs(p1.y - p2.y)
-            // Skip rendering if cells are sub-pixel (extremely zoomed out)
             guard pixelsPerCell >= 0.5 else { return }
 
-            // Slightly larger radius for overlap between adjacent cells
-            let circleRadius = pixelsPerCell * 1.15
+            // Slightly larger radius so adjacent cells overlap smoothly
+            let circleRadius = pixelsPerCell * 1.2
 
             // Determine visible cell bounds from the region
             let minLat = region.center.latitude - region.span.latitudeDelta / 2
@@ -34,28 +33,33 @@ struct FogOfWarOverlay: View {
             let minCol = Int(floor(minLng / FogOfWar.degreesPerCell)) - 1
             let maxCol = Int(ceil(maxLng / FogOfWar.degreesPerCell)) + 1
 
-            // Build path: full-screen fog with even-odd holes for revealed cells
-            var path = Path()
-            path.addRect(CGRect(origin: .zero, size: size))
+            // Use drawLayer so destinationOut only erases within this layer
+            context.drawLayer { layerContext in
+                // Fog covers full canvas plus overflow above top edge
+                let fogRect = CGRect(x: 0, y: -200, width: size.width, height: size.height + 200)
+                layerContext.fill(
+                    Path(fogRect),
+                    with: .color(Color(white: 0.08, opacity: 0.7))
+                )
 
-            for cell in revealedCells {
-                guard cell.row >= minRow && cell.row <= maxRow
-                        && cell.col >= minCol && cell.col <= maxCol else { continue }
-                let coord = FogOfWar.coordinate(for: cell)
-                guard let screenPoint = proxy.convert(coord, to: .local) else { continue }
-                path.addEllipse(in: CGRect(
-                    x: screenPoint.x - circleRadius,
-                    y: screenPoint.y - circleRadius,
-                    width: circleRadius * 2,
-                    height: circleRadius * 2
-                ))
+                // Erase revealed cells — overlapping circles just erase more
+                layerContext.blendMode = .destinationOut
+                for cell in revealedCells {
+                    guard cell.row >= minRow && cell.row <= maxRow
+                            && cell.col >= minCol && cell.col <= maxCol else { continue }
+                    let coord = FogOfWar.coordinate(for: cell)
+                    guard let screenPoint = proxy.convert(coord, to: .local) else { continue }
+                    layerContext.fill(
+                        Path(ellipseIn: CGRect(
+                            x: screenPoint.x - circleRadius,
+                            y: screenPoint.y - circleRadius,
+                            width: circleRadius * 2,
+                            height: circleRadius * 2
+                        )),
+                        with: .color(.white)
+                    )
+                }
             }
-
-            context.fill(
-                path,
-                with: .color(Color(white: 0.12, opacity: 0.65)),
-                style: FillStyle(eoFill: true)
-            )
         }
         .allowsHitTesting(false)
     }
