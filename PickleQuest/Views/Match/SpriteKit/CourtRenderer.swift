@@ -117,9 +117,10 @@ enum CourtRenderer {
         let tl = courtPoint(nx: 0, ny: 1)
         let tr = courtPoint(nx: 1, ny: 1)
 
-        // Offset each corner outward by padding in screen space
-        let abl = CGPoint(x: bl.x - padding, y: bl.y - padding)
-        let abr = CGPoint(x: br.x + padding, y: br.y - padding)
+        // Bottom corners get extra horizontal padding for stronger perspective
+        let bottomExtra = C.apronBottomExtraPadding
+        let abl = CGPoint(x: bl.x - padding - bottomExtra, y: bl.y - padding)
+        let abr = CGPoint(x: br.x + padding + bottomExtra, y: br.y - padding)
         let atr = CGPoint(x: tr.x + padding, y: tr.y + padding)
         let atl = CGPoint(x: tl.x - padding, y: tl.y + padding)
 

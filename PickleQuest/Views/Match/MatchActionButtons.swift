@@ -58,18 +58,19 @@ struct MatchActionButtons: View {
                 Button {
                     Task { await viewModel.skipMatch() }
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 8) {
                         Image(systemName: "forward.fill")
+                            .font(.system(size: 16))
                         Text("Skip")
+                            .font(.system(size: 16, weight: .bold))
                     }
-                    .font(.caption.bold())
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 12)
                     .background(.black.opacity(0.6))
                     .clipShape(Capsule())
                 }
-                .padding(.bottom, 16)
+                .padding(.bottom, 24)
             }
         }
         .alert("Resign Match?", isPresented: $showResignConfirm) {

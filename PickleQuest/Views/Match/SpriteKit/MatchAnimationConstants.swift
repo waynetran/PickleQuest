@@ -9,7 +9,7 @@ enum MatchAnimationConstants {
 
     enum Court {
         // Trapezoid: near baseline wider, far baseline narrower (low court-level perspective)
-        static let nearBaselineWidth: CGFloat = 340
+        static let nearBaselineWidth: CGFloat = 380
         static let farBaselineWidth: CGFloat = 130
         static let courtHeight: CGFloat = 370
         static let courtBottomY: CGFloat = 250
@@ -29,7 +29,8 @@ enum MatchAnimationConstants {
         static let netColor = "#C0C0C0"
         static let netPostColor = "#808080"
         static let apronColor = "#3A8C42"           // green surround
-        static let apronPadding: CGFloat = 25
+        static let apronPadding: CGFloat = 30
+        static let apronBottomExtraPadding: CGFloat = 30   // extra width at bottom for perspective
     }
 
     enum Sprites {
