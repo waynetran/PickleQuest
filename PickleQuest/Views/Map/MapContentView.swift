@@ -197,7 +197,7 @@ struct MapContentView: View {
     // MARK: - Map Layer
 
     private var mapLayer: some View {
-        Map(position: $cameraPosition, bounds: MapCameraBounds(minimumDistance: 2500, maximumDistance: 2500)) {
+        Map(position: $cameraPosition, interactionModes: [.pan]) {
             // Player location (dev override or real)
             if let override = appState.locationOverride {
                 Annotation("You", coordinate: override) {
