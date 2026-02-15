@@ -14,6 +14,7 @@
 | 4.1 | Sprite Sheet + Character Customization | **Complete** |
 | 4.2 | Court Realism + Player Positioning | **Complete** |
 | 4.3 | Match Actions, Consumables, Character2 | **Complete** |
+| 4.4 | Court Ladder Progression System | **Complete** |
 | 5 | Doubles, Team Synergy, Tournaments | Planned |
 | 6 | Training, Coaching, Energy + Economy | Planned |
 | 7 | Persistence, Polish, Multiplayer Prep | Planned |
@@ -367,6 +368,55 @@ AsyncStream<MatchEvent> → MatchViewModel → courtScene.animate() → MatchAni
 - `MockInventoryService.swift` — consumable storage + starter items
 - `MatchService.swift` — createMatch params (consumables, reputation)
 - `MockMatchService.swift` — passes consumables/reputation to engine
+
+---
+
+## Milestone 4.4: Court Ladder Progression System
+
+**Commit**: `2862519`
+
+### What was built
+- **Court ladder system**: each court now has a structured ladder of 2-4 NPCs sorted weakest to strongest by DUPR rating
+- **Sequential progression**: players must beat NPCs in order — lowest first, then unlock the next challenger up the ladder
+- **Defeated NPC tracking**: beaten NPCs show as "Gone home" with green checkmark; locked NPCs display lock icon and "Beat [name] first"
+- **Alpha boss encounters**: after clearing all regulars at a court, an alpha boss spawns with 1.3x scaled stats (capped at 75 per stat), one difficulty tier above the court's strongest NPC
+- **Boss loot drops**: beating an alpha guarantees 1 legendary + 2 epic equipment drops (all with abilities)
+- **King of the Court**: beating the alpha awards a crown badge and "King of the Court" title on the court header
+- **Farmable alphas**: alpha bosses remain available after being beaten — re-challengeable for additional loot drops
+- **Court perks**: track per-court domination status (tournament invite, 20% store discount, coaching — stored as data for future feature wiring)
+- **Deterministic alpha IDs**: alpha NPCs use UUID derived from court ID, so the same alpha regenerates consistently
+- **Ladder UI overhaul**: CourtDetailSheet replaced flat NPC list with full ladder view — strongest at top, alpha card at very top with dramatic red styling, perk badges section
+
+### Architecture
+```
+CourtProgressionService (protocol)
+    ↓
+MockCourtProgressionService (actor) — stores ladders + perks + alpha NPCs
+    ↓
+MapViewModel — loads ladder on court select, validates challenges, records defeats
+    ↓
+CourtDetailSheet — renders ladder rungs, alpha card, perk badges
+    ↓
+MatchHubView processResult — calls mapVM.recordMatchResult on win, handles alpha loot
+```
+
+### New files
+- `Models/World/CourtLadder.swift` — CourtLadder struct (progression state per court/game type), GameType enum (singles/doubles), CourtPerk struct
+- `Engine/LootGeneration/AlphaNPCGenerator.swift` — generates alpha boss NPC with 1.3x stat scaling, difficulty bump, deterministic UUID, alpha dialogue
+- `Engine/LootGeneration/AlphaLootGenerator.swift` — generates 1 legendary + 2 epic drops for alpha defeats
+- `Services/Protocols/CourtProgressionService.swift` — protocol + LadderAdvanceResult enum (nextUnlocked, alphaUnlocked, alphaDefeated, alreadyDefeated)
+- `Services/Mock/MockCourtProgressionService.swift` — in-memory actor implementation
+
+### Modified files
+- `GameConstants.swift` — CourtProgression section (singlesNPCRange 2...4, alphaStatScale 1.3, alphaStatCap 75, alphaRewardMultiplier 5.0, alphaLootCount 3, storeDiscountPercent 0.20)
+- `Player.swift` — courtLadders and courtPerks arrays
+- `CourtService.swift` — getLadderNPCs method
+- `MockCourtService.swift` — 2-4 NPCs per court sorted by DUPR, getLadderNPCs
+- `DependencyContainer.swift` — courtProgressionService dependency
+- `MapViewModel.swift` — ladder state (currentLadder, alphaNPC, courtPerk, ladderAdvanceResult), selectCourt initializes ladder, canChallengeNPC validation, recordMatchResult
+- `CourtDetailSheet.swift` — full ladder UI overhaul (ladder rungs, alpha card, perk badges, King of Court crown)
+- `MapContentView.swift` — passes ladder/perk/alpha to CourtDetailSheet
+- `MatchHubView.swift` — post-match ladder advancement, alpha loot handling
 
 ---
 
