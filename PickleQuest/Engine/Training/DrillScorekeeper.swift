@@ -44,7 +44,7 @@ final class DrillScorekeeper {
             self.scoringMode = .rallyStreak
         case .servePractice:
             self.scoringMode = .serveAccuracy
-        case .returnOfServe:
+        case .accuracyDrill, .returnOfServe:
             self.scoringMode = .returnTarget
         }
     }

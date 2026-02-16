@@ -64,9 +64,9 @@ struct DrillConfig: Sendable {
                 showConeTargets: false,
                 instructions: "Swipe up to serve!\nAngle your swipe to aim left or right.\n5 serves each side!"
             )
-        case .returnOfServe:
+        case .accuracyDrill:
             return DrillConfig(
-                drillType: .returnOfServe,
+                drillType: .accuracyDrill,
                 playerStartNX: 0.5, playerStartNY: 0.08,
                 coachStartNX: 0.75, coachStartNY: 0.92,
                 playerMinNY: 0.0, playerMaxNY: 0.48,
@@ -76,6 +76,19 @@ struct DrillConfig: Sendable {
                 totalRounds: 10,
                 showConeTargets: true,
                 instructions: "Return the coach's serves!\nAim for the cones on the other side.\n10 serves to return!"
+            )
+        case .returnOfServe:
+            return DrillConfig(
+                drillType: .returnOfServe,
+                playerStartNX: 0.5, playerStartNY: 0.08,
+                coachStartNX: 0.25, coachStartNY: 0.95,
+                playerMinNY: 0.0, playerMaxNY: 0.48,
+                playerMinNX: 0.0, playerMaxNX: 1.0,
+                inputMode: .joystick,
+                rallyShotsRequired: 0,
+                totalRounds: 10,
+                showConeTargets: true,
+                instructions: "Return the coach's cross-court serves!\nAim for the cones on their side.\n5 serves from each side!"
             )
         }
     }

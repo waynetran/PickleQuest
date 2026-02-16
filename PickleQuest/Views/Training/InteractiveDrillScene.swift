@@ -217,7 +217,10 @@ final class InteractiveDrillScene: SKScene {
     }
 
     private func buildConeTargets() {
-        for target in P.coneTargets {
+        let targets = drill.type == .returnOfServe
+            ? P.returnOfServeConeTargets
+            : P.accuracyConeTargets
+        for target in targets {
             let screenPos = CourtRenderer.courtPoint(nx: target.nx, ny: target.ny)
             let cone = SKShapeNode()
             let path = CGMutablePath()
@@ -579,13 +582,16 @@ final class InteractiveDrillScene: SKScene {
     // MARK: - Cone Hit Detection (Return of Serve)
 
     private func checkConeHits() {
-        guard drill.type == .returnOfServe else { return }
+        guard drill.type == .accuracyDrill || drill.type == .returnOfServe else { return }
         guard ballSim.bounceCount == 1, ballSim.lastHitByPlayer else { return }
 
         let ballNX = ballSim.courtX
         let ballNY = ballSim.courtY
 
-        for (index, target) in P.coneTargets.enumerated() {
+        let targets = drill.type == .returnOfServe
+            ? P.returnOfServeConeTargets
+            : P.accuracyConeTargets
+        for (index, target) in targets.enumerated() {
             let dx = ballNX - target.nx
             let dy = ballNY - target.ny
             let dist = sqrt(dx * dx + dy * dy)
@@ -652,8 +658,9 @@ final class InteractiveDrillScene: SKScene {
             return
         }
 
-        // Check cone hits when ball bounces on coach's side (return of serve)
-        if drill.type == .returnOfServe && ballSim.bounceCount == 1 && ballSim.lastHitByPlayer {
+        // Check cone hits when ball bounces on coach's side (accuracy/return of serve)
+        if (drill.type == .accuracyDrill || drill.type == .returnOfServe)
+            && ballSim.bounceCount == 1 && ballSim.lastHitByPlayer {
             checkConeHits()
         }
 
@@ -665,6 +672,14 @@ final class InteractiveDrillScene: SKScene {
                     onBallDead(outcome: .serveIn)
                 } else {
                     onBallDead(outcome: .serveFault)
+                }
+            } else if drill.type == .returnOfServe {
+                // Return of serve: ball landed on coach's side = successful return
+                if ballSim.lastHitByPlayer && ballSim.courtY > 0.5 {
+                    scorekeeper.onSuccessfulReturn()
+                    onBallDead(outcome: .winner)
+                } else {
+                    onBallDead(outcome: .doubleBounce)
                 }
             } else {
                 let outcome: PointOutcome = ballSim.lastHitByPlayer ? .winner : .doubleBounce
@@ -707,7 +722,7 @@ final class InteractiveDrillScene: SKScene {
             feedNewBall()
         case .servePractice:
             phase = .waitingForServe
-        case .returnOfServe:
+        case .accuracyDrill, .returnOfServe:
             phase = .playing
             feedNewBall()
         }
@@ -743,7 +758,7 @@ final class InteractiveDrillScene: SKScene {
         case .servePractice:
             // Player serves via swipe — don't feed
             return
-        case .returnOfServe:
+        case .accuracyDrill, .returnOfServe:
             coachAI.serveToPlayer(ball: ballSim)
         }
 
@@ -811,8 +826,14 @@ final class InteractiveDrillScene: SKScene {
             scoreLabel.text = sideText
             rallyLabel.text = "In: \(scorekeeper.successfulReturns)"
         case .returnTarget:
-            ballCountLabel.text = "Return \(scorekeeper.totalRoundsAttempted + 1)/\(scorekeeper.totalRounds)"
-            scoreLabel.text = "Returns: \(scorekeeper.successfulReturns)"
+            let roundNum = min(scorekeeper.totalRoundsAttempted + 1, scorekeeper.totalRounds)
+            ballCountLabel.text = "Return \(roundNum)/\(scorekeeper.totalRounds)"
+            if drill.type == .returnOfServe {
+                let sideText = scorekeeper.totalRoundsAttempted < 5 ? "Coach: Left" : "Coach: Right"
+                scoreLabel.text = "\(sideText) · Returns: \(scorekeeper.successfulReturns)"
+            } else {
+                scoreLabel.text = "Returns: \(scorekeeper.successfulReturns)"
+            }
             rallyLabel.text = "Cone Hits: \(scorekeeper.coneHits)"
         }
     }

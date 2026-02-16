@@ -326,10 +326,20 @@ enum GameConstants {
         static let serveSwipeMaxPower: CGFloat = 300
         static let serveSwipeAngleRange: CGFloat = 0.5
 
-        // Cone targets (return of serve)
-        static let coneTargets: [(nx: CGFloat, ny: CGFloat)] = [
+        // Cone targets (accuracy drill)
+        static let accuracyConeTargets: [(nx: CGFloat, ny: CGFloat)] = [
             (0.25, 0.75), (0.50, 0.85), (0.75, 0.75)
         ]
+
+        // Cone targets (return of serve) — kitchen sidelines, deep middle, deep baseline sides
+        static let returnOfServeConeTargets: [(nx: CGFloat, ny: CGFloat)] = [
+            (0.12, 0.58),   // left kitchen sideline
+            (0.88, 0.58),   // right kitchen sideline
+            (0.50, 0.90),   // deep center
+            (0.15, 0.88),   // deep baseline left
+            (0.85, 0.88),   // deep baseline right
+        ]
+
         static let coneHitRadius: CGFloat = 0.10
     }
 

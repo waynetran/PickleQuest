@@ -109,8 +109,8 @@ final class DrillCoachAI {
         guard ball.bounceCount < 2 else { return false }
         guard ball.height < 0.20 else { return false }
 
-        // In serve practice, coach doesn't return — just catches
-        if drillType == .servePractice { return false }
+        // In serve practice and return of serve, coach doesn't return — just catches
+        if drillType == .servePractice || drillType == .returnOfServe { return false }
 
         let dx = ball.courtX - currentNX
         let dy = ball.courtY - currentNY
@@ -196,8 +196,8 @@ final class DrillCoachAI {
         case .servePractice:
             // Serve practice: coach doesn't feed — player serves
             return
-        case .returnOfServe:
-            // Return of serve: coach serves to player
+        case .accuracyDrill, .returnOfServe:
+            // Coach serves to player
             return
         }
 
@@ -211,12 +211,31 @@ final class DrillCoachAI {
         ball.lastHitByPlayer = false
     }
 
-    /// Coach serves to the player (return of serve drill).
-    /// Alternates sides: first 5 from right (nx=0.75), next 5 from left (nx=0.25).
+    /// Coach serves to the player.
+    /// Accuracy drill: first 5 from right, next 5 from left.
+    /// Return of serve: first 5 from LEFT (cross-court), next 5 from RIGHT (cross-court).
     func serveToPlayer(ball: DrillBallSimulation) {
         serveCount += 1
-        let fromRight = serveCount <= 5
-        let serveNX: CGFloat = fromRight ? 0.75 : 0.25
+
+        let serveNX: CGFloat
+        let targetNX: CGFloat
+
+        switch drillType {
+        case .returnOfServe:
+            // Cross-court: LEFT side first (5), then RIGHT side (5)
+            let fromLeft = serveCount <= 5
+            serveNX = fromLeft ? 0.25 : 0.75
+            // Cross-court target: opposite side of where coach is
+            targetNX = fromLeft
+                ? CGFloat.random(in: 0.55...0.80)
+                : CGFloat.random(in: 0.20...0.45)
+        default:
+            // Accuracy drill: RIGHT side first (5), then LEFT side (5)
+            let fromRight = serveCount <= 5
+            serveNX = fromRight ? 0.75 : 0.25
+            targetNX = CGFloat.random(in: 0.25...0.75)
+        }
+
         currentNX = serveNX
         self.targetNX = serveNX
         currentNY = config.coachStartNY
@@ -224,9 +243,8 @@ final class DrillCoachAI {
         let servePower = 0.5 + difficulty * 0.3
         let serveArc: CGFloat = 0.50
 
-        // Target player's side
-        let targetNX = CGFloat.random(in: 0.25...0.75)
-        let targetNY = CGFloat.random(in: 0.05...0.20)
+        // Target close to player's baseline
+        let targetNY = CGFloat.random(in: 0.05...0.18)
 
         ball.launch(
             from: CGPoint(x: serveNX, y: currentNY),

@@ -94,7 +94,7 @@ final class TrainingDrillScene: SKScene {
         case .dinkingDrill:
             runRallyAnimation(player: player, duration: duration)
             runCoachFeedingAnimation(coach: coach, duration: duration)
-        case .returnOfServe:
+        case .accuracyDrill, .returnOfServe:
             runDefenseAnimation(player: player, coach: coach, duration: duration)
         }
 

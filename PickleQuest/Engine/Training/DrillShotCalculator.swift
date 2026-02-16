@@ -60,7 +60,7 @@ enum DrillShotCalculator {
         case .dinkingDrill:
             // Dink: high arc, soft lob
             arc = CGFloat.random(in: 0.6...0.8)
-        case .returnOfServe:
+        case .accuracyDrill, .returnOfServe:
             // Return: moderate arc
             arc = CGFloat.random(in: 0.2...0.5)
         default:
@@ -97,7 +97,7 @@ enum DrillShotCalculator {
         case .baselineRally:
             // Rally: varying cross-court locations
             return (CGFloat.random(in: 0.15...0.85), CGFloat.random(in: 0.65...0.95))
-        case .returnOfServe:
+        case .accuracyDrill, .returnOfServe:
             // Return: deep cross-court
             return (CGFloat.random(in: 0.15...0.85), CGFloat.random(in: 0.65...0.90))
         case .servePractice:
@@ -127,6 +127,9 @@ enum DrillShotCalculator {
         if drillType == .dinkingDrill {
             // Dink: soft touch only, no power scaling
             power = 0.15 + (powerStat / 99.0) * 0.20
+        } else if drillType == .baselineRally {
+            // Baseline rally: hit harder to reach opponent's baseline
+            power = 0.5 + (powerStat / 99.0) * 0.5
         } else {
             power = 0.3 + (powerStat / 99.0) * 0.7
 
@@ -146,6 +149,9 @@ enum DrillShotCalculator {
         switch drillType {
         case .dinkingDrill:
             arc = CGFloat.random(in: 0.5...0.7)
+        case .baselineRally:
+            // Higher arc to drive ball deep near opponent's baseline
+            arc = CGFloat.random(in: 0.40...0.55)
         default:
             arc = CGFloat.random(in: 0.25...0.35)
         }
@@ -157,6 +163,9 @@ enum DrillShotCalculator {
         if drillType == .dinkingDrill {
             // Dink: keep in opponent's kitchen (0.52–0.68, before their kitchen line)
             targetNY = max(0.52, min(0.68, baseTargetNY))
+        } else if drillType == .baselineRally {
+            // Baseline rally: aim deep near opponent's baseline
+            targetNY = max(0.75, min(0.95, baseTargetNY))
         } else {
             targetNY = max(0.55, min(0.95, baseTargetNY))
         }
@@ -187,7 +196,7 @@ enum DrillShotCalculator {
         switch drillType {
         case .dinkingDrill:
             power = 0.15 + (powerStat / 99.0) * 0.15
-        case .returnOfServe:
+        case .accuracyDrill, .returnOfServe:
             power = 0.4 + (powerStat / 99.0) * 0.4
         default:
             power = 0.3 + (powerStat / 99.0) * 0.5
@@ -203,7 +212,7 @@ enum DrillShotCalculator {
         switch drillType {
         case .dinkingDrill:
             arc = 0.65  // dink: consistent soft lob
-        case .returnOfServe:
+        case .accuracyDrill, .returnOfServe:
             arc = 0.45  // aggressive but still deep
         default:
             arc = 0.55  // rally: high arc, lands near baseline
@@ -217,7 +226,7 @@ enum DrillShotCalculator {
         let targetNX: CGFloat
         let targetNY: CGFloat
         switch drillType {
-        case .returnOfServe:
+        case .accuracyDrill, .returnOfServe:
             // Corners, deep
             let corner = Bool.random()
             targetNX = corner ? CGFloat.random(in: 0.10...0.30) : CGFloat.random(in: 0.70...0.90)

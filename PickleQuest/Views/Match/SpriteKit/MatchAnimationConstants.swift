@@ -25,7 +25,7 @@ enum MatchAnimationConstants {
         // Colors
         static let surfaceColor = "#4A86C8"        // blue court
         static let lineColor = "#FFFFFF"
-        static let kitchenColor = "#3D73AD"         // slightly darker blue for kitchen
+        static let kitchenColor = "#8E8E93"         // grey kitchen zone
         static let netColor = "#C0C0C0"
         static let netPostColor = "#808080"
         static let apronColor = "#3A8C42"           // green surround

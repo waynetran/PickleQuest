@@ -141,6 +141,7 @@ struct InteractiveDrillView: View {
             // Stats (varies by drill type)
             HStack(spacing: 24) {
                 if result.drill.type == .baselineRally || result.drill.type == .dinkingDrill {
+                    // Rally drills: show rallies completed + best streak
                     VStack(spacing: 4) {
                         Text("\(result.ralliesCompleted)/10")
                             .font(.title2.bold().monospacedDigit())
@@ -155,7 +156,7 @@ struct InteractiveDrillView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                } else if result.drill.type == .returnOfServe {
+                } else if result.drill.type == .accuracyDrill || result.drill.type == .returnOfServe {
                     VStack(spacing: 4) {
                         Text("\(result.successfulReturns)/\(result.totalBalls)")
                             .font(.title2.bold().monospacedDigit())
