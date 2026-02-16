@@ -264,7 +264,7 @@ struct TrainingDrillView: View {
             appearance: appState.player.appearance,
             coachAppearance: coach.appearance,
             coachLevel: coach.level,
-            coachDialogue: coach.dialogue.onSession,
+            coachPersonality: coach.personality,
             playerEnergy: appState.player.currentEnergy,
             coachEnergy: coachEnergy,
             onComplete: { result in

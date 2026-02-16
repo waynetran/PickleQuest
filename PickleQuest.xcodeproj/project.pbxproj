@@ -151,6 +151,7 @@
 		C42CE90D2DA3273949387E7D /* MatchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 912C27A2B8A18DDDEDA05D69 /* MatchEngine.swift */; };
 		C568849F3E7E70B323E268D6 /* DependencyContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C7DF57C299CE8D8DF73B080 /* DependencyContainer.swift */; };
 		C59FDDAFB1C1E9CE54336D15 /* MatchCourtScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DF9A9414A06C483D6964FE9 /* MatchCourtScene.swift */; };
+		C76ACBC7B43C63E29217BFED /* CoachPersonality.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A68971196890067FA5B3BC2 /* CoachPersonality.swift */; };
 		C7E0584C2C5148BE0F63989B /* LevelUpBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75BF66C5ABC414685644FB7 /* LevelUpBanner.swift */; };
 		CD7F3AAC4180F9ECBFCA635D /* EquipmentCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B619B590B70982D275E99B1B /* EquipmentCardView.swift */; };
 		CDB28D325BE68FCE621848C4 /* InteractiveDrillScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA7C2EE5B4B3BC2816E9E92A /* InteractiveDrillScene.swift */; };
@@ -299,6 +300,7 @@
 		665DD2E2381E8DAD0E1A31C3 /* DUPRProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DUPRProfileTests.swift; sourceTree = "<group>"; };
 		68D8691955EBCC5E919FE7D9 /* TrainingResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingResult.swift; sourceTree = "<group>"; };
 		6918B86594312D1407B045AB /* MatchSpriteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchSpriteView.swift; sourceTree = "<group>"; };
+		6A68971196890067FA5B3BC2 /* CoachPersonality.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachPersonality.swift; sourceTree = "<group>"; };
 		6B76EE940F5B3616BE523BA2 /* TrainingDrill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingDrill.swift; sourceTree = "<group>"; };
 		6DE2F3174E21AC04B25ECDDA /* EquipmentRarity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentRarity.swift; sourceTree = "<group>"; };
 		6DF9A9414A06C483D6964FE9 /* MatchCourtScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchCourtScene.swift; sourceTree = "<group>"; };
@@ -588,6 +590,7 @@
 			isa = PBXGroup;
 			children = (
 				BBBB7B2357F5CEBB6C3168A0 /* Coach.swift */,
+				6A68971196890067FA5B3BC2 /* CoachPersonality.swift */,
 				E1F4F6711234985DD739D5AB /* DailyChallenge.swift */,
 				3AF4D0D6692B46B7BEB6CFA7 /* DrillConfig.swift */,
 				7AEF41F1D7795308585F814E /* InteractiveDrillResult.swift */,
@@ -1129,6 +1132,7 @@
 				3D4CF8CAE0599935F14CE975 /* CharacterCreationViewModel.swift in Sources */,
 				F891F09CDE18A4C95117C196 /* CharacterPreset.swift in Sources */,
 				C27B3751FD2D84CBA255C3AE /* Coach.swift in Sources */,
+				C76ACBC7B43C63E29217BFED /* CoachPersonality.swift in Sources */,
 				03EBB5DDE153AC015144D455 /* CoachService.swift in Sources */,
 				9789F4D02A64E20E7FEAF063 /* CoachView.swift in Sources */,
 				04E498BB1ED53A774576B7CE /* ColorReplacer.swift in Sources */,

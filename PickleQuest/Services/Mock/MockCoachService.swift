@@ -16,7 +16,8 @@ actor MockCoachService: CoachService {
                 onSession: "Great improvement! Your serve is getting sharper.",
                 onExhausted: "That's enough for today. Rest up and come back tomorrow!"
             ),
-            portraitName: "coach_maria"
+            portraitName: "coach_maria",
+            personalityType: .enthusiastic
         ),
         Coach(
             id: UUID(uuidString: "C0AC0002-0000-0000-0000-000000000002")!,
@@ -28,7 +29,8 @@ actor MockCoachService: CoachService {
                 onSession: "You're covering the court much better now!",
                 onExhausted: "Your legs need recovery. See you tomorrow!"
             ),
-            portraitName: "coach_darius"
+            portraitName: "coach_darius",
+            personalityType: .drill_sergeant
         ),
         Coach(
             id: UUID(uuidString: "C0AC0003-0000-0000-0000-000000000003")!,
@@ -40,7 +42,8 @@ actor MockCoachService: CoachService {
                 onSession: "Beautiful! That spin will confuse your opponents.",
                 onExhausted: "Your wrist needs rest. Practice what you learned!"
             ),
-            portraitName: "coach_yuki"
+            portraitName: "coach_yuki",
+            personalityType: .chill
         ),
         Coach(
             id: UUID(uuidString: "C0AC0004-0000-0000-0000-000000000004")!,
@@ -52,7 +55,8 @@ actor MockCoachService: CoachService {
                 onSession: "Nothing's getting past you now!",
                 onExhausted: "Even walls need maintenance. Come back tomorrow."
             ),
-            portraitName: "coach_reginald"
+            portraitName: "coach_reginald",
+            personalityType: .grumpy
         ),
         Coach(
             id: UUID(uuidString: "C0AC0005-0000-0000-0000-000000000005")!,
@@ -64,7 +68,8 @@ actor MockCoachService: CoachService {
                 onSession: "You're finding that inner calm. Keep it up.",
                 onExhausted: "Meditation takes time. Reflect on today's lesson."
             ),
-            portraitName: "coach_zen"
+            portraitName: "coach_zen",
+            personalityType: .zen
         ),
         Coach(
             id: UUID(uuidString: "C0AC0006-0000-0000-0000-000000000006")!,
@@ -76,7 +81,8 @@ actor MockCoachService: CoachService {
                 onSession: "Your court IQ just went up a level!",
                 onExhausted: "Study today's patterns. I'll have new ones tomorrow."
             ),
-            portraitName: "coach_sofia"
+            portraitName: "coach_sofia",
+            personalityType: .jokester
         )
     ]
 

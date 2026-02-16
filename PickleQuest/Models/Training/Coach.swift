@@ -10,6 +10,11 @@ struct Coach: Identifiable, Sendable {
     let isAlphaCoach: Bool
     var alphaDefeated: Bool
     var appearance: CharacterAppearance
+    let personalityType: CoachPersonalityType
+
+    var personality: CoachPersonality {
+        CoachPersonality(type: personalityType)
+    }
 
     init(
         id: UUID,
@@ -20,7 +25,8 @@ struct Coach: Identifiable, Sendable {
         portraitName: String,
         isAlphaCoach: Bool = false,
         alphaDefeated: Bool = false,
-        appearance: CharacterAppearance = .defaultOpponent
+        appearance: CharacterAppearance = .defaultOpponent,
+        personalityType: CoachPersonalityType = .enthusiastic
     ) {
         self.id = id
         self.name = name
@@ -31,6 +37,7 @@ struct Coach: Identifiable, Sendable {
         self.isAlphaCoach = isAlphaCoach
         self.alphaDefeated = alphaDefeated
         self.appearance = appearance
+        self.personalityType = personalityType
     }
 
     /// Base fee derived from coach level.
@@ -68,6 +75,10 @@ struct Coach: Identifiable, Sendable {
     /// Create a coach from the alpha NPC at a court.
     static func fromAlphaNPC(_ npc: NPC, alphaDefeated: Bool) -> Coach {
         let level = levelForDifficulty(npc.difficulty)
+        // Deterministic personality from NPC ID
+        let allTypes = CoachPersonalityType.allCases
+        let personalityIndex = djb2Hash(npc.id.uuidString) % allTypes.count
+        let personality = allTypes[personalityIndex]
 
         return Coach(
             id: npc.id,
@@ -84,7 +95,8 @@ struct Coach: Identifiable, Sendable {
             portraitName: npc.portraitName,
             isAlphaCoach: true,
             alphaDefeated: alphaDefeated,
-            appearance: AppearanceGenerator.appearance(for: npc)
+            appearance: AppearanceGenerator.appearance(for: npc),
+            personalityType: personality
         )
     }
 

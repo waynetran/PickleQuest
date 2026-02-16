@@ -11,7 +11,7 @@ struct InteractiveDrillView: View {
     let appearance: CharacterAppearance
     let coachAppearance: CharacterAppearance
     let coachLevel: Int
-    let coachDialogue: String
+    let coachPersonality: CoachPersonality
     let playerEnergy: Double
     let coachEnergy: Double
     let onComplete: (InteractiveDrillResult) -> Void
@@ -65,6 +65,7 @@ struct InteractiveDrillView: View {
             appearance: appearance,
             coachAppearance: coachAppearance,
             coachLevel: coachLevel,
+            coachPersonality: coachPersonality,
             playerEnergy: playerEnergy,
             coachEnergy: coachEnergy,
             onComplete: { result in
@@ -195,7 +196,7 @@ struct InteractiveDrillView: View {
                 .foregroundStyle(.yellow)
 
             // Coach dialogue
-            Text(coachDialogue)
+            Text("\"\(coachPersonality.drillEndLine(grade: result.performanceGrade))\"")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .italic()

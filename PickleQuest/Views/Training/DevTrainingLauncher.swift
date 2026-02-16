@@ -20,7 +20,7 @@ struct DevTrainingLauncher: View {
                     appearance: appState.player.appearance,
                     coachAppearance: .defaultOpponent,
                     coachLevel: 3,
-                    coachDialogue: "Good session! You're improving.",
+                    coachPersonality: CoachPersonality(type: .jokester),
                     playerEnergy: 100.0,
                     coachEnergy: 100.0,
                     onComplete: { result in

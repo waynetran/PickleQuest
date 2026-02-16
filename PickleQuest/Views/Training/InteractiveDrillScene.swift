@@ -38,6 +38,12 @@ final class InteractiveDrillScene: SKScene {
     // Cone targets (return of serve)
     private var coneNodes: [SKShapeNode] = []
 
+    // Speech bubble
+    private var speechBubbleNode: SKNode!
+    private var speechBubbleBackground: SKShapeNode!
+    private var speechBubbleLabel: SKLabelNode!
+    private var speechBubbleTail: SKShapeNode!
+
     // Game state
     private let ballSim = DrillBallSimulation()
     private var coachAI: DrillCoachAI!
@@ -45,6 +51,7 @@ final class InteractiveDrillScene: SKScene {
     private let drillConfig: DrillConfig
     private let playerStats: PlayerStats
     private let coachLevel: Int
+    private let coachPersonality: CoachPersonality
 
     // Player position in court space
     private var playerNX: CGFloat = 0.5
@@ -86,6 +93,7 @@ final class InteractiveDrillScene: SKScene {
         appearance: CharacterAppearance,
         coachAppearance: CharacterAppearance,
         coachLevel: Int,
+        coachPersonality: CoachPersonality,
         playerEnergy: Double,
         coachEnergy: Double,
         onComplete: @escaping (InteractiveDrillResult) -> Void
@@ -96,6 +104,7 @@ final class InteractiveDrillScene: SKScene {
         self.appearance = appearance
         self.coachAppearance = coachAppearance
         self.coachLevel = coachLevel
+        self.coachPersonality = coachPersonality
         self.playerEnergy = playerEnergy
         self.coachEnergy = coachEnergy
         self.onComplete = onComplete
@@ -154,6 +163,9 @@ final class InteractiveDrillScene: SKScene {
         coachNode.zPosition = AC.ZPositions.farPlayer
         addChild(coachNode)
         coachAnimator = SpriteSheetAnimator(node: coachNode, textures: cTextures, isNear: false)
+
+        // Speech bubble (follows coach)
+        buildSpeechBubble()
 
         // Ball
         ballTextures = SpriteFactory.makeBallTextures()
@@ -237,6 +249,89 @@ final class InteractiveDrillScene: SKScene {
             addChild(cone)
             coneNodes.append(cone)
         }
+    }
+
+    private func buildSpeechBubble() {
+        speechBubbleNode = SKNode()
+        speechBubbleNode.zPosition = AC.ZPositions.text + 2
+        speechBubbleNode.alpha = 0
+
+        // Label (multiline)
+        speechBubbleLabel = SKLabelNode(text: "")
+        speechBubbleLabel.fontName = AC.Text.fontName
+        speechBubbleLabel.fontSize = 11
+        speechBubbleLabel.fontColor = .white
+        speechBubbleLabel.numberOfLines = 0
+        speechBubbleLabel.preferredMaxLayoutWidth = 160
+        speechBubbleLabel.verticalAlignmentMode = .center
+        speechBubbleLabel.horizontalAlignmentMode = .center
+
+        // Background bubble (sized dynamically in showCoachSpeech)
+        speechBubbleBackground = SKShapeNode()
+        speechBubbleBackground.fillColor = UIColor(white: 0.1, alpha: 0.85)
+        speechBubbleBackground.strokeColor = UIColor(white: 0.7, alpha: 0.5)
+        speechBubbleBackground.lineWidth = 1
+
+        // Tail triangle pointing down toward coach
+        speechBubbleTail = SKShapeNode()
+        let tailPath = CGMutablePath()
+        tailPath.move(to: CGPoint(x: -6, y: 0))
+        tailPath.addLine(to: CGPoint(x: 6, y: 0))
+        tailPath.addLine(to: CGPoint(x: 0, y: -8))
+        tailPath.closeSubpath()
+        speechBubbleTail.path = tailPath
+        speechBubbleTail.fillColor = UIColor(white: 0.1, alpha: 0.85)
+        speechBubbleTail.strokeColor = .clear
+
+        speechBubbleNode.addChild(speechBubbleBackground)
+        speechBubbleNode.addChild(speechBubbleTail)
+        speechBubbleNode.addChild(speechBubbleLabel)
+        addChild(speechBubbleNode)
+    }
+
+    private func showCoachSpeech(_ text: String, duration: TimeInterval = 2.0) {
+        speechBubbleLabel.text = text
+        speechBubbleNode.removeAllActions()
+
+        // Size the bubble to fit text
+        let textFrame = speechBubbleLabel.frame
+        let padding: CGFloat = 10
+        let bubbleWidth = max(textFrame.width + padding * 2, 60)
+        let bubbleHeight = max(textFrame.height + padding * 2, 26)
+        let rect = CGRect(
+            x: -bubbleWidth / 2,
+            y: -bubbleHeight / 2,
+            width: bubbleWidth,
+            height: bubbleHeight
+        )
+        speechBubbleBackground.path = UIBezierPath(roundedRect: rect, cornerRadius: 8).cgPath
+
+        // Position tail at bottom center
+        speechBubbleTail.position = CGPoint(x: 0, y: -bubbleHeight / 2)
+
+        // Position bubble above coach
+        let coachScreenPos = CourtRenderer.courtPoint(nx: coachAI.currentNX, ny: coachAI.currentNY)
+        let coachScale = CourtRenderer.perspectiveScale(ny: coachAI.currentNY)
+        let bubbleY = coachScreenPos.y + 30 * coachScale + bubbleHeight / 2 + 8
+        speechBubbleNode.position = CGPoint(x: coachScreenPos.x, y: bubbleY)
+
+        // Clamp to screen bounds
+        let halfW = bubbleWidth / 2 + 4
+        if speechBubbleNode.position.x < halfW {
+            speechBubbleNode.position.x = halfW
+        } else if speechBubbleNode.position.x > AC.sceneWidth - halfW {
+            speechBubbleNode.position.x = AC.sceneWidth - halfW
+        }
+
+        speechBubbleNode.setScale(0.5)
+        speechBubbleNode.run(.group([
+            .fadeIn(withDuration: 0.15),
+            .scale(to: 1.0, duration: 0.15)
+        ]))
+        speechBubbleNode.run(.sequence([
+            .wait(forDuration: duration),
+            .fadeOut(withDuration: 0.4)
+        ]))
     }
 
     private func setupHUD() {
@@ -532,7 +627,8 @@ final class InteractiveDrillScene: SKScene {
         if scorekeeper.scoringMode == .rallyStreak,
            scorekeeper.currentConsecutiveReturns >= drillConfig.rallyShotsRequired {
             scorekeeper.onRallyCompleted()
-            showIndicator("Rally Complete!", color: .systemGreen, duration: 0.8)
+            let msg = coachPersonality.rallyCompleteLine(requiredShots: drillConfig.rallyShotsRequired)
+            showCoachSpeech(msg, duration: 1.5)
         }
 
         let ballFromLeft = ballSim.courtX < playerNX
@@ -600,7 +696,7 @@ final class InteractiveDrillScene: SKScene {
 
             if dist <= P.coneHitRadius {
                 scorekeeper.onConeHit()
-                showIndicator("Cone Hit!", color: .orange, duration: 0.6)
+                showCoachSpeech(coachPersonality.coneHitLine(), duration: 1.2)
                 // Flash cone green
                 if index < coneNodes.count {
                     let cone = coneNodes[index]
@@ -721,8 +817,30 @@ final class InteractiveDrillScene: SKScene {
         scorekeeper.onRoundAttempted()
         showOutcome(outcome)
 
+        // Show coach commentary after a short delay
+        let coachLine = coachCommentary(for: outcome)
+        if let line = coachLine {
+            run(.sequence([
+                .wait(forDuration: 0.5),
+                .run { [weak self] in self?.showCoachSpeech(line, duration: 1.8) }
+            ]))
+        }
+
         phase = .feedPause
-        feedPauseTimer = P.feedDelay + 0.4
+        feedPauseTimer = coachLine != nil ? P.feedDelay + 1.8 : P.feedDelay + 0.4
+    }
+
+    private func coachCommentary(for outcome: PointOutcome) -> String? {
+        switch outcome {
+        case .winner:
+            return coachPersonality.goodShotLine()
+        case .serveIn:
+            return coachPersonality.serveInLine()
+        case .net, .out, .doubleBounce:
+            return coachPersonality.missLine()
+        case .serveFault:
+            return coachPersonality.serveFaultLine()
+        }
     }
 
     private func advanceToNextRound() {
