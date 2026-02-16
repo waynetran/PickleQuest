@@ -22,6 +22,7 @@
 | 7b | Wager System + Hustler NPCs | **Complete** |
 | 8 | Match Simulation Realism + Focus Stat | **Complete** |
 | 9 | Gear Drop System (Loot on the Map) | **Complete** |
+| 9.1 | Drill System Redesign + UI Polish | **Complete** |
 | 7c | Persistence Polish, Cloud Prep, Multiplayer Prep | Planned |
 
 ---
@@ -843,6 +844,40 @@ MapContentView — ForEach annotations, reveal sheet, contested sheet, trail ban
 - `MatchViewModel.swift` — removed nested `LootDecision` enum (now shared)
 - `LootDropRow.swift` — updated binding type from `MatchViewModel.LootDecision?` to `LootDecision?`
 - `MatchHubView.swift` — passes `gearDropService` to MapViewModel init
+
+---
+
+## Milestone 9.1: Drill System Redesign + UI Polish
+
+**Commit**: `a251676`
+
+### What was built
+- **New drill types**: Replaced defenseDrill/footworkTraining with dinkingDrill/returnOfServe, renamed rallyDrill→baselineRally, redesigned servePractice with swipe input
+- **Rally scoring system**: 5-shot rally streaks (10 rounds) for baseline/dinking drills — 5 consecutive returns = 1 rally completed, miss resets counter
+- **Swipe-to-serve input**: Serve practice uses upward swipe gesture — angle controls aim direction, distance controls power, player stats reduce scatter
+- **Serve side switching**: 5 serves from right side, then animated switch to left side for 5 more
+- **Return of serve drill**: Coach serves alternating sides, player returns with joystick, 3 cone targets on coach's court for bonus scoring
+- **Cone target rendering**: Triangle SKShapeNodes at target positions, flash green on hit with "Cone Hit!" indicator
+- **Per-drill HUD**: Rally mode shows "Rally X/10" + "Returns: X/5", serve mode shows "Serve X/10" + side indicator, return mode shows "Return X/10" + "Cone Hits: X"
+- **ScoringMode enum**: rallyStreak (baseline/dink), serveAccuracy (serve), returnTarget (return of serve) — each with distinct grade calculation
+- **Pre-match instruction overlay**: MatchSpriteView now shows opponent name, match type, and explains all 5 actions (Timeout, Item, Hook, Resign, Skip) before match starts
+- **"Let's Play Pickleball!" button**: Replaces "Let's Go!" on drill instruction overlay, also used on match start overlay
+- **Consistent dev launcher**: All drill type buttons use `.frame(maxWidth: .infinity)` for uniform width
+- **DrillCoachAI updates**: Kitchen-zone clamping for dinking, `serveToPlayer()` method for return of serve, no-return mode for serve practice
+
+### Modified files (12)
+- `TrainingDrill.swift` — 4 new DrillType cases with updated properties and forStat() mapping
+- `DrillConfig.swift` — DrillInputMode enum, new config fields (inputMode, rallyShotsRequired, totalRounds, showConeTargets)
+- `GameConstants.swift` — Serve swipe constants (minDistance, maxPower, angleRange) + cone target positions/radius
+- `InteractiveDrillResult.swift` — Added ralliesCompleted and coneHits fields
+- `DrillScorekeeper.swift` — Rewritten with ScoringMode, rally/cone tracking, mode-specific success rates
+- `DrillCoachAI.swift` — Dinking behavior, serveToPlayer(), serve practice catch-only mode
+- `DrillShotCalculator.swift` — Updated all switch statements for new drill types
+- `InteractiveDrillScene.swift` — Swipe input, cone targets, rally counting, serve side management, new phases
+- `InteractiveDrillView.swift` — Per-drill instructions, button text, rally/cone result display
+- `TrainingDrillScene.swift` — Updated animation switch cases
+- `DevTrainingLauncher.swift` — Consistent button sizing, default to baselineRally
+- `MatchSpriteView.swift` — Pre-match instruction overlay with action explanations
 
 ---
 
