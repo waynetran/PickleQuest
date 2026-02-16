@@ -96,8 +96,8 @@ final class DrillCoachAI {
         currentNX = max(0.0, min(1.0, currentNX))
         switch drillType {
         case .dinkingDrill:
-            // Coach stays in kitchen zone
-            currentNY = max(0.55, min(0.75, currentNY))
+            // Coach stays just behind far kitchen line (0.682), not inside it
+            currentNY = max(0.68, min(0.85, currentNY))
         default:
             currentNY = max(config.coachStartNY - 0.10, min(1.0, currentNY))
         }
@@ -181,14 +181,14 @@ final class DrillCoachAI {
             targetNX = CGFloat.random(in: 0.25...0.75)
             targetNY = CGFloat.random(in: 0.05...0.20)
         case .dinkingDrill:
-            // Dink: soft feeds to kitchen zone
+            // Dink: soft feeds into player's kitchen zone (ny 0.20–0.30, before kitchen line at 0.318)
             targetNX = CGFloat.random(in: 0.25...0.75)
-            targetNY = CGFloat.random(in: 0.30...0.42)
+            targetNY = CGFloat.random(in: 0.20...0.30)
             ball.launch(
                 from: CGPoint(x: currentNX, y: currentNY),
                 toward: CGPoint(x: targetNX, y: targetNY),
-                power: 0.3 + difficulty * 0.15,
-                arc: 0.65,
+                power: 0.20 + difficulty * 0.10,
+                arc: 0.70,
                 spin: 0
             )
             ball.lastHitByPlayer = false

@@ -393,8 +393,8 @@ final class InteractiveDrillScene: SKScene {
         let swipeAngle = atan2(dx, dy)
         let angleDeviation = max(-P.serveSwipeAngleRange, min(P.serveSwipeAngleRange, swipeAngle))
 
-        // Swipe distance → power (capped)
-        let powerFactor = min(distance / P.serveSwipeMaxPower, 1.0)
+        // Swipe distance → raw power factor (0.0–1.0+, uncapped for overhit detection)
+        let rawPowerFactor = distance / P.serveSwipeMaxPower
 
         // Player stats reduce random scatter
         let accuracyStat = CGFloat(playerStats.stat(.accuracy))
@@ -404,12 +404,16 @@ final class InteractiveDrillScene: SKScene {
         let scatterX = CGFloat.random(in: -scatter...scatter)
         let scatterY = CGFloat.random(in: -scatter...scatter)
 
-        // Calculate target position
+        // Calculate target position — overhit pushes target deeper (past baseline = out)
+        let baseTargetNY: CGFloat = 0.70 + rawPowerFactor * 0.25  // sweet spot ~0.75–0.82, overhit >0.95 = out
         let targetNX = max(0.15, min(0.85, 0.5 + angleDeviation + scatterX))
-        let targetNY = max(0.60, min(0.90, 0.75 + scatterY))
+        let targetNY = max(0.55, min(1.05, baseTargetNY + scatterY))
 
-        let servePower = 0.4 + powerFactor * 0.5
-        let serveArc: CGFloat = 0.35 + (1.0 - powerFactor) * 0.15
+        // Power: too slow = can't clear net, too fast = rockets out
+        // Sweet spot is rawPowerFactor ~0.3–0.7
+        let servePower = 0.15 + min(rawPowerFactor, 1.2) * 0.65
+        // Arc: slow swipes get high arc (lobs), fast swipes get flat arc (drives)
+        let serveArc: CGFloat = max(0.15, 0.50 - rawPowerFactor * 0.30)
 
         // Launch ball from player position
         phase = .playing

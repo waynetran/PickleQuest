@@ -35,8 +35,8 @@ enum DrillShotCalculator {
         let power: CGFloat
         switch drillType {
         case .dinkingDrill:
-            // Dink: lower power
-            power = 0.2 + (powerStat / 99.0) * 0.4
+            // Dink: very soft power — keep ball in kitchen
+            power = 0.15 + (powerStat / 99.0) * 0.20
         default:
             power = 0.3 + (powerStat / 99.0) * 0.7
         }
@@ -92,8 +92,8 @@ enum DrillShotCalculator {
     private static func targetForDrill(_ drillType: DrillType) -> (CGFloat, CGFloat) {
         switch drillType {
         case .dinkingDrill:
-            // Dink: target kitchen zone on opponent's side
-            return (CGFloat.random(in: 0.25...0.75), CGFloat.random(in: 0.55...0.70))
+            // Dink: target opponent's kitchen zone (between net at 0.50 and kitchen line at 0.682)
+            return (CGFloat.random(in: 0.25...0.75), CGFloat.random(in: 0.52...0.66))
         case .baselineRally:
             // Rally: varying cross-court locations
             return (CGFloat.random(in: 0.15...0.85), CGFloat.random(in: 0.65...0.95))
@@ -123,13 +123,19 @@ enum DrillShotCalculator {
         let shotType: ShotType = ballApproachFromLeft ? .backhand : .forehand
 
         // Base power from stats
-        var power = 0.3 + (powerStat / 99.0) * 0.7
+        var power: CGFloat
+        if drillType == .dinkingDrill {
+            // Dink: soft touch only, no power scaling
+            power = 0.15 + (powerStat / 99.0) * 0.20
+        } else {
+            power = 0.3 + (powerStat / 99.0) * 0.7
 
-        // Height bonus: higher ball at contact = more power (overhead smash)
-        let heightBonus = min(ballHeight / 0.15, 1.0) * P.heightPowerBonus
-        power += heightBonus
+            // Height bonus: higher ball at contact = more power (overhead smash)
+            let heightBonus = min(ballHeight / 0.15, 1.0) * P.heightPowerBonus
+            power += heightBonus
+        }
 
-        power = max(0.2, min(1.0, power))
+        power = max(0.15, min(1.0, power))
 
         // Spin
         let spinDirection: CGFloat = Bool.random() ? 1.0 : -1.0
@@ -147,7 +153,13 @@ enum DrillShotCalculator {
         // Target on coach's side
         let (baseTargetNX, baseTargetNY) = targetForDrill(drillType)
         let targetNX = max(0.05, min(0.95, baseTargetNX))
-        let targetNY = max(0.55, min(0.95, baseTargetNY))
+        let targetNY: CGFloat
+        if drillType == .dinkingDrill {
+            // Dink: keep in opponent's kitchen (0.52–0.68, before their kitchen line)
+            targetNY = max(0.52, min(0.68, baseTargetNY))
+        } else {
+            targetNY = max(0.55, min(0.95, baseTargetNY))
+        }
 
         return ShotResult(
             power: power,
@@ -174,7 +186,7 @@ enum DrillShotCalculator {
         let power: CGFloat
         switch drillType {
         case .dinkingDrill:
-            power = 0.2 + (powerStat / 99.0) * 0.3
+            power = 0.15 + (powerStat / 99.0) * 0.15
         case .returnOfServe:
             power = 0.4 + (powerStat / 99.0) * 0.4
         default:
@@ -211,9 +223,9 @@ enum DrillShotCalculator {
             targetNX = corner ? CGFloat.random(in: 0.10...0.30) : CGFloat.random(in: 0.70...0.90)
             targetNY = CGFloat.random(in: 0.03...0.18)
         case .dinkingDrill:
-            // Kitchen zone
+            // Player's kitchen zone (between net and kitchen line at 0.318)
             targetNX = CGFloat.random(in: 0.25...0.75)
-            targetNY = CGFloat.random(in: 0.30...0.45)
+            targetNY = CGFloat.random(in: 0.20...0.30)
         default:
             // Baseline rally: deep, near baseline
             targetNX = CGFloat.random(in: 0.15...0.85)
