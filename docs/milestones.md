@@ -739,6 +739,21 @@ MatchHubView.processResult → npcLossRecord tracking, hustler loot generation
 - **UI display**: Purse amounts shown on ladder rung cards (next challenger) and hustler cards. WagerSelectionSheet filters tiers to NPC purse. Hustler sheet shows effective wager when purse < base.
 - **Tests**: 4 new WagerDecision tests (purse rejection, within-purse acceptance, hustler purse cap, hustler empty purse).
 
+### Equipment Brand, Level & Base/Bonus Stat System
+
+**Commit**: `83ef0bb`
+
+- **14 equipment brands**: 6 multi-slot (CourtKraft, SwiftSole, EnduroWear, ProSpin, EliteEdge, AllCourt) + 8 single-slot specialists (Dinkmaster, SpinWizard, ThunderSmash, ZenPaddle, RushFoot, IronSole, ClutchGear, FlexForm), ~60 models total
+- **Slot-relevant base stats**: each model specializes in one stat relevant to its slot (paddle: power/accuracy/spin/consistency; shoes: speed/positioning/reflexes/defense; etc.)
+- **Rarity-driven stat split**: base stat value scales by rarity (common=3, legendary=16); bonus stat count scales (common=0, legendary=4) with separate budget distribution
+- **Equipment levels 1-25**: level cap per rarity (common=5, legendary=25), +5% stat scaling per level, exponential upgrade costs with rarity multiplier
+- **Player-level gating**: equipment with level > player level contributes 0 stats (prevents twinking)
+- **Brand identity**: equipment named "Brand Model" (e.g., "Dinkmaster Vortex"), brand shown on inventory cards and store items
+- **Upgrade system**: coin-based upgrades via inventory detail view, cost = `25 * pow(targetLevel, 1.4) * rarityMultiplier`
+- **Backward compatible**: all new fields use `decodeIfPresent` with defaults in custom Codable init
+- **Updated views**: level badges on cards, base vs bonus stat sections in detail view, upgrade button, level gate warnings
+- **Tests**: 6 new loot generator tests (brand assignment, stat budget, base/bonus split), 3 new stat calculator tests (level multiplier, level gate, default level)
+
 ---
 
 ## Milestone 7c: Persistence Polish, Cloud Prep, Multiplayer Prep (Planned)
