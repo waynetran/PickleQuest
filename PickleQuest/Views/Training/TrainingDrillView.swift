@@ -267,6 +267,7 @@ struct TrainingDrillView: View {
                 statGained: result.statGained,
                 statGainAmount: result.statGainAmount,
                 appearance: appState.player.appearance,
+                coachAppearance: coach.appearance,
                 onComplete: { [weak vm] in
                     vm?.onAnimationComplete()
                 }

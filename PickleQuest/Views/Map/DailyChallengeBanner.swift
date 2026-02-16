@@ -111,3 +111,78 @@ struct DailyChallengeBanner: View {
         }
     }
 }
+
+/// Full list view for the sheet — shows all challenges without expand/collapse.
+struct DailyChallengeListView: View {
+    let state: DailyChallengeState
+    let onClaimBonus: () -> Void
+
+    var body: some View {
+        List {
+            ForEach(state.challenges) { challenge in
+                HStack(spacing: 12) {
+                    Image(systemName: challenge.isCompleted ? "checkmark.circle.fill" : challenge.type.iconName)
+                        .foregroundStyle(challenge.isCompleted ? .green : .secondary)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(challenge.description)
+                            .font(.subheadline)
+                            .foregroundStyle(challenge.isCompleted ? .secondary : .primary)
+                            .strikethrough(challenge.isCompleted)
+
+                        if challenge.targetCount > 1 {
+                            ProgressView(value: Double(challenge.currentCount), total: Double(challenge.targetCount))
+                                .tint(challenge.isCompleted ? .green : .blue)
+                            Text("\(challenge.currentCount)/\(challenge.targetCount)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("+\(challenge.coinReward)")
+                            .font(.caption.bold())
+                            .foregroundStyle(.yellow)
+                        Text("+\(challenge.xpReward) XP")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .listRowSeparator(.hidden)
+            }
+
+            // Completion bonus
+            if state.allCompleted && !state.bonusClaimed {
+                Button {
+                    onClaimBonus()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "gift.fill")
+                            .foregroundStyle(.yellow)
+                        Text("Claim Bonus: +\(GameConstants.DailyChallenge.completionBonusCoins) coins")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.yellow)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(.yellow.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .listRowSeparator(.hidden)
+            } else if state.bonusClaimed {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Text("All bonuses claimed!")
+                        .font(.subheadline)
+                        .foregroundStyle(.green)
+                }
+                .listRowSeparator(.hidden)
+            }
+        }
+        .listStyle(.plain)
+    }
+}

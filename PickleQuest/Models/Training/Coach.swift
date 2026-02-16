@@ -9,6 +9,7 @@ struct Coach: Identifiable, Sendable {
     let portraitName: String
     let isAlphaCoach: Bool
     var alphaDefeated: Bool
+    var appearance: CharacterAppearance
 
     init(
         id: UUID,
@@ -18,7 +19,8 @@ struct Coach: Identifiable, Sendable {
         dialogue: CoachDialogue,
         portraitName: String,
         isAlphaCoach: Bool = false,
-        alphaDefeated: Bool = false
+        alphaDefeated: Bool = false,
+        appearance: CharacterAppearance = .defaultOpponent
     ) {
         self.id = id
         self.name = name
@@ -28,6 +30,7 @@ struct Coach: Identifiable, Sendable {
         self.portraitName = portraitName
         self.isAlphaCoach = isAlphaCoach
         self.alphaDefeated = alphaDefeated
+        self.appearance = appearance
     }
 
     /// Base fee derived from coach level.
@@ -80,7 +83,8 @@ struct Coach: Identifiable, Sendable {
             ),
             portraitName: npc.portraitName,
             isAlphaCoach: true,
-            alphaDefeated: alphaDefeated
+            alphaDefeated: alphaDefeated,
+            appearance: AppearanceGenerator.appearance(for: npc)
         )
     }
 
@@ -94,16 +98,6 @@ struct Coach: Identifiable, Sendable {
         }
     }
 
-    /// All-white appearance for coach sprites in drill scenes.
-    static let coachAppearance = CharacterAppearance(
-        hairColor: "#FFFFFF",
-        skinTone: "#FFFFFF",
-        shirtColor: "#FFFFFF",
-        shortsColor: "#FFFFFF",
-        headbandColor: "#FFFFFF",
-        shoeColor: "#FFFFFF",
-        paddleColor: "#FFFFFF"
-    )
 }
 
 /// Deterministic hash (djb2) — stable across process launches unlike String.hashValue.

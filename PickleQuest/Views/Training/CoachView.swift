@@ -16,14 +16,11 @@ struct CoachView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Coach header
             HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(.blue.opacity(0.2))
-                        .frame(width: 52, height: 52)
-                    Image(systemName: "figure.run")
-                        .font(.title2)
-                        .foregroundStyle(.blue)
-                }
+                AnimatedSpriteView(
+                    appearance: coach.appearance,
+                    size: 52,
+                    animationState: .idleFront
+                )
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(coach.name)

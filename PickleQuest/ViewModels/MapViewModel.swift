@@ -28,6 +28,7 @@ final class MapViewModel {
     // Coach state
     var coachAtSelectedCourt: Coach?
     var courtIDsWithCoaches: Set<UUID> = []
+    var coachAppearances: [UUID: CharacterAppearance] = [:] // courtID → appearance for map sprites
 
     // Daily challenges
     var dailyChallengeState: DailyChallengeState?
@@ -80,14 +81,26 @@ final class MapViewModel {
 
         // Build set of court IDs that have coaches (for map display)
         var coachIDs = Set<UUID>()
+        var appearances: [UUID: CharacterAppearance] = [:]
         let allCoaches = await coachService.getAllCoaches()
-        coachIDs.formUnion(allCoaches.keys)
+        for (courtID, coach) in allCoaches {
+            coachIDs.insert(courtID)
+            appearances[courtID] = coach.appearance
+        }
         for court in courts {
             if await coachService.isAlphaCoachCourt(court.id) {
                 coachIDs.insert(court.id)
+                // Pre-compute appearance from the strongest NPC at this court
+                if appearances[court.id] == nil {
+                    let npcs = await courtService.getLadderNPCs(courtID: court.id)
+                    if let strongest = npcs.max(by: { $0.duprRating < $1.duprRating }) {
+                        appearances[court.id] = AppearanceGenerator.appearance(for: strongest)
+                    }
+                }
             }
         }
         courtIDsWithCoaches = coachIDs
+        coachAppearances = appearances
     }
 
     func selectCourt(_ court: Court) async {
@@ -112,10 +125,12 @@ final class MapViewModel {
                 let coach = Coach.fromAlphaNPC(alpha, alphaDefeated: defeated)
                 await coachService.setAlphaCoach(coach, courtID: court.id)
                 coachAtSelectedCourt = coach
+                coachAppearances[court.id] = coach.appearance
             } else if let strongest = npcsAtSelectedCourt.max(by: { $0.duprRating < $1.duprRating }) {
                 // Alpha not unlocked yet — strongest NPC coaches
                 let coach = Coach.fromAlphaNPC(strongest, alphaDefeated: false)
                 coachAtSelectedCourt = coach
+                coachAppearances[court.id] = coach.appearance
             }
         } else {
             coachAtSelectedCourt = await coachService.getCoachAtCourt(court.id)

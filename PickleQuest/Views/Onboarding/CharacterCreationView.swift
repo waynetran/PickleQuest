@@ -55,7 +55,7 @@ struct CharacterCreationView: View {
             Spacer()
 
             AnimatedSpriteView(
-                appearance: viewModel.selectedPreset.appearance,
+                appearance: viewModel.previewAppearance,
                 size: 100,
                 animationState: .idleFront
             )
@@ -92,11 +92,17 @@ struct CharacterCreationView: View {
 
             // Large preview
             AnimatedSpriteView(
-                appearance: viewModel.selectedPreset.appearance,
+                appearance: viewModel.previewAppearance,
                 size: 120,
                 animationState: .idleFront
             )
             .padding(.vertical, 8)
+
+            // Body type picker
+            HStack(spacing: 16) {
+                spriteSheetOption("character1-Sheet", label: "Body 1")
+                spriteSheetOption("character2-Sheet", label: "Body 2")
+            }
 
             Text(viewModel.selectedPreset.name)
                 .font(.headline)
@@ -115,6 +121,33 @@ struct CharacterCreationView: View {
             }
 
             Spacer()
+        }
+    }
+
+    private func spriteSheetOption(_ sheet: String, label: String) -> some View {
+        let isSelected = viewModel.selectedSpriteSheet == sheet
+        var previewApp = viewModel.selectedPreset.appearance
+        previewApp.spriteSheet = sheet
+        return VStack(spacing: 6) {
+            AnimatedSpriteView(
+                appearance: previewApp,
+                size: 56,
+                animationState: .idleFront
+            )
+            Text(label)
+                .font(.caption.bold())
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isSelected ? Color.accentColor.opacity(0.15) : Color(.systemGray6))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(isSelected ? Color.accentColor : .clear, lineWidth: 2)
+        )
+        .onTapGesture {
+            viewModel.selectedSpriteSheet = sheet
         }
     }
 

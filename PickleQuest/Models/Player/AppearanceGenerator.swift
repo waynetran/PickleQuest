@@ -51,6 +51,35 @@ enum AppearanceGenerator {
 
     // MARK: - Generation
 
+    /// Generate appearance from a UUID with a default personality (for coaches, etc.)
+    static func appearance(forID id: UUID, personality: NPCPersonality = .allRounder) -> CharacterAppearance {
+        let hash = stableHash(from: id)
+
+        let hairIndex = hash[0] % hairColors.count
+        let skinIndex = hash[1] % skinTones.count
+        let shortsIndex = hash[2] % shortsColors.count
+        let shoeIndex = hash[3] % shoeColors.count
+        let paddleIndex = hash[4] % paddleColors.count
+
+        let palette = shirtPalette(for: personality)
+        let shirtIndex = hash[5] % palette.count
+        let shirtColor = palette[shirtIndex]
+
+        let spriteSheetIndex = hash[6] % 2
+        let spriteSheet = spriteSheetIndex == 0 ? "character1-Sheet" : "character2-Sheet"
+
+        return CharacterAppearance(
+            hairColor: hairColors[hairIndex],
+            skinTone: skinTones[skinIndex],
+            shirtColor: shirtColor,
+            shortsColor: shortsColors[shortsIndex],
+            headbandColor: shirtColor,
+            shoeColor: shoeColors[shoeIndex],
+            paddleColor: paddleColors[paddleIndex],
+            spriteSheet: spriteSheet
+        )
+    }
+
     static func appearance(for npc: NPC) -> CharacterAppearance {
         let hash = stableHash(from: npc.id)
 

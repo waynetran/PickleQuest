@@ -5,6 +5,7 @@ import Foundation
 final class CharacterCreationViewModel {
     var playerName: String = ""
     var selectedPreset: CharacterPreset = CharacterPreset.allPresets[0]
+    var selectedSpriteSheet: String = "character1-Sheet"
     var selectedPersonality: NPCPersonality = .allRounder
     var currentStep: CreationStep = .name
 
@@ -12,6 +13,13 @@ final class CharacterCreationViewModel {
         case name
         case appearance
         case personality
+    }
+
+    /// Preview appearance combining preset colors with selected sprite sheet
+    var previewAppearance: CharacterAppearance {
+        var appearance = selectedPreset.appearance
+        appearance.spriteSheet = selectedSpriteSheet
+        return appearance
     }
 
     var isNameValid: Bool {
@@ -46,7 +54,9 @@ final class CharacterCreationViewModel {
     func createPlayer() -> Player {
         let name = playerName.trimmingCharacters(in: .whitespacesAndNewlines)
         var player = Player.newPlayer(name: name)
-        player.appearance = selectedPreset.appearance
+        var appearance = selectedPreset.appearance
+        appearance.spriteSheet = selectedSpriteSheet
+        player.appearance = appearance
         player.personality = selectedPersonality
 
         // Apply personality stat bias (keeps total equal)

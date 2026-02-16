@@ -12,7 +12,11 @@ struct MatchResultView: View {
     let energyDrain: Double
     let onDismiss: () -> Void
 
+    @EnvironmentObject private var container: DependencyContainer
     @State private var showDiscardAlert = false
+    @State private var showLevelUpBanner = true
+    @State private var showStatAllocation = false
+    @State private var profileVM: PlayerProfileViewModel?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -60,9 +64,6 @@ struct MatchResultView: View {
                         }
                     }
                     .padding(.top, 24)
-
-                    // Level Up Banner
-                    LevelUpBanner(rewards: levelUpRewards)
 
                     // Rewards
                     HStack(spacing: 24) {
@@ -197,6 +198,35 @@ struct MatchResultView: View {
             } message: {
                 let count = matchVM.lootDrops.filter { matchVM.lootDecisions[$0.id] == nil }.count
                 Text("\(count) item(s) will be discarded.")
+            }
+        }
+        .overlay(alignment: .top) {
+            if showLevelUpBanner && !levelUpRewards.isEmpty {
+                LevelUpBanner(
+                    rewards: levelUpRewards,
+                    onAllocate: {
+                        if profileVM == nil {
+                            profileVM = PlayerProfileViewModel(
+                                playerService: container.playerService,
+                                inventoryService: container.inventoryService
+                            )
+                        }
+                        showStatAllocation = true
+                    },
+                    onDismiss: {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            showLevelUpBanner = false
+                        }
+                    }
+                )
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .padding(.top, 8)
+            }
+        }
+        .animation(.spring(duration: 0.4), value: showLevelUpBanner)
+        .sheet(isPresented: $showStatAllocation) {
+            if let vm = profileVM {
+                StatAllocationView(viewModel: vm)
             }
         }
     }

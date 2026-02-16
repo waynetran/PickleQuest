@@ -12,6 +12,7 @@ final class TrainingDrillScene: SKScene {
     private let statGained: StatType
     private let statGainAmount: Int
     private let appearance: CharacterAppearance
+    private let coachAppearance: CharacterAppearance
     private let onComplete: () -> Void
 
     init(
@@ -19,12 +20,14 @@ final class TrainingDrillScene: SKScene {
         statGained: StatType,
         statGainAmount: Int,
         appearance: CharacterAppearance,
+        coachAppearance: CharacterAppearance,
         onComplete: @escaping () -> Void
     ) {
         self.drillType = drillType
         self.statGained = statGained
         self.statGainAmount = statGainAmount
         self.appearance = appearance
+        self.coachAppearance = coachAppearance
         self.onComplete = onComplete
         super.init(size: CGSize(
             width: MatchAnimationConstants.sceneWidth,
@@ -60,8 +63,8 @@ final class TrainingDrillScene: SKScene {
         node.zPosition = MatchAnimationConstants.ZPositions.nearPlayer
         addChild(node)
 
-        // Coach sprite (far side, all-white, feeding balls)
-        let (cNode, cTextures) = SpriteFactory.makeCharacterNode(appearance: Coach.coachAppearance, isNearPlayer: false)
+        // Coach sprite (far side, using coach's actual appearance)
+        let (cNode, cTextures) = SpriteFactory.makeCharacterNode(appearance: coachAppearance, isNearPlayer: false)
         coachTextures = cTextures
         coachNode = cNode
         let farScale = MatchAnimationConstants.Sprites.farPlayerScale * CourtRenderer.perspectiveScale(ny: 0.92)

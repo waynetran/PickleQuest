@@ -121,9 +121,13 @@ actor MockCoachService: CoachService {
                 let targetLevel = levelForDifficulty(courtDifficulty)
 
                 if let matchIdx = availableCoaches.firstIndex(where: { $0.level == targetLevel }) {
-                    courtCoaches[courtID] = availableCoaches.remove(at: matchIdx)
+                    var coach = availableCoaches.remove(at: matchIdx)
+                    coach.appearance = AppearanceGenerator.appearance(forID: coach.id)
+                    courtCoaches[courtID] = coach
                 } else {
-                    courtCoaches[courtID] = availableCoaches.removeFirst()
+                    var coach = availableCoaches.removeFirst()
+                    coach.appearance = AppearanceGenerator.appearance(forID: coach.id)
+                    courtCoaches[courtID] = coach
                 }
             }
         }

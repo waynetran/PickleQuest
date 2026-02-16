@@ -214,7 +214,7 @@ struct MapContentView: View {
         .sheet(isPresented: $showChallenges) {
             if let challengeState = mapVM.dailyChallengeState {
                 NavigationStack {
-                    DailyChallengeBanner(state: challengeState) {
+                    DailyChallengeListView(state: challengeState) {
                         if challengeState.allCompleted && !challengeState.bonusClaimed {
                             appState.player.wallet.coins += GameConstants.DailyChallenge.completionBonusCoins
                             mapVM.dailyChallengeState?.bonusClaimed = true
@@ -296,9 +296,9 @@ struct MapContentView: View {
                 if discovered && mapVM.courtIDsWithCoaches.contains(court.id) {
                     Annotation("", coordinate: court.coachCoordinate) {
                         AnimatedSpriteView(
-                            appearance: Coach.coachAppearance,
+                            appearance: mapVM.coachAppearances[court.id] ?? .defaultOpponent,
                             size: 160,
-                            animationState: .idleBack
+                            animationState: .idleFront
                         )
                         .onTapGesture {
                             Task { await mapVM.selectCourt(court) }
