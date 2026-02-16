@@ -108,11 +108,14 @@ enum DrillShotCalculator {
 
     /// Generate a shot for the player.
     /// - ballHeight: ball height at time of contact (logical units)
+    /// Generate a shot for the player.
+    /// - courtNY: player's current court position (0=near baseline, 0.5=net)
     static func calculatePlayerShot(
         stats: PlayerStats,
         ballApproachFromLeft: Bool,
         drillType: DrillType,
-        ballHeight: CGFloat = 0.0
+        ballHeight: CGFloat = 0.0,
+        courtNY: CGFloat = 0.1
     ) -> ShotResult {
         let P = GameConstants.DrillPhysics.self
 
@@ -122,7 +125,10 @@ enum DrillShotCalculator {
         // Shot type from ball approach direction
         let shotType: ShotType = ballApproachFromLeft ? .backhand : .forehand
 
-        // Base power from stats
+        // Distance from net (0.5) — closer to net = shorter distance to cover
+        let distFromNet = abs(0.5 - courtNY)  // 0.0 at net, ~0.5 at baseline
+
+        // Base power from stats, scaled by distance from net
         var power: CGFloat
         if drillType == .dinkingDrill {
             // Dink: soft touch only, no power scaling
@@ -144,16 +150,19 @@ enum DrillShotCalculator {
         let spinDirection: CGFloat = Bool.random() ? 1.0 : -1.0
         let spinCurve = spinDirection * (spinStat / 99.0)
 
-        // Arc
+        // Arc scales with distance from net: farther = higher arc, closer = flatter
+        let distanceFactor = min(distFromNet / 0.5, 1.0)  // 0.0 at net, 1.0 at baseline
         let arc: CGFloat
         switch drillType {
         case .dinkingDrill:
             arc = CGFloat.random(in: 0.5...0.7)
         case .baselineRally:
-            // Higher arc to drive ball deep near opponent's baseline
-            arc = CGFloat.random(in: 0.40...0.55)
+            // Higher arc from baseline, flatter near kitchen line
+            let baseArc: CGFloat = 0.30 + distanceFactor * 0.30  // 0.30–0.60
+            arc = baseArc + CGFloat.random(in: -0.05...0.05)
         default:
-            arc = CGFloat.random(in: 0.25...0.35)
+            let baseArc: CGFloat = 0.20 + distanceFactor * 0.20  // 0.20–0.40
+            arc = baseArc + CGFloat.random(in: -0.05...0.05)
         }
 
         // Target on coach's side
@@ -182,10 +191,12 @@ enum DrillShotCalculator {
     }
 
     /// Generate a shot for the coach (targets player's side of court).
+    /// - courtNY: coach's current court position (0.5=net, 1.0=far baseline)
     static func calculateCoachShot(
         stats: PlayerStats,
         ballApproachFromLeft: Bool,
-        drillType: DrillType
+        drillType: DrillType,
+        courtNY: CGFloat = 0.9
     ) -> ShotResult {
         let powerStat = CGFloat(stats.stat(.power))
         let accuracyStat = CGFloat(stats.stat(.accuracy))
@@ -207,15 +218,17 @@ enum DrillShotCalculator {
         let scatterX = CGFloat.random(in: -maxDeviation...maxDeviation)
         let scatterY = CGFloat.random(in: -maxDeviation...maxDeviation)
 
-        // High arc = deep landings near baseline (with gravity 1.2)
+        // Arc scales with distance from net: farther = higher arc, closer = flatter
+        let distFromNet = abs(0.5 - courtNY)  // 0.0 at net, ~0.5 at baseline
+        let distanceFactor = min(distFromNet / 0.5, 1.0)  // 0.0 at net, 1.0 at baseline
         let arc: CGFloat
         switch drillType {
         case .dinkingDrill:
-            arc = 0.65  // dink: consistent soft lob
+            arc = 0.55 + distanceFactor * 0.15  // 0.55–0.70 (soft lob, higher from farther)
         case .accuracyDrill, .returnOfServe:
-            arc = 0.45  // aggressive but still deep
+            arc = 0.25 + distanceFactor * 0.25  // 0.25–0.50 (aggressive, scales with distance)
         default:
-            arc = 0.55  // rally: high arc, lands near baseline
+            arc = 0.30 + distanceFactor * 0.30  // 0.30–0.60 (rally, scales with distance)
         }
 
         // Light spin from coach
@@ -232,9 +245,9 @@ enum DrillShotCalculator {
             targetNX = corner ? CGFloat.random(in: 0.10...0.30) : CGFloat.random(in: 0.70...0.90)
             targetNY = CGFloat.random(in: 0.03...0.18)
         case .dinkingDrill:
-            // Player's kitchen zone (between net and kitchen line at 0.318)
+            // Player's kitchen zone (between kitchen line at 0.318 and net at 0.50)
             targetNX = CGFloat.random(in: 0.25...0.75)
-            targetNY = CGFloat.random(in: 0.20...0.30)
+            targetNY = CGFloat.random(in: 0.33...0.47)
         default:
             // Baseline rally: deep, near baseline
             targetNX = CGFloat.random(in: 0.15...0.85)

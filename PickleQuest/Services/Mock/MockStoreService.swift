@@ -42,6 +42,10 @@ actor MockStoreService: StoreService {
         return consumableItems[index].consumable
     }
 
+    func sellItem(_ equipment: Equipment) async -> Int {
+        equipment.effectiveSellPrice
+    }
+
     // MARK: - Consumable Pool
 
     private static let consumablePool: [Consumable] = [

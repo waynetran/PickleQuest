@@ -38,6 +38,14 @@ enum CourtRenderer {
         return pow(clamped, 1.0 / C.perspectiveExponent)
     }
 
+    /// Inverse perspective mapping: convert scene X coordinate back to logical nx at a given logical ny.
+    static func logicalNX(fromSceneX x: CGFloat, atLogicalNY ny: CGFloat) -> CGFloat {
+        let mappedNY = pow(max(0, min(1, ny)), C.perspectiveExponent)
+        let width = interpolatedWidth(ny: mappedNY)
+        let centerX = MatchAnimationConstants.sceneWidth / 2
+        return 0.5 + (x - centerX) / width
+    }
+
     /// Build the court node tree.
     static func buildCourt() -> SKNode {
         let courtNode = SKNode()
@@ -62,13 +70,13 @@ enum CourtRenderer {
         surface.name = "surface"
         courtNode.addChild(surface)
 
-        // Kitchen zones (slightly darker, near and far side)
-        let kitchenNear = buildKitchenZone(bottomNY: 0, topNY: C.kitchenDepthRatio)
+        // Kitchen zones (non-volley zone: between kitchen lines and the net)
+        let kitchenNear = buildKitchenZone(bottomNY: C.kitchenDepthRatio, topNY: 0.5)
         kitchenNear.zPosition = Z.courtSurface + 0.1
         kitchenNear.name = "kitchenNear"
         courtNode.addChild(kitchenNear)
 
-        let kitchenFar = buildKitchenZone(bottomNY: 1.0 - C.kitchenDepthRatio, topNY: 1.0)
+        let kitchenFar = buildKitchenZone(bottomNY: 0.5, topNY: 1.0 - C.kitchenDepthRatio)
         kitchenFar.zPosition = Z.courtSurface + 0.1
         kitchenFar.name = "kitchenFar"
         courtNode.addChild(kitchenFar)
@@ -90,7 +98,7 @@ enum CourtRenderer {
 
     // MARK: - Private
 
-    private static func interpolatedWidth(ny: CGFloat) -> CGFloat {
+    static func interpolatedWidth(ny: CGFloat) -> CGFloat {
         C.nearBaselineWidth + (C.farBaselineWidth - C.nearBaselineWidth) * ny
     }
 

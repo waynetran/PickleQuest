@@ -10,6 +10,8 @@ final class TrainingViewModel {
     var isSimulating = false
     var errorMessage: String?
     var animationComplete = false
+    var interactiveDrillResult: InteractiveDrillResult?
+    var showInteractiveDrill = false
 
     init(trainingService: TrainingService, coach: Coach) {
         self.trainingService = trainingService
@@ -104,5 +106,71 @@ final class TrainingViewModel {
         trainingResult = nil
         errorMessage = nil
         animationComplete = false
+        interactiveDrillResult = nil
+        showInteractiveDrill = false
+    }
+
+    // MARK: - Interactive Drill
+
+    /// Validates and deducts costs for an interactive drill. Returns true if ready to start.
+    func prepareInteractiveDrill(player: inout Player) -> Bool {
+        let drill = TrainingDrill(type: coach.dailyDrillType)
+        errorMessage = nil
+
+        // Check energy
+        guard player.currentEnergy >= drill.energyCost else {
+            errorMessage = "Not enough energy (\(Int(drill.energyCost))% needed)"
+            return false
+        }
+
+        // Check coach energy
+        let coachEnergy = player.coachingRecord.coachRemainingEnergy(coachID: coach.id)
+        guard coachEnergy > 0 else {
+            errorMessage = coach.dialogue.onExhausted
+            return false
+        }
+
+        // Check cost
+        let fee = player.coachingRecord.fee(for: coach)
+        guard player.wallet.coins >= fee else {
+            errorMessage = "Not enough coins (\(fee) needed)"
+            return false
+        }
+
+        // Deduct costs upfront
+        player.wallet.coins -= fee
+        player.energy = max(
+            GameConstants.PersistentEnergy.minEnergy,
+            player.currentEnergy - drill.energyCost
+        )
+        player.lastMatchDate = Date()
+
+        // Drain coach energy
+        player.coachingRecord.drainCoach(
+            coachID: coach.id,
+            amount: GameConstants.Coaching.coachDrainPerSession
+        )
+
+        showInteractiveDrill = true
+        return true
+    }
+
+    /// Apply results from completed interactive drill.
+    func completeInteractiveDrill(result: InteractiveDrillResult, player: inout Player) {
+        // Apply stat gain
+        let currentValue = player.stats.stat(result.statGained)
+        player.stats.setStat(result.statGained, value: min(currentValue + result.statGainAmount, GameConstants.Stats.maxValue))
+        player.coachingRecord.recordSession(coachID: coach.id, stat: result.statGained, amount: result.statGainAmount)
+
+        // Award XP + level-up loop
+        player.progression.currentXP += result.xpEarned
+        while player.progression.currentXP >= GameConstants.XP.xpRequired(forLevel: player.progression.level + 1),
+              player.progression.level < GameConstants.Stats.maxLevel {
+            player.progression.currentXP -= GameConstants.XP.xpRequired(forLevel: player.progression.level + 1)
+            player.progression.level += 1
+            player.progression.availableStatPoints += GameConstants.Stats.statPointsPerLevel
+        }
+
+        interactiveDrillResult = result
     }
 }

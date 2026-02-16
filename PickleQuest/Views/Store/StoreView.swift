@@ -25,7 +25,8 @@ struct StoreView: View {
                 if viewModel == nil {
                     let vm = StoreViewModel(
                         storeService: container.storeService,
-                        inventoryService: container.inventoryService
+                        inventoryService: container.inventoryService,
+                        playerService: container.playerService
                     )
                     viewModel = vm
                     await vm.loadStore()

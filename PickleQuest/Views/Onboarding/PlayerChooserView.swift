@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PlayerChooserView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var container: DependencyContainer
     @State private var savedPlayers: [SavedPlayerSummary] = []
     @State private var isLoading = true
@@ -93,6 +94,7 @@ struct PlayerChooserView: View {
                 .strokeBorder(Color.accentColor.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [6]))
         )
         .onTapGesture {
+            dismiss()
             appState.appPhase = .characterCreation
         }
     }
@@ -114,6 +116,7 @@ struct PlayerChooserView: View {
                 await mockInventory.reset(inventory: bundle.inventory, consumables: bundle.consumables)
             }
 
+            dismiss()
             if bundle.tutorialCompleted {
                 appState.appPhase = .playing
             } else {
@@ -131,6 +134,7 @@ struct PlayerChooserView: View {
 
         // If no players left, go to creation
         if savedPlayers.isEmpty {
+            dismiss()
             appState.appPhase = .characterCreation
         }
     }

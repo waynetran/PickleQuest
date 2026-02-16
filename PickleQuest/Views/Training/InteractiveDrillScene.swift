@@ -540,7 +540,8 @@ final class InteractiveDrillScene: SKScene {
             stats: playerStats,
             ballApproachFromLeft: ballFromLeft,
             drillType: drill.type,
-            ballHeight: ballSim.height
+            ballHeight: ballSim.height,
+            courtNY: playerNY
         )
 
         let animState: CharacterAnimationState = shot.shotType == .forehand ? .forehand : .backhand
@@ -697,6 +698,16 @@ final class InteractiveDrillScene: SKScene {
                 onBallDead(outcome: .serveFault)
             } else {
                 onBallDead(outcome: .out)
+            }
+            return
+        }
+
+        // Stall detection: ball rolling with no velocity or timed out
+        if ballSim.isStalled {
+            if ballSim.lastHitByPlayer && ballSim.courtY > 0.5 {
+                onBallDead(outcome: .winner)
+            } else {
+                onBallDead(outcome: .net)
             }
             return
         }

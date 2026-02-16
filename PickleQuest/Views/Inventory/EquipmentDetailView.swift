@@ -9,9 +9,41 @@ struct EquipmentDetailView: View {
     let playerLevel: Int
     let onEquip: () -> Void
     let onUnequip: () -> Void
-    let onSell: () -> Void
+    let onSell: (() -> Void)?
     let onRepair: (() -> Void)?
     let onUpgrade: (() -> Void)?
+    let onBuy: (() -> Void)?
+    let buyPrice: Int?
+
+    init(
+        equipment: Equipment,
+        isEquipped: Bool,
+        currentStats: PlayerStats,
+        previewStats: PlayerStats?,
+        playerCoins: Int,
+        playerLevel: Int,
+        onEquip: @escaping () -> Void,
+        onUnequip: @escaping () -> Void,
+        onSell: (() -> Void)? = nil,
+        onRepair: (() -> Void)? = nil,
+        onUpgrade: (() -> Void)? = nil,
+        onBuy: (() -> Void)? = nil,
+        buyPrice: Int? = nil
+    ) {
+        self.equipment = equipment
+        self.isEquipped = isEquipped
+        self.currentStats = currentStats
+        self.previewStats = previewStats
+        self.playerCoins = playerCoins
+        self.playerLevel = playerLevel
+        self.onEquip = onEquip
+        self.onUnequip = onUnequip
+        self.onSell = onSell
+        self.onRepair = onRepair
+        self.onUpgrade = onUpgrade
+        self.onBuy = onBuy
+        self.buyPrice = buyPrice
+    }
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -284,7 +316,18 @@ struct EquipmentDetailView: View {
 
                     // Actions
                     VStack(spacing: 12) {
-                        if isEquipped {
+                        if let onBuy, let buyPrice {
+                            Button(action: onBuy) {
+                                Label("Buy for \(buyPrice) coins", systemImage: "cart.badge.plus")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(playerCoins >= buyPrice ? .green : .gray)
+                                    .foregroundStyle(.white)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            .disabled(playerCoins < buyPrice)
+                        } else if isEquipped {
                             Button(action: onUnequip) {
                                 Label("Unequip", systemImage: "minus.circle")
                                     .font(.headline)
@@ -306,14 +349,16 @@ struct EquipmentDetailView: View {
                             }
                         }
 
-                        Button(action: onSell) {
-                            Label("Sell for \(equipment.effectiveSellPrice) coins", systemImage: "dollarsign.circle")
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(.red.opacity(0.15))
-                                .foregroundStyle(.red)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        if let onSell {
+                            Button(action: onSell) {
+                                Label("Sell for \(equipment.effectiveSellPrice) coins", systemImage: "dollarsign.circle")
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(.red.opacity(0.15))
+                                    .foregroundStyle(.red)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
                         }
                     }
                 }

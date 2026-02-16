@@ -7,7 +7,7 @@ struct PlayerSlotCard: View {
         VStack(spacing: 10) {
             AnimatedSpriteView(
                 appearance: summary.appearance,
-                size: 120,
+                size: 160,
                 animationState: .idleFront
             )
 

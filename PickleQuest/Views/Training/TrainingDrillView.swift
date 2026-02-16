@@ -6,6 +6,7 @@ struct TrainingDrillView: View {
     @EnvironmentObject private var container: DependencyContainer
     @State private var viewModel: TrainingViewModel?
     @State private var showScene = false
+    @State private var showInteractiveDrill = false
     @Environment(\.dismiss) private var dismiss
 
     let coach: Coach
@@ -21,6 +22,11 @@ struct TrainingDrillView: View {
                     }
                 } else {
                     ProgressView()
+                }
+            }
+            .fullScreenCover(isPresented: $showInteractiveDrill) {
+                if let vm = viewModel {
+                    interactiveDrillCover(vm: vm)
                 }
             }
             .navigationTitle("Training")
@@ -217,25 +223,15 @@ struct TrainingDrillView: View {
 
     private func startTrainingButton(vm: TrainingViewModel) -> some View {
         Button {
-            Task {
-                var player = appState.player
-                await vm.startDrill(player: &player)
-                if vm.trainingResult != nil {
-                    player.dailyChallengeState?.incrementProgress(for: .completeDrills)
-                }
+            var player = appState.player
+            if vm.prepareInteractiveDrill(player: &player) {
+                player.dailyChallengeState?.incrementProgress(for: .completeDrills)
                 appState.player = player
-                if vm.trainingResult != nil {
-                    showScene = true
-                }
+                showInteractiveDrill = true
             }
         } label: {
             HStack {
-                if vm.isSimulating {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    Image(systemName: "play.fill")
-                }
+                Image(systemName: "play.fill")
                 Text("Start Training")
                     .font(.headline)
             }
@@ -245,7 +241,7 @@ struct TrainingDrillView: View {
             .foregroundStyle(.white)
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .disabled(!canStart(vm: vm) || vm.isSimulating)
+        .disabled(!canStart(vm: vm))
     }
 
     private func canStart(vm: TrainingViewModel) -> Bool {
@@ -254,6 +250,33 @@ struct TrainingDrillView: View {
         return appState.player.wallet.coins >= fee
             && appState.player.currentEnergy >= GameConstants.Training.drillEnergyCost
             && coachEnergy > 0
+    }
+
+    // MARK: - Interactive Drill
+
+    @ViewBuilder
+    private func interactiveDrillCover(vm: TrainingViewModel) -> some View {
+        let coachEnergy = appState.player.coachingRecord.coachRemainingEnergy(coachID: coach.id)
+        InteractiveDrillView(
+            drill: TrainingDrill(type: coach.dailyDrillType),
+            statGained: coach.dailySpecialtyStat,
+            playerStats: appState.player.stats,
+            appearance: appState.player.appearance,
+            coachAppearance: coach.appearance,
+            coachLevel: coach.level,
+            coachDialogue: coach.dialogue.onSession,
+            playerEnergy: appState.player.currentEnergy,
+            coachEnergy: coachEnergy,
+            onComplete: { result in
+                var player = appState.player
+                vm.completeInteractiveDrill(result: result, player: &player)
+                appState.player = player
+                showInteractiveDrill = false
+                vm.clearResult()
+                dismiss()
+            }
+        )
+        .environment(appState)
     }
 
     // MARK: - Drill Scene + Results

@@ -92,14 +92,14 @@ final class DrillCoachAI {
             }
         }
 
-        // Clamp to coach's side of court
+        // Clamp to coach's side of court — never enter kitchen (kitchen line at 0.682)
         currentNX = max(0.0, min(1.0, currentNX))
+        let minCoachNY: CGFloat = 0.69  // just behind far kitchen line
         switch drillType {
         case .dinkingDrill:
-            // Coach stays behind far kitchen line (0.682), never inside kitchen
-            currentNY = max(0.69, min(0.85, currentNY))
+            currentNY = max(minCoachNY, min(0.85, currentNY))
         default:
-            currentNY = max(config.coachStartNY - 0.10, min(1.0, currentNY))
+            currentNY = max(max(minCoachNY, config.coachStartNY - 0.10), min(1.0, currentNY))
         }
     }
 
@@ -130,7 +130,8 @@ final class DrillCoachAI {
         return DrillShotCalculator.calculateCoachShot(
             stats: syntheticStats,
             ballApproachFromLeft: ballFromLeft,
-            drillType: drillType
+            drillType: drillType,
+            courtNY: currentNY
         )
     }
 
@@ -181,9 +182,9 @@ final class DrillCoachAI {
             targetNX = CGFloat.random(in: 0.25...0.75)
             targetNY = CGFloat.random(in: 0.05...0.20)
         case .dinkingDrill:
-            // Dink: soft feeds into player's kitchen zone (ny 0.20–0.30, before kitchen line at 0.318)
+            // Dink: soft feeds into player's kitchen zone (between kitchen line 0.318 and net 0.50)
             targetNX = CGFloat.random(in: 0.25...0.75)
-            targetNY = CGFloat.random(in: 0.20...0.30)
+            targetNY = CGFloat.random(in: 0.33...0.47)
             ball.launch(
                 from: CGPoint(x: currentNX, y: currentNY),
                 toward: CGPoint(x: targetNX, y: targetNY),

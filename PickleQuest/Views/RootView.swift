@@ -25,12 +25,22 @@ struct RootView: View {
 
             case .playing:
                 ContentView()
+
+            // TODO: Remove — temporary dev shortcut to test interactive drills
+            case .devTraining:
+                DevTrainingLauncher()
             }
         }
         .animation(.easeInOut(duration: 0.3), value: appState.appPhase)
     }
 
     private func resolveInitialPhase() async {
+        // TODO: Remove — temporary dev shortcut to test interactive drills
+        if appState.devTrainingEnabled {
+            appState.appPhase = .devTraining
+            return
+        }
+
         do {
             let saved = try await container.persistenceService.listSavedPlayers()
             if saved.isEmpty {

@@ -6,4 +6,5 @@ protocol StoreService: Sendable {
     func buyItem(_ itemID: UUID) async -> Equipment?
     func getStoreConsumables() async -> [StoreConsumableItem]
     func buyConsumable(_ itemID: UUID) async -> Consumable?
+    func sellItem(_ equipment: Equipment) async -> Int
 }
