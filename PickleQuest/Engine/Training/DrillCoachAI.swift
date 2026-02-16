@@ -96,8 +96,8 @@ final class DrillCoachAI {
         currentNX = max(0.0, min(1.0, currentNX))
         switch drillType {
         case .dinkingDrill:
-            // Coach stays just behind far kitchen line (0.682), not inside it
-            currentNY = max(0.68, min(0.85, currentNY))
+            // Coach stays behind far kitchen line (0.682), never inside kitchen
+            currentNY = max(0.69, min(0.85, currentNY))
         default:
             currentNY = max(config.coachStartNY - 0.10, min(1.0, currentNY))
         }
