@@ -727,6 +727,18 @@ MatchHubView.processResult → npcLossRecord tracking, hustler loot generation
 - `MatchResultView.swift` — wager win/loss badges, hustler defeat callout
 - `MatchHubView.swift` — npcLossRecord tracking, hustler loot, wager in history
 
+### NPC Coin Purse System (added post-7b)
+
+**Commit**: `9fbf1b8`
+
+- **NPC purses**: Regular NPCs carry 0-200 coins, hustlers carry 1000-3000. Wager amounts capped at what the NPC has.
+- **Hustler restocking**: Hustlers regenerate purse every hour (`hustlerResetInterval: 3600s`). Session-only state — resets on app restart.
+- **WagerDecision purse checks**: Regular NPCs reject wagers exceeding their purse ("I don't have that much on me"). Hustlers auto-cap effective wager to min(baseWager, purse). Zero-purse hustlers reject ("I'm tapped out").
+- **MapViewModel purse loading**: `npcPursesAtSelectedCourt` populated on court selection, cleared on dismiss, refreshed after match transactions.
+- **Post-match purse transactions**: Player win deducts from NPC purse; player loss adds to NPC purse. Purses refresh after each match.
+- **UI display**: Purse amounts shown on ladder rung cards (next challenger) and hustler cards. WagerSelectionSheet filters tiers to NPC purse. Hustler sheet shows effective wager when purse < base.
+- **Tests**: 4 new WagerDecision tests (purse rejection, within-purse acceptance, hustler purse cap, hustler empty purse).
+
 ---
 
 ## Milestone 7c: Persistence Polish, Cloud Prep, Multiplayer Prep (Planned)
