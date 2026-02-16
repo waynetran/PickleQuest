@@ -130,6 +130,12 @@ final class InteractiveDrillScene: SKScene {
         setupHUD()
     }
 
+    /// Called from SwiftUI to skip/fast-forward the drill.
+    func skipDrill() {
+        guard phase != .finished && phase != .waitingToStart else { return }
+        endDrill()
+    }
+
     /// Called from SwiftUI when the player taps "Let's Play Pickleball!".
     func beginDrill() {
         guard phase == .waitingToStart else { return }
