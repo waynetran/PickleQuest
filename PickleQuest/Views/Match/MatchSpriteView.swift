@@ -46,6 +46,7 @@ struct MatchSpriteView: View {
             // Action buttons overlay
             if viewModel.matchState == .simulating {
                 MatchActionButtons(viewModel: viewModel)
+                    .frame(maxWidth: .infinity, alignment: .topTrailing)
                     .padding(.top, 60)
 
                 // Skip button pinned to very bottom right
