@@ -392,12 +392,20 @@ struct MapContentView: View {
             await mapVM.generateCourtsIfNeeded(around: override)
             runDiscoveryCheck()
         } else {
-            // Wait for real GPS to generate courts (camera is already tracking via .userLocation)
+            // Wait for real GPS
             for _ in 0..<100 { // up to 10 seconds
                 if mapVM.locationManager.currentLocation != nil { break }
                 try? await Task.sleep(for: .milliseconds(100))
             }
             if let loc = mapVM.locationManager.currentLocation {
+                // Set camera to actual GPS location on first launch.
+                // .userLocation fallback may still be showing SF if GPS wasn't ready at init.
+                if !hasRestoredCamera {
+                    cameraPosition = .region(MKCoordinateRegion(
+                        center: loc.coordinate,
+                        span: MapContentView.defaultSpan
+                    ))
+                }
                 await mapVM.generateCourtsIfNeeded(around: loc.coordinate)
                 runDiscoveryCheck()
             }
