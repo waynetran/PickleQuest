@@ -408,15 +408,16 @@ final class InteractiveDrillScene: SKScene {
         let scatterY = CGFloat.random(in: -scatter...scatter)
 
         // Calculate target position — overhit pushes target deeper (past baseline = out)
-        let baseTargetNY: CGFloat = 0.70 + rawPowerFactor * 0.25  // sweet spot ~0.75–0.82, overhit >0.95 = out
+        // More sensitive: small swipe = kitchen/net, big swipe = long/out
+        let baseTargetNY: CGFloat = 0.55 + rawPowerFactor * 0.50  // sweet spot ~0.72–0.85, overhit >0.95 = out
         let targetNX = max(0.15, min(0.85, 0.5 + angleDeviation + scatterX))
-        let targetNY = max(0.55, min(1.05, baseTargetNY + scatterY))
+        let targetNY = max(0.50, min(1.10, baseTargetNY + scatterY))
 
         // Power: too slow = can't clear net, too fast = rockets out
-        // Sweet spot is rawPowerFactor ~0.3–0.7
-        let servePower = 0.15 + min(rawPowerFactor, 1.2) * 0.65
+        // Sweet spot is rawPowerFactor ~0.3–0.6
+        let servePower = 0.10 + min(rawPowerFactor, 1.3) * 0.75
         // Arc: slow swipes get high arc (lobs), fast swipes get flat arc (drives)
-        let serveArc: CGFloat = max(0.15, 0.50 - rawPowerFactor * 0.30)
+        let serveArc: CGFloat = max(0.10, 0.55 - rawPowerFactor * 0.40)
 
         // Launch ball from player position
         phase = .playing

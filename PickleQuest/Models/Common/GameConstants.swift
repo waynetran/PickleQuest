@@ -323,7 +323,7 @@ enum GameConstants {
 
         // Serve swipe
         static let serveSwipeMinDistance: CGFloat = 50
-        static let serveSwipeMaxPower: CGFloat = 300
+        static let serveSwipeMaxPower: CGFloat = 200
         static let serveSwipeAngleRange: CGFloat = 0.5
 
         // Cone targets (accuracy drill)
