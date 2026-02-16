@@ -46,6 +46,7 @@ final class MapViewModel {
     var pendingCourtCacheDrop: GearDrop?
     var showContestedSheet = false
     var selectedContestedDrop: GearDrop?
+    var pendingContestedDrop: GearDrop?
 
     // Dev mode movement
     var isStickyMode = false
@@ -300,6 +301,9 @@ final class MapViewModel {
         // Remove expired
         await gearDropService.removeExpiredDrops()
 
+        // Background-prefetch scenic POIs for trail generation
+        Task { await gearDropService.prefetchScenicPoints(around: coordinate) }
+
         // Spawn field drops
         let fieldDrops = await gearDropService.checkAndSpawnFieldDrops(around: coordinate, state: state)
         if !fieldDrops.isEmpty {
@@ -324,7 +328,7 @@ final class MapViewModel {
         )
         if !stashes.isEmpty {
             activeGearDrops.append(contentsOf: stashes)
-            gearDropToast = "Hidden stash found!"
+            gearDropToast = "Hidden stash spotted! Sneaky serve energy detected."
         }
     }
 
@@ -332,35 +336,6 @@ final class MapViewModel {
     func isDropInRange(_ drop: GearDrop, playerLocation: CLLocation) -> Bool {
         let dropLocation = CLLocation(latitude: drop.latitude, longitude: drop.longitude)
         return playerLocation.distance(from: dropLocation) <= GameConstants.GearDrop.pickupRadius
-    }
-
-    /// Handle tapping a gear drop on the map.
-    func handleGearDropTap(_ drop: GearDrop, playerLocation: CLLocation?) {
-        guard let playerLocation else { return }
-
-        // Check range
-        guard isDropInRange(drop, playerLocation: playerLocation) else {
-            gearDropToast = "Walk closer to pick up!"
-            return
-        }
-
-        // Court cache: must be unlocked
-        if drop.type == .courtCache && !drop.isUnlocked {
-            gearDropToast = "Win a match at this court to unlock!"
-            return
-        }
-
-        // Contested: show challenge sheet
-        if drop.type == .contested {
-            selectedContestedDrop = drop
-            showContestedSheet = true
-            return
-        }
-
-        // Collect the drop
-        Task {
-            await collectGearDrop(drop, playerLevel: 1) // playerLevel passed from caller
-        }
     }
 
     /// Collect a gear drop and show the reveal sheet.

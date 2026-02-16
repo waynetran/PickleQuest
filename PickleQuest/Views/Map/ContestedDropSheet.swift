@@ -21,7 +21,7 @@ struct ContestedDropSheet: View {
                 Text("Contested Drop!")
                     .font(.title2.bold())
 
-                Text("A guardian NPC protects this gear cache. Defeat them to claim the loot!")
+                Text(guardianFlavorText)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -69,6 +69,19 @@ struct ContestedDropSheet: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.medium])
+    }
+
+    private var guardianFlavorText: String {
+        switch drop.guardianDifficulty {
+        case .advanced:
+            return "A self-proclaimed 'kitchen commander' guards this cache. They won't give it up without a fight!"
+        case .expert:
+            return "This guardian has been banging drives all day. Think you can handle the heat?"
+        case .master:
+            return "The legendary Erne Master awaits. This one's got spin that'll make your paddle cry."
+        default:
+            return "A guardian NPC protects this gear cache. Defeat them to claim the loot!"
+        }
     }
 
     private func detailRow(label: String, value: String, color: Color) -> some View {

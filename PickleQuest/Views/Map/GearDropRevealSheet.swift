@@ -67,14 +67,34 @@ struct GearDropRevealSheet: View {
                 Circle()
                     .fill(drop.rarity.color.opacity(0.2))
                     .frame(width: 72, height: 72)
-                Image(systemName: "bag.fill")
-                    .font(.system(size: 32))
-                    .foregroundStyle(drop.rarity.color)
+                Image("GearDropBackpack")
+                    .resizable()
+                    .frame(width: 40, height: 40)
             }
 
             Text("You found a \(drop.rarity.displayName) \(drop.type.displayName)!")
                 .font(.title3.bold())
                 .multilineTextAlignment(.center)
+
+            Text(rarityQuip)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    private var rarityQuip: String {
+        switch drop.rarity {
+        case .common:
+            return "Hey, even pros started with a wooden paddle."
+        case .uncommon:
+            return "Not bad — this gear's got some dink potential."
+        case .rare:
+            return "Ooh, that's got some serious kitchen energy!"
+        case .epic:
+            return "Your opponents won't know what hit 'em."
+        case .legendary:
+            return "The pickleball gods have blessed you today!"
         }
     }
 }

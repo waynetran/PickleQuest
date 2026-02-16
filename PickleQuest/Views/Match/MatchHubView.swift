@@ -247,6 +247,16 @@ struct MatchHubView: View {
             if case .alphaDefeated(let alphaLoot) = mapVM.ladderAdvanceResult {
                 matchVM.lootDrops.append(contentsOf: alphaLoot)
             }
+
+            // Unlock court cache after win
+            if let unlockedDrop = await mapVM.unlockCourtCacheIfNeeded(courtID: court.id) {
+                await mapVM.collectGearDrop(unlockedDrop, playerLevel: player.progression.level)
+            }
+        }
+
+        // Contested drop: collect on win
+        if let mapVM, let drop = mapVM.pendingContestedDrop, result.didPlayerWin, !result.wasResigned {
+            await mapVM.collectGearDrop(drop, playerLevel: player.progression.level)
         }
 
         // Record match history

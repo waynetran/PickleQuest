@@ -1,10 +1,60 @@
 import Foundation
 import CoreLocation
+import MapKit
+
+/// A cached scenic point of interest (park, trail, garden, etc.)
+struct ScenicPOI: Sendable {
+    let name: String
+    let coordinate: CLLocationCoordinate2D
+    let category: ScenicCategory
+
+    enum ScenicCategory: Sendable, Equatable {
+        case hikingTrail, park, garden, natureReserve, beach, waterfront
+    }
+}
 
 actor MockGearDropService: GearDropService {
     private var activeDrops: [GearDrop] = []
     private let spawnEngine = GearDropSpawnEngine()
     private let lootGenerator = LootGenerator()
+
+    // MARK: - Scenic POI Cache
+    // Grid key = (latBucket, lngBucket) at ~500m resolution.
+    // Each bucket stores discovered POIs + a timestamp to avoid re-fetching.
+    private var scenicCache: [ScenicGridKey: ScenicCacheEntry] = [:]
+    private var pendingSearchKeys: Set<ScenicGridKey> = []
+    private static let gridResolution: Double = 0.005 // ~500m in degrees
+    private static let cacheExpiry: TimeInterval = 3600 // 1 hour
+
+    private struct ScenicGridKey: Hashable, Sendable {
+        let latBucket: Int
+        let lngBucket: Int
+    }
+
+    private struct ScenicCacheEntry: Sendable {
+        let pois: [ScenicPOI]
+        let fetchedAt: Date
+        var isExpired: Bool { Date().timeIntervalSince(fetchedAt) > MockGearDropService.cacheExpiry }
+    }
+
+    private func gridKey(for coordinate: CLLocationCoordinate2D) -> ScenicGridKey {
+        ScenicGridKey(
+            latBucket: Int(coordinate.latitude / Self.gridResolution),
+            lngBucket: Int(coordinate.longitude / Self.gridResolution)
+        )
+    }
+
+    /// Surrounding grid keys (3x3 area) for a coordinate.
+    private func surroundingKeys(for coordinate: CLLocationCoordinate2D) -> [ScenicGridKey] {
+        let center = gridKey(for: coordinate)
+        var keys: [ScenicGridKey] = []
+        for dr in -1...1 {
+            for dc in -1...1 {
+                keys.append(ScenicGridKey(latBucket: center.latBucket + dr, lngBucket: center.lngBucket + dc))
+            }
+        }
+        return keys
+    }
 
     // MARK: - Field Drops
 
@@ -85,31 +135,128 @@ actor MockGearDropService: GearDropService {
         return newDrops
     }
 
+    // MARK: - Scenic POI Prefetch
+
+    func prefetchScenicPoints(around coordinate: CLLocationCoordinate2D) async {
+        let keys = surroundingKeys(for: coordinate)
+        for key in keys {
+            // Skip if already cached and not expired, or already in-flight
+            if let entry = scenicCache[key], !entry.isExpired { continue }
+            if pendingSearchKeys.contains(key) { continue }
+            pendingSearchKeys.insert(key)
+
+            let centerLat = (Double(key.latBucket) + 0.5) * Self.gridResolution
+            let centerLng = (Double(key.lngBucket) + 0.5) * Self.gridResolution
+            let center = CLLocationCoordinate2D(latitude: centerLat, longitude: centerLng)
+
+            let pois = await searchScenicPOIs(around: center)
+            scenicCache[key] = ScenicCacheEntry(pois: pois, fetchedAt: Date())
+            pendingSearchKeys.remove(key)
+        }
+    }
+
+    /// Search MapKit for parks, trails, gardens, and nature areas near a coordinate.
+    private func searchScenicPOIs(around center: CLLocationCoordinate2D) async -> [ScenicPOI] {
+        let searchRadius: CLLocationDistance = 800 // meters
+        let region = MKCoordinateRegion(
+            center: center,
+            latitudinalMeters: searchRadius * 2,
+            longitudinalMeters: searchRadius * 2
+        )
+
+        // Search categories in priority order
+        let queries: [(String, ScenicPOI.ScenicCategory)] = [
+            ("hiking trail", .hikingTrail),
+            ("park", .park),
+            ("nature reserve", .natureReserve),
+            ("botanical garden", .garden),
+            ("beach", .beach),
+            ("waterfront", .waterfront),
+        ]
+
+        var allPOIs: [ScenicPOI] = []
+
+        for (query, category) in queries {
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = query
+            request.region = region
+            request.resultTypes = .pointOfInterest
+
+            do {
+                let search = MKLocalSearch(request: request)
+                let response = try await search.start()
+                for item in response.mapItems {
+                    let poi = ScenicPOI(
+                        name: item.name ?? query,
+                        coordinate: item.placemark.coordinate,
+                        category: category
+                    )
+                    allPOIs.append(poi)
+                }
+            } catch {
+                // Search failed for this category — continue with others
+                continue
+            }
+        }
+
+        return allPOIs
+    }
+
+    /// Get cached scenic POIs near a coordinate, sorted by priority.
+    private func nearbyScenicPOIs(around coordinate: CLLocationCoordinate2D) -> [ScenicPOI] {
+        let keys = surroundingKeys(for: coordinate)
+        var pois: [ScenicPOI] = []
+        for key in keys {
+            if let entry = scenicCache[key], !entry.isExpired {
+                pois.append(contentsOf: entry.pois)
+            }
+        }
+
+        // Sort by category priority (hiking trails first) then by distance
+        let priorityOrder: [ScenicPOI.ScenicCategory] = [
+            .hikingTrail, .park, .garden, .natureReserve, .beach, .waterfront
+        ]
+        let loc = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        return pois.sorted { a, b in
+            let aPriority = priorityOrder.firstIndex(of: a.category) ?? 99
+            let bPriority = priorityOrder.firstIndex(of: b.category) ?? 99
+            if aPriority != bPriority { return aPriority < bPriority }
+            let aDist = CLLocation(latitude: a.coordinate.latitude, longitude: a.coordinate.longitude).distance(from: loc)
+            let bDist = CLLocation(latitude: b.coordinate.latitude, longitude: b.coordinate.longitude).distance(from: loc)
+            return aDist < bDist
+        }
+    }
+
     // MARK: - Trail Route
 
     func generateTrailRoute(around coordinate: CLLocationCoordinate2D, playerLevel: Int) async -> TrailRoute {
         let waypointCount = Int.random(in: GameConstants.GearDrop.trailWaypointCountRange)
-        let coordinates = spawnEngine.generateTrailWaypoints(
-            from: coordinate,
+
+        // Build waypoint targets: prefer scenic POIs, pad with random coordinates
+        let targets = buildScenicWaypoints(
+            around: coordinate,
             count: waypointCount,
             spacing: GameConstants.GearDrop.trailSpacing
         )
+
+        // Snap to walking paths (public streets/trails — avoids private land)
+        let snappedCoordinates = await snapToWalkingPaths(from: coordinate, targets: targets)
 
         let trailID = UUID()
         let brandFamilies = ["ProKennex", "Selkirk", "JOOLA", "Engage", "Paddletek", "Franklin"]
         let brandID = brandFamilies.randomElement()
 
         let trailNames = [
-            "Morning Hustle", "Dink Run", "Kitchen Walk",
-            "Baseline Blitz", "Court Circuit", "Rally Route",
-            "Power Path", "Spin Trail"
+            "The Third Shot Tour", "Erne's Revenge", "Kitchen Confidential",
+            "The Dink Dynasty", "No Man's Land Dash", "Stacking Spree",
+            "Lob City Limits", "Drop Shot Derby"
         ]
         let trailName = trailNames.randomElement() ?? "Trail"
 
         var waypoints: [GearDrop] = []
-        for (i, coord) in coordinates.enumerated() {
-            let isLast = i == coordinates.count - 1
-            let isFinalStretch = Double(i) >= Double(coordinates.count) * 0.6
+        for (i, coord) in snappedCoordinates.enumerated() {
+            let isLast = i == snappedCoordinates.count - 1
+            let isFinalStretch = Double(i) >= Double(snappedCoordinates.count) * 0.6
 
             let rarity: EquipmentRarity
             if isLast {
@@ -142,6 +289,104 @@ actor MockGearDropService: GearDropService {
             waypoints: waypoints,
             expiresAt: Date().addingTimeInterval(GameConstants.GearDrop.trailTimeLimit)
         )
+    }
+
+    /// Build waypoint targets prioritizing cached scenic POIs.
+    /// Falls back to random circular waypoints for any gaps.
+    private func buildScenicWaypoints(
+        around coordinate: CLLocationCoordinate2D,
+        count: Int,
+        spacing: Double
+    ) -> [CLLocationCoordinate2D] {
+        let scenicPOIs = nearbyScenicPOIs(around: coordinate)
+        var targets: [CLLocationCoordinate2D] = []
+        var usedIndices: Set<Int> = []
+
+        // Try to fill waypoints with scenic POIs within reasonable range
+        let maxRange = spacing * Double(count) * 0.6
+        let playerLoc = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+
+        for (index, poi) in scenicPOIs.enumerated() {
+            if targets.count >= count { break }
+            let dist = CLLocation(latitude: poi.coordinate.latitude, longitude: poi.coordinate.longitude)
+                .distance(from: playerLoc)
+            if dist < maxRange && dist > spacing * 0.3 {
+                // Ensure minimum spacing between selected POIs
+                let tooClose = targets.contains { existing in
+                    CLLocation(latitude: existing.latitude, longitude: existing.longitude)
+                        .distance(from: CLLocation(latitude: poi.coordinate.latitude, longitude: poi.coordinate.longitude)) < spacing * 0.5
+                }
+                if !tooClose {
+                    targets.append(poi.coordinate)
+                    usedIndices.insert(index)
+                }
+            }
+        }
+
+        // Fill remaining slots with random circular waypoints
+        if targets.count < count {
+            let remaining = count - targets.count
+            let fallbacks = spawnEngine.generateTrailWaypoints(
+                from: coordinate,
+                count: remaining,
+                spacing: spacing
+            )
+            targets.append(contentsOf: fallbacks)
+        }
+
+        // Sort by angle from player to form a walkable loop
+        targets.sort { a, b in
+            let angleA = atan2(a.longitude - coordinate.longitude, a.latitude - coordinate.latitude)
+            let angleB = atan2(b.longitude - coordinate.longitude, b.latitude - coordinate.latitude)
+            return angleA < angleB
+        }
+
+        return targets
+    }
+
+    /// Snap waypoint targets to real walking paths using MapKit directions.
+    /// Walking transport type ensures routes follow public streets/trails.
+    private func snapToWalkingPaths(
+        from start: CLLocationCoordinate2D,
+        targets: [CLLocationCoordinate2D]
+    ) async -> [CLLocationCoordinate2D] {
+        var snappedPoints: [CLLocationCoordinate2D] = []
+        var current = start
+
+        for target in targets {
+            let request = MKDirections.Request()
+            request.source = MKMapItem(placemark: MKPlacemark(coordinate: current))
+            request.destination = MKMapItem(placemark: MKPlacemark(coordinate: target))
+            request.transportType = .walking
+
+            do {
+                let directions = MKDirections(request: request)
+                let response = try await directions.calculate()
+
+                if let route = response.routes.first {
+                    let pointCount = route.polyline.pointCount
+                    if pointCount > 1 {
+                        let pickIndex = Int(Double(pointCount) * 0.8)
+                        let points = route.polyline.points()
+                        let snapped = points[min(pickIndex, pointCount - 1)]
+                        let coord = snapped.coordinate
+                        snappedPoints.append(coord)
+                        current = coord
+                    } else {
+                        snappedPoints.append(target)
+                        current = target
+                    }
+                } else {
+                    snappedPoints.append(target)
+                    current = target
+                }
+            } catch {
+                snappedPoints.append(target)
+                current = target
+            }
+        }
+
+        return snappedPoints
     }
 
     // MARK: - Contested Drops

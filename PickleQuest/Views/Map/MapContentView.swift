@@ -7,6 +7,7 @@ struct MapContentView: View {
     let mapVM: MapViewModel
     let matchVM: MatchViewModel
     @Environment(AppState.self) private var appState
+    @EnvironmentObject private var container: DependencyContainer
 
     @State private var cameraPosition: MapCameraPosition
 
@@ -131,8 +132,9 @@ struct MapContentView: View {
                 VStack {
                     Spacer()
                     HStack(spacing: 8) {
-                        Image(systemName: "bag.fill")
-                            .foregroundStyle(.orange)
+                        Image("GearDropBackpack")
+                            .resizable()
+                            .frame(width: 16, height: 16)
                         Text(toast)
                             .font(.subheadline.bold())
                             .foregroundStyle(.white)
@@ -339,8 +341,20 @@ struct MapContentView: View {
                     drop: drop,
                     onChallenge: {
                         mapVM.showContestedSheet = false
-                        // TODO: Start contested match against generated NPC
-                        mapVM.gearDropToast = "Contested matches coming soon!"
+                        mapVM.pendingContestedDrop = drop
+                        Task {
+                            let difficulty = drop.guardianDifficulty ?? .advanced
+                            let npcs = await container.npcService.getNPCs(forDifficulty: difficulty)
+                            guard let guardian = npcs.randomElement() else {
+                                showGearDropToast("No guardian found... lucky you!")
+                                return
+                            }
+                            await matchVM.startMatch(
+                                player: appState.player,
+                                opponent: guardian,
+                                courtName: "Contested Drop"
+                            )
+                        }
                     },
                     onCancel: {
                         mapVM.showContestedSheet = false
@@ -368,6 +382,14 @@ struct MapContentView: View {
                     }
                 }
                 .presentationDetents([.medium])
+            }
+        }
+        .onChange(of: matchVM.matchState) { _, newState in
+            // When a contested match returns to idle, clear the pending drop reference.
+            // The actual collection happens in MatchHubView.processResult() on win.
+            if newState == .idle, mapVM.pendingContestedDrop != nil {
+                mapVM.pendingContestedDrop = nil
+                mapVM.selectedContestedDrop = nil
             }
         }
     }
@@ -577,12 +599,12 @@ struct MapContentView: View {
         guard let playerLocation else { return }
 
         guard mapVM.isDropInRange(drop, playerLocation: playerLocation) else {
-            showGearDropToast("Walk closer to pick up!")
+            showGearDropToast("Dink closer to grab this loot!")
             return
         }
 
         if drop.type == .courtCache && !drop.isUnlocked {
-            showGearDropToast("Win a match at this court to unlock!")
+            showGearDropToast("Win a match here first — no free lunch at the kitchen!")
             return
         }
 
@@ -608,8 +630,7 @@ struct MapContentView: View {
     }
 
     private func processGearDropLoot() {
-        // Add kept/equipped loot to player decisions — actual inventory update happens elsewhere
-        // For now, gear drop loot is auto-kept (simplified)
+        // Default any undecided items to "keep"
         for item in mapVM.gearDropLoot {
             if mapVM.gearDropLootDecisions[item.id] == nil {
                 mapVM.gearDropLootDecisions[item.id] = .keep
@@ -640,50 +661,115 @@ struct MapContentView: View {
             }
         }
 
-        showGearDropToast("Gear collected!")
+        // Persist equipment to inventory and handle equip decisions
+        let loot = mapVM.gearDropLoot
+        let decisions = mapVM.gearDropLootDecisions
+        Task {
+            let keptLoot = loot.filter { decisions[$0.id] != nil }
+            if !keptLoot.isEmpty {
+                await container.inventoryService.addEquipmentBatch(keptLoot)
+            }
+
+            // Equip items marked for equip
+            for item in loot {
+                if decisions[item.id] == .equip {
+                    appState.player.equippedItems[item.slot] = item.id
+                }
+            }
+
+            // Auto-save
+            let currentInventory = await container.inventoryService.getInventory()
+            let currentConsumables = await container.inventoryService.getConsumables()
+            await appState.saveCurrentPlayer(
+                using: container.persistenceService,
+                inventory: currentInventory,
+                consumables: currentConsumables
+            )
+        }
+
+        showGearDropToast("Nice pickup! Kitchen-approved gear acquired.")
     }
 
     // MARK: - Bottom Bar
 
+    private var hasActiveTrail: Bool {
+        guard let trail = appState.player.gearDropState?.activeTrail else { return false }
+        return !trail.isExpired
+    }
+
     private var bottomBar: some View {
-        HStack(spacing: 16) {
-            // Discovery progress
-            let discovered = appState.player.discoveredCourtIDs.count
-            let total = mapVM.courts.count
-            Label("\(discovered)/\(total) courts", systemImage: "map.fill")
-                .font(.caption.bold())
-
-            Spacer()
-
-            // SUPR
-            if appState.player.duprProfile.hasRating {
-                Label(
-                    String(format: "%.2f", appState.player.duprRating),
-                    systemImage: "chart.line.uptrend.xyaxis"
-                )
-                .font(.caption.bold())
-                .foregroundStyle(.green)
+        VStack(spacing: 8) {
+            // Trail activation button
+            if !hasActiveTrail {
+                Button {
+                    guard let coord = appState.locationOverride
+                        ?? mapVM.locationManager.currentLocation?.coordinate else { return }
+                    Task {
+                        let route = await mapVM.startTrailRoute(
+                            around: coord,
+                            playerLevel: appState.player.progression.level
+                        )
+                        appState.player.gearDropState?.activeTrail = route
+                        // Auto-save trail state
+                        let inv = await container.inventoryService.getInventory()
+                        let cons = await container.inventoryService.getConsumables()
+                        await appState.saveCurrentPlayer(
+                            using: container.persistenceService,
+                            inventory: inv,
+                            consumables: cons
+                        )
+                        showGearDropToast("Trail activated — time for a dink-and-dash!")
+                    }
+                } label: {
+                    Label("Start Trail", systemImage: "figure.walk")
+                        .font(.caption.bold())
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(.green.opacity(0.85))
+                        .foregroundStyle(.white)
+                        .clipShape(Capsule())
+                }
             }
 
-            // Energy
-            HStack(spacing: 4) {
-                Image(systemName: "bolt.fill")
-                    .foregroundStyle(energyColor)
-                Text("\(Int(appState.player.currentEnergy))%")
-                    .font(.caption.bold().monospacedDigit())
-                    .foregroundStyle(energyColor)
-            }
+            HStack(spacing: 16) {
+                // Discovery progress
+                let discovered = appState.player.discoveredCourtIDs.count
+                let total = mapVM.courts.count
+                Label("\(discovered)/\(total) courts", systemImage: "map.fill")
+                    .font(.caption.bold())
 
-            // Paddle warning
-            if !appState.player.hasPaddleEquipped {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.yellow)
+                Spacer()
+
+                // SUPR
+                if appState.player.duprProfile.hasRating {
+                    Label(
+                        String(format: "%.2f", appState.player.duprRating),
+                        systemImage: "chart.line.uptrend.xyaxis"
+                    )
+                    .font(.caption.bold())
+                    .foregroundStyle(.green)
+                }
+
+                // Energy
+                HStack(spacing: 4) {
+                    Image(systemName: "bolt.fill")
+                        .foregroundStyle(energyColor)
+                    Text("\(Int(appState.player.currentEnergy))%")
+                        .font(.caption.bold().monospacedDigit())
+                        .foregroundStyle(energyColor)
+                }
+
+                // Paddle warning
+                if !appState.player.hasPaddleEquipped {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.yellow)
+                }
             }
+            .padding(12)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal)
         }
-        .padding(12)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal)
         .padding(.bottom, 8)
     }
 

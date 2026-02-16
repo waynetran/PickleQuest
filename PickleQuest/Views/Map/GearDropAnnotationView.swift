@@ -10,23 +10,13 @@ struct GearDropAnnotationView: View {
     var body: some View {
         Button(action: onTap) {
             ZStack {
-                // Rarity glow ring
+                // Pulsating glow — always visible, intensifies when in range
                 Circle()
-                    .fill(drop.rarity.color.opacity(0.3))
-                    .frame(width: 44, height: 44)
-                    .scaleEffect(isPulsing && isInRange ? 1.3 : 1.0)
-                    .opacity(isPulsing && isInRange ? 0.5 : 0.8)
+                    .fill(glowColor.opacity(isPulsing ? 0.6 : 0.2))
+                    .frame(width: isPulsing ? 52 : 36, height: isPulsing ? 52 : 36)
+                    .blur(radius: isPulsing ? 12 : 6)
 
-                // Background circle
-                Circle()
-                    .fill(.white)
-                    .frame(width: 36, height: 36)
-                    .shadow(color: drop.rarity.color.opacity(0.6), radius: 4)
-
-                // Icon
                 iconView
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(iconColor)
 
                 // Trail order badge
                 if let order = drop.trailOrder, drop.type == .trail {
@@ -42,20 +32,17 @@ struct GearDropAnnotationView: View {
         }
         .buttonStyle(.plain)
         .onAppear {
-            if isInRange {
-                withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
-                    isPulsing = true
-                }
+            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                isPulsing = true
             }
         }
-        .onChange(of: isInRange) { _, newValue in
-            if newValue {
-                withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
-                    isPulsing = true
-                }
-            } else {
-                withAnimation { isPulsing = false }
-            }
+    }
+
+    private var glowColor: Color {
+        switch drop.type {
+        case .courtCache where !drop.isUnlocked: return .gray
+        case .contested: return .orange
+        default: return drop.rarity.color
         }
     }
 
@@ -64,23 +51,18 @@ struct GearDropAnnotationView: View {
         switch drop.type {
         case .courtCache where !drop.isUnlocked:
             Image(systemName: "lock.fill")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundStyle(.gray)
         case .contested:
             Image(systemName: "flame.fill")
-        case .fogStash:
-            Image(systemName: "bag.fill")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundStyle(.orange)
         default:
-            Image(systemName: "bag.fill")
-        }
-    }
-
-    private var iconColor: Color {
-        switch drop.type {
-        case .courtCache where !drop.isUnlocked:
-            return .gray
-        case .contested:
-            return .orange
-        default:
-            return drop.rarity.color
+            Image("GearDropBackpack")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 32, height: 32)
+                .colorMultiply(drop.rarity.color)
         }
     }
 }
