@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		004F82EE3181237E32E907A2 /* CourtService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F80B1209767EBD9BA7EAC8D /* CourtService.swift */; };
+		0063D33B299E7C1E07372BD7 /* DrillCoachAI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B58F360D5BA99BD39D34BABF /* DrillCoachAI.swift */; };
 		023992AA330250878468D1C3 /* MatchAnimationConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B645A22F0D9CDF3E5A80D89D /* MatchAnimationConstants.swift */; };
 		030053C44EF48B07E766AD2B /* PlayerProgression.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52C2A0413DC0CD20FB85994C /* PlayerProgression.swift */; };
 		03EBB5DDE153AC015144D455 /* CoachService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F8ABB430145AF9DE553375B /* CoachService.swift */; };
@@ -22,10 +23,13 @@
 		0D9B2D6B41077877A74F860C /* LootGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FE0743BF162137BA3E922FE /* LootGeneratorTests.swift */; };
 		0DE26A4AFC66D19D3E48F370 /* Tournament.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CC4871F71FB046FA08EBCB /* Tournament.swift */; };
 		0DFA243D216FD16F1255A3EC /* NPC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1675D372694A305F611FE32D /* NPC.swift */; };
+		0E07B851E462F9FCE0E9F67A /* DrillConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AF4D0D6692B46B7BEB6CFA7 /* DrillConfig.swift */; };
 		110AF643701AAA7DE9374498 /* WagerSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F71E187CC780C999D83D3C0 /* WagerSelectionSheet.swift */; };
 		115E766AA6D6C5A4C0986C4A /* MapPlayerAnnotation.swift in Sources */ = {isa = PBXBuildFile; fileRef = EACFC1726A4D0C790A37B600 /* MapPlayerAnnotation.swift */; };
+		11F155236C50D3D64CE57AB1 /* DrillShotCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4526E661CCA8B3541BD3B370 /* DrillShotCalculator.swift */; };
 		1420F1984DD6F098EB6FE80D /* TrainingDrill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B76EE940F5B3616BE523BA2 /* TrainingDrill.swift */; };
 		16EC3C8E33849102AC8DA88A /* WagerDecisionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355E3510763BE8B045F5312B /* WagerDecisionTests.swift */; };
+		1C5BCB7D4CC87D0E42E704F7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 82570377146F7C1A2620EFAD /* Assets.xcassets */; };
 		1D4054E15A14E383E1E5DA81 /* InventoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCDD3AF27C7FE92C46AD5297 /* InventoryViewModel.swift */; };
 		1DFA20353BD0EAC474762221 /* MatchSimulationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73B3FD5E1D993A1A80123844 /* MatchSimulationView.swift */; };
 		1E70999B50D15BAE06FB335A /* TutorialPostMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F9416C9EFFF9B1BF256D661 /* TutorialPostMatchView.swift */; };
@@ -44,6 +48,7 @@
 		3A3878E9CF1C3B1BD53F30AD /* MatchResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E37015A94BA1E07BCD8C05A5 /* MatchResultView.swift */; };
 		3B050E3BBEEFF0A145385100 /* PlayerProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02FF717F7DEC1E46AC1C7912 /* PlayerProfileView.swift */; };
 		3D4CF8CAE0599935F14CE975 /* CharacterCreationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B2BA348020705A5CD7C5532 /* CharacterCreationViewModel.swift */; };
+		3ECD6088E7E286B2695E46E4 /* DrillBallSimulation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EB751DF95009E0BDBAFE4F3 /* DrillBallSimulation.swift */; };
 		412DC22F0B76ED5957269316 /* StatAllocationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71BCAA08F2AC0ED226B60E86 /* StatAllocationView.swift */; };
 		42C45C73D13D9B01E2F842C7 /* MockTrainingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD24E19153CE530F326BC20 /* MockTrainingService.swift */; };
 		43B535BCBF33D536997AD2BA /* EquipmentNameGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDABEB3FE4D53ECE0EF7759B /* EquipmentNameGenerator.swift */; };
@@ -53,6 +58,7 @@
 		470429CEA3B3C2B1C7A13A3C /* TournamentBracketView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A221F9F0E394C6E1DBD79DF1 /* TournamentBracketView.swift */; };
 		473BB098A5401D2799FD9521 /* CourtDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0A3F5F877F307464FDF9F72 /* CourtDetailSheet.swift */; };
 		49657DCD34805C399017F8FA /* FatigueModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549DF67C3EB0E36D696AE3EA /* FatigueModelTests.swift */; };
+		4D3E4B4A3D522E41596FDE37 /* AppIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 035FA5134D2ADB53EE96AC24 /* AppIcon.png */; };
 		4D748EE939FE5E3303B90587 /* AnimatedSpriteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86C3558974FB3B5245A17E9E /* AnimatedSpriteView.swift */; };
 		4DAD72FBC09DA09E916FEB5B /* InventoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0E26D687250C76182C3D4C /* InventoryService.swift */; };
 		500C63BE9013D7DBB0CF32EE /* SpriteSheetLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11A0AC7AEE35D805C2CD630 /* SpriteSheetLoader.swift */; };
@@ -75,6 +81,7 @@
 		694E9D55D983B6A7B17E33F3 /* EquipmentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC56C33DEA89A36C94D6A5DE /* EquipmentDetailView.swift */; };
 		6B926319C01448A9202029E2 /* DailyChallenge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F4F6711234985DD739D5AB /* DailyChallenge.swift */; };
 		6BA89A76AD013E7FE476EFDA /* CourtProgressionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207E9AC418A76077A2A4CC2B /* CourtProgressionService.swift */; };
+		6CDAFCBBAF79042C51A02D5E /* InteractiveDrillResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AEF41F1D7795308585F814E /* InteractiveDrillResult.swift */; };
 		6EC9B25135C35C3965C18609 /* MatchActionButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C109738393E6303B611E62 /* MatchActionButtons.swift */; };
 		72218CB4A65BD13B1CE5DDD9 /* MomentumTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B134E5A041B5743FC9C0BBC /* MomentumTrackerTests.swift */; };
 		72B54FB6B5F49BBA080E5BB7 /* LootDropRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5408E905229A627A3B5BAA80 /* LootDropRow.swift */; };
@@ -85,6 +92,7 @@
 		784F9AB42DE8809127A302A1 /* MomentumTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64FE8C463FC243A364CDD109 /* MomentumTracker.swift */; };
 		7925FA2AB77DB5D5CB6B2B4A /* MatchPoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113D32D22345163D83B3B9D9 /* MatchPoint.swift */; };
 		7B91FE412F2C535CA4E9D8F7 /* TournamentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F977D908DEC7193937DBE634 /* TournamentEngine.swift */; };
+		7C006A7645E9AA7EAB0D9F2D /* InteractiveDrillView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77833555ACFC1BF514A7EA0F /* InteractiveDrillView.swift */; };
 		7C28EC5E2BDA53B5A0DDC7FD /* PointResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08207D8485476682AC02577 /* PointResolver.swift */; };
 		7D38D7EB38143D8854EE48C0 /* Consumable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78EDF9FACA3C6EB32CC7BAF /* Consumable.swift */; };
 		7D96587EFB503CAA3EAEEED0 /* NPCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 317B5B682D9B2CC67773486B /* NPCService.swift */; };
@@ -137,6 +145,7 @@
 		C59FDDAFB1C1E9CE54336D15 /* MatchCourtScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DF9A9414A06C483D6964FE9 /* MatchCourtScene.swift */; };
 		C7E0584C2C5148BE0F63989B /* LevelUpBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75BF66C5ABC414685644FB7 /* LevelUpBanner.swift */; };
 		CD7F3AAC4180F9ECBFCA635D /* EquipmentCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B619B590B70982D275E99B1B /* EquipmentCardView.swift */; };
+		CDB28D325BE68FCE621848C4 /* InteractiveDrillScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA7C2EE5B4B3BC2816E9E92A /* InteractiveDrillScene.swift */; };
 		CDB582B28BCB65C90D6A3E06 /* RepProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87E6BC2CEDE4611F9F591DD0 /* RepProfile.swift */; };
 		CDBE28F6BF3462D4396D9340 /* RepCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1AE74519D395EBC944F80F /* RepCalculator.swift */; };
 		CDC370E8A960436CE37C8B5C /* AlphaLootGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BA4A9EC594E96B9B74A293F /* AlphaLootGenerator.swift */; };
@@ -151,6 +160,7 @@
 		D1C34495E0D732C0A1341776 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5EA4DC48371B4ABC65DBEA0 /* ContentView.swift */; };
 		D726C1B09F3C251DB2798EBB /* MockNPCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE09A927C4E070179DA2B55B /* MockNPCService.swift */; };
 		D8C4B3036E5214BAE018D4BD /* AppearanceGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8643BD07D4ED9ECD24B2D8EC /* AppearanceGenerator.swift */; };
+		D8DD722458A3C2CDBC6063EF /* DrillScorekeeper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D5CBD9FA214FC088FFEC5EA /* DrillScorekeeper.swift */; };
 		D94A60FDE166721728A7C6FD /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584959296BFD092ED3EE3FD8 /* PlayerService.swift */; };
 		DB1E24C03C5CA4CDFAA83ABD /* MatchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 784E4E44166C3416091BA7E0 /* MatchResult.swift */; };
 		DBE5F18AC6CBE4C42E7A712E /* StatCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */; };
@@ -195,8 +205,10 @@
 /* Begin PBXFileReference section */
 		01992CB63887808953615677 /* StoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreService.swift; sourceTree = "<group>"; };
 		02FF717F7DEC1E46AC1C7912 /* PlayerProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProfileView.swift; sourceTree = "<group>"; };
+		035FA5134D2ADB53EE96AC24 /* AppIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = AppIcon.png; sourceTree = "<group>"; };
 		0C2A0910DA48FBCFB568311B /* CLLocationCoordinate2D+Sendable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CLLocationCoordinate2D+Sendable.swift"; sourceTree = "<group>"; };
 		0D14EE825541CA06E8391E4B /* TournamentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentService.swift; sourceTree = "<group>"; };
+		0D5CBD9FA214FC088FFEC5EA /* DrillScorekeeper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillScorekeeper.swift; sourceTree = "<group>"; };
 		0E3B9DA82455DDC9859651BB /* character1-Sheet.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "character1-Sheet.png"; sourceTree = "<group>"; };
 		0F008F637AAC2F4A4BA60D19 /* WagerDecision.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WagerDecision.swift; sourceTree = "<group>"; };
 		113D32D22345163D83B3B9D9 /* MatchPoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPoint.swift; sourceTree = "<group>"; };
@@ -213,6 +225,7 @@
 		1C16E89037C904100D1C317F /* MatchHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchHistoryEntry.swift; sourceTree = "<group>"; };
 		1D8901DF47B273A28A842991 /* EquipmentSetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentSetTests.swift; sourceTree = "<group>"; };
 		1EA16300A59A2F1C52C8B9CF /* PickleQuest.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PickleQuest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EB751DF95009E0BDBAFE4F3 /* DrillBallSimulation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillBallSimulation.swift; sourceTree = "<group>"; };
 		202A83825C89EF08D54F91B4 /* MatchAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchAction.swift; sourceTree = "<group>"; };
 		207E9AC418A76077A2A4CC2B /* CourtProgressionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtProgressionService.swift; sourceTree = "<group>"; };
 		20C3B07BE8F5AC941C995746 /* MatchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchViewModel.swift; sourceTree = "<group>"; };
@@ -233,6 +246,7 @@
 		355E3510763BE8B045F5312B /* WagerDecisionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WagerDecisionTests.swift; sourceTree = "<group>"; };
 		392EA26F10E273F38B0D3BA7 /* character2-Sheet.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "character2-Sheet.png"; sourceTree = "<group>"; };
 		3AEAB8CBD3D6D5C1EBBECABA /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		3AF4D0D6692B46B7BEB6CFA7 /* DrillConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillConfig.swift; sourceTree = "<group>"; };
 		3B97CA559D005D19373B923E /* MatchAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchAnimator.swift; sourceTree = "<group>"; };
 		3BFE0CBC43F0E6621040BFCB /* LootGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LootGenerator.swift; sourceTree = "<group>"; };
 		3C77694636A45688609F6B51 /* MockCourtProgressionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockCourtProgressionService.swift; sourceTree = "<group>"; };
@@ -242,6 +256,7 @@
 		3E04A2ED044AD72F22F98FBD /* TrainingDrillView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingDrillView.swift; sourceTree = "<group>"; };
 		3FE0743BF162137BA3E922FE /* LootGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LootGeneratorTests.swift; sourceTree = "<group>"; };
 		40CF56E088227F546C60B738 /* NPCPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NPCPickerView.swift; sourceTree = "<group>"; };
+		4526E661CCA8B3541BD3B370 /* DrillShotCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillShotCalculator.swift; sourceTree = "<group>"; };
 		46473886B6F00CB5E23F17C8 /* DoublesScoreTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoublesScoreTracker.swift; sourceTree = "<group>"; };
 		46B06729836D2E4D76ECC28B /* MatchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchService.swift; sourceTree = "<group>"; };
 		4C0D6A9C6DD259AB87FE0D21 /* EquipmentSlot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentSlot.swift; sourceTree = "<group>"; };
@@ -276,10 +291,13 @@
 		73B3FD5E1D993A1A80123844 /* MatchSimulationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchSimulationView.swift; sourceTree = "<group>"; };
 		761E0DC7B75C06D52FBD491E /* MapItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapItem.swift; sourceTree = "<group>"; };
 		775C461714AC3A47F1E99E0B /* Wallet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wallet.swift; sourceTree = "<group>"; };
+		77833555ACFC1BF514A7EA0F /* InteractiveDrillView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveDrillView.swift; sourceTree = "<group>"; };
 		784E4E44166C3416091BA7E0 /* MatchResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchResult.swift; sourceTree = "<group>"; };
+		7AEF41F1D7795308585F814E /* InteractiveDrillResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveDrillResult.swift; sourceTree = "<group>"; };
 		7B9C13867B41A5C25A60AE0F /* PickleQuestUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickleQuestUITests.swift; sourceTree = "<group>"; };
 		7C1AE74519D395EBC944F80F /* RepCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepCalculator.swift; sourceTree = "<group>"; };
 		7E2060A9BBEF6769156A056F /* MatchEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchEvent.swift; sourceTree = "<group>"; };
+		82570377146F7C1A2620EFAD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		83CC4871F71FB046FA08EBCB /* Tournament.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tournament.swift; sourceTree = "<group>"; };
 		840065301D6F3845B7E589EA /* StatCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCalculator.swift; sourceTree = "<group>"; };
 		8643BD07D4ED9ECD24B2D8EC /* AppearanceGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceGenerator.swift; sourceTree = "<group>"; };
@@ -309,6 +327,7 @@
 		AC40DE9B0F4DEA364DD07A20 /* HustlerNPCGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HustlerNPCGenerator.swift; sourceTree = "<group>"; };
 		AEFAD8E2F8A415500DC0220A /* StoreViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreViewModel.swift; sourceTree = "<group>"; };
 		AF0E26D687250C76182C3D4C /* InventoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryService.swift; sourceTree = "<group>"; };
+		B58F360D5BA99BD39D34BABF /* DrillCoachAI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillCoachAI.swift; sourceTree = "<group>"; };
 		B58F409C0413C7C983E62A1A /* StoreItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreItem.swift; sourceTree = "<group>"; };
 		B619B590B70982D275E99B1B /* EquipmentCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentCardView.swift; sourceTree = "<group>"; };
 		B645A22F0D9CDF3E5A80D89D /* MatchAnimationConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchAnimationConstants.swift; sourceTree = "<group>"; };
@@ -357,6 +376,7 @@
 		F834383C0689A948AB2E8C1A /* TutorialNPC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialNPC.swift; sourceTree = "<group>"; };
 		F977D908DEC7193937DBE634 /* TournamentEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentEngine.swift; sourceTree = "<group>"; };
 		FA01C280E5F28D53830ED79E /* PlayerStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerStats.swift; sourceTree = "<group>"; };
+		FA7C2EE5B4B3BC2816E9E92A /* InteractiveDrillScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveDrillScene.swift; sourceTree = "<group>"; };
 		FA8DE4ED9E1758F094CD6300 /* TrainingDrillScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingDrillScene.swift; sourceTree = "<group>"; };
 		FB2870DBB7DBD09CB6D576DD /* CourtLadder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtLadder.swift; sourceTree = "<group>"; };
 		FD07BCE35CB5A979F86D4A2F /* AlphaNPCGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphaNPCGenerator.swift; sourceTree = "<group>"; };
@@ -478,6 +498,8 @@
 			isa = PBXGroup;
 			children = (
 				644505D3B40777DD8A62A693 /* CoachView.swift */,
+				FA7C2EE5B4B3BC2816E9E92A /* InteractiveDrillScene.swift */,
+				77833555ACFC1BF514A7EA0F /* InteractiveDrillView.swift */,
 				FA8DE4ED9E1758F094CD6300 /* TrainingDrillScene.swift */,
 				3E04A2ED044AD72F22F98FBD /* TrainingDrillView.swift */,
 			);
@@ -536,6 +558,8 @@
 			children = (
 				BBBB7B2357F5CEBB6C3168A0 /* Coach.swift */,
 				E1F4F6711234985DD739D5AB /* DailyChallenge.swift */,
+				3AF4D0D6692B46B7BEB6CFA7 /* DrillConfig.swift */,
+				7AEF41F1D7795308585F814E /* InteractiveDrillResult.swift */,
 				6B76EE940F5B3616BE523BA2 /* TrainingDrill.swift */,
 				68D8691955EBCC5E919FE7D9 /* TrainingResult.swift */,
 			);
@@ -749,6 +773,8 @@
 		D3A0B29900EFF94ED1D9AA0C /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				035FA5134D2ADB53EE96AC24 /* AppIcon.png */,
+				82570377146F7C1A2620EFAD /* Assets.xcassets */,
 				392EA26F10E273F38B0D3BA7 /* character2-Sheet.png */,
 				629F8845B7EE41F1934A1746 /* MockData */,
 				EEB40D2250A9785A88611B87 /* SpriteSheets */,
@@ -786,6 +812,10 @@
 		D84A9426D9ADFE6E45C86472 /* Training */ = {
 			isa = PBXGroup;
 			children = (
+				1EB751DF95009E0BDBAFE4F3 /* DrillBallSimulation.swift */,
+				B58F360D5BA99BD39D34BABF /* DrillCoachAI.swift */,
+				0D5CBD9FA214FC088FFEC5EA /* DrillScorekeeper.swift */,
+				4526E661CCA8B3541BD3B370 /* DrillShotCalculator.swift */,
 				634683B0BE31F01A4E5C08DF /* TrainingDrillSimulator.swift */,
 			);
 			path = Training;
@@ -958,7 +988,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1600;
+				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					06B1C32CDD2A45D368A92289 = {
 						DevelopmentTeam = 69F6RR9M5J;
@@ -1001,6 +1031,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4D3E4B4A3D522E41596FDE37 /* AppIcon.png in Resources */,
+				1C5BCB7D4CC87D0E42E704F7 /* Assets.xcassets in Resources */,
 				BDC86FDAA4439CFE42A0F107 /* ball.png in Resources */,
 				C31CD5CA9BE818B447085B10 /* character1-Sheet.png in Resources */,
 				571951E2E4725FBDC54CDA84 /* character2-Sheet.png in Resources */,
@@ -1072,6 +1104,11 @@
 				C568849F3E7E70B323E268D6 /* DependencyContainer.swift in Sources */,
 				95681C2A013819E0A47237C1 /* DevModeView.swift in Sources */,
 				072B58AE5FD6E05492409251 /* DoublesScoreTracker.swift in Sources */,
+				3ECD6088E7E286B2695E46E4 /* DrillBallSimulation.swift in Sources */,
+				0063D33B299E7C1E07372BD7 /* DrillCoachAI.swift in Sources */,
+				0E07B851E462F9FCE0E9F67A /* DrillConfig.swift in Sources */,
+				D8DD722458A3C2CDBC6063EF /* DrillScorekeeper.swift in Sources */,
+				11F155236C50D3D64CE57AB1 /* DrillShotCalculator.swift in Sources */,
 				F7AC5CB510EB35254105DCE4 /* Equipment.swift in Sources */,
 				66DE4973BD9BED0C2197BD50 /* EquipmentAbility.swift in Sources */,
 				820B4B44127D89E340B3ACDE /* EquipmentBrand.swift in Sources */,
@@ -1088,6 +1125,9 @@
 				F2E663160A6E773AAC127E77 /* GameConstants.swift in Sources */,
 				D0832371A2C980AEBC8970D8 /* HustlerLootGenerator.swift in Sources */,
 				E1799A56C51681C244B964E8 /* HustlerNPCGenerator.swift in Sources */,
+				6CDAFCBBAF79042C51A02D5E /* InteractiveDrillResult.swift in Sources */,
+				CDB28D325BE68FCE621848C4 /* InteractiveDrillScene.swift in Sources */,
+				7C006A7645E9AA7EAB0D9F2D /* InteractiveDrillView.swift in Sources */,
 				4DAD72FBC09DA09E916FEB5B /* InventoryService.swift in Sources */,
 				F45115D8662B6784B8EABDB1 /* InventoryView.swift in Sources */,
 				1D4054E15A14E383E1E5DA81 /* InventoryViewModel.swift in Sources */,
@@ -1323,6 +1363,7 @@
 				DEVELOPMENT_TEAM = 69F6RR9M5J;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -1343,6 +1384,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
@@ -1422,6 +1464,7 @@
 				DEVELOPMENT_TEAM = 69F6RR9M5J;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -1435,6 +1478,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
