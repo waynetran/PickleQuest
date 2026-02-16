@@ -47,6 +47,33 @@ struct MatchSpriteView: View {
             if viewModel.matchState == .simulating {
                 MatchActionButtons(viewModel: viewModel)
                     .padding(.top, 60)
+
+                // Skip button pinned to very bottom right
+                if !viewModel.isSkipping {
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            Button {
+                                Task { await viewModel.skipMatch() }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "forward.fill")
+                                        .font(.system(size: 16))
+                                    Text("Skip")
+                                        .font(.system(size: 16, weight: .bold))
+                                }
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 28)
+                                .padding(.vertical, 12)
+                                .background(.black.opacity(0.6))
+                                .clipShape(Capsule())
+                            }
+                            .padding(.trailing, 16)
+                            .padding(.bottom, 8)
+                        }
+                    }
+                }
             }
         }
         .task {
@@ -89,9 +116,10 @@ private struct EventLogOverlay: View {
                     .opacity(entryOpacity(index: index))
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.leading, 14)
+        .padding(.trailing, 120) // leave room for Skip button
         .padding(.top, 6)
-        .padding(.bottom, 56)
+        .padding(.bottom, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             LinearGradient(

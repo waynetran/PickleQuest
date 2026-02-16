@@ -74,6 +74,9 @@ actor MatchEngine {
     private var availableConsumables: [Consumable]
     private var currentReputation: Int
 
+    // Active consumable stat boosts (stat → total bonus)
+    private var activeStatBoosts: [StatType: Int] = [:]
+
     // Pending action events to emit between points
     private var pendingActionEvents: [MatchEvent] = []
 
@@ -249,7 +252,7 @@ actor MatchEngine {
             var oFatigue = opponentFatigue
 
             let resolved = pointResolver.resolvePoint(
-                playerBaseStats: playerStats,
+                playerBaseStats: boostedPlayerStats(),
                 opponentBaseStats: opponentStats,
                 playerEquipment: playerEquipment,
                 opponentEquipment: opponentEquipment,
@@ -387,14 +390,27 @@ actor MatchEngine {
         doublesScoreTracker = tracker
     }
 
+    // MARK: - Consumable Stat Boosts
+
+    /// Returns playerStats with any active consumable stat boosts applied.
+    private func boostedPlayerStats() -> PlayerStats {
+        guard !activeStatBoosts.isEmpty else { return playerStats }
+        var stats = playerStats
+        for (stat, bonus) in activeStatBoosts {
+            stats.setStat(stat, value: stats.stat(stat) + bonus)
+        }
+        return stats
+    }
+
     // MARK: - Doubles Helpers
 
     private func compositePlayerTeamStats() -> PlayerStats {
+        let boosted = boostedPlayerStats()
         guard let pStats = partnerStats, let synergy = teamSynergy else {
-            return playerStats // fallback to singles if no partner
+            return boosted // fallback to singles if no partner
         }
         return TeamStatCompositor.compositeEffectiveStats(
-            p1Effective: playerStats,
+            p1Effective: boosted,
             p2Effective: pStats,
             synergy: synergy
         )
@@ -643,6 +659,7 @@ actor MatchEngine {
             playerFatigue.restore(amount: amount)
             effectDesc = "+\(Int(amount))% energy"
         case .statBoost(let stat, let amount, _):
+            activeStatBoosts[stat, default: 0] += amount
             effectDesc = "+\(amount) \(stat.rawValue) this match"
         case .xpMultiplier(let mult, _):
             effectDesc = "\(mult)x XP"
