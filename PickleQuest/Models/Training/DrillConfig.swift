@@ -42,7 +42,7 @@ struct DrillConfig: Sendable {
             return DrillConfig(
                 drillType: .dinkingDrill,
                 playerStartNX: 0.5, playerStartNY: 0.30,
-                coachStartNX: 0.5, coachStartNY: 0.72,
+                coachStartNX: 0.5, coachStartNY: 0.82,
                 playerMinNY: 0.15, playerMaxNY: 0.31,
                 playerMinNX: 0.0, playerMaxNX: 1.0,
                 inputMode: .joystick,

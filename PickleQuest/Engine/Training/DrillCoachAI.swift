@@ -93,11 +93,12 @@ final class DrillCoachAI {
         }
 
         // Clamp to coach's side of court — never enter kitchen (kitchen line at 0.682)
+        // Use 0.78 minimum so the coach sprite doesn't visually overlap the grey kitchen zone
         currentNX = max(0.0, min(1.0, currentNX))
-        let minCoachNY: CGFloat = 0.69  // just behind far kitchen line
+        let minCoachNY: CGFloat = 0.78
         switch drillType {
         case .dinkingDrill:
-            currentNY = max(minCoachNY, min(0.85, currentNY))
+            currentNY = max(minCoachNY, min(0.92, currentNY))
         default:
             currentNY = max(max(minCoachNY, config.coachStartNY - 0.10), min(1.0, currentNY))
         }
