@@ -5,6 +5,7 @@ struct WagerSelectionSheet: View {
     let playerCoins: Int
     let playerSUPR: Double
     let consecutiveWins: Int
+    let npcPurse: Int
     let onAccept: (Int) -> Void
     let onCancel: () -> Void
     @Environment(\.dismiss) private var dismiss
@@ -15,7 +16,7 @@ struct WagerSelectionSheet: View {
     private var isHustler: Bool { npc.isHustler }
 
     private var effectiveWager: Int {
-        isHustler ? npc.baseWagerAmount : selectedTier
+        isHustler ? min(npc.baseWagerAmount, npcPurse) : selectedTier
     }
 
     private var canAfford: Bool {
@@ -119,13 +120,24 @@ struct WagerSelectionSheet: View {
                     .font(.headline)
             }
 
-            Text("\(npc.name) demands a wager of \(npc.baseWagerAmount) coins. Take it or leave it.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            if npcPurse < npc.baseWagerAmount && npcPurse > 0 {
+                Text("\(npc.name) demands a wager but only has \(npcPurse) coins. Effective wager: \(effectiveWager) coins.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            } else {
+                Text("\(npc.name) demands a wager of \(npc.baseWagerAmount) coins. Take it or leave it.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
 
-            wagerAmountDisplay(amount: npc.baseWagerAmount)
+            wagerAmountDisplay(amount: effectiveWager)
         }
+    }
+
+    private var availableTiers: [Int] {
+        GameConstants.Wager.wagerTiers.filter { $0 == 0 || $0 <= npcPurse }
     }
 
     private var regularWagerView: some View {
@@ -133,9 +145,20 @@ struct WagerSelectionSheet: View {
             Text("Choose Your Wager")
                 .font(.headline)
 
-            // Tier picker
+            // NPC purse display
+            if npcPurse < GameConstants.Wager.wagerTiers.last ?? 0 {
+                HStack(spacing: 4) {
+                    Image(systemName: "dollarsign.circle.fill")
+                        .foregroundStyle(.yellow)
+                    Text("\(npc.name) has \(npcPurse) coins")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            // Tier picker (filtered by NPC purse)
             HStack(spacing: 8) {
-                ForEach(GameConstants.Wager.wagerTiers, id: \.self) { tier in
+                ForEach(availableTiers, id: \.self) { tier in
                     Button {
                         selectedTier = tier
                         evaluateWager()
@@ -262,7 +285,8 @@ struct WagerSelectionSheet: View {
             npc: npc,
             wagerAmount: effectiveWager,
             playerSUPR: playerSUPR,
-            consecutivePlayerWins: consecutiveWins
+            consecutivePlayerWins: consecutiveWins,
+            npcPurse: npcPurse
         )
 
         switch decision {

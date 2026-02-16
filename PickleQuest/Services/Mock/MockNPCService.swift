@@ -3,6 +3,8 @@ import Foundation
 actor MockNPCService: NPCService {
     private let npcs: [NPC]
     private let hustlers: [NPC]
+    private var npcPurses: [UUID: Int] = [:]
+    private var hustlerLastReset: [UUID: Date] = [:]
 
     init() {
         self.npcs = MockNPCService.createAllNPCs()
@@ -23,6 +25,46 @@ actor MockNPCService: NPCService {
 
     func getHustlerNPCs() async -> [NPC] {
         hustlers
+    }
+
+    func getPurse(npcID: UUID) -> Int {
+        let isHustlerNPC = hustlers.contains { $0.id == npcID }
+
+        if isHustlerNPC {
+            // Check if hustler needs reset (restocks every hour)
+            if let lastReset = hustlerLastReset[npcID],
+               Date().timeIntervalSince(lastReset) >= GameConstants.Wager.hustlerResetInterval {
+                let amount = Int.random(in: GameConstants.Wager.hustlerMinPurse...GameConstants.Wager.hustlerMaxPurse)
+                npcPurses[npcID] = amount
+                hustlerLastReset[npcID] = Date()
+                return amount
+            }
+        }
+
+        if let existing = npcPurses[npcID] {
+            return existing
+        }
+
+        // First access — initialize purse
+        let amount: Int
+        if isHustlerNPC {
+            amount = Int.random(in: GameConstants.Wager.hustlerMinPurse...GameConstants.Wager.hustlerMaxPurse)
+            hustlerLastReset[npcID] = Date()
+        } else {
+            amount = Int.random(in: GameConstants.Wager.regularNPCMinPurse...GameConstants.Wager.regularNPCMaxPurse)
+        }
+        npcPurses[npcID] = amount
+        return amount
+    }
+
+    func deductPurse(npcID: UUID, amount: Int) {
+        let current = npcPurses[npcID] ?? 0
+        npcPurses[npcID] = max(0, current - amount)
+    }
+
+    func addToPurse(npcID: UUID, amount: Int) {
+        let current = npcPurses[npcID] ?? 0
+        npcPurses[npcID] = current + amount
     }
 
     // MARK: - NPC Roster

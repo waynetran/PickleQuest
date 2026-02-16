@@ -2,11 +2,25 @@ import SwiftUI
 import MapKit
 
 struct MapContentView: View {
+    static let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.009, longitudeDelta: 0.009)
+
     let mapVM: MapViewModel
     let matchVM: MatchViewModel
     @Environment(AppState.self) private var appState
 
-    @State private var cameraPosition: MapCameraPosition = .automatic
+    @State private var cameraPosition: MapCameraPosition
+
+    init(mapVM: MapViewModel, matchVM: MatchViewModel) {
+        self.mapVM = mapVM
+        self.matchVM = matchVM
+        // Restore saved camera region immediately to avoid zoom flicker
+        // when the view is recreated (e.g. returning from a match)
+        if let savedRegion = mapVM.lastCameraRegion {
+            _cameraPosition = State(initialValue: .region(savedRegion))
+        } else {
+            _cameraPosition = State(initialValue: .automatic)
+        }
+    }
     @State private var undiscoveredCourt: Court?
     @State private var isDoublesMode = false
     @State private var visibleRegion: MKCoordinateRegion?
@@ -114,9 +128,25 @@ struct MapContentView: View {
                 .animation(.easeInOut(duration: 0.4), value: discoveredCourtName)
             }
 
-            // Bottom overlay: court count + energy
+            // Recenter button (bottom right, above bottom bar)
             VStack {
                 Spacer()
+                HStack {
+                    Spacer()
+                    Button {
+                        recenterMap()
+                    } label: {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.blue)
+                            .frame(width: 40, height: 40)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                    }
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 8)
+                }
                 bottomBar
             }
         }
@@ -129,7 +159,7 @@ struct MapContentView: View {
                 // Only recenter camera when not in sticky mode (sticky mode = user is panning)
                 if !mapVM.isStickyMode {
                     let currentSpan = mapVM.lastCameraRegion?.span
-                        ?? MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                        ?? MapContentView.defaultSpan
                     cameraPosition = .region(MKCoordinateRegion(
                         center: coord,
                         span: currentSpan
@@ -145,6 +175,7 @@ struct MapContentView: View {
                     court: court,
                     npcs: mapVM.npcsAtSelectedCourt,
                     hustlers: mapVM.hustlersAtSelectedCourt,
+                    npcPurses: mapVM.npcPursesAtSelectedCourt,
                     playerRating: appState.player.duprRating,
                     ladder: mapVM.currentLadder,
                     doublesLadder: nil, // Phase 6: doubles ladder
@@ -183,6 +214,7 @@ struct MapContentView: View {
                     playerCoins: appState.player.wallet.coins,
                     playerSUPR: appState.player.duprRating,
                     consecutiveWins: appState.player.npcLossRecord[npc.id] ?? 0,
+                    npcPurse: mapVM.npcPursesAtSelectedCourt[npc.id] ?? 0,
                     onAccept: { wagerAmount in
                         let courtNameForMatch = mapVM.selectedCourt?.name ?? ""
                         Task {
@@ -334,19 +366,19 @@ struct MapContentView: View {
     private func setupMap() async {
         let hasRestoredCamera = mapVM.lastCameraRegion != nil
 
-        // Restore camera position from previous session, or set initial position
-        if let savedRegion = mapVM.lastCameraRegion {
-            cameraPosition = .region(savedRegion)
-        } else if let override = appState.locationOverride {
-            cameraPosition = .region(MKCoordinateRegion(
-                center: override,
-                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-            ))
-        } else {
-            cameraPosition = .userLocation(fallback: .region(MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-            )))
+        // If init didn't have a saved region, set from location override or GPS fallback
+        if !hasRestoredCamera {
+            if let override = appState.locationOverride {
+                cameraPosition = .region(MKCoordinateRegion(
+                    center: override,
+                    span: MapContentView.defaultSpan
+                ))
+            } else {
+                cameraPosition = .userLocation(fallback: .region(MKCoordinateRegion(
+                    center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+                    span: MapContentView.defaultSpan
+                )))
+            }
         }
 
         mapVM.requestLocationPermission()
@@ -372,12 +404,21 @@ struct MapContentView: View {
                 if !hasRestoredCamera {
                     cameraPosition = .region(MKCoordinateRegion(
                         center: loc.coordinate,
-                        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                        span: MapContentView.defaultSpan
                     ))
                 }
                 await mapVM.generateCourtsIfNeeded(around: loc.coordinate)
                 runDiscoveryCheck()
             }
+        }
+    }
+
+    private func recenterMap() {
+        if let coord = appState.locationOverride ?? mapVM.locationManager.currentLocation?.coordinate {
+            cameraPosition = .region(MKCoordinateRegion(
+                center: coord,
+                span: Self.defaultSpan
+            ))
         }
     }
 

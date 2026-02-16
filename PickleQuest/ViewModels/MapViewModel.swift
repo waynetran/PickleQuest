@@ -17,6 +17,7 @@ final class MapViewModel {
     var selectedCourt: Court?
     var npcsAtSelectedCourt: [NPC] = []
     var hustlersAtSelectedCourt: [NPC] = []
+    var npcPursesAtSelectedCourt: [UUID: Int] = [:]
     var showCourtDetail = false
     var courtsLoaded = false
     // Court ladder state
@@ -109,6 +110,16 @@ final class MapViewModel {
         npcsAtSelectedCourt = await courtService.getLadderNPCs(courtID: court.id)
         hustlersAtSelectedCourt = await courtService.getHustlersAtCourt(court.id)
 
+        // Load purses for all NPCs at this court
+        var purses: [UUID: Int] = [:]
+        for npc in npcsAtSelectedCourt {
+            purses[npc.id] = await npcService.getPurse(npcID: npc.id)
+        }
+        for hustler in hustlersAtSelectedCourt {
+            purses[hustler.id] = await npcService.getPurse(npcID: hustler.id)
+        }
+        npcPursesAtSelectedCourt = purses
+
         // Initialize ladder if needed
         let npcIDs = npcsAtSelectedCourt.map(\.id)
         await courtProgressionService.initializeLadder(courtID: court.id, gameType: .singles, npcIDs: npcIDs)
@@ -146,11 +157,23 @@ final class MapViewModel {
         selectedCourt = nil
         npcsAtSelectedCourt = []
         hustlersAtSelectedCourt = []
+        npcPursesAtSelectedCourt = [:]
         currentLadder = nil
         currentCourtPerk = nil
         alphaNPC = nil
         ladderAdvanceResult = nil
         coachAtSelectedCourt = nil
+    }
+
+    func refreshPurses() async {
+        var purses: [UUID: Int] = [:]
+        for npc in npcsAtSelectedCourt {
+            purses[npc.id] = await npcService.getPurse(npcID: npc.id)
+        }
+        for hustler in hustlersAtSelectedCourt {
+            purses[hustler.id] = await npcService.getPurse(npcID: hustler.id)
+        }
+        npcPursesAtSelectedCourt = purses
     }
 
     // MARK: - Daily Challenges

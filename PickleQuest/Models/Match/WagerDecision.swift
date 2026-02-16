@@ -12,21 +12,24 @@ enum WagerDecision {
     ///   - wagerAmount: The proposed wager (0 = free match)
     ///   - playerSUPR: The player's current SUPR rating
     ///   - consecutivePlayerWins: How many times the player has beaten this NPC in a row
+    ///   - npcPurse: How many coins the NPC currently carries
     /// - Returns: Whether the NPC accepts and the effective wager amount
     static func evaluate(
         npc: NPC,
         wagerAmount: Int,
         playerSUPR: Double,
-        consecutivePlayerWins: Int
+        consecutivePlayerWins: Int,
+        npcPurse: Int = Int.max
     ) -> Result {
         if npc.isHustler {
-            return evaluateHustler(npc: npc, playerSUPR: playerSUPR)
+            return evaluateHustler(npc: npc, playerSUPR: playerSUPR, npcPurse: npcPurse)
         }
         return evaluateRegular(
             npc: npc,
             wagerAmount: wagerAmount,
             playerSUPR: playerSUPR,
-            consecutivePlayerWins: consecutivePlayerWins
+            consecutivePlayerWins: consecutivePlayerWins,
+            npcPurse: npcPurse
         )
     }
 
@@ -36,11 +39,17 @@ enum WagerDecision {
         npc: NPC,
         wagerAmount: Int,
         playerSUPR: Double,
-        consecutivePlayerWins: Int
+        consecutivePlayerWins: Int,
+        npcPurse: Int
     ) -> Result {
         // Free matches are always accepted
         if wagerAmount == 0 {
             return .accepted(amount: 0)
+        }
+
+        // Refuse if NPC can't afford the wager
+        if wagerAmount > npcPurse {
+            return .rejected(reason: "\(npc.name) pats their pockets. \"I don't have that much on me.\"")
         }
 
         // Refuse if player has beaten them too many times
@@ -60,7 +69,8 @@ enum WagerDecision {
 
     private static func evaluateHustler(
         npc: NPC,
-        playerSUPR: Double
+        playerSUPR: Double,
+        npcPurse: Int
     ) -> Result {
         let suprGap = playerSUPR - npc.duprRating
 
@@ -69,7 +79,13 @@ enum WagerDecision {
             return .rejected(reason: "\(npc.name) eyes you suspiciously. \"Nah, I know a ringer when I see one. I'm out.\"")
         }
 
-        // Hustlers always force their own wager amount
-        return .accepted(amount: npc.baseWagerAmount)
+        // Reject if hustler is tapped out
+        if npcPurse == 0 {
+            return .rejected(reason: "\(npc.name) shrugs. \"I'm tapped out. Come back later.\"")
+        }
+
+        // Cap effective wager at what the hustler can afford
+        let effectiveWager = min(npc.baseWagerAmount, npcPurse)
+        return .accepted(amount: effectiveWager)
     }
 }

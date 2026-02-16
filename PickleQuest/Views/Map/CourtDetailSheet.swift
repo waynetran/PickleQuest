@@ -4,6 +4,7 @@ struct CourtDetailSheet: View {
     let court: Court
     let npcs: [NPC]
     let hustlers: [NPC]
+    let npcPurses: [UUID: Int]
     let playerRating: Double
     let ladder: CourtLadder?
     let doublesLadder: CourtLadder?
@@ -400,6 +401,16 @@ struct CourtDetailSheet: View {
                         Text("SUPR \(String(format: "%.2f", npc.duprRating))")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
+                        if isNextChallenger, let purse = npcPurses[npc.id] {
+                            HStack(spacing: 2) {
+                                Image(systemName: "dollarsign.circle.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(.yellow)
+                                Text("\(purse)")
+                                    .font(.caption2.bold())
+                                    .foregroundStyle(.orange)
+                            }
+                        }
                     }
                 }
 
@@ -734,6 +745,16 @@ struct CourtDetailSheet: View {
                     Text("Wager: \(hustler.baseWagerAmount) coins")
                         .font(.caption2)
                         .foregroundStyle(.orange)
+                    if let purse = npcPurses[hustler.id] {
+                        HStack(spacing: 2) {
+                            Image(systemName: "dollarsign.circle.fill")
+                                .font(.caption2)
+                                .foregroundStyle(.yellow)
+                            Text("\(purse)")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.orange)
+                        }
+                    }
                 }
             }
 

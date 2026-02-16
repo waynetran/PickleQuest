@@ -54,61 +54,68 @@ struct MatchHubView: View {
 
     @ViewBuilder
     private func matchContent(matchVM: MatchViewModel, mapVM: MapViewModel) -> some View {
-        switch matchVM.matchState {
-        case .idle, .selectingOpponent:
+        ZStack {
+            // Map stays alive underneath — hidden during match/results to avoid recreation
             MapContentView(mapVM: mapVM, matchVM: matchVM)
                 .navigationBarTitleDisplayMode(.inline)
+                .opacity(matchVM.matchState == .idle || matchVM.matchState == .selectingOpponent ? 1 : 0)
+                .allowsHitTesting(matchVM.matchState == .idle || matchVM.matchState == .selectingOpponent)
 
-        case .selectingPartner:
-            PartnerPickerView(
-                availableNPCs: partnerCandidates(mapVM: mapVM, matchVM: matchVM),
-                playerPersonality: appState.player.personality,
-                opponent1: matchVM.selectedNPC,
-                opponent2: matchVM.opponentPartner,
-                onSelect: { partner in
-                    guard let opp1 = matchVM.selectedNPC,
-                          let opp2 = matchVM.opponentPartner else { return }
-                    let courtName = mapVM.selectedCourt?.name ?? ""
-                    Task {
-                        await matchVM.startDoublesMatch(
-                            player: appState.player,
-                            partner: partner,
-                            opponent1: opp1,
-                            opponent2: opp2,
-                            courtName: courtName
-                        )
-                    }
-                },
-                onCancel: {
-                    matchVM.reset()
-                }
-            )
+            switch matchVM.matchState {
+            case .idle, .selectingOpponent:
+                EmptyView()
 
-        case .simulating:
-            if matchVM.useSpriteVisualization {
-                MatchSpriteView(viewModel: matchVM)
-                    .toolbar(.hidden, for: .navigationBar)
-                    .toolbar(.hidden, for: .tabBar)
-            } else {
-                MatchSimulationView(viewModel: matchVM)
-            }
-
-        case .finished:
-            if let result = matchVM.matchResult {
-                MatchResultView(
-                    result: result,
-                    opponent: matchVM.selectedNPC,
-                    matchVM: matchVM,
-                    levelUpRewards: matchVM.levelUpRewards,
-                    duprChange: matchVM.duprChange,
-                    potentialDuprChange: matchVM.potentialDuprChange,
-                    repChange: matchVM.repChange,
-                    brokenEquipment: matchVM.brokenEquipment,
-                    energyDrain: matchVM.energyDrain
-                ) {
-                    Task {
-                        await processResult(matchVM: matchVM)
+            case .selectingPartner:
+                PartnerPickerView(
+                    availableNPCs: partnerCandidates(mapVM: mapVM, matchVM: matchVM),
+                    playerPersonality: appState.player.personality,
+                    opponent1: matchVM.selectedNPC,
+                    opponent2: matchVM.opponentPartner,
+                    onSelect: { partner in
+                        guard let opp1 = matchVM.selectedNPC,
+                              let opp2 = matchVM.opponentPartner else { return }
+                        let courtName = mapVM.selectedCourt?.name ?? ""
+                        Task {
+                            await matchVM.startDoublesMatch(
+                                player: appState.player,
+                                partner: partner,
+                                opponent1: opp1,
+                                opponent2: opp2,
+                                courtName: courtName
+                            )
+                        }
+                    },
+                    onCancel: {
                         matchVM.reset()
+                    }
+                )
+
+            case .simulating:
+                if matchVM.useSpriteVisualization {
+                    MatchSpriteView(viewModel: matchVM)
+                        .toolbar(.hidden, for: .navigationBar)
+                        .toolbar(.hidden, for: .tabBar)
+                } else {
+                    MatchSimulationView(viewModel: matchVM)
+                }
+
+            case .finished:
+                if let result = matchVM.matchResult {
+                    MatchResultView(
+                        result: result,
+                        opponent: matchVM.selectedNPC,
+                        matchVM: matchVM,
+                        levelUpRewards: matchVM.levelUpRewards,
+                        duprChange: matchVM.duprChange,
+                        potentialDuprChange: matchVM.potentialDuprChange,
+                        repChange: matchVM.repChange,
+                        brokenEquipment: matchVM.brokenEquipment,
+                        energyDrain: matchVM.energyDrain
+                    ) {
+                        Task {
+                            await processResult(matchVM: matchVM)
+                            matchVM.reset()
+                        }
                     }
                 }
             }
@@ -207,6 +214,16 @@ struct MatchHubView: View {
         // Wager loss deduction (MockMatchService handles the wallet, but we need to ensure
         // the wager cost is reflected in the player we're building)
         // Note: MockMatchService.processMatchResult already adds/deducts wager coins
+
+        // Update NPC purse based on wager result
+        if matchVM.wagerAmount > 0, !result.wasResigned {
+            if result.didPlayerWin {
+                await container.npcService.deductPurse(npcID: npc.id, amount: matchVM.wagerAmount)
+            } else {
+                await container.npcService.addToPurse(npcID: npc.id, amount: matchVM.wagerAmount)
+            }
+            await mapVM?.refreshPurses()
+        }
 
         // Track NPC loss record for wager refusal mechanic
         if result.didPlayerWin && !result.wasResigned {

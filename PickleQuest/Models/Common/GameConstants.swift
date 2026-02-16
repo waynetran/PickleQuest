@@ -293,6 +293,11 @@ enum GameConstants {
         static let hustlerMinSUPRRejectThreshold: Double = 0.5
         static let hustlerBeatRepBonus: Int = 25
         static let hustlerCount: Int = 3
+        static let regularNPCMinPurse: Int = 0
+        static let regularNPCMaxPurse: Int = 200
+        static let hustlerMinPurse: Int = 1000
+        static let hustlerMaxPurse: Int = 3000
+        static let hustlerResetInterval: TimeInterval = 3600 // 1 hour
     }
 
     // MARK: - XP
