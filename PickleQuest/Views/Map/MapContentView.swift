@@ -16,6 +16,7 @@ struct MapContentView: View {
         if let savedRegion = mapVM.lastCameraRegion {
             // Returning from a match — restore exact camera position
             _cameraPosition = State(initialValue: .region(savedRegion))
+            _hasCenteredOnPlayer = State(initialValue: true)
         } else {
             // Fresh launch — .userLocation smoothly animates to GPS when available.
             // Never use .automatic — it's reactive to annotations and causes zoom jumps.
@@ -25,6 +26,7 @@ struct MapContentView: View {
             ))))
         }
     }
+    @State private var hasCenteredOnPlayer = false
     @State private var undiscoveredCourt: Court?
     @State private var isDoublesMode = false
     @State private var visibleRegion: MKCoordinateRegion?
@@ -237,11 +239,18 @@ struct MapContentView: View {
                 )
             }
         }
-        .onChange(of: mapVM.locationManager.currentLocation?.coordinate) { _, _ in
-            // Continuous discovery check as real GPS updates
-            if appState.locationOverride == nil {
-                runDiscoveryCheck()
+        .onChange(of: mapVM.locationManager.currentLocation?.coordinate) { _, newCoord in
+            guard appState.locationOverride == nil else { return }
+            // First GPS fix after permission granted — center camera + generate courts
+            if !hasCenteredOnPlayer, let coord = newCoord {
+                cameraPosition = .region(MKCoordinateRegion(
+                    center: coord,
+                    span: MapContentView.defaultSpan
+                ))
+                hasCenteredOnPlayer = true
+                Task { await mapVM.generateCourtsIfNeeded(around: coord) }
             }
+            runDiscoveryCheck()
         }
         .confirmationDialog(
             "Undiscovered Court",
@@ -371,12 +380,12 @@ struct MapContentView: View {
         let hasRestoredCamera = mapVM.lastCameraRegion != nil
 
         // Dev mode override: set camera to override location once.
-        // Real GPS: .userLocation (set in init) handles tracking automatically — no camera set needed.
-        if !hasRestoredCamera, let override = appState.locationOverride {
+        if !hasCenteredOnPlayer, let override = appState.locationOverride {
             cameraPosition = .region(MKCoordinateRegion(
                 center: override,
                 span: MapContentView.defaultSpan
             ))
+            hasCenteredOnPlayer = true
         }
 
         mapVM.requestLocationPermission()
@@ -398,13 +407,12 @@ struct MapContentView: View {
                 try? await Task.sleep(for: .milliseconds(100))
             }
             if let loc = mapVM.locationManager.currentLocation {
-                // Set camera to actual GPS location on first launch.
-                // .userLocation fallback may still be showing SF if GPS wasn't ready at init.
-                if !hasRestoredCamera {
+                if !hasCenteredOnPlayer {
                     cameraPosition = .region(MKCoordinateRegion(
                         center: loc.coordinate,
                         span: MapContentView.defaultSpan
                     ))
+                    hasCenteredOnPlayer = true
                 }
                 await mapVM.generateCourtsIfNeeded(around: loc.coordinate)
                 runDiscoveryCheck()
