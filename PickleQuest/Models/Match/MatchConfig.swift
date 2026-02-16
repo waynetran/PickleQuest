@@ -7,6 +7,7 @@ struct MatchConfig: Sendable {
     let winByTwo: Bool
     let isRated: Bool
     let isTournament: Bool
+    let wagerAmount: Int
 
     init(
         matchType: MatchType,
@@ -14,7 +15,8 @@ struct MatchConfig: Sendable {
         gamesToWin: Int,
         winByTwo: Bool,
         isRated: Bool = true,
-        isTournament: Bool = false
+        isTournament: Bool = false,
+        wagerAmount: Int = 0
     ) {
         self.matchType = matchType
         self.pointsToWin = pointsToWin
@@ -22,6 +24,7 @@ struct MatchConfig: Sendable {
         self.winByTwo = winByTwo
         self.isRated = isRated
         self.isTournament = isTournament
+        self.wagerAmount = wagerAmount
     }
 
     var maxTimeouts: Int {

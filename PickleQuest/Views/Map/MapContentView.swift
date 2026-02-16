@@ -9,8 +9,6 @@ struct MapContentView: View {
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var undiscoveredCourt: Court?
     @State private var isDoublesMode = false
-    @State private var pendingDoublesOpp1: NPC?
-    @State private var pendingDoublesOpp2: NPC?
     @State private var visibleRegion: MKCoordinateRegion?
     @State private var showTrainingView = false
     @State private var playerAnimationState: CharacterAnimationState = .idleBack
@@ -130,9 +128,11 @@ struct MapContentView: View {
             if let coord = newOverride {
                 // Only recenter camera when not in sticky mode (sticky mode = user is panning)
                 if !mapVM.isStickyMode {
+                    let currentSpan = mapVM.lastCameraRegion?.span
+                        ?? MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
                     cameraPosition = .region(MKCoordinateRegion(
                         center: coord,
-                        span: MKCoordinateSpan(latitudeDelta: 0.002, longitudeDelta: 0.002)
+                        span: currentSpan
                     ))
                 }
                 Task { await mapVM.generateCourtsIfNeeded(around: coord) }
@@ -144,6 +144,7 @@ struct MapContentView: View {
                 CourtDetailSheet(
                     court: court,
                     npcs: mapVM.npcsAtSelectedCourt,
+                    hustlers: mapVM.hustlersAtSelectedCourt,
                     playerRating: appState.player.duprRating,
                     ladder: mapVM.currentLadder,
                     doublesLadder: nil, // Phase 6: doubles ladder
@@ -156,19 +157,46 @@ struct MapContentView: View {
                     isRated: Bindable(matchVM).isRated,
                     isDoublesMode: $isDoublesMode,
                     onChallenge: { npc in
-                        mapVM.pendingChallenge = npc
-                        mapVM.showCourtDetail = false
+                        // Hustlers and wager-eligible NPCs go through the wager sheet
+                        matchVM.pendingWagerNPC = npc
+                        matchVM.showWagerSheet = true
                     },
                     onDoublesChallenge: { opp1, opp2 in
-                        pendingDoublesOpp1 = opp1
-                        pendingDoublesOpp2 = opp2
-                        mapVM.showCourtDetail = false
+                        matchVM.selectedNPC = opp1
+                        matchVM.opponentPartner = opp2
+                        matchVM.isDoublesMode = true
+                        matchVM.matchState = .selectingPartner
                     },
                     onTournament: {
                         // Phase 5: tournament flow
                     },
                     onCoachTraining: {
                         showTrainingView = true
+                    }
+                )
+            }
+        }
+        .sheet(isPresented: Bindable(matchVM).showWagerSheet) {
+            if let npc = matchVM.pendingWagerNPC {
+                WagerSelectionSheet(
+                    npc: npc,
+                    playerCoins: appState.player.wallet.coins,
+                    playerSUPR: appState.player.duprRating,
+                    consecutiveWins: appState.player.npcLossRecord[npc.id] ?? 0,
+                    onAccept: { wagerAmount in
+                        let courtNameForMatch = mapVM.selectedCourt?.name ?? ""
+                        Task {
+                            await matchVM.startMatch(
+                                player: appState.player,
+                                opponent: npc,
+                                courtName: courtNameForMatch,
+                                wagerAmount: wagerAmount
+                            )
+                        }
+                        matchVM.pendingWagerNPC = nil
+                    },
+                    onCancel: {
+                        matchVM.pendingWagerNPC = nil
                     }
                 )
             }
@@ -232,32 +260,12 @@ struct MapContentView: View {
                 .presentationDetents([.medium])
             }
         }
-        .onChange(of: mapVM.showCourtDetail) { _, isPresented in
-            if !isPresented {
-                if let npc = mapVM.pendingChallenge {
-                    // Singles challenge
-                    let courtNameForMatch = mapVM.selectedCourt?.name ?? ""
-                    mapVM.pendingChallenge = nil
-                    Task {
-                        await matchVM.startMatch(player: appState.player, opponent: npc, courtName: courtNameForMatch)
-                    }
-                } else if let opp1 = pendingDoublesOpp1, let opp2 = pendingDoublesOpp2 {
-                    // Doubles challenge → enter partner selection
-                    pendingDoublesOpp1 = nil
-                    pendingDoublesOpp2 = nil
-                    matchVM.selectedNPC = opp1
-                    matchVM.opponentPartner = opp2
-                    matchVM.isDoublesMode = true
-                    matchVM.matchState = .selectingPartner
-                }
-            }
-        }
     }
 
     // MARK: - Map Layer
 
     private var mapLayer: some View {
-        Map(position: $cameraPosition, interactionModes: [.pan]) {
+        Map(position: $cameraPosition, interactionModes: [.pan, .zoom]) {
             // Player location (dev override, real GPS, or fallback)
             if let playerCoord = appState.locationOverride ?? mapVM.locationManager.currentLocation?.coordinate {
                 Annotation(appState.player.name, coordinate: playerCoord) {
@@ -313,6 +321,7 @@ struct MapContentView: View {
         }
         .onMapCameraChange(frequency: .continuous) { context in
             visibleRegion = context.region
+            mapVM.lastCameraRegion = context.region
             mapVM.updateStickyLocation(
                 center: context.camera.centerCoordinate,
                 appState: appState
@@ -323,14 +332,21 @@ struct MapContentView: View {
     // MARK: - Setup
 
     private func setupMap() async {
-        // Set camera position immediately so the player annotation is visible
-        if let override = appState.locationOverride {
+        let hasRestoredCamera = mapVM.lastCameraRegion != nil
+
+        // Restore camera position from previous session, or set initial position
+        if let savedRegion = mapVM.lastCameraRegion {
+            cameraPosition = .region(savedRegion)
+        } else if let override = appState.locationOverride {
             cameraPosition = .region(MKCoordinateRegion(
                 center: override,
-                span: MKCoordinateSpan(latitudeDelta: 0.009, longitudeDelta: 0.009)
+                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
             ))
         } else {
-            cameraPosition = .userLocation(fallback: .automatic)
+            cameraPosition = .userLocation(fallback: .region(MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+            )))
         }
 
         mapVM.requestLocationPermission()
@@ -352,6 +368,13 @@ struct MapContentView: View {
                 try? await Task.sleep(for: .milliseconds(100))
             }
             if let loc = mapVM.locationManager.currentLocation {
+                // Only set camera from GPS on first launch — don't clobber restored position
+                if !hasRestoredCamera {
+                    cameraPosition = .region(MKCoordinateRegion(
+                        center: loc.coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                    ))
+                }
                 await mapVM.generateCourtsIfNeeded(around: loc.coordinate)
                 runDiscoveryCheck()
             }

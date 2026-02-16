@@ -11,6 +11,9 @@ struct NPC: Identifiable, Codable, Equatable, Sendable {
     let portraitName: String // asset catalog image name
     let rewardMultiplier: Double
     let duprRating: Double
+    let isHustler: Bool
+    let hiddenStats: Bool
+    let baseWagerAmount: Int
 
     init(
         id: UUID,
@@ -22,7 +25,10 @@ struct NPC: Identifiable, Codable, Equatable, Sendable {
         dialogue: NPCDialogue,
         portraitName: String,
         rewardMultiplier: Double,
-        duprRating: Double? = nil
+        duprRating: Double? = nil,
+        isHustler: Bool = false,
+        hiddenStats: Bool = false,
+        baseWagerAmount: Int = 0
     ) {
         self.id = id
         self.name = name
@@ -34,6 +40,9 @@ struct NPC: Identifiable, Codable, Equatable, Sendable {
         self.portraitName = portraitName
         self.rewardMultiplier = rewardMultiplier
         self.duprRating = duprRating ?? stats.duprRating
+        self.isHustler = isHustler
+        self.hiddenStats = hiddenStats
+        self.baseWagerAmount = baseWagerAmount
     }
 }
 

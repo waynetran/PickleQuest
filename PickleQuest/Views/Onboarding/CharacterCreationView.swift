@@ -4,6 +4,7 @@ struct CharacterCreationView: View {
     @Environment(AppState.self) private var appState
     @EnvironmentObject private var container: DependencyContainer
     @State private var viewModel = CharacterCreationViewModel()
+    @FocusState private var nameFieldFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -67,9 +68,13 @@ struct CharacterCreationView: View {
                 .textFieldStyle(.roundedBorder)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 280)
+                .focused($nameFieldFocused)
                 .submitLabel(.next)
                 .onSubmit {
-                    if viewModel.canAdvance { viewModel.advance() }
+                    if viewModel.canAdvance {
+                        nameFieldFocused = false
+                        viewModel.advance()
+                    }
                 }
 
             Text("1-20 characters")
@@ -252,6 +257,7 @@ struct CharacterCreationView: View {
                 .buttonStyle(.borderedProminent)
             } else {
                 Button("Next") {
+                    nameFieldFocused = false
                     viewModel.advance()
                 }
                 .buttonStyle(.borderedProminent)

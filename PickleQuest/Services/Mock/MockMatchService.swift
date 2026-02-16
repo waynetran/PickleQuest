@@ -84,9 +84,17 @@ final class MockMatchService: MatchService {
         // Award XP
         let levelUpRewards = player.progression.addXP(result.xpEarned)
 
-        // Award coins with difficulty bonus
-        let bonus = Int(Double(result.coinsEarned) * opponent.rewardMultiplier)
-        player.wallet.add(result.coinsEarned + bonus)
+        // Award coins: wager wins get flat wager amount (no multiplier), regular matches use difficulty bonus
+        if config.wagerAmount > 0 {
+            if result.didPlayerWin {
+                player.wallet.add(config.wagerAmount)
+            } else {
+                _ = player.wallet.spend(config.wagerAmount)
+            }
+        } else {
+            let bonus = Int(Double(result.coinsEarned) * opponent.rewardMultiplier)
+            player.wallet.add(result.coinsEarned + bonus)
+        }
 
         // Calculate DUPR change
         let lastGame = result.gameScores.last ?? result.finalScore
@@ -111,11 +119,15 @@ final class MockMatchService: MatchService {
         }
 
         // Reputation
-        let repChange = RepCalculator.calculateRepChange(
+        var repChange = RepCalculator.calculateRepChange(
             didWin: result.didPlayerWin,
             playerSUPR: player.duprRating,
             opponentSUPR: opponent.duprRating
         )
+        // Bonus rep for beating a hustler
+        if result.didPlayerWin && opponent.isHustler {
+            repChange += GameConstants.Wager.hustlerBeatRepBonus
+        }
         player.repProfile.applyRepChange(repChange)
 
         // Equipment durability (only on loss, only wearable slots)

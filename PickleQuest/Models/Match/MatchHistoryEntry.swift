@@ -20,6 +20,7 @@ struct MatchHistoryEntry: Identifiable, Codable, Equatable, Sendable {
     let matchType: MatchType
     let partnerName: String?
     let opponent2Name: String?
+    let wagerAmount: Int
 
     init(
         id: UUID,
@@ -40,7 +41,8 @@ struct MatchHistoryEntry: Identifiable, Codable, Equatable, Sendable {
         wasResigned: Bool = false,
         matchType: MatchType = .singles,
         partnerName: String? = nil,
-        opponent2Name: String? = nil
+        opponent2Name: String? = nil,
+        wagerAmount: Int = 0
     ) {
         self.id = id
         self.date = date
@@ -61,6 +63,7 @@ struct MatchHistoryEntry: Identifiable, Codable, Equatable, Sendable {
         self.matchType = matchType
         self.partnerName = partnerName
         self.opponent2Name = opponent2Name
+        self.wagerAmount = wagerAmount
     }
 
     // MARK: - Codable (backwards-compatible with older saves)
@@ -86,5 +89,6 @@ struct MatchHistoryEntry: Identifiable, Codable, Equatable, Sendable {
         matchType = try c.decodeIfPresent(MatchType.self, forKey: .matchType) ?? .singles
         partnerName = try c.decodeIfPresent(String.self, forKey: .partnerName)
         opponent2Name = try c.decodeIfPresent(String.self, forKey: .opponent2Name)
+        wagerAmount = try c.decodeIfPresent(Int.self, forKey: .wagerAmount) ?? 0
     }
 }

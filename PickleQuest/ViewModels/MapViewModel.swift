@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import MapKit
 import SwiftUI
 
 @MainActor
@@ -15,10 +16,9 @@ final class MapViewModel {
     var courts: [Court] = []
     var selectedCourt: Court?
     var npcsAtSelectedCourt: [NPC] = []
+    var hustlersAtSelectedCourt: [NPC] = []
     var showCourtDetail = false
     var courtsLoaded = false
-    var pendingChallenge: NPC?
-
     // Court ladder state
     var currentLadder: CourtLadder?
     var currentCourtPerk: CourtPerk?
@@ -35,6 +35,7 @@ final class MapViewModel {
 
     // Dev mode movement
     var isStickyMode = false
+    var lastCameraRegion: MKCoordinateRegion?
 
     static let discoveryRadius: CLLocationDistance = 200
     private static let moveStepMeters: Double = 50
@@ -106,6 +107,7 @@ final class MapViewModel {
     func selectCourt(_ court: Court) async {
         selectedCourt = court
         npcsAtSelectedCourt = await courtService.getLadderNPCs(courtID: court.id)
+        hustlersAtSelectedCourt = await courtService.getHustlersAtCourt(court.id)
 
         // Initialize ladder if needed
         let npcIDs = npcsAtSelectedCourt.map(\.id)
@@ -143,6 +145,7 @@ final class MapViewModel {
         showCourtDetail = false
         selectedCourt = nil
         npcsAtSelectedCourt = []
+        hustlersAtSelectedCourt = []
         currentLadder = nil
         currentCourtPerk = nil
         alphaNPC = nil

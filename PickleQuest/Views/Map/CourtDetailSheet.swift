@@ -3,6 +3,7 @@ import SwiftUI
 struct CourtDetailSheet: View {
     let court: Court
     let npcs: [NPC]
+    let hustlers: [NPC]
     let playerRating: Double
     let ladder: CourtLadder?
     let doublesLadder: CourtLadder?
@@ -36,6 +37,7 @@ struct CourtDetailSheet: View {
                     } else {
                         ladderSection
                     }
+                    hustlerSection
                 }
                 .padding()
             }
@@ -642,6 +644,123 @@ struct CourtDetailSheet: View {
         if synergy.multiplier >= 1.03 { return .mint }
         if synergy.multiplier >= 0.97 { return .secondary }
         return .orange
+    }
+
+    // MARK: - Hustler Section
+
+    @ViewBuilder
+    private var hustlerSection: some View {
+        let activeHustlers = hustlers.filter { hustler in
+            // Hide hustlers the player has beaten (sore loser mechanic)
+            let wins = player.npcLossRecord[hustler.id] ?? 0
+            return wins == 0
+        }
+
+        if !activeHustlers.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 6) {
+                    Image(systemName: "eye.slash.fill")
+                        .foregroundStyle(.purple)
+                    Text("Mysterious Challengers")
+                        .font(.headline)
+                }
+                .padding(.horizontal)
+
+                ForEach(activeHustlers) { hustler in
+                    hustlerCard(hustler: hustler)
+                }
+            }
+        }
+
+        // Show "left the court" for beaten hustlers
+        let beatenHustlers = hustlers.filter { (player.npcLossRecord[$0.id] ?? 0) > 0 }
+        if !beatenHustlers.isEmpty {
+            ForEach(beatenHustlers) { hustler in
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color(.systemGray5))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "figure.walk.departure")
+                            .foregroundStyle(.secondary)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(hustler.name)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .strikethrough()
+                        Text("Left the court...")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .italic()
+                    }
+                    Spacer()
+                }
+                .padding(12)
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .opacity(0.6)
+            }
+        }
+    }
+
+    private func hustlerCard(hustler: NPC) -> some View {
+        HStack(spacing: 12) {
+            // Mysterious portrait
+            ZStack {
+                Circle()
+                    .fill(.purple.opacity(0.2))
+                    .frame(width: 48, height: 48)
+                Image(systemName: "questionmark")
+                    .font(.title3.bold())
+                    .foregroundStyle(.purple)
+            }
+            .overlay(
+                Circle()
+                    .stroke(.purple.opacity(0.5), lineWidth: 1.5)
+                    .frame(width: 48, height: 48)
+            )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(hustler.name)
+                    .font(.subheadline.bold())
+                Text(hustler.title)
+                    .font(.caption)
+                    .foregroundStyle(.purple)
+                HStack(spacing: 6) {
+                    Text("SUPR ???")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.purple)
+                    Text("Wager: \(hustler.baseWagerAmount) coins")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
+            }
+
+            Spacer()
+
+            Button {
+                dismiss()
+                onChallenge(hustler)
+            } label: {
+                Text("Challenge")
+                    .font(.caption.bold())
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.purple)
+                    .foregroundStyle(.white)
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.purple.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(.purple.opacity(0.2), lineWidth: 1)
+                )
+        )
     }
 
     // MARK: - Helpers

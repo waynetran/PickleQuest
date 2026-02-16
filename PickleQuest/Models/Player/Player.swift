@@ -20,6 +20,7 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
     var personality: NPCPersonality = .allRounder
     var coachingRecord: CoachingRecord = .empty
     var dailyChallengeState: DailyChallengeState? = nil
+    var npcLossRecord: [UUID: Int] = [:] // NPC ID → consecutive player wins (for wager refusal)
 
     init(id: UUID, name: String, stats: PlayerStats, progression: PlayerProgression,
          equippedItems: [EquipmentSlot: UUID], wallet: Wallet, duprProfile: DUPRProfile,
@@ -28,7 +29,8 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
          energy: Double = GameConstants.PersistentEnergy.maxEnergy, lastMatchDate: Date? = nil,
          discoveredCourtIDs: Set<UUID> = [], courtLadders: [CourtLadder] = [],
          courtPerks: [CourtPerk] = [], personality: NPCPersonality = .allRounder,
-         coachingRecord: CoachingRecord = .empty, dailyChallengeState: DailyChallengeState? = nil) {
+         coachingRecord: CoachingRecord = .empty, dailyChallengeState: DailyChallengeState? = nil,
+         npcLossRecord: [UUID: Int] = [:]) {
         self.id = id
         self.name = name
         self.stats = stats
@@ -48,6 +50,7 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
         self.personality = personality
         self.coachingRecord = coachingRecord
         self.dailyChallengeState = dailyChallengeState
+        self.npcLossRecord = npcLossRecord
     }
 
     var duprRating: Double {
@@ -99,6 +102,7 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
         personality = try c.decodeIfPresent(NPCPersonality.self, forKey: .personality) ?? .allRounder
         coachingRecord = try c.decodeIfPresent(CoachingRecord.self, forKey: .coachingRecord) ?? .empty
         dailyChallengeState = try c.decodeIfPresent(DailyChallengeState.self, forKey: .dailyChallengeState)
+        npcLossRecord = try c.decodeIfPresent([UUID: Int].self, forKey: .npcLossRecord) ?? [:]
     }
 
     static func newPlayer(name: String) -> Player {

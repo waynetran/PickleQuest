@@ -527,7 +527,7 @@ actor MatchEngine {
         let coins = calculateCoins(didWin: didWin)
 
         let loot: [Equipment]
-        if let generator = lootGenerator {
+        if didWin, let generator = lootGenerator {
             loot = generator.generateMatchLoot(
                 didWin: didWin,
                 opponentDifficulty: opponentDifficulty,
@@ -589,6 +589,10 @@ actor MatchEngine {
     }
 
     private func calculateCoins(didWin: Bool) -> Int {
+        // Wager matches: winner takes the wager amount
+        if didWin && config.wagerAmount > 0 {
+            return config.wagerAmount
+        }
         // Rec matches don't award coins — coins come from tournaments and wagers
         return 0
     }

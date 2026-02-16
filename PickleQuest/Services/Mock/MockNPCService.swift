@@ -2,9 +2,11 @@ import Foundation
 
 actor MockNPCService: NPCService {
     private let npcs: [NPC]
+    private let hustlers: [NPC]
 
     init() {
         self.npcs = MockNPCService.createAllNPCs()
+        self.hustlers = HustlerNPCGenerator.generateHustlers()
     }
 
     func getAllNPCs() async -> [NPC] {
@@ -12,11 +14,15 @@ actor MockNPCService: NPCService {
     }
 
     func getNPC(by id: UUID) async -> NPC? {
-        npcs.first { $0.id == id }
+        npcs.first { $0.id == id } ?? hustlers.first { $0.id == id }
     }
 
     func getNPCs(forDifficulty difficulty: NPCDifficulty) async -> [NPC] {
         npcs.filter { $0.difficulty == difficulty }
+    }
+
+    func getHustlerNPCs() async -> [NPC] {
+        hustlers
     }
 
     // MARK: - NPC Roster

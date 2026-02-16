@@ -7,58 +7,52 @@ struct MatchActionButtons: View {
     @State private var showNoItemsMessage = false
 
     var body: some View {
-        ZStack {
-            // Right-side action buttons (vertically centered)
-            HStack {
-                Spacer()
-                VStack(spacing: 12) {
-                    // Timeout
-                    ActionButton(
-                        icon: "clock.arrow.circlepath",
-                        label: "Timeout",
-                        enabled: viewModel.canUseTimeout
-                    ) {
-                        Task { await viewModel.callTimeout() }
-                    }
+        ZStack(alignment: .topTrailing) {
+            // Right-side action buttons (top right)
+            VStack(spacing: 12) {
+                ActionButton(
+                    icon: "clock.arrow.circlepath",
+                    label: "Timeout",
+                    enabled: viewModel.canUseTimeout
+                ) {
+                    Task { await viewModel.callTimeout() }
+                }
 
-                    // Consumable
-                    ActionButton(
-                        icon: "cup.and.saucer.fill",
-                        label: "Item",
-                        enabled: viewModel.matchState == .simulating && !viewModel.isSkipping
-                    ) {
-                        if viewModel.playerConsumables.isEmpty {
-                            showNoItemsMessage = true
-                            Task {
-                                try? await Task.sleep(for: .seconds(2))
-                                showNoItemsMessage = false
-                            }
-                        } else if viewModel.canUseConsumable {
-                            showConsumablePicker = true
+                ActionButton(
+                    icon: "cup.and.saucer.fill",
+                    label: "Item",
+                    enabled: viewModel.matchState == .simulating && !viewModel.isSkipping
+                ) {
+                    if viewModel.playerConsumables.isEmpty {
+                        showNoItemsMessage = true
+                        Task {
+                            try? await Task.sleep(for: .seconds(2))
+                            showNoItemsMessage = false
                         }
-                    }
-
-                    // Hook a Line Call
-                    ActionButton(
-                        icon: "eye.trianglebadge.exclamationmark",
-                        label: "Hook",
-                        enabled: viewModel.canHookCall
-                    ) {
-                        Task { await viewModel.hookLineCall() }
-                    }
-
-                    // Resign
-                    ActionButton(
-                        icon: "flag.fill",
-                        label: "Resign",
-                        enabled: true,
-                        tint: .red
-                    ) {
-                        showResignConfirm = true
+                    } else if viewModel.canUseConsumable {
+                        showConsumablePicker = true
                     }
                 }
-                .padding(.trailing, 12)
+
+                ActionButton(
+                    icon: "eye.trianglebadge.exclamationmark",
+                    label: "Hook",
+                    enabled: viewModel.canHookCall
+                ) {
+                    Task { await viewModel.hookLineCall() }
+                }
+
+                ActionButton(
+                    icon: "flag.fill",
+                    label: "Resign",
+                    enabled: true,
+                    tint: .red
+                ) {
+                    showResignConfirm = true
+                }
             }
+            .padding(.trailing, 12)
+            .padding(.top, 12)
 
             // Skip button at bottom-right
             if !viewModel.isSkipping {

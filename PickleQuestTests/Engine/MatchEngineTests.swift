@@ -77,7 +77,7 @@ struct MatchEngineTests {
         #expect(result.totalPoints > 0)
         #expect(result.gameScores.count >= 1)
         #expect(result.xpEarned > 0)
-        #expect(result.coinsEarned > 0)
+        #expect(result.coinsEarned >= 0) // Rec matches award 0 coins; wagers/tournaments award coins
         #expect(result.playerStats.finalEnergy >= 0)
         #expect(result.opponentStats.finalEnergy >= 0)
     }

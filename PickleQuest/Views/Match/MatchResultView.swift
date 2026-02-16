@@ -68,11 +68,42 @@ struct MatchResultView: View {
                     // Rewards
                     HStack(spacing: 24) {
                         RewardBadge(icon: "star.fill", label: "XP", value: "+\(result.xpEarned)", color: .blue)
-                        if result.coinsEarned > 0 {
+                        if matchVM.wagerAmount > 0 {
+                            if result.didPlayerWin {
+                                RewardBadge(
+                                    icon: "dollarsign.circle.fill",
+                                    label: "Wager Won!",
+                                    value: "+\(matchVM.wagerAmount)",
+                                    color: .green
+                                )
+                            } else {
+                                RewardBadge(
+                                    icon: "dollarsign.circle.fill",
+                                    label: "Wager Lost",
+                                    value: "-\(matchVM.wagerAmount)",
+                                    color: .red
+                                )
+                            }
+                        } else if result.coinsEarned > 0 {
                             RewardBadge(icon: "dollarsign.circle.fill", label: "Coins", value: "+\(result.coinsEarned)", color: .yellow)
                         }
                         suprBadge
                         repBadge
+                    }
+
+                    // Hustler defeat bonus
+                    if matchVM.isHustlerMatch && result.didPlayerWin {
+                        HStack(spacing: 8) {
+                            Image(systemName: "star.fill")
+                                .foregroundStyle(.purple)
+                            Text("Hustler Defeated! +\(GameConstants.Wager.hustlerBeatRepBonus) bonus rep")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.purple)
+                        }
+                        .padding(8)
+                        .frame(maxWidth: .infinity)
+                        .background(.purple.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
 
                     // Energy drain indicator

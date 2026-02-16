@@ -204,6 +204,23 @@ struct MatchHubView: View {
             player.consumables.removeAll { usedIDs.contains($0.id) }
         }
 
+        // Wager loss deduction (MockMatchService handles the wallet, but we need to ensure
+        // the wager cost is reflected in the player we're building)
+        // Note: MockMatchService.processMatchResult already adds/deducts wager coins
+
+        // Track NPC loss record for wager refusal mechanic
+        if result.didPlayerWin && !result.wasResigned {
+            player.npcLossRecord[npc.id, default: 0] += 1
+        } else {
+            player.npcLossRecord[npc.id] = 0
+        }
+
+        // Hustler defeat: generate premium loot
+        if result.didPlayerWin && !result.wasResigned && npc.isHustler {
+            let hustlerLoot = HustlerLootGenerator.generateHustlerLoot()
+            matchVM.lootDrops.append(contentsOf: hustlerLoot)
+        }
+
         // Advance court ladder on win
         if let mapVM, let court = mapVM.selectedCourt, result.didPlayerWin, !result.wasResigned {
             await mapVM.recordMatchResult(courtID: court.id, npcID: npc.id, didWin: true)
@@ -234,7 +251,8 @@ struct MatchHubView: View {
             wasResigned: result.wasResigned,
             matchType: matchVM.isDoublesMode ? .doubles : .singles,
             partnerName: matchVM.selectedPartner?.name,
-            opponent2Name: matchVM.opponentPartner?.name
+            opponent2Name: matchVM.opponentPartner?.name,
+            wagerAmount: matchVM.wagerAmount
         )
         player.matchHistory.append(historyEntry)
 

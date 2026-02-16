@@ -73,16 +73,19 @@ struct PlayerChooserView: View {
 
     private var newCharacterCard: some View {
         VStack(spacing: 10) {
+            Spacer()
+
             Image(systemName: "plus.circle.fill")
                 .font(.system(size: 40))
                 .foregroundStyle(Color.accentColor)
 
             Text("New Character")
                 .font(.headline)
+
+            Spacer()
         }
         .padding()
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: 140)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.accentColor.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(

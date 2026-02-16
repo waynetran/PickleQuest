@@ -38,6 +38,12 @@ final class MatchViewModel {
     var partnerAppearance: CharacterAppearance?
     var opponent2Appearance: CharacterAppearance?
 
+    // Wager state
+    var wagerAmount: Int = 0
+    var isHustlerMatch: Bool = false
+    var pendingWagerNPC: NPC?
+    var showWagerSheet: Bool = false
+
     // Doubles state
     var selectedPartner: NPC?
     var opponentPartner: NPC?
@@ -105,10 +111,12 @@ final class MatchViewModel {
         isRated && !isAutoUnrated(playerRating: playerRating, opponentRating: opponentRating)
     }
 
-    func startMatch(player: Player, opponent: NPC, courtName: String = "") async {
+    func startMatch(player: Player, opponent: NPC, courtName: String = "", wagerAmount: Int = 0) async {
         selectedNPC = opponent
         self.courtName = courtName
         self.playerName = player.name
+        self.wagerAmount = wagerAmount
+        self.isHustlerMatch = opponent.isHustler
         isDoublesMode = false
         resetMatchState()
 
@@ -124,7 +132,8 @@ final class MatchViewModel {
             pointsToWin: GameConstants.Match.defaultPointsToWin,
             gamesToWin: 1,
             winByTwo: GameConstants.Match.winByTwo,
-            isRated: effectiveRated
+            isRated: effectiveRated,
+            wagerAmount: wagerAmount
         )
 
         let newEngine = await matchService.createMatch(
@@ -381,6 +390,10 @@ final class MatchViewModel {
         hookCallsAvailable = 1
         playerConsumables = []
         opponentStreak = 0
+        wagerAmount = 0
+        isHustlerMatch = false
+        pendingWagerNPC = nil
+        showWagerSheet = false
         selectedPartner = nil
         opponentPartner = nil
         teamSynergy = nil

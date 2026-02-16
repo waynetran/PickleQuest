@@ -19,7 +19,8 @@
 | 5 | Doubles, Team Synergy, Tournaments | **Complete** |
 | 6 | Training, Coaching, Daily Challenges & Economy Rebalance | **Complete** |
 | 7a | Onboarding, Player Management & Basic Persistence | **Complete** |
-| 7b | Persistence Polish, Cloud Prep, Multiplayer Prep | Planned |
+| 7b | Wager System + Hustler NPCs | **Complete** |
+| 7c | Persistence Polish, Cloud Prep, Multiplayer Prep | Planned |
 
 ---
 
@@ -668,7 +669,67 @@ Profile → "Switch Player" → save current → [.playerChooser]
 
 ---
 
-## Milestone 7b: Persistence Polish, Cloud Prep, Multiplayer Prep (Planned)
+## Milestone 7b: Wager System + Hustler NPCs
+
+### What was built
+- **Wager system**: players can bet coins on matches against NPCs with tier options [Free, 50, 100, 250, 500]; win doubles the wager, loss deducts it
+- **NPC wager decisions**: regular NPCs accept wagers if their SUPR ≥ player - 0.5 and consecutive losses < 3; free matches always accepted; NPCs refuse wagers after losing 3 in a row
+- **Hustler NPC archetype**: 3 pre-defined hustler NPCs (Slick Rick, Diamond Dee, The Shark) with hidden stats ("???"), forced wager amounts (300/500/800), and sore-loser mechanic (leave court after defeat)
+- **Hustler loot**: defeating a hustler generates premium drops (1 epic + 1 rare + 1 bonus roll 50/50 epic/rare) via `HustlerLootGenerator`
+- **Hustler rep bonus**: +25 reputation for beating a hustler (via `GameConstants.Wager.hustlerBeatRepBonus`)
+- **WagerSelectionSheet**: intermediate sheet between NPC challenge and match start — tier picker for regular NPCs, forced wager display for hustlers, coin balance check, NPC rejection messages
+- **Court hustler distribution**: 3 hustlers distributed across mid-to-high difficulty courts (indices 4-8)
+- **Match result wager display**: green "+X (Wager Won!)" on victory, red "-X (Wager Lost)" on defeat, purple hustler defeat callout with bonus rep
+- **NPC loss record tracking**: `Player.npcLossRecord` tracks consecutive player wins per NPC for wager refusal mechanic
+- **Match history**: wager amounts recorded in `MatchHistoryEntry`
+
+### Architecture
+```
+CourtDetailSheet (hustler section with "???" stats + wager badges)
+    ↓ challenge tap
+MapContentView → sets pendingWagerNPC → shows WagerSelectionSheet
+    ↓
+WagerDecision.evaluate(npc, wagerAmount, playerSUPR, consecutiveWins)
+    ├─ .accepted(amount) → matchVM.startMatch(..., wagerAmount:)
+    └─ .rejected(reason) → shows rejection message
+    ↓
+MatchEngine (config.wagerAmount) → calculateCoins returns wagerAmount on win
+    ↓
+MockMatchService.processMatchResult → wallet.add/spend(wager), hustler rep bonus
+    ↓
+MatchHubView.processResult → npcLossRecord tracking, hustler loot generation
+```
+
+### New files (6)
+- `Engine/LootGeneration/HustlerNPCGenerator.swift` — 3 pre-defined hustler NPCs with deterministic UUIDs
+- `Engine/LootGeneration/HustlerLootGenerator.swift` — premium loot drops for hustler defeats
+- `Models/Match/WagerDecision.swift` — NPC accept/reject logic for wagers
+- `Views/Map/WagerSelectionSheet.swift` — wager UI with tier picker / forced hustler wager
+- `PickleQuestTests/Engine/WagerDecisionTests.swift` — 7 tests for wager decision logic
+- `PickleQuestTests/Engine/HustlerNPCGeneratorTests.swift` — 8 tests for hustler generation
+
+### Modified files (17)
+- `NPC.swift` — isHustler, hiddenStats, baseWagerAmount fields
+- `MatchConfig.swift` — wagerAmount field
+- `Player.swift` — npcLossRecord with Codable migration
+- `MatchHistoryEntry.swift` — wagerAmount with Codable migration
+- `GameConstants.swift` — Wager section (tiers, thresholds, hustler constants)
+- `NPCService.swift` — getHustlerNPCs() protocol method
+- `MockNPCService.swift` — hustler generation + getNPC checks hustlers
+- `CourtService.swift` — getHustlersAtCourt() protocol method
+- `MockCourtService.swift` — hustler distribution across courts
+- `MatchEngine.swift` — calculateCoins returns wagerAmount on win
+- `MockMatchService.swift` — wager economy + hustler rep bonus
+- `MatchViewModel.swift` — wager state, pendingWagerNPC, showWagerSheet
+- `MapViewModel.swift` — hustlersAtSelectedCourt loading
+- `CourtDetailSheet.swift` — hustler section with mysterious styling
+- `MapContentView.swift` — wager sheet flow integration
+- `MatchResultView.swift` — wager win/loss badges, hustler defeat callout
+- `MatchHubView.swift` — npcLossRecord tracking, hustler loot, wager in history
+
+---
+
+## Milestone 7c: Persistence Polish, Cloud Prep, Multiplayer Prep (Planned)
 
 ### Goals
 - Cloud save preparation (protocol-based storage layer)

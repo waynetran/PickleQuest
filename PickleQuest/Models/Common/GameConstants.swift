@@ -285,6 +285,16 @@ enum GameConstants {
         static let completionBonusCoins: Int = 500
     }
 
+    // MARK: - Wager
+    enum Wager {
+        static let wagerTiers: [Int] = [0, 50, 100, 250, 500]
+        static let npcMaxConsecutiveLosses: Int = 3
+        static let hustlerWagerRange: ClosedRange<Int> = 200...1000
+        static let hustlerMinSUPRRejectThreshold: Double = 0.5
+        static let hustlerBeatRepBonus: Int = 25
+        static let hustlerCount: Int = 3
+    }
+
     // MARK: - XP
     enum XP {
         static let baseXPPerMatch: Int = 50

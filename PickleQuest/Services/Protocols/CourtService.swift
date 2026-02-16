@@ -7,5 +7,6 @@ protocol CourtService: Sendable {
     func getCourt(by id: UUID) async -> Court?
     func getNPCsAtCourt(_ courtID: UUID) async -> [NPC]
     func getLadderNPCs(courtID: UUID) async -> [NPC]  // sorted weakest → strongest
+    func getHustlersAtCourt(_ courtID: UUID) async -> [NPC]
     var hasGenerated: Bool { get async }
 }

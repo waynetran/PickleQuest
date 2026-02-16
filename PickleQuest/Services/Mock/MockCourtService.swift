@@ -5,6 +5,7 @@ import CoreLocation
 actor MockCourtService: CourtService {
     private var courts: [Court] = []
     private var courtNPCAssignments: [UUID: [NPC]] = [:]
+    private var courtHustlerAssignments: [UUID: [NPC]] = [:]
     private var generated = false
     private let npcService: NPCService
 
@@ -45,6 +46,9 @@ actor MockCourtService: CourtService {
         // Phase 6: Distribute NPCs to courts by difficulty tier
         await distributeNPCs()
 
+        // Phase 7: Distribute hustlers to mid-to-high difficulty courts
+        await distributeHustlers()
+
         generated = true
     }
 
@@ -61,6 +65,10 @@ actor MockCourtService: CourtService {
     func getLadderNPCs(courtID: UUID) async -> [NPC] {
         let npcs = courtNPCAssignments[courtID] ?? []
         return npcs.sorted { $0.duprRating < $1.duprRating }
+    }
+
+    func getHustlersAtCourt(_ courtID: UUID) async -> [NPC] {
+        courtHustlerAssignments[courtID] ?? []
     }
 
     // MARK: - NPC Distribution
@@ -96,6 +104,31 @@ actor MockCourtService: CourtService {
             // Sort by DUPR rating (weakest → strongest) to form the ladder
             npcs.sort { $0.duprRating < $1.duprRating }
             courtNPCAssignments[court.id] = npcs
+        }
+    }
+
+    // MARK: - Hustler Distribution
+
+    private func distributeHustlers() async {
+        let hustlers = await npcService.getHustlerNPCs()
+        guard !hustlers.isEmpty else { return }
+
+        // Prefer mid-to-high difficulty courts (indices 4-8 in sorted order)
+        let preferredIndices = Array(4..<min(9, courts.count))
+        let targetCourts: [Court]
+        if preferredIndices.count >= hustlers.count {
+            // Pick hustler.count courts from the preferred range
+            let shuffled = preferredIndices.shuffled()
+            targetCourts = shuffled.prefix(hustlers.count).map { courts[$0] }
+        } else {
+            // Fallback: just use the first N courts
+            targetCourts = Array(courts.prefix(hustlers.count))
+        }
+
+        for (index, hustler) in hustlers.enumerated() {
+            guard index < targetCourts.count else { break }
+            let courtID = targetCourts[index].id
+            courtHustlerAssignments[courtID, default: []].append(hustler)
         }
     }
 

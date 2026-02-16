@@ -76,7 +76,7 @@ private struct EventLogOverlay: View {
 
     // Show only the last few events
     private var recentEvents: [MatchEventEntry] {
-        Array(events.suffix(4))
+        Array(events.suffix(6))
     }
 
     var body: some View {
@@ -90,7 +90,8 @@ private struct EventLogOverlay: View {
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 6)
+        .padding(.top, 6)
+        .padding(.bottom, 56)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             LinearGradient(
