@@ -21,6 +21,7 @@
 | 7a | Onboarding, Player Management & Basic Persistence | **Complete** |
 | 7b | Wager System + Hustler NPCs | **Complete** |
 | 8 | Match Simulation Realism + Focus Stat | **Complete** |
+| 9 | Gear Drop System (Loot on the Map) | **Complete** |
 | 7c | Persistence Polish, Cloud Prep, Multiplayer Prep | Planned |
 
 ---
@@ -785,6 +786,63 @@ MatchHubView.processResult → npcLossRecord tracking, hustler loot generation
 - `TeamStatCompositor.swift` — focus in composite stats
 - `TrainingDrill.swift` — focus case in forStat switch
 - `EquipmentNameGenerator.swift` — focus flavor text
+
+---
+
+## Milestone 9: Gear Drop System (Loot on the Map)
+
+**Commit**: `8b006fe`
+
+### What was built
+- **5 drop types** with GPS-anchored backpack pins on the map:
+  - **Field Drops**: passive walking spawns every 15-20min, despawn after 30min, max 3 active, spawn within 300m of player
+  - **Court Caches**: anchored to discovered courts, locked until winning a match at that court, 4hr cooldown per court, rarity boosted by court difficulty
+  - **Trail Drops**: daily themed walking route with 5-8 waypoints ~200m apart, 2hr timer, escalating rarity (final waypoint = epic/legendary), brand-themed loot
+  - **Contested Drops**: rare beacons at 500-2000m from player with NPC guardian, 2/day max, guaranteed rare+ loot (3 items)
+  - **Fog Stashes**: 2% chance per newly revealed fog cell, remoteness bonus (isolated cells → better rarity)
+- **Map integration**: backpack annotations with rarity-colored glow, pulsing animation when in 50m pickup range, type-specific icons (lock for court caches, flame for contested, numbered badges for trails)
+- **Loot reveal sheet**: rarity-colored header, coin reward display, equipment list with equip/keep decisions, sticky dismiss button
+- **Trail banner**: horizontal progress bar overlay on map showing trail name, waypoint progress, countdown timer
+- **Contested drop sheet**: guardian difficulty display, challenge button, risk/reward info
+- **Daily reset**: contested and field drop counters reset each calendar day, expired trails auto-clear
+- **Fog stash detection**: captures fog cells before/after reveal, spawns stashes in newly revealed cells with "Hidden stash found!" toast
+- **Court cache flow**: after winning a match at a court, pending court cache auto-unlocks for collection
+- **Persistence**: `GearDropState` on Player model (collectedDropIDs, courtCacheCooldowns, activeTrail, contestedDropsClaimed, fieldDropsCollectedToday, lastDailyReset, lastFieldSpawnTime) — all with backward-compatible Codable
+
+### Architecture
+```
+GearDropService (protocol)
+    ↓
+MockGearDropService (actor) — holds activeDrops in memory, uses LootGenerator for collection
+    ↓
+GearDropSpawnEngine (struct) — coordinate generation, rarity rolling, trail waypoint layout, remoteness calculation
+    ↓
+MapViewModel — refreshGearDrops() called on location change, collectGearDrop() shows reveal sheet
+    ↓
+MapContentView — ForEach annotations, reveal sheet, contested sheet, trail banner, fog stash hook in runDiscoveryCheck()
+```
+
+### New files (10)
+- `Models/GearDrop/GearDrop.swift` — GearDrop model + GearDropType enum (field, courtCache, trail, contested, fogStash)
+- `Models/GearDrop/GearDropState.swift` — Persisted player state + TrailRoute with backward-compatible Codable
+- `Models/Common/LootDecision.swift` — Shared `LootDecision` enum extracted from MatchViewModel
+- `Services/Protocols/GearDropService.swift` — Service protocol (spawn, collect, expire, check)
+- `Services/Mock/MockGearDropService.swift` — Actor implementation with all 5 drop type logic
+- `Engine/GearDrop/GearDropSpawnEngine.swift` — Coordinate gen, rarity rolling, trail waypoints, remoteness
+- `Views/Map/GearDropAnnotationView.swift` — Backpack pin with rarity glow + pulse animation
+- `Views/Map/GearDropRevealSheet.swift` — Loot reveal modal with equip/keep decisions
+- `Views/Map/TrailBannerView.swift` — Trail progress overlay with live countdown timer
+- `Views/Map/ContestedDropSheet.swift` — NPC guardian challenge confirmation
+
+### Modified files (7)
+- `GameConstants.swift` — GearDrop section (30 constants: spawn intervals, radii, cooldowns, rarity boosts, trail params, contested limits, fog stash chance)
+- `Player.swift` — `gearDropState: GearDropState?` with `decodeIfPresent` backward compat
+- `DependencyContainer.swift` — `gearDropService: GearDropService` property + init wiring
+- `MapViewModel.swift` — gear drop state vars, refreshGearDrops(), collectGearDrop(), isDropInRange(), checkFogStashes(), unlockCourtCacheIfNeeded(), startTrailRoute()
+- `MapContentView.swift` — gear drop annotations in mapLayer, reveal/contested sheets, trail banner, fog stash hook in runDiscoveryCheck(), toast system, processGearDropLoot(), daily reset
+- `MatchViewModel.swift` — removed nested `LootDecision` enum (now shared)
+- `LootDropRow.swift` — updated binding type from `MatchViewModel.LootDecision?` to `LootDecision?`
+- `MatchHubView.swift` — passes `gearDropService` to MapViewModel init
 
 ---
 
