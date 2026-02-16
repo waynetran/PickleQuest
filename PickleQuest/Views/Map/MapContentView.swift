@@ -13,12 +13,16 @@ struct MapContentView: View {
     init(mapVM: MapViewModel, matchVM: MatchViewModel) {
         self.mapVM = mapVM
         self.matchVM = matchVM
-        // Restore saved camera region immediately to avoid zoom flicker
-        // when the view is recreated (e.g. returning from a match)
         if let savedRegion = mapVM.lastCameraRegion {
+            // Returning from a match — restore exact camera position
             _cameraPosition = State(initialValue: .region(savedRegion))
         } else {
-            _cameraPosition = State(initialValue: .automatic)
+            // Fresh launch — .userLocation smoothly animates to GPS when available.
+            // Never use .automatic — it's reactive to annotations and causes zoom jumps.
+            _cameraPosition = State(initialValue: .userLocation(fallback: .region(MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+                span: MapContentView.defaultSpan
+            ))))
         }
     }
     @State private var undiscoveredCourt: Court?
@@ -366,19 +370,13 @@ struct MapContentView: View {
     private func setupMap() async {
         let hasRestoredCamera = mapVM.lastCameraRegion != nil
 
-        // If init didn't have a saved region, set from location override or GPS fallback
-        if !hasRestoredCamera {
-            if let override = appState.locationOverride {
-                cameraPosition = .region(MKCoordinateRegion(
-                    center: override,
-                    span: MapContentView.defaultSpan
-                ))
-            } else {
-                cameraPosition = .userLocation(fallback: .region(MKCoordinateRegion(
-                    center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-                    span: MapContentView.defaultSpan
-                )))
-            }
+        // Dev mode override: set camera to override location once.
+        // Real GPS: .userLocation (set in init) handles tracking automatically — no camera set needed.
+        if !hasRestoredCamera, let override = appState.locationOverride {
+            cameraPosition = .region(MKCoordinateRegion(
+                center: override,
+                span: MapContentView.defaultSpan
+            ))
         }
 
         mapVM.requestLocationPermission()
@@ -394,19 +392,12 @@ struct MapContentView: View {
             await mapVM.generateCourtsIfNeeded(around: override)
             runDiscoveryCheck()
         } else {
-            // Wait for real GPS
+            // Wait for real GPS to generate courts (camera is already tracking via .userLocation)
             for _ in 0..<100 { // up to 10 seconds
                 if mapVM.locationManager.currentLocation != nil { break }
                 try? await Task.sleep(for: .milliseconds(100))
             }
             if let loc = mapVM.locationManager.currentLocation {
-                // Only set camera from GPS on first launch — don't clobber restored position
-                if !hasRestoredCamera {
-                    cameraPosition = .region(MKCoordinateRegion(
-                        center: loc.coordinate,
-                        span: MapContentView.defaultSpan
-                    ))
-                }
                 await mapVM.generateCourtsIfNeeded(around: loc.coordinate)
                 runDiscoveryCheck()
             }
