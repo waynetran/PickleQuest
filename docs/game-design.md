@@ -160,7 +160,7 @@ Each item gets a rarity-appropriate prefix + slot-appropriate base name (e.g., "
 
 ## Leveling & Stat Allocation (Milestone 2)
 - Each level-up grants 3 stat points
-- Points allocated manually to any of the 10 stats
+- Points allocated manually to any of the 11 stats
 - Profile shows base stats vs effective stats (with equipment bonuses)
 - Stat allocation available from Profile view when points are available
 

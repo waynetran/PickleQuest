@@ -39,7 +39,7 @@ struct StatCalculator: Sendable {
     func applyMomentum(stats: PlayerStats, modifier: Double) -> PlayerStats {
         guard modifier != 0 else { return stats }
         var result = stats
-        let affectedStats: [StatType] = [.power, .accuracy, .spin, .speed, .clutch, .consistency]
+        let affectedStats: [StatType] = [.power, .accuracy, .spin, .speed, .clutch, .focus, .consistency]
         for type in affectedStats {
             let current = Double(stats.stat(type))
             let adjusted = Int(current * (1.0 + modifier))

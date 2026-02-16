@@ -14,7 +14,7 @@ enum GameConstants {
         static let startingLevel: Int = 1
         static let maxLevel: Int = 50
         static let statPointsPerLevel: Int = 3
-        static let startingStatTotal: Int = 150 // distributed across 10 stats
+        static let startingStatTotal: Int = 165 // distributed across 11 stats
     }
 
     // MARK: - DUPR Mapping
@@ -71,7 +71,6 @@ enum GameConstants {
         static let defaultGamesToWin: Int = 2
         static let winByTwo: Bool = true
         static let maxPoints: Int = 21 // safety cap per game
-        static let serveSwitchInterval: Int = 2 // singles: every 2 points
     }
 
     // MARK: - Fatigue
@@ -114,6 +113,14 @@ enum GameConstants {
         static let maxRallyShots: Int = 30
         static let baseWinnerChance: Double = 0.15
         static let baseErrorChance: Double = 0.12
+
+        // Doubles dink phase
+        static let doublesDinkMinShots: Int = 3
+        static let doublesDinkMaxShots: Int = 15
+        static let dinkWinnerChance: Double = 0.05
+        static let dinkErrorChance: Double = 0.05
+        static let dinkForcedErrorChance: Double = 0.02
+        static let doublesMaxRallyShots: Int = 45
     }
 
     // MARK: - Equipment

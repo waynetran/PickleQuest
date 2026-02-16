@@ -84,7 +84,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 10, accuracy: 12, spin: 5, speed: 10,
                 defense: 12, reflexes: 10, positioning: 12,
-                clutch: 8, stamina: 15, consistency: 15
+                clutch: 8, focus: 10, stamina: 15, consistency: 15
             ),
             personality: .defensive,
             dialogue: NPCDialogue(
@@ -104,7 +104,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 8, accuracy: 10, spin: 8, speed: 20,
                 defense: 10, reflexes: 18, positioning: 8,
-                clutch: 10, stamina: 12, consistency: 10
+                clutch: 10, focus: 8, stamina: 12, consistency: 10
             ),
             personality: .speedster,
             dialogue: NPCDialogue(
@@ -124,7 +124,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 10, accuracy: 14, spin: 8, speed: 12,
                 defense: 10, reflexes: 12, positioning: 10,
-                clutch: 5, stamina: 14, consistency: 16
+                clutch: 5, focus: 6, stamina: 14, consistency: 16
             ),
             personality: .allRounder,
             dialogue: NPCDialogue(
@@ -144,7 +144,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 20, accuracy: 8, spin: 10, speed: 8,
                 defense: 6, reflexes: 8, positioning: 6,
-                clutch: 12, stamina: 10, consistency: 5
+                clutch: 12, focus: 6, stamina: 10, consistency: 5
             ),
             personality: .aggressive,
             dialogue: NPCDialogue(
@@ -164,7 +164,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 12, accuracy: 10, spin: 6, speed: 14,
                 defense: 14, reflexes: 12, positioning: 10,
-                clutch: 10, stamina: 16, consistency: 12
+                clutch: 10, focus: 10, stamina: 16, consistency: 12
             ),
             personality: .allRounder,
             dialogue: NPCDialogue(
@@ -184,7 +184,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 8, accuracy: 16, spin: 10, speed: 10,
                 defense: 14, reflexes: 10, positioning: 14,
-                clutch: 6, stamina: 12, consistency: 18
+                clutch: 6, focus: 12, stamina: 12, consistency: 18
             ),
             personality: .defensive,
             dialogue: NPCDialogue(
@@ -204,7 +204,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 5, accuracy: 18, spin: 12, speed: 10,
                 defense: 16, reflexes: 14, positioning: 12,
-                clutch: 8, stamina: 14, consistency: 14
+                clutch: 8, focus: 14, stamina: 14, consistency: 14
             ),
             personality: .strategist,
             dialogue: NPCDialogue(
@@ -224,7 +224,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 6, accuracy: 14, spin: 8, speed: 8,
                 defense: 16, reflexes: 10, positioning: 16,
-                clutch: 12, stamina: 18, consistency: 20
+                clutch: 12, focus: 14, stamina: 18, consistency: 20
             ),
             personality: .defensive,
             dialogue: NPCDialogue(
@@ -249,7 +249,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 15, accuracy: 20, spin: 12, speed: 15,
                 defense: 22, reflexes: 18, positioning: 20,
-                clutch: 15, stamina: 20, consistency: 25
+                clutch: 15, focus: 18, stamina: 20, consistency: 25
             ),
             personality: .defensive,
             dialogue: NPCDialogue(
@@ -269,7 +269,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 28, accuracy: 15, spin: 20, speed: 12,
                 defense: 10, reflexes: 12, positioning: 10,
-                clutch: 18, stamina: 15, consistency: 12
+                clutch: 18, focus: 12, stamina: 15, consistency: 12
             ),
             personality: .aggressive,
             dialogue: NPCDialogue(
@@ -289,7 +289,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 14, accuracy: 22, spin: 25, speed: 16,
                 defense: 15, reflexes: 16, positioning: 18,
-                clutch: 20, stamina: 18, consistency: 20
+                clutch: 20, focus: 20, stamina: 18, consistency: 20
             ),
             personality: .strategist,
             dialogue: NPCDialogue(
@@ -309,7 +309,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 12, accuracy: 18, spin: 10, speed: 18,
                 defense: 20, reflexes: 15, positioning: 22,
-                clutch: 14, stamina: 28, consistency: 24
+                clutch: 14, focus: 16, stamina: 28, consistency: 24
             ),
             personality: .defensive,
             dialogue: NPCDialogue(
@@ -329,7 +329,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 16, accuracy: 22, spin: 24, speed: 14,
                 defense: 18, reflexes: 16, positioning: 16,
-                clutch: 16, stamina: 20, consistency: 18
+                clutch: 16, focus: 18, stamina: 20, consistency: 18
             ),
             personality: .strategist,
             dialogue: NPCDialogue(
@@ -349,7 +349,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 18, accuracy: 16, spin: 14, speed: 18,
                 defense: 16, reflexes: 18, positioning: 14,
-                clutch: 28, stamina: 16, consistency: 16
+                clutch: 28, focus: 16, stamina: 16, consistency: 16
             ),
             personality: .allRounder,
             dialogue: NPCDialogue(
@@ -369,7 +369,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 14, accuracy: 20, spin: 16, speed: 16,
                 defense: 22, reflexes: 20, positioning: 24,
-                clutch: 14, stamina: 18, consistency: 22
+                clutch: 14, focus: 20, stamina: 18, consistency: 22
             ),
             personality: .defensive,
             dialogue: NPCDialogue(
@@ -389,7 +389,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 20, accuracy: 18, spin: 16, speed: 12,
                 defense: 20, reflexes: 14, positioning: 20,
-                clutch: 16, stamina: 22, consistency: 20
+                clutch: 16, focus: 14, stamina: 22, consistency: 20
             ),
             personality: .strategist,
             dialogue: NPCDialogue(
@@ -414,7 +414,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 20, accuracy: 30, spin: 25, speed: 20,
                 defense: 25, reflexes: 22, positioning: 30,
-                clutch: 25, stamina: 22, consistency: 28
+                clutch: 25, focus: 28, stamina: 22, consistency: 28
             ),
             personality: .strategist,
             dialogue: NPCDialogue(
@@ -434,7 +434,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 32, accuracy: 28, spin: 22, speed: 22,
                 defense: 18, reflexes: 20, positioning: 18,
-                clutch: 28, stamina: 20, consistency: 22
+                clutch: 28, focus: 22, stamina: 20, consistency: 22
             ),
             personality: .aggressive,
             dialogue: NPCDialogue(
@@ -454,7 +454,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 18, accuracy: 26, spin: 20, speed: 22,
                 defense: 30, reflexes: 28, positioning: 32,
-                clutch: 22, stamina: 26, consistency: 30
+                clutch: 22, focus: 30, stamina: 26, consistency: 30
             ),
             personality: .defensive,
             dialogue: NPCDialogue(
@@ -474,7 +474,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 22, accuracy: 24, spin: 18, speed: 35,
                 defense: 22, reflexes: 32, positioning: 20,
-                clutch: 24, stamina: 24, consistency: 22
+                clutch: 24, focus: 20, stamina: 24, consistency: 22
             ),
             personality: .speedster,
             dialogue: NPCDialogue(
@@ -494,7 +494,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 26, accuracy: 28, spin: 20, speed: 28,
                 defense: 20, reflexes: 30, positioning: 24,
-                clutch: 26, stamina: 22, consistency: 24
+                clutch: 26, focus: 22, stamina: 22, consistency: 24
             ),
             personality: .aggressive,
             dialogue: NPCDialogue(
@@ -514,7 +514,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 20, accuracy: 28, spin: 22, speed: 20,
                 defense: 32, reflexes: 24, positioning: 28,
-                clutch: 22, stamina: 30, consistency: 32
+                clutch: 22, focus: 28, stamina: 30, consistency: 32
             ),
             personality: .defensive,
             dialogue: NPCDialogue(
@@ -534,7 +534,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 30, accuracy: 24, spin: 28, speed: 26,
                 defense: 18, reflexes: 26, positioning: 20,
-                clutch: 30, stamina: 20, consistency: 22
+                clutch: 30, focus: 20, stamina: 20, consistency: 22
             ),
             personality: .aggressive,
             dialogue: NPCDialogue(
@@ -554,7 +554,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 22, accuracy: 26, spin: 24, speed: 30,
                 defense: 26, reflexes: 28, positioning: 26,
-                clutch: 24, stamina: 26, consistency: 26
+                clutch: 24, focus: 24, stamina: 26, consistency: 26
             ),
             personality: .allRounder,
             dialogue: NPCDialogue(
@@ -579,7 +579,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 35, accuracy: 38, spin: 30, speed: 40,
                 defense: 35, reflexes: 40, positioning: 35,
-                clutch: 38, stamina: 30, consistency: 35
+                clutch: 38, focus: 35, stamina: 30, consistency: 35
             ),
             personality: .allRounder,
             dialogue: NPCDialogue(
@@ -599,7 +599,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 30, accuracy: 35, spin: 28, speed: 28,
                 defense: 42, reflexes: 38, positioning: 40,
-                clutch: 35, stamina: 38, consistency: 40
+                clutch: 35, focus: 36, stamina: 38, consistency: 40
             ),
             personality: .defensive,
             dialogue: NPCDialogue(
@@ -619,7 +619,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 42, accuracy: 35, spin: 35, speed: 32,
                 defense: 28, reflexes: 30, positioning: 25,
-                clutch: 38, stamina: 28, consistency: 30
+                clutch: 38, focus: 30, stamina: 28, consistency: 30
             ),
             personality: .aggressive,
             dialogue: NPCDialogue(
@@ -639,7 +639,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 32, accuracy: 42, spin: 32, speed: 30,
                 defense: 30, reflexes: 34, positioning: 36,
-                clutch: 36, stamina: 32, consistency: 38
+                clutch: 36, focus: 38, stamina: 32, consistency: 38
             ),
             personality: .strategist,
             dialogue: NPCDialogue(
@@ -659,7 +659,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 44, accuracy: 32, spin: 30, speed: 34,
                 defense: 28, reflexes: 32, positioning: 28,
-                clutch: 40, stamina: 30, consistency: 28
+                clutch: 40, focus: 30, stamina: 30, consistency: 28
             ),
             personality: .aggressive,
             dialogue: NPCDialogue(
@@ -679,7 +679,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 34, accuracy: 36, spin: 34, speed: 36,
                 defense: 36, reflexes: 36, positioning: 34,
-                clutch: 34, stamina: 34, consistency: 36
+                clutch: 34, focus: 34, stamina: 34, consistency: 36
             ),
             personality: .allRounder,
             dialogue: NPCDialogue(
@@ -699,7 +699,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 28, accuracy: 38, spin: 36, speed: 26,
                 defense: 38, reflexes: 34, positioning: 42,
-                clutch: 38, stamina: 34, consistency: 38
+                clutch: 38, focus: 40, stamina: 34, consistency: 38
             ),
             personality: .strategist,
             dialogue: NPCDialogue(
@@ -724,7 +724,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 40, accuracy: 48, spin: 42, speed: 38,
                 defense: 42, reflexes: 40, positioning: 50,
-                clutch: 45, stamina: 40, consistency: 48
+                clutch: 45, focus: 48, stamina: 40, consistency: 48
             ),
             personality: .strategist,
             dialogue: NPCDialogue(
@@ -744,7 +744,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 45, accuracy: 45, spin: 40, speed: 48,
                 defense: 40, reflexes: 48, positioning: 42,
-                clutch: 50, stamina: 38, consistency: 42
+                clutch: 50, focus: 42, stamina: 38, consistency: 42
             ),
             personality: .allRounder,
             dialogue: NPCDialogue(
@@ -764,7 +764,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 42, accuracy: 46, spin: 44, speed: 46,
                 defense: 44, reflexes: 46, positioning: 44,
-                clutch: 42, stamina: 42, consistency: 44
+                clutch: 42, focus: 44, stamina: 42, consistency: 44
             ),
             personality: .speedster,
             dialogue: NPCDialogue(
@@ -784,7 +784,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 38, accuracy: 50, spin: 45, speed: 36,
                 defense: 48, reflexes: 42, positioning: 48,
-                clutch: 48, stamina: 44, consistency: 50
+                clutch: 48, focus: 46, stamina: 44, consistency: 50
             ),
             personality: .defensive,
             dialogue: NPCDialogue(
@@ -804,7 +804,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 48, accuracy: 44, spin: 42, speed: 42,
                 defense: 38, reflexes: 44, positioning: 40,
-                clutch: 48, stamina: 40, consistency: 42
+                clutch: 48, focus: 42, stamina: 40, consistency: 42
             ),
             personality: .aggressive,
             dialogue: NPCDialogue(
@@ -824,7 +824,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 40, accuracy: 48, spin: 46, speed: 40,
                 defense: 46, reflexes: 44, positioning: 50,
-                clutch: 46, stamina: 42, consistency: 46
+                clutch: 46, focus: 48, stamina: 42, consistency: 46
             ),
             personality: .strategist,
             dialogue: NPCDialogue(
@@ -844,7 +844,7 @@ actor MockNPCService: NPCService {
             stats: PlayerStats(
                 power: 46, accuracy: 42, spin: 38, speed: 38,
                 defense: 50, reflexes: 42, positioning: 46,
-                clutch: 44, stamina: 48, consistency: 48
+                clutch: 44, focus: 44, stamina: 48, consistency: 48
             ),
             personality: .defensive,
             dialogue: NPCDialogue(

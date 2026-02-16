@@ -20,6 +20,7 @@
 | 6 | Training, Coaching, Daily Challenges & Economy Rebalance | **Complete** |
 | 7a | Onboarding, Player Management & Basic Persistence | **Complete** |
 | 7b | Wager System + Hustler NPCs | **Complete** |
+| 8 | Match Simulation Realism + Focus Stat | **Complete** |
 | 7c | Persistence Polish, Cloud Prep, Multiplayer Prep | Planned |
 
 ---
@@ -30,7 +31,7 @@
 
 ### What was built
 - **App scaffold**: SwiftUI app with MVVM + Services architecture, XcodeGen project, Swift 6 strict concurrency
-- **10-stat system**: power, accuracy, spin, speed, defense, reflexes, positioning, clutch, stamina, consistency (1-99 scale)
+- **11-stat system**: power, accuracy, spin, speed, defense, reflexes, positioning, clutch, focus, stamina, consistency (1-99 scale)
 - **Match engine** (actor): point-by-point simulation with serve phase (ace check), rally phase (shot-by-shot winner/error/forced error), clutch modifier
 - **Fatigue system**: energy drain per rally shot, 3 thresholds (70/50/30%) with escalating stat penalties, stamina reduces drain
 - **Momentum system**: consecutive point streaks (+2% to +7%), opponent streaks (-1% to -5%), resets between games
@@ -753,6 +754,37 @@ MatchHubView.processResult → npcLossRecord tracking, hustler loot generation
 - **Backward compatible**: all new fields use `decodeIfPresent` with defaults in custom Codable init
 - **Updated views**: level badges on cards, base vs bonus stat sections in detail view, upgrade button, level gate warnings
 - **Tests**: 6 new loot generator tests (brand assignment, stat budget, base/bonus split), 3 new stat calculator tests (level multiplier, level gate, default level)
+
+---
+
+## Milestone 8: Match Simulation Realism + Focus Stat
+
+### What was built
+- **Focus stat**: 11th stat added to mental category (clutch, focus, stamina, consistency); backward-compatible Codable with `decodeIfPresent` defaulting to 15; added to all 38 NPCs, 3 hustlers, tutorial NPC, alpha generator, equipment brands, momentum tracking, and stat calculator
+- **Singles side-out scoring**: server wins rally → scores; server loses rally → side-out (serve switches, no score); matches official pickleball rules where only the serving side can score
+- **Doubles dink phase**: after serve in doubles, 3-15 shot dink approach phase at the kitchen line before regular rally begins; dink outcomes use soft-game stats (accuracy, spin, focus, consistency, positioning) instead of power; if unresolved, flows into regular rally phase
+- **Enhanced timeout animation**: 5-phase walk-off/walk-on sequence (players walk off court → "TIMEOUT" announcement → "Streak Broken!" callout → players walk back → floating energy indicators); timeout now restores energy for ALL participants (both sides)
+- **Doubles visual bounces**: raised from 5 to 8 max visual bounces during rally animation to reflect longer doubles rallies
+- **Focus-based equipment**: Dinkmaster Focus Cap changed baseStat to `.focus`; added FocusBand Focus headwear model
+
+### Files modified (16)
+- `PlayerStats.swift` — focus field, StatType.focus, custom Codable, average divisor 10→11
+- `GameConstants.swift` — dink phase constants, removed serveSwitchInterval, startingStatTotal 165/11
+- `RallySimulator.swift` — isDoubles param, dink approach phase with 3 new helper methods
+- `MatchEngine.swift` — singles side-out scoring, timeout restores all participants, isDoubles threading
+- `PointResolver.swift` — isDoubles param threaded to rally simulator
+- `MatchEvent.swift` — timeout event energy fields
+- `MatchAnimator.swift` — 5-phase timeout animation, doubles bounce cap 8
+- `MatchAnimationConstants.swift` — timeout timing, doublesMaxVisualBounces
+- `StatCalculator.swift` — focus in momentum-affected stats
+- `EquipmentBrand.swift` — focus-based headwear models
+- `MockNPCService.swift` — focus values for all 38 NPCs
+- `HustlerNPCGenerator.swift` — focus for 3 hustlers
+- `TutorialNPC.swift` — focus: 3
+- `AlphaNPCGenerator.swift` — focus in stat scaling
+- `TeamStatCompositor.swift` — focus in composite stats
+- `TrainingDrill.swift` — focus case in forStat switch
+- `EquipmentNameGenerator.swift` — focus flavor text
 
 ---
 

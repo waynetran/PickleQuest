@@ -17,7 +17,7 @@ enum HustlerNPCGenerator {
         stats: PlayerStats(
             power: 28, accuracy: 30, spin: 26, speed: 24,
             defense: 26, reflexes: 28, positioning: 30,
-            clutch: 32, stamina: 24, consistency: 28
+            clutch: 32, focus: 30, stamina: 24, consistency: 28
         ),
         personality: .strategist,
         dialogue: NPCDialogue(
@@ -43,7 +43,7 @@ enum HustlerNPCGenerator {
         stats: PlayerStats(
             power: 36, accuracy: 38, spin: 32, speed: 34,
             defense: 34, reflexes: 36, positioning: 36,
-            clutch: 40, stamina: 30, consistency: 34
+            clutch: 40, focus: 36, stamina: 30, consistency: 34
         ),
         personality: .allRounder,
         dialogue: NPCDialogue(
@@ -69,7 +69,7 @@ enum HustlerNPCGenerator {
         stats: PlayerStats(
             power: 40, accuracy: 42, spin: 36, speed: 38,
             defense: 38, reflexes: 40, positioning: 40,
-            clutch: 44, stamina: 34, consistency: 38
+            clutch: 44, focus: 40, stamina: 34, consistency: 38
         ),
         personality: .aggressive,
         dialogue: NPCDialogue(

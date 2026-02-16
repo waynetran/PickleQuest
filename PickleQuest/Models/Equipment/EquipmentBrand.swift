@@ -96,7 +96,7 @@ enum EquipmentBrandCatalog {
         // Shoes: speed, positioning, reflexes, defense
         // Shirt: stamina, consistency, clutch, defense
         // Bottoms: speed, positioning, stamina
-        // Headwear: clutch, consistency, accuracy
+        // Headwear: clutch, focus, consistency, accuracy
         // Wristband: spin, accuracy, reflexes
 
         // --- Dinkmaster (paddle, wristband, headwear) ---
@@ -106,7 +106,7 @@ enum EquipmentBrandCatalog {
             EquipmentModel(id: "dm_metronome", name: "Metronome", brandID: "dinkmaster", slot: .paddle, baseStat: .consistency),
             EquipmentModel(id: "dm_precision_band", name: "Precision Band", brandID: "dinkmaster", slot: .wristband, baseStat: .accuracy),
             EquipmentModel(id: "dm_spin_wrap", name: "Spin Wrap", brandID: "dinkmaster", slot: .wristband, baseStat: .spin),
-            EquipmentModel(id: "dm_focus_cap", name: "Focus Cap", brandID: "dinkmaster", slot: .headwear, baseStat: .accuracy),
+            EquipmentModel(id: "dm_focus_cap", name: "Focus Cap", brandID: "dinkmaster", slot: .headwear, baseStat: .focus),
             EquipmentModel(id: "dm_steady_visor", name: "Steady Visor", brandID: "dinkmaster", slot: .headwear, baseStat: .consistency),
         ]
 
@@ -209,6 +209,7 @@ enum EquipmentBrandCatalog {
         // --- FocusBand (headwear only) ---
         models += [
             EquipmentModel(id: "fb_zen", name: "Zen", brandID: "focus_band", slot: .headwear, baseStat: .clutch),
+            EquipmentModel(id: "fb_focus", name: "Focus", brandID: "focus_band", slot: .headwear, baseStat: .focus),
             EquipmentModel(id: "fb_steady", name: "Steady", brandID: "focus_band", slot: .headwear, baseStat: .consistency),
             EquipmentModel(id: "fb_hawk", name: "Hawk", brandID: "focus_band", slot: .headwear, baseStat: .accuracy),
         ]

@@ -43,7 +43,7 @@ PickleQuest/
 - Use `@MainActor` for ViewModels and UI-facing code
 
 ### Game Design
-- **10-stat system** (1-99 scale): power, accuracy, spin, speed, defense, reflexes, positioning, clutch, stamina, consistency
+- **11-stat system** (1-99 scale): power, accuracy, spin, speed, defense, reflexes, positioning, clutch, focus, stamina, consistency
 - **DUPR mapping**: stat average 1-99 maps to DUPR 2.0-8.0
 - **Equipment**: 6 slots, 5 rarities, diminishing returns soft cap (linear <60, 0.7x 60-80, 0.4x 80+, hard cap 99)
 - **Match engine**: serve phase → rally phase → clutch modifier; momentum streaks; fatigue drain

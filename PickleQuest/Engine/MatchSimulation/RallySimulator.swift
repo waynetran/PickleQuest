@@ -14,11 +14,12 @@ struct RallySimulator: Sendable {
         let rallyLength: Int
     }
 
-    /// Simulate a single point including serve phase and rally phase.
+    /// Simulate a single point including serve phase, optional dink phase (doubles), and rally phase.
     func simulatePoint(
         serverSide: MatchSide,
         playerStats: PlayerStats,
-        opponentStats: PlayerStats
+        opponentStats: PlayerStats,
+        isDoubles: Bool = false
     ) -> RallyResult {
         let serverStats = serverSide == .player ? playerStats : opponentStats
         let receiverStats = serverSide == .player ? opponentStats : playerStats
@@ -29,39 +30,66 @@ struct RallySimulator: Sendable {
             return RallyResult(winnerSide: serverSide, pointType: .ace, rallyLength: 1)
         }
 
-        // Phase 2: Rally
-        let maxShots = calculateMaxRallyLength(
-            player: playerStats,
-            opponent: opponentStats
-        )
+        var totalShots = 1 // count the serve return
 
-        var shot = 1
-        while shot <= maxShots {
-            // Determine which side is "attacking" this shot
-            let attackingSide: MatchSide = (shot % 2 == 1) ? serverSide : (serverSide == .player ? .opponent : .player)
+        // Phase 2 (doubles only): Dink approach phase — kitchen line battle
+        if isDoubles {
+            let dinkLength = calculateDinkLength(player: playerStats, opponent: opponentStats)
+            let receiverSide: MatchSide = serverSide == .player ? .opponent : .player
+
+            for dinkShot in 0..<dinkLength {
+                totalShots += 1
+                let attackingSide: MatchSide = (dinkShot % 2 == 0) ? receiverSide : serverSide
+                let attacker = attackingSide == .player ? playerStats : opponentStats
+                let defender = attackingSide == .player ? opponentStats : playerStats
+
+                // Dink winner: uses accuracy + spin + focus (soft game stats)
+                let dinkWinChance = calculateDinkWinnerChance(attacker: attacker, defender: defender)
+                if rng.nextDouble() < dinkWinChance {
+                    return RallyResult(winnerSide: attackingSide, pointType: .winner, rallyLength: totalShots)
+                }
+
+                // Dink error: uses consistency + focus
+                let dinkErrChance = calculateDinkErrorChance(attacker: attacker)
+                if rng.nextDouble() < dinkErrChance {
+                    let otherSide: MatchSide = attackingSide == .player ? .opponent : .player
+                    return RallyResult(winnerSide: otherSide, pointType: .unforcedError, rallyLength: totalShots)
+                }
+
+                // Dink forced error
+                if rng.nextDouble() < GameConstants.Rally.dinkForcedErrorChance {
+                    return RallyResult(winnerSide: attackingSide, pointType: .forcedError, rallyLength: totalShots)
+                }
+            }
+        }
+
+        // Phase 3: Regular rally
+        let maxShots = isDoubles
+            ? GameConstants.Rally.doublesMaxRallyShots
+            : calculateMaxRallyLength(player: playerStats, opponent: opponentStats)
+
+        while totalShots <= maxShots {
+            let attackingSide: MatchSide = (totalShots % 2 == 1) ? serverSide : (serverSide == .player ? .opponent : .player)
             let attacker = attackingSide == .player ? playerStats : opponentStats
             let defender = attackingSide == .player ? opponentStats : playerStats
 
-            // Check for winner
-            let winnerChance = calculateWinnerChance(attacker: attacker, defender: defender, shotNumber: shot)
+            let winnerChance = calculateWinnerChance(attacker: attacker, defender: defender, shotNumber: totalShots)
             if rng.nextDouble() < winnerChance {
-                return RallyResult(winnerSide: attackingSide, pointType: .winner, rallyLength: shot)
+                return RallyResult(winnerSide: attackingSide, pointType: .winner, rallyLength: totalShots)
             }
 
-            // Check for unforced error by attacker
-            let errorChance = calculateErrorChance(attacker: attacker, shotNumber: shot)
+            let errorChance = calculateErrorChance(attacker: attacker, shotNumber: totalShots)
             if rng.nextDouble() < errorChance {
                 let otherSide: MatchSide = attackingSide == .player ? .opponent : .player
-                return RallyResult(winnerSide: otherSide, pointType: .unforcedError, rallyLength: shot)
+                return RallyResult(winnerSide: otherSide, pointType: .unforcedError, rallyLength: totalShots)
             }
 
-            // Check for forced error on defender
             let forcedErrorChance = calculateForcedErrorChance(attacker: attacker, defender: defender)
             if rng.nextDouble() < forcedErrorChance {
-                return RallyResult(winnerSide: attackingSide, pointType: .forcedError, rallyLength: shot)
+                return RallyResult(winnerSide: attackingSide, pointType: .forcedError, rallyLength: totalShots)
             }
 
-            shot += 1
+            totalShots += 1
         }
 
         // Rally went to max — resolve by stat comparison
@@ -105,6 +133,28 @@ struct RallySimulator: Sendable {
         let attackPressure = (Double(attacker.power) + Double(attacker.spin)) / 200.0
         let defenseResist = (Double(defender.defense) + Double(defender.reflexes)) / 200.0
         return max(0.01, min(0.20, 0.08 + attackPressure - defenseResist))
+    }
+
+    // MARK: - Doubles Dink Phase
+
+    private func calculateDinkLength(player: PlayerStats, opponent: PlayerStats) -> Int {
+        let avgSoftGame = Double(player.accuracy + player.consistency + player.focus +
+                                  opponent.accuracy + opponent.consistency + opponent.focus) / 6.0
+        let normalized = avgSoftGame / 99.0
+        let range = GameConstants.Rally.doublesDinkMaxShots - GameConstants.Rally.doublesDinkMinShots
+        return GameConstants.Rally.doublesDinkMinShots + Int(normalized * Double(range))
+    }
+
+    private func calculateDinkWinnerChance(attacker: PlayerStats, defender: PlayerStats) -> Double {
+        let attackFactor = (Double(attacker.accuracy) + Double(attacker.spin) + Double(attacker.focus)) / 300.0
+        let defenseFactor = (Double(defender.consistency) + Double(defender.focus) + Double(defender.positioning)) / 300.0
+        return max(0.01, min(0.15, GameConstants.Rally.dinkWinnerChance + attackFactor - defenseFactor))
+    }
+
+    private func calculateDinkErrorChance(attacker: PlayerStats) -> Double {
+        let consistencyFactor = Double(attacker.consistency) / 200.0
+        let focusFactor = Double(attacker.focus) / 200.0
+        return max(0.01, min(0.15, GameConstants.Rally.dinkErrorChance - consistencyFactor - focusFactor))
     }
 
     private func overallAdvantage(player: PlayerStats, opponent: PlayerStats) -> Double {

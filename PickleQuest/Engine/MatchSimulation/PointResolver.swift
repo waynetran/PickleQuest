@@ -28,7 +28,8 @@ struct PointResolver: Sendable {
         servingSide: MatchSide,
         isClutch: Bool,
         playerLevel: Int = 50,
-        opponentLevel: Int = 50
+        opponentLevel: Int = 50,
+        isDoubles: Bool = false
     ) -> ResolvedPoint {
         // 1. Base + equipment (with level gating)
         var playerEffective = statCalculator.effectiveStats(base: playerBaseStats, equipment: playerEquipment, playerLevel: playerLevel)
@@ -55,7 +56,8 @@ struct PointResolver: Sendable {
         let result = rallySimulator.simulatePoint(
             serverSide: servingSide,
             playerStats: playerEffective,
-            opponentStats: opponentEffective
+            opponentStats: opponentEffective,
+            isDoubles: isDoubles
         )
 
         // 6. Drain energy

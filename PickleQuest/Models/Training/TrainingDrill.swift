@@ -49,7 +49,7 @@ enum DrillType: String, CaseIterable, Codable, Sendable {
         case .consistency, .positioning: return .rallyDrill
         case .defense, .reflexes: return .defenseDrill
         case .speed, .stamina: return .footworkTraining
-        case .clutch: return .rallyDrill
+        case .clutch, .focus: return .rallyDrill
         }
     }
 }

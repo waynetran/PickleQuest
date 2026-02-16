@@ -9,7 +9,7 @@ enum TutorialNPC {
         stats: PlayerStats(
             power: 5, accuracy: 5, spin: 3, speed: 5,
             defense: 5, reflexes: 5, positioning: 5,
-            clutch: 3, stamina: 5, consistency: 5
+            clutch: 3, focus: 3, stamina: 5, consistency: 5
         ),
         personality: .allRounder,
         dialogue: NPCDialogue(

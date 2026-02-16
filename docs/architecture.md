@@ -22,7 +22,7 @@ PickleQuest follows MVVM + Services architecture with protocol-based dependency 
 Pure value types (structs/enums) that are `Codable`, `Sendable`, and `Equatable`. No business logic beyond simple computed properties.
 
 - **Player**: identity, stats, progression, equipment slots, wallet, DUPR profile, rep profile, match history, energy, last match date, discovered court IDs
-- **PlayerStats**: 10-stat system with DUPR mapping
+- **PlayerStats**: 11-stat system (power, accuracy, spin, speed, defense, reflexes, positioning, clutch, focus, stamina, consistency) with DUPR mapping
 - **DUPRProfile**: rating, match count, unique opponents, last match date, computed reliability/K-factor
 - **RepProfile**: reputation score, lifetime rep earned, computed title and NPC sell price multiplier
 - **Equipment**: 6 slots, 5 rarities, stat bonuses, triggered abilities (epic+), condition (durability for shoes/paddle), flavor text, optional set membership

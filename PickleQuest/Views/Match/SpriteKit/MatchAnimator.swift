@@ -32,8 +32,8 @@ final class MatchAnimator {
             await animateAbility(side: side, name: abilityName)
         case .gameEnd(let gameNumber, let winnerSide, _):
             await animateGameEnd(gameNumber: gameNumber, winnerSide: winnerSide)
-        case .timeoutCalled(let side, _, _):
-            await animateTimeout(side: side)
+        case .timeoutCalled(let side, let energyRestored, let streakBroken, let playerEnergy, let opponentEnergy):
+            await animateTimeout(side: side, energyRestored: energyRestored, streakBroken: streakBroken, playerEnergy: playerEnergy, opponentEnergy: opponentEnergy)
         case .consumableUsed(let side, let name, _):
             await animateConsumable(side: side, name: name)
         case .hookCallAttempt(let side, let success, _):
@@ -185,7 +185,8 @@ final class MatchAnimator {
         await animateServe(from: serverPos, to: receiverPos, serverNY: serverNY, receiverNY: receiverNY, serverNode: serverNode, serverAnimator: serverAnimator)
 
         // Phase 2: Rally bounces (if rally length > 1)
-        let bounces = min(point.rallyLength - 1, T.maxVisualBounces)
+        let maxBounces = scene.isDoubles ? T.doublesMaxVisualBounces : T.maxVisualBounces
+        let bounces = min(point.rallyLength - 1, maxBounces)
         if bounces > 0 && point.pointType != .ace {
             await animateRally(
                 bounces: bounces,
@@ -639,30 +640,98 @@ final class MatchAnimator {
 
     // MARK: - Action Animations
 
-    private func animateTimeout(side: MatchSide) async {
+    private func animateTimeout(
+        side: MatchSide,
+        energyRestored: Double,
+        streakBroken: Bool,
+        playerEnergy: Double,
+        opponentEnergy: Double
+    ) async {
         guard let scene else { return }
 
-        let node = side == .player ? scene.nearPlayer! : scene.farPlayer!
+        // Phase 1: All players walk off court (0.5s)
+        scene.nearAnimator?.play(.walkToward)
+        scene.nearPartnerAnimator?.play(.walkToward)
+        scene.farAnimator?.play(.walkAway)
+        scene.farPartnerAnimator?.play(.walkAway)
 
-        // Clock emoji callout
-        let clock = SKLabelNode(text: "\u{23F0}")
-        clock.fontSize = 24
-        clock.position = CGPoint(x: node.position.x, y: node.position.y + 40)
-        clock.zPosition = AC.ZPositions.effects
-        scene.addChild(clock)
+        let walkOffDuration = T.timeoutWalkOffDuration
+        let nearOffTarget = CGPoint(x: scene.nearPlayer.position.x, y: -100)
+        let farOffTarget = CGPoint(x: scene.farPlayer.position.x, y: AC.sceneHeight + 100)
 
-        await clock.runAsync(
-            .sequence([
+        if let np = scene.nearPartner {
+            fireAction(np, .move(to: CGPoint(x: np.position.x, y: -100), duration: walkOffDuration))
+        }
+        if let fp = scene.farPartner {
+            fireAction(fp, .move(to: CGPoint(x: fp.position.x, y: AC.sceneHeight + 100), duration: walkOffDuration))
+        }
+        fireAction(scene.farPlayer, .move(to: farOffTarget, duration: walkOffDuration))
+        await scene.nearPlayer.runAsync(.move(to: nearOffTarget, duration: walkOffDuration))
+
+        // Phase 2: Show "TIMEOUT" announcement (3s)
+        await scene.showAnnouncement("TIMEOUT", fontSize: AC.Text.announcementFontSize)
+        try? await Task.sleep(for: .milliseconds(Int(T.timeoutHoldDuration * 1000)))
+
+        // Phase 3: Show streak broken callout if applicable
+        if streakBroken {
+            await scene.showCallout("Streak Broken!", at: CGPoint(x: AC.sceneWidth / 2, y: AC.sceneHeight / 2 - 40), color: .orange)
+        }
+
+        // Phase 4: All players walk back on court (0.5s)
+        let nearTarget = CourtRenderer.courtPoint(nx: Pos.playerCenterNX, ny: Pos.nearPlayerNY)
+        let farTarget = CourtRenderer.courtPoint(nx: Pos.playerCenterNX, ny: Pos.farPlayerNY)
+
+        scene.nearAnimator?.play(.walkAway)
+        scene.nearPartnerAnimator?.play(.walkAway)
+        scene.farAnimator?.play(.walkToward)
+        scene.farPartnerAnimator?.play(.walkToward)
+
+        let walkOnDuration = T.timeoutWalkOnDuration
+
+        if scene.isDoubles {
+            let nearLeftTarget = CourtRenderer.courtPoint(nx: Pos.doublesLeftNX, ny: Pos.nearPlayerNY)
+            let nearRightTarget = CourtRenderer.courtPoint(nx: Pos.doublesRightNX, ny: Pos.nearPlayerNY)
+            let farLeftTarget = CourtRenderer.courtPoint(nx: Pos.doublesLeftNX, ny: Pos.farPlayerNY)
+            let farRightTarget = CourtRenderer.courtPoint(nx: Pos.doublesRightNX, ny: Pos.farPlayerNY)
+
+            fireAction(scene.nearPlayer, .move(to: nearLeftTarget, duration: walkOnDuration))
+            if let np = scene.nearPartner { fireAction(np, .move(to: nearRightTarget, duration: walkOnDuration)) }
+            fireAction(scene.farPlayer, .move(to: farLeftTarget, duration: walkOnDuration))
+            if let fp = scene.farPartner { fireAction(fp, .move(to: farRightTarget, duration: walkOnDuration)) }
+        } else {
+            fireAction(scene.nearPlayer, .move(to: nearTarget, duration: walkOnDuration))
+            fireAction(scene.farPlayer, .move(to: farTarget, duration: walkOnDuration))
+        }
+
+        try? await Task.sleep(for: .milliseconds(Int(walkOnDuration * 1000)))
+
+        // Idle stance
+        scene.nearAnimator?.play(.idleBack)
+        scene.nearPartnerAnimator?.play(.idleBack)
+        scene.farAnimator?.play(.idleFront)
+        scene.farPartnerAnimator?.play(.idleFront)
+
+        // Phase 5: Floating energy indicators above each sprite
+        let energyText = "+\(Int(energyRestored))% ⚡"
+        for node in [scene.nearPlayer, scene.farPlayer, scene.nearPartner, scene.farPartner].compactMap({ $0 }) {
+            let label = SKLabelNode(text: energyText)
+            label.fontName = AC.Text.fontName
+            label.fontSize = AC.Text.smallCalloutFontSize
+            label.fontColor = .green
+            label.position = CGPoint(x: node.position.x, y: node.position.y + 40)
+            label.zPosition = AC.ZPositions.text
+            scene.addChild(label)
+
+            fireAction(label, .sequence([
                 .group([
-                    .moveBy(x: 0, y: 20, duration: 0.5),
-                    .scale(to: 1.5, duration: 0.3)
+                    .moveBy(x: 0, y: 30, duration: 0.8),
+                    .fadeOut(withDuration: 0.8)
                 ]),
-                .fadeOut(withDuration: 0.3),
                 .removeFromParent()
-            ])
-        )
+            ]))
+        }
 
-        await scene.showCallout("TIMEOUT!", at: CGPoint(x: node.position.x, y: node.position.y + 50), color: .cyan)
+        try? await Task.sleep(for: .milliseconds(800))
     }
 
     private func animateConsumable(side: MatchSide, name: String) async {

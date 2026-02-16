@@ -42,7 +42,6 @@ actor MatchEngine {
     private var currentGame: Int = 1
     private var pointNumber: Int = 0
     private var servingSide: MatchSide = .player
-    private var totalServeCount: Int = 0
 
     // Doubles scoring
     private var doublesScoreTracker: DoublesScoreTracker?
@@ -237,10 +236,9 @@ actor MatchEngine {
         opponent2Fatigue?.restBetweenGames()
 
         currentGame += 1
-        totalServeCount = 0
     }
 
-    // MARK: - Singles Game Loop
+    // MARK: - Singles Game Loop (side-out scoring)
 
     private func runSinglesGame(continuation: AsyncStream<MatchEvent>.Continuation) {
         while !isGameOver() {
@@ -268,14 +266,25 @@ actor MatchEngine {
             playerFatigue = pFatigue
             opponentFatigue = oFatigue
 
-            // Update score
+            // Side-out scoring: only server can score
             let winner = resolved.result.winnerSide
-            if winner == .player {
-                playerPoints += 1
-                playerPointsWon += 1
+            let serverWon = winner == servingSide
+
+            if serverWon {
+                // Server wins the rally → server scores
+                if winner == .player {
+                    playerPoints += 1
+                    playerPointsWon += 1
+                } else {
+                    opponentPoints += 1
+                    opponentPointsWon += 1
+                }
             } else {
-                opponentPoints += 1
-                opponentPointsWon += 1
+                // Server loses the rally → side-out (no score, serve switches)
+                servingSide = servingSide == .player ? .opponent : .player
+                if !skipRequested {
+                    continuation.yield(.sideOut(newServingTeam: servingSide, serverNumber: 1))
+                }
             }
 
             let score = MatchScore(
@@ -292,17 +301,12 @@ actor MatchEngine {
                 pointType: resolved.result.pointType,
                 rallyLength: resolved.result.rallyLength,
                 servingSide: servingSide,
-                scoreAfter: score
+                scoreAfter: score,
+                isSideOut: !serverWon
             )
             allPoints.append(point)
             trackStats(point: point)
             emitPointEvents(point: point, resolved: resolved, continuation: continuation)
-
-            // Switch serve
-            totalServeCount += 1
-            if totalServeCount % GameConstants.Match.serveSwitchInterval == 0 {
-                servingSide = servingSide == .player ? .opponent : .player
-            }
         }
     }
 
@@ -335,7 +339,8 @@ actor MatchEngine {
                 servingSide: tracker.servingTeam,
                 isClutch: isClutch,
                 playerLevel: 50,
-                opponentLevel: 50
+                opponentLevel: 50,
+                isDoubles: true
             )
 
             // Drain individual fatigue models
@@ -638,11 +643,23 @@ actor MatchEngine {
 
         timeoutsUsedThisGame += 1
         let restoreAmount = GameConstants.MatchActions.timeoutEnergyRestore
+
+        // Timeouts are a break for everyone — restore all participants
         playerFatigue.restore(amount: restoreAmount)
+        opponentFatigue.restore(amount: restoreAmount)
+        partnerFatigue?.restore(amount: restoreAmount)
+        opponent2Fatigue?.restore(amount: restoreAmount)
+
         let hadStreak = opponentStreak >= 2
         momentum.resetOpponentStreak()
 
-        pendingActionEvents.append(.timeoutCalled(side: .player, energyRestored: restoreAmount, streakBroken: hadStreak))
+        pendingActionEvents.append(.timeoutCalled(
+            side: .player,
+            energyRestored: restoreAmount,
+            streakBroken: hadStreak,
+            playerEnergy: playerFatigue.energy,
+            opponentEnergy: opponentFatigue.energy
+        ))
         return .timeoutUsed(energyRestored: restoreAmount, streakBroken: hadStreak)
     }
 

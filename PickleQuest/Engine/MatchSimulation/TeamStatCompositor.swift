@@ -28,6 +28,7 @@ enum TeamStatCompositor {
             reflexes: avg(p1Effective.reflexes, p2Effective.reflexes),
             positioning: avg(p1Effective.positioning, p2Effective.positioning),
             clutch: avg(p1Effective.clutch, p2Effective.clutch),
+            focus: avg(p1Effective.focus, p2Effective.focus),
             stamina: avg(p1Effective.stamina, p2Effective.stamina),
             consistency: avg(p1Effective.consistency, p2Effective.consistency)
         )
@@ -57,6 +58,7 @@ enum TeamStatCompositor {
             reflexes: avg(p1Effective.reflexes, p2Effective.reflexes),
             positioning: avg(p1Effective.positioning, p2Effective.positioning),
             clutch: avg(p1Effective.clutch, p2Effective.clutch),
+            focus: avg(p1Effective.focus, p2Effective.focus),
             stamina: avg(p1Effective.stamina, p2Effective.stamina),
             consistency: avg(p1Effective.consistency, p2Effective.consistency)
         )

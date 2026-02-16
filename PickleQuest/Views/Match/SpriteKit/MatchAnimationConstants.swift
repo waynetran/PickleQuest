@@ -103,6 +103,12 @@ enum MatchAnimationConstants {
 
         // Rally bounce cap
         static let maxVisualBounces = 5
+        static let doublesMaxVisualBounces = 8
+
+        // Timeout animation
+        static let timeoutWalkOffDuration: TimeInterval = 0.5
+        static let timeoutHoldDuration: TimeInterval = 3.0
+        static let timeoutWalkOnDuration: TimeInterval = 0.5
     }
 
     enum Text {

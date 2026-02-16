@@ -8,7 +8,7 @@ enum MatchEvent: Sendable {
     case fatigueWarning(side: MatchSide, energyPercent: Double)
     case abilityTriggered(side: MatchSide, abilityName: String, effectDescription: String)
     case gameEnd(gameNumber: Int, winnerSide: MatchSide, score: MatchScore)
-    case timeoutCalled(side: MatchSide, energyRestored: Double, streakBroken: Bool)
+    case timeoutCalled(side: MatchSide, energyRestored: Double, streakBroken: Bool, playerEnergy: Double = 0, opponentEnergy: Double = 0)
     case consumableUsed(side: MatchSide, name: String, effect: String)
     case hookCallAttempt(side: MatchSide, success: Bool, repChange: Int)
     case sideOut(newServingTeam: MatchSide, serverNumber: Int)
@@ -57,7 +57,7 @@ enum MatchEvent: Sendable {
         case .gameEnd(let num, let winner, let score):
             let who = winner == .player ? "\(playerName) wins" : "\(opponentLabel) wins"
             return "\(who) Game \(num)! (Games: \(score.playerGames)-\(score.opponentGames))"
-        case .timeoutCalled(let side, let energyRestored, let streakBroken):
+        case .timeoutCalled(let side, let energyRestored, let streakBroken, _, _):
             let who = side == .player ? playerName : opponentLabel
             if streakBroken {
                 return "⏸ \(who) calls timeout! Broke the opponent's momentum and recovered \(Int(energyRestored))% energy."

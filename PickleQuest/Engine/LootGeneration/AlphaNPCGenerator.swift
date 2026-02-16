@@ -58,6 +58,7 @@ enum AlphaNPCGenerator {
             reflexes: scaled(stats.reflexes),
             positioning: scaled(stats.positioning),
             clutch: scaled(stats.clutch),
+            focus: scaled(stats.focus),
             stamina: scaled(stats.stamina),
             consistency: scaled(stats.consistency)
         )

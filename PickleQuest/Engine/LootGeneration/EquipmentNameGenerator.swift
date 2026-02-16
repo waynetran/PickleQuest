@@ -148,6 +148,8 @@ struct EquipmentNameGenerator: Sendable {
                 pool += ["Ice in the veins, fire in the shots.", "Match point? More like comfort zone.", "Thrives under pressure like a deep-sea fish."]
             case .stamina:
                 pool += ["Outlasts opponents and most batteries.", "Still fresh in the fifth game.", "Cardio is a personality trait now."]
+            case .focus:
+                pool += ["Distractions? What distractions?", "Locked in like a laser-guided pickle.", "Mental clarity sold separately. Just kidding, it's included."]
             case .consistency:
                 pool += ["Boring? No. Reliable? Absolutely.", "Error rate: statistically insignificant.", "Does the same thing. Perfectly. Every time."]
             }
