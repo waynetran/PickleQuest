@@ -4,6 +4,7 @@ import SpriteKit
 struct MatchSpriteView: View {
     let viewModel: MatchViewModel
     @State private var scene: MatchCourtScene?
+    @State private var showPreMatchOverlay = true
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -19,7 +20,7 @@ struct MatchSpriteView: View {
 
             VStack(spacing: 0) {
                 // Broadcast score overlay (top-left, PPA style)
-                if let score = viewModel.currentScore {
+                if !showPreMatchOverlay, let score = viewModel.currentScore {
                     BroadcastScoreOverlay(
                         playerName: viewModel.isDoublesMode ? "\(viewModel.playerName)'s Team" : viewModel.playerName,
                         opponentName: viewModel.selectedNPC?.name ?? "Opponent",
@@ -40,11 +41,13 @@ struct MatchSpriteView: View {
                 Spacer()
 
                 // Play-by-play event log at bottom
-                EventLogOverlay(events: viewModel.eventLog)
+                if !showPreMatchOverlay {
+                    EventLogOverlay(events: viewModel.eventLog)
+                }
             }
 
             // Action buttons overlay
-            if viewModel.matchState == .simulating {
+            if !showPreMatchOverlay && viewModel.matchState == .simulating {
                 MatchActionButtons(viewModel: viewModel)
                     .frame(maxWidth: .infinity, alignment: .topTrailing)
                     .padding(.top, 60)
@@ -76,7 +79,17 @@ struct MatchSpriteView: View {
                     }
                 }
             }
+
+            // Pre-match instruction overlay
+            if showPreMatchOverlay {
+                VStack {
+                    Spacer()
+                    preMatchOverlay
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
+        .animation(.easeInOut(duration: 0.3), value: showPreMatchOverlay)
         .task {
             guard scene == nil else { return }
             let newScene = MatchCourtScene(
@@ -93,6 +106,65 @@ struct MatchSpriteView: View {
             newScene.anchorPoint = CGPoint(x: 0, y: 0)
             scene = newScene
             viewModel.courtScene = newScene
+        }
+    }
+
+    private var preMatchOverlay: some View {
+        let opponentName = viewModel.selectedNPC?.name ?? "Opponent"
+        let matchType = viewModel.isDoublesMode ? "Doubles" : "Singles"
+
+        return VStack(spacing: 16) {
+            Text("vs \(opponentName)")
+                .font(.system(size: 28, weight: .heavy, design: .rounded))
+                .foregroundStyle(.green)
+
+            Text(matchType)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 10) {
+                actionRow(icon: "pause.circle", title: "Timeout", desc: "Call a timeout to pause play and regroup")
+                actionRow(icon: "sparkles", title: "Item", desc: "Use a consumable item for a temporary boost")
+                actionRow(icon: "exclamationmark.triangle", title: "Hook", desc: "Challenge a close line call")
+                actionRow(icon: "flag", title: "Resign", desc: "Forfeit the match")
+                actionRow(icon: "forward.fill", title: "Skip", desc: "Fast-forward to the end")
+            }
+
+            Divider()
+
+            Button {
+                showPreMatchOverlay = false
+            } label: {
+                Text("Let's Play Pickleball!")
+                    .font(.title2.bold())
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(.green)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding()
+    }
+
+    private func actionRow(icon: String, title: String, desc: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.body)
+                .foregroundStyle(.green)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.bold())
+                Text(desc)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }

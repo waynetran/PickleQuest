@@ -1,55 +1,56 @@
 import Foundation
 
 enum DrillType: String, CaseIterable, Codable, Sendable {
+    case baselineRally
+    case dinkingDrill
     case servePractice
-    case rallyDrill
-    case defenseDrill
-    case footworkTraining
+    case returnOfServe
 
     var displayName: String {
         switch self {
+        case .baselineRally: return "Baseline Rally"
+        case .dinkingDrill: return "Dinking Drill"
         case .servePractice: return "Serve Practice"
-        case .rallyDrill: return "Rally Drill"
-        case .defenseDrill: return "Defense Drill"
-        case .footworkTraining: return "Footwork Training"
+        case .returnOfServe: return "Return of Serve"
         }
     }
 
     var iconName: String {
         switch self {
+        case .baselineRally: return "arrow.left.arrow.right"
+        case .dinkingDrill: return "drop.fill"
         case .servePractice: return "figure.tennis"
-        case .rallyDrill: return "arrow.left.arrow.right"
-        case .defenseDrill: return "shield.fill"
-        case .footworkTraining: return "figure.run"
+        case .returnOfServe: return "shield.fill"
         }
     }
 
     var targetStats: [StatType] {
         switch self {
+        case .baselineRally: return [.consistency, .accuracy, .positioning]
+        case .dinkingDrill: return [.accuracy, .focus, .consistency]
         case .servePractice: return [.power, .accuracy, .spin]
-        case .rallyDrill: return [.consistency, .accuracy, .positioning]
-        case .defenseDrill: return [.defense, .reflexes, .positioning]
-        case .footworkTraining: return [.speed, .reflexes, .stamina]
+        case .returnOfServe: return [.defense, .reflexes, .positioning]
         }
     }
 
     var description: String {
         switch self {
-        case .servePractice: return "Practice your serve placement and power."
-        case .rallyDrill: return "Extended rally exchanges to build consistency."
-        case .defenseDrill: return "React to incoming shots and return them."
-        case .footworkTraining: return "Quick lateral movements across the court."
+        case .baselineRally: return "Extended rally exchanges to build consistency."
+        case .dinkingDrill: return "Soft shots at the kitchen line. Control wins."
+        case .servePractice: return "Swipe to serve! Practice placement and power."
+        case .returnOfServe: return "Return the coach's serves and aim for the cones."
         }
     }
 
     /// Maps a stat to the most appropriate drill type for training it.
     static func forStat(_ stat: StatType) -> DrillType {
         switch stat {
-        case .power, .accuracy, .spin: return .servePractice
-        case .consistency, .positioning: return .rallyDrill
-        case .defense, .reflexes: return .defenseDrill
-        case .speed, .stamina: return .footworkTraining
-        case .clutch, .focus: return .rallyDrill
+        case .power, .spin: return .servePractice
+        case .accuracy, .focus: return .dinkingDrill
+        case .consistency, .positioning: return .baselineRally
+        case .defense, .reflexes: return .returnOfServe
+        case .speed, .stamina: return .baselineRally
+        case .clutch: return .dinkingDrill
         }
     }
 }

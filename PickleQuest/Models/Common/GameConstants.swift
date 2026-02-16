@@ -295,35 +295,42 @@ enum GameConstants {
 
     // MARK: - Drill Physics (Interactive Mini-Games)
     enum DrillPhysics {
-        static let gravity: CGFloat = 1.8           // logical units/sec² (reduced for higher arcs)
+        static let gravity: CGFloat = 1.2           // logical units/sec² (low for floaty, arcade feel)
         static let bounceDamping: CGFloat = 0.6     // vz retained after bounce
         static let courtFriction: CGFloat = 0.85    // vx/vy retained after bounce
         static let netLogicalHeight: CGFloat = 0.08 // net height in court-space units
         static let spinCurveFactor: CGFloat = 0.15  // max lateral curve from spin stat
 
-        // Shot speeds (court units per second) — halved for playability
-        static let baseShotSpeed: CGFloat = 0.4
-        static let maxShotSpeed: CGFloat = 1.0
-        static let dinkShotSpeed: CGFloat = 0.25
+        // Shot speeds (court units per second)
+        static let baseShotSpeed: CGFloat = 0.35
+        static let maxShotSpeed: CGFloat = 0.90
+        static let dinkShotSpeed: CGFloat = 0.20
 
         // Player hitbox (court-space units)
-        static let baseHitboxRadius: CGFloat = 0.06
-        static let positioningHitboxBonus: CGFloat = 0.04
+        static let baseHitboxRadius: CGFloat = 0.12      // reach (paddle + arm extension)
+        static let positioningHitboxBonus: CGFloat = 0.04 // bonus from positioning stat
 
         // Player movement (court units per second)
         static let baseMoveSpeed: CGFloat = 0.4
         static let maxMoveSpeedBonus: CGFloat = 0.8
 
-        // Contact quality — affects shot power and accuracy
-        static let centerHitPowerBonus: CGFloat = 0.3    // bonus power for dead-center hit
-        static let heightPowerBonus: CGFloat = 0.4        // bonus power for high ball (overhead smash)
-        static let edgeHitPowerPenalty: CGFloat = 0.5     // power reduction for edge hits
-        static let edgePopUpChance: CGFloat = 0.35        // chance of a pop-up on edge/low hit
-        static let popUpArc: CGFloat = 0.9                // high arc for pop-up shots
+        // Shot quality
+        static let heightPowerBonus: CGFloat = 0.3        // bonus power for high ball (overhead smash)
 
         // Drill ball count
         static let drillBallCount: Int = 10
         static let feedDelay: TimeInterval = 0.8
+
+        // Serve swipe
+        static let serveSwipeMinDistance: CGFloat = 50
+        static let serveSwipeMaxPower: CGFloat = 300
+        static let serveSwipeAngleRange: CGFloat = 0.5
+
+        // Cone targets (return of serve)
+        static let coneTargets: [(nx: CGFloat, ny: CGFloat)] = [
+            (0.25, 0.75), (0.50, 0.85), (0.75, 0.75)
+        ]
+        static let coneHitRadius: CGFloat = 0.10
     }
 
     // MARK: - Coaching

@@ -88,14 +88,14 @@ final class TrainingDrillScene: SKScene {
         case .servePractice:
             runServeAnimation(player: player, duration: duration)
             runCoachFeedingAnimation(coach: coach, duration: duration)
-        case .rallyDrill:
+        case .baselineRally:
             runRallyAnimation(player: player, duration: duration)
             runCoachFeedingAnimation(coach: coach, duration: duration)
-        case .defenseDrill:
-            runDefenseAnimation(player: player, coach: coach, duration: duration)
-        case .footworkTraining:
-            runFootworkAnimation(player: player, duration: duration)
+        case .dinkingDrill:
+            runRallyAnimation(player: player, duration: duration)
             runCoachFeedingAnimation(coach: coach, duration: duration)
+        case .returnOfServe:
+            runDefenseAnimation(player: player, coach: coach, duration: duration)
         }
 
         // Show stat gain label at end, then call onComplete
