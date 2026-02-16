@@ -666,10 +666,13 @@ final class InteractiveDrillScene: SKScene {
 
         if ballSim.isDoubleBounce {
             if drill.type == .servePractice {
-                // Serve: ball landed on coach's side = In!
-                if ballSim.lastHitByPlayer && ballSim.courtY > 0.5 {
+                // Serve: must land past kitchen line (0.682) to be in
+                if ballSim.lastHitByPlayer && ballSim.courtY > 0.682 {
                     scorekeeper.onSuccessfulReturn()
                     onBallDead(outcome: .serveIn)
+                } else if ballSim.lastHitByPlayer && ballSim.courtY > 0.5 {
+                    // Landed in kitchen — fault
+                    onBallDead(outcome: .serveFault)
                 } else {
                     onBallDead(outcome: .serveFault)
                 }
