@@ -7,6 +7,7 @@ struct EquipmentNameGenerator: Sendable {
         self.rng = rng
     }
 
+    /// Legacy name generation (used for backward compatibility)
     func generateName(slot: EquipmentSlot, rarity: EquipmentRarity) -> String {
         let prefix = prefixes(for: rarity).randomElement(using: rng)
         let base = baseNames(for: slot).randomElement(using: rng)

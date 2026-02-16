@@ -26,11 +26,13 @@ struct PointResolver: Sendable {
         opponentFatigue: inout FatigueModel,
         momentum: MomentumTracker,
         servingSide: MatchSide,
-        isClutch: Bool
+        isClutch: Bool,
+        playerLevel: Int = 50,
+        opponentLevel: Int = 50
     ) -> ResolvedPoint {
-        // 1. Base + equipment
-        var playerEffective = statCalculator.effectiveStats(base: playerBaseStats, equipment: playerEquipment)
-        var opponentEffective = statCalculator.effectiveStats(base: opponentBaseStats, equipment: opponentEquipment)
+        // 1. Base + equipment (with level gating)
+        var playerEffective = statCalculator.effectiveStats(base: playerBaseStats, equipment: playerEquipment, playerLevel: playerLevel)
+        var opponentEffective = statCalculator.effectiveStats(base: opponentBaseStats, equipment: opponentEquipment, playerLevel: opponentLevel)
 
         // 2. Apply fatigue
         playerEffective = statCalculator.applyFatigue(stats: playerEffective, energy: playerFatigue.energy)

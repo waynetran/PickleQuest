@@ -22,6 +22,12 @@ struct StoreItemCard: View {
                 .lineLimit(2)
                 .foregroundStyle(item.isSoldOut ? .secondary : item.equipment.rarity.color)
 
+            if let brandName = item.equipment.brandName {
+                Text(brandName)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
             RarityBadge(rarity: item.equipment.rarity)
 
             if let setName = item.equipment.setName {

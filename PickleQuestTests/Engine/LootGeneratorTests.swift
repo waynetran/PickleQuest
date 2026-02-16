@@ -59,14 +59,62 @@ struct LootGeneratorTests {
 
     // MARK: - Stat Caps
 
-    @Test("Generated equipment respects rarity stat caps")
-    func statCapsRespected() {
+    @Test("Generated equipment has positive total stats (base + bonus)")
+    func totalStatsPositive() {
         for seed in UInt64(0)..<UInt64(100) {
             let generator = LootGenerator(rng: SeededRandomSource(seed: seed))
             let item = generator.generateEquipment()
-            let totalBonus = item.statBonuses.reduce(0) { $0 + $1.value }
-            #expect(totalBonus <= item.rarity.maxStatBonus)
-            #expect(totalBonus > 0)
+            // totalBonusPoints includes baseStat + bonus stats
+            #expect(item.totalBonusPoints > 0, "Seed \(seed) produced 0 total stats")
+        }
+    }
+
+    @Test("Generated equipment has brand and model assigned")
+    func brandModelAssignment() {
+        for seed in UInt64(0)..<UInt64(50) {
+            let generator = LootGenerator(rng: SeededRandomSource(seed: seed))
+            let item = generator.generateEquipment()
+            #expect(item.brandID != nil, "Seed \(seed) missing brandID")
+            #expect(item.modelID != nil, "Seed \(seed) missing modelID")
+            #expect(item.baseStat != nil, "Seed \(seed) missing baseStat")
+            #expect(item.level == 1, "Seed \(seed) level should be 1")
+        }
+    }
+
+    @Test("Bonus stat count matches rarity specification")
+    func bonusStatCountMatchesRarity() {
+        for seed in UInt64(0)..<UInt64(100) {
+            let generator = LootGenerator(rng: SeededRandomSource(seed: seed))
+            let item = generator.generateEquipment()
+            #expect(item.statBonuses.count == item.rarity.bonusStatCount,
+                    "Seed \(seed): \(item.rarity) expected \(item.rarity.bonusStatCount) bonuses, got \(item.statBonuses.count)")
+        }
+    }
+
+    @Test("Base stat value matches rarity baseStatValue")
+    func baseStatValueMatchesRarity() {
+        for seed in UInt64(0)..<UInt64(50) {
+            let generator = LootGenerator(rng: SeededRandomSource(seed: seed))
+            let item = generator.generateEquipment()
+            guard let baseStat = item.baseStat else {
+                Issue.record("Seed \(seed) missing baseStat")
+                continue
+            }
+            #expect(baseStat.value == item.rarity.baseStatValue,
+                    "Seed \(seed): \(item.rarity) base should be \(item.rarity.baseStatValue), got \(baseStat.value)")
+        }
+    }
+
+    @Test("Bonus stats don't overlap with base stat")
+    func bonusStatsExcludeBaseStat() {
+        for seed in UInt64(0)..<UInt64(100) {
+            let generator = LootGenerator(rng: SeededRandomSource(seed: seed))
+            let item = generator.generateEquipment()
+            guard let baseStat = item.baseStat else { continue }
+            for bonus in item.statBonuses {
+                #expect(bonus.stat != baseStat.stat,
+                        "Seed \(seed): bonus stat \(bonus.stat) overlaps with base stat")
+            }
         }
     }
 
@@ -77,6 +125,9 @@ struct LootGeneratorTests {
             let item = generator.generateEquipment()
             for bonus in item.statBonuses {
                 #expect(bonus.value > 0)
+            }
+            if let baseStat = item.baseStat {
+                #expect(baseStat.value > 0)
             }
         }
     }
@@ -119,6 +170,8 @@ struct LootGeneratorTests {
         #expect(item1.slot == item2.slot)
         #expect(item1.rarity == item2.rarity)
         #expect(item1.statBonuses == item2.statBonuses)
+        #expect(item1.brandID == item2.brandID)
+        #expect(item1.modelID == item2.modelID)
     }
 
     // MARK: - Store Inventory
@@ -142,13 +195,17 @@ struct LootGeneratorTests {
 
     // MARK: - Name Generation
 
-    @Test("Generated names are non-empty")
-    func namesNonEmpty() {
+    @Test("Generated names contain brand and model")
+    func namesContainBrandModel() {
         for seed in UInt64(0)..<UInt64(50) {
             let generator = LootGenerator(rng: SeededRandomSource(seed: seed))
             let item = generator.generateEquipment()
             #expect(!item.name.isEmpty)
-            #expect(item.name.contains(" ")) // prefix + base name
+            #expect(item.name.contains(" ")) // "Brand Model"
+            // Name should contain the model name
+            if let modelName = item.modelName {
+                #expect(item.name.contains(modelName), "Name '\(item.name)' should contain model '\(modelName)'")
+            }
         }
     }
 
@@ -161,5 +218,26 @@ struct LootGeneratorTests {
             let item = generator.generateEquipment()
             #expect(!item.flavorText.isEmpty, "Seed \(seed) produced empty flavor text")
         }
+    }
+
+    // MARK: - Level System
+
+    @Test("Equipment level multiplier scales correctly")
+    func levelMultiplier() {
+        var item = Equipment(
+            id: .init(), name: "Test", slot: .paddle, rarity: .rare,
+            statBonuses: [StatBonus(stat: .accuracy, value: 10)],
+            ability: nil, sellPrice: 100, level: 1,
+            baseStat: StatBonus(stat: .power, value: 8)
+        )
+        #expect(item.levelMultiplier == 1.0)
+
+        item.level = 5
+        // 1.0 + 0.05 * 4 = 1.20
+        #expect(abs(item.levelMultiplier - 1.20) < 0.001)
+
+        item.level = 15
+        // 1.0 + 0.05 * 14 = 1.70
+        #expect(abs(item.levelMultiplier - 1.70) < 0.001)
     }
 }

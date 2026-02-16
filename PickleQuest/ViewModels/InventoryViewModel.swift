@@ -59,7 +59,7 @@ final class InventoryViewModel {
                 player.equippedItems.removeValue(forKey: slot)
             }
         }
-        player.wallet.add(item.sellPrice)
+        player.wallet.add(item.effectiveSellPrice)
         await inventoryService.removeEquipment(item.id)
         await playerService.savePlayer(player)
         await loadInventory()
@@ -75,6 +75,19 @@ final class InventoryViewModel {
         return success
     }
 
+    func upgradeItem(_ item: Equipment, player: inout Player) async -> Equipment? {
+        let cost = item.upgradeCost
+        guard player.wallet.coins >= cost else { return nil }
+        guard !item.isMaxLevel else { return nil }
+
+        guard let upgraded = await inventoryService.upgradeEquipment(item.id) else { return nil }
+        player.wallet.coins -= cost
+        await playerService.savePlayer(player)
+        await loadInventory()
+        selectedItem = upgraded
+        return upgraded
+    }
+
     func equippedItem(for slot: EquipmentSlot, player: Player) -> Equipment? {
         guard let id = player.equippedItems[slot] else { return nil }
         return inventory.first { $0.id == id }
@@ -84,7 +97,7 @@ final class InventoryViewModel {
         let equipped = player.equippedItems.values.compactMap { id in
             inventory.first { $0.id == id }
         }
-        return statCalculator.effectiveStats(base: player.stats, equipment: equipped)
+        return statCalculator.effectiveStats(base: player.stats, equipment: equipped, playerLevel: player.progression.level)
     }
 
     // MARK: - Private
@@ -109,6 +122,6 @@ final class InventoryViewModel {
         // Remove current item in same slot
         equippedItems.removeAll { $0.slot == item.slot }
         equippedItems.append(item)
-        return statCalculator.effectiveStats(base: player.stats, equipment: equippedItems)
+        return statCalculator.effectiveStats(base: player.stats, equipment: equippedItems, playerLevel: player.progression.level)
     }
 }

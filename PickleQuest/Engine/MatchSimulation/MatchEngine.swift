@@ -260,7 +260,9 @@ actor MatchEngine {
                 opponentFatigue: &oFatigue,
                 momentum: momentum,
                 servingSide: servingSide,
-                isClutch: isClutch
+                isClutch: isClutch,
+                playerLevel: playerLevel,
+                opponentLevel: 50
             )
 
             playerFatigue = pFatigue
@@ -331,7 +333,9 @@ actor MatchEngine {
                 opponentFatigue: &teamOpponentFatigue,
                 momentum: momentum,
                 servingSide: tracker.servingTeam,
-                isClutch: isClutch
+                isClutch: isClutch,
+                playerLevel: 50,
+                opponentLevel: 50
             )
 
             // Drain individual fatigue models

@@ -10,6 +10,7 @@ protocol InventoryService: Sendable {
     func getEquippedItems(for equippedSlots: [EquipmentSlot: UUID]) async -> [Equipment]
     func updateEquipmentCondition(_ id: UUID, condition: Double) async
     func repairEquipment(_ id: UUID) async -> Bool
+    func upgradeEquipment(_ id: UUID) async -> Equipment?
     func getConsumables() async -> [Consumable]
     func addConsumable(_ consumable: Consumable) async
     func removeConsumable(_ id: UUID) async

@@ -6,10 +6,12 @@ struct EquipmentDetailView: View {
     let currentStats: PlayerStats
     let previewStats: PlayerStats?
     let playerCoins: Int
+    let playerLevel: Int
     let onEquip: () -> Void
     let onUnequip: () -> Void
     let onSell: () -> Void
     let onRepair: (() -> Void)?
+    let onUpgrade: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -25,7 +27,16 @@ struct EquipmentDetailView: View {
                             .font(.title2.bold())
                             .foregroundStyle(equipment.rarity.color)
 
-                        RarityBadge(rarity: equipment.rarity)
+                        HStack(spacing: 8) {
+                            RarityBadge(rarity: equipment.rarity)
+                            levelBadge
+                        }
+
+                        if let brandName = equipment.brandName {
+                            Text(brandName)
+                                .font(.caption.bold())
+                                .foregroundStyle(.secondary)
+                        }
 
                         if !equipment.flavorText.isEmpty {
                             Text(equipment.flavorText)
@@ -37,25 +48,88 @@ struct EquipmentDetailView: View {
                     }
                     .padding(.top)
 
-                    // Stat Bonuses
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Stat Bonuses")
-                            .font(.headline)
+                    // Level gate warning
+                    if equipment.level > playerLevel {
+                        HStack {
+                            Image(systemName: "lock.fill")
+                                .foregroundStyle(.red)
+                            Text("Requires Player Level \(equipment.level)")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.red)
+                        }
+                        .padding(10)
+                        .frame(maxWidth: .infinity)
+                        .background(.red.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
 
-                        ForEach(equipment.statBonuses, id: \.stat) { bonus in
+                    // Base Stat (from model)
+                    if let baseStat = equipment.baseStat {
+                        VStack(alignment: .leading, spacing: 12) {
                             HStack {
-                                Text(bonus.stat.displayName)
+                                Text("Base Stat")
+                                    .font(.headline)
+                                Spacer()
+                                if equipment.level > 1 {
+                                    Text("+\(Int((equipment.levelMultiplier - 1.0) * 100))% from level")
+                                        .font(.caption)
+                                        .foregroundStyle(.blue)
+                                }
+                            }
+
+                            HStack {
+                                Text(baseStat.stat.displayName)
                                     .font(.subheadline)
                                 Spacer()
-                                Text("+\(bonus.value)")
+                                let scaledValue = Int((Double(baseStat.value) * equipment.levelMultiplier).rounded(.down))
+                                if equipment.level > 1 {
+                                    Text("\(baseStat.value)")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                    Image(systemName: "arrow.right")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text("+\(scaledValue)")
                                     .font(.subheadline.bold())
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(.cyan)
                             }
                         }
+                        .padding()
+                        .background(.cyan.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .padding()
-                    .background(.regularMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    // Bonus Stats (from rarity)
+                    if !equipment.statBonuses.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Bonus Stats")
+                                .font(.headline)
+
+                            ForEach(equipment.statBonuses, id: \.stat) { bonus in
+                                HStack {
+                                    Text(bonus.stat.displayName)
+                                        .font(.subheadline)
+                                    Spacer()
+                                    let scaledValue = Int((Double(bonus.value) * equipment.levelMultiplier).rounded(.down))
+                                    if equipment.level > 1 {
+                                        Text("\(bonus.value)")
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                        Image(systemName: "arrow.right")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Text("+\(scaledValue)")
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(.green)
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(.regularMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
 
                     // Ability (if any)
                     if let ability = equipment.ability {
@@ -149,6 +223,36 @@ struct EquipmentDetailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
 
+                    // Upgrade section
+                    if !equipment.isMaxLevel, let onUpgrade {
+                        VStack(spacing: 8) {
+                            HStack {
+                                Text("Upgrade to Lv. \(equipment.level + 1)")
+                                    .font(.subheadline.bold())
+                                Spacer()
+                                Text("+\(Int(GameConstants.EquipmentLevel.statPercentPerLevel * 100))% stats")
+                                    .font(.caption)
+                                    .foregroundStyle(.blue)
+                            }
+
+                            Button {
+                                onUpgrade()
+                            } label: {
+                                Label("\(equipment.upgradeCost) coins", systemImage: "arrow.up.circle.fill")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(playerCoins >= equipment.upgradeCost ? .blue : .gray)
+                                    .foregroundStyle(.white)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            .disabled(playerCoins < equipment.upgradeCost)
+                        }
+                        .padding()
+                        .background(.blue.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
                     // Repair (for broken equipment)
                     if equipment.isBroken, let onRepair {
                         VStack(spacing: 8) {
@@ -203,7 +307,7 @@ struct EquipmentDetailView: View {
                         }
 
                         Button(action: onSell) {
-                            Label("Sell for \(equipment.sellPrice) coins", systemImage: "dollarsign.circle")
+                            Label("Sell for \(equipment.effectiveSellPrice) coins", systemImage: "dollarsign.circle")
                                 .font(.subheadline)
                                 .frame(maxWidth: .infinity)
                                 .padding()
@@ -223,5 +327,15 @@ struct EquipmentDetailView: View {
                 }
             }
         }
+    }
+
+    private var levelBadge: some View {
+        Text("Lv. \(equipment.level) / \(equipment.maxLevel)")
+            .font(.caption2.bold().monospacedDigit())
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(.blue.opacity(0.15))
+            .foregroundStyle(.blue)
+            .clipShape(Capsule())
     }
 }

@@ -60,17 +60,31 @@ struct LootGenerator: Sendable {
     ) -> Equipment {
         let finalRarity = rarity ?? rollRarity(boost: difficultyBoost)
         let slot = EquipmentSlot.allCases[rng.nextInt(in: 0...EquipmentSlot.allCases.count - 1)]
-        let bonuses = generateBonuses(rarity: finalRarity)
+
+        // Pick a random brand+model for this slot
+        let model = EquipmentBrandCatalog.randomModel(for: slot, using: rng)
+        let brand = EquipmentBrandCatalog.brand(for: model.brandID)
+
+        // Base stat from model
+        let baseStat = StatBonus(stat: model.baseStat, value: finalRarity.baseStatValue)
+
+        // Bonus stats (excluding the base stat)
+        let bonuses = generateBonuses(rarity: finalRarity, excludingStat: model.baseStat)
+
         let ability = finalRarity.hasAbility ? generateAbility() : nil
-        let flavorText = nameGenerator.generateFlavorText(slot: slot, rarity: finalRarity, statBonuses: bonuses)
+        let allBonuses = baseStat.value > 0 ? [baseStat] + bonuses : bonuses
+        let flavorText = nameGenerator.generateFlavorText(slot: slot, rarity: finalRarity, statBonuses: allBonuses)
 
         // Roll for set piece
         let (setID, setName) = rollSetPiece(rarity: finalRarity, slot: slot)
 
-        let baseName = nameGenerator.generateName(slot: slot, rarity: finalRarity)
+        // Name = "Brand Model"
+        let brandName = brand?.name ?? "Unknown"
+        let modelName = model.name
+        let baseName = "\(brandName) \(modelName)"
         let name = setName.map { "\($0) \(baseName)" } ?? baseName
 
-        let sellPrice = calculateSellPrice(rarity: finalRarity, bonuses: bonuses)
+        let sellPrice = calculateSellPrice(rarity: finalRarity, baseStat: baseStat, bonuses: bonuses)
 
         return Equipment(
             id: UUID(),
@@ -82,7 +96,11 @@ struct LootGenerator: Sendable {
             setID: setID,
             setName: setName,
             ability: ability,
-            sellPrice: sellPrice
+            sellPrice: sellPrice,
+            brandID: model.brandID,
+            modelID: model.id,
+            level: 1,
+            baseStat: baseStat
         )
     }
 
@@ -153,15 +171,15 @@ struct LootGenerator: Sendable {
 
     // MARK: - Stat Bonuses
 
-    private func generateBonuses(rarity: EquipmentRarity) -> [StatBonus] {
-        let countRange = GameConstants.Loot.bonusStatCount[rarity] ?? 1...2
-        let count = rng.nextInt(in: countRange)
-        let maxTotal = rarity.maxStatBonus
+    private func generateBonuses(rarity: EquipmentRarity, excludingStat: StatType) -> [StatBonus] {
+        let count = rarity.bonusStatCount
+        let budget = rarity.bonusStatBudget
+        guard count > 0 && budget > 0 else { return [] }
 
-        // Pick unique stats
-        var availableStats = StatType.allCases.shuffled(using: rng)
+        // Pick unique stats (excluding the base stat)
+        var availableStats = StatType.allCases.filter { $0 != excludingStat }.shuffled(using: rng)
         var bonuses: [StatBonus] = []
-        var remaining = maxTotal
+        var remaining = budget
 
         for i in 0..<count {
             guard !availableStats.isEmpty && remaining > 0 else { break }
@@ -221,7 +239,7 @@ struct LootGenerator: Sendable {
 
     // MARK: - Pricing
 
-    private func calculateSellPrice(rarity: EquipmentRarity, bonuses: [StatBonus]) -> Int {
+    private func calculateSellPrice(rarity: EquipmentRarity, baseStat: StatBonus, bonuses: [StatBonus]) -> Int {
         let basePrice: Int
         switch rarity {
         case .common: basePrice = 15
@@ -230,8 +248,8 @@ struct LootGenerator: Sendable {
         case .epic: basePrice = 250
         case .legendary: basePrice = 600
         }
-        let bonusValue = bonuses.reduce(0) { $0 + $1.value } * 2
-        return basePrice + bonusValue
+        let totalStatValue = baseStat.value + bonuses.reduce(0) { $0 + $1.value }
+        return basePrice + totalStatValue * 2
     }
 }
 

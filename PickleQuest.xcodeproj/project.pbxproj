@@ -89,6 +89,7 @@
 		7D38D7EB38143D8854EE48C0 /* Consumable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F78EDF9FACA3C6EB32CC7BAF /* Consumable.swift */; };
 		7D96587EFB503CAA3EAEEED0 /* NPCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 317B5B682D9B2CC67773486B /* NPCService.swift */; };
 		817A9EF3A2B3ED0AB941555F /* FogOfWar.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEE7EFCE25B4E6958A88CE77 /* FogOfWar.swift */; };
+		820B4B44127D89E340B3ACDE /* EquipmentBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A86894E723421380CA433B8 /* EquipmentBrand.swift */; };
 		83812AFF88513C6F80ECC31D /* TrainingDrillScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8DE4ED9E1758F094CD6300 /* TrainingDrillScene.swift */; };
 		83F6CFA7D9E6567325395BE6 /* TutorialNPC.swift in Sources */ = {isa = PBXBuildFile; fileRef = F834383C0689A948AB2E8C1A /* TutorialNPC.swift */; };
 		848425B1474A2E05128FD703 /* TrainingResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68D8691955EBCC5E919FE7D9 /* TrainingResult.swift */; };
@@ -207,6 +208,7 @@
 		1570143F6B049443848F6689 /* SavedPlayerSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPlayerSummary.swift; sourceTree = "<group>"; };
 		1675D372694A305F611FE32D /* NPC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NPC.swift; sourceTree = "<group>"; };
 		18092C844ECE15E47E4AB4F1 /* PickleQuestTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PickleQuestTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A86894E723421380CA433B8 /* EquipmentBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentBrand.swift; sourceTree = "<group>"; };
 		1B134E5A041B5743FC9C0BBC /* MomentumTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentumTrackerTests.swift; sourceTree = "<group>"; };
 		1C16E89037C904100D1C317F /* MatchHistoryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchHistoryEntry.swift; sourceTree = "<group>"; };
 		1D8901DF47B273A28A842991 /* EquipmentSetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentSetTests.swift; sourceTree = "<group>"; };
@@ -599,6 +601,7 @@
 			children = (
 				BE3FB9F0A9E372A5A0CB3D66 /* Equipment.swift */,
 				13D27DD38A3C07AF3DC1F5AF /* EquipmentAbility.swift */,
+				1A86894E723421380CA433B8 /* EquipmentBrand.swift */,
 				6DE2F3174E21AC04B25ECDDA /* EquipmentRarity.swift */,
 				5F96F8D08C8F4FC655940785 /* EquipmentSet.swift */,
 				4C0D6A9C6DD259AB87FE0D21 /* EquipmentSlot.swift */,
@@ -1071,6 +1074,7 @@
 				072B58AE5FD6E05492409251 /* DoublesScoreTracker.swift in Sources */,
 				F7AC5CB510EB35254105DCE4 /* Equipment.swift in Sources */,
 				66DE4973BD9BED0C2197BD50 /* EquipmentAbility.swift in Sources */,
+				820B4B44127D89E340B3ACDE /* EquipmentBrand.swift in Sources */,
 				CD7F3AAC4180F9ECBFCA635D /* EquipmentCardView.swift in Sources */,
 				694E9D55D983B6A7B17E33F3 /* EquipmentDetailView.swift in Sources */,
 				43B535BCBF33D536997AD2BA /* EquipmentNameGenerator.swift in Sources */,

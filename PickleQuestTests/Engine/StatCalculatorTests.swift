@@ -128,4 +128,70 @@ struct StatCalculatorTests {
         // Only item bonus, no set bonus → 30 + 5 = 35
         #expect(effective.power == 35)
     }
+
+    // MARK: - Level Multiplier Tests
+
+    @Test("Level multiplier scales equipment bonuses")
+    func levelMultiplierScalesBonuses() {
+        let base = PlayerStats(
+            power: 20, accuracy: 20, spin: 20, speed: 20,
+            defense: 20, reflexes: 20, positioning: 20,
+            clutch: 20, stamina: 20, consistency: 20
+        )
+        let level1Item = Equipment(
+            id: .init(), name: "Test", slot: .paddle, rarity: .rare,
+            statBonuses: [StatBonus(stat: .accuracy, value: 10)],
+            ability: nil, sellPrice: 100, level: 1,
+            baseStat: StatBonus(stat: .power, value: 8)
+        )
+        var level5Item = level1Item
+        level5Item.level = 5
+
+        let effectLv1 = calculator.effectiveStats(base: base, equipment: [level1Item])
+        let effectLv5 = calculator.effectiveStats(base: base, equipment: [level5Item])
+
+        // Level 5 should give more power than level 1
+        #expect(effectLv5.power > effectLv1.power)
+        #expect(effectLv5.accuracy > effectLv1.accuracy)
+    }
+
+    @Test("Level gate zeroes contribution when equipment level exceeds player level")
+    func levelGateZeroesStats() {
+        let base = PlayerStats(
+            power: 20, accuracy: 20, spin: 20, speed: 20,
+            defense: 20, reflexes: 20, positioning: 20,
+            clutch: 20, stamina: 20, consistency: 20
+        )
+        let highLevelItem = Equipment(
+            id: .init(), name: "Test", slot: .paddle, rarity: .rare,
+            statBonuses: [StatBonus(stat: .accuracy, value: 10)],
+            ability: nil, sellPrice: 100, level: 10,
+            baseStat: StatBonus(stat: .power, value: 8)
+        )
+
+        // Player level 5 < equipment level 10 → item should contribute nothing
+        let gated = calculator.effectiveStats(base: base, equipment: [highLevelItem], playerLevel: 5)
+        #expect(gated.power == 20) // no bonus applied
+        #expect(gated.accuracy == 20)
+
+        // Player level 10 = equipment level 10 → item should work
+        let ungated = calculator.effectiveStats(base: base, equipment: [highLevelItem], playerLevel: 10)
+        #expect(ungated.power > 20)
+        #expect(ungated.accuracy > 20)
+    }
+
+    @Test("Default playerLevel of 50 allows all standard equipment")
+    func defaultPlayerLevelAllowsAll() {
+        let base = PlayerStats.starter
+        let item = Equipment(
+            id: .init(), name: "Test", slot: .paddle, rarity: .legendary,
+            statBonuses: [StatBonus(stat: .accuracy, value: 10)],
+            ability: nil, sellPrice: 100, level: 25,
+            baseStat: StatBonus(stat: .power, value: 16)
+        )
+
+        // Default playerLevel = 50 should allow level 25 legendary
+        let effective = calculator.effectiveStats(base: base, equipment: [item])
+        #expect(effective.power > base.power)
+    }
 }

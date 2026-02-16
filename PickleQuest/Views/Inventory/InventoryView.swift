@@ -121,6 +121,7 @@ struct InventoryView: View {
                     currentStats: vm.effectiveStats(for: appState.player),
                     previewStats: vm.previewStats,
                     playerCoins: appState.player.wallet.coins,
+                    playerLevel: appState.player.progression.level,
                     onEquip: {
                         Task {
                             var player = appState.player
@@ -155,7 +156,14 @@ struct InventoryView: View {
                                 vm.showingDetail = false
                             }
                         }
-                    } : nil
+                    } : nil,
+                    onUpgrade: {
+                        Task {
+                            var player = appState.player
+                            _ = await vm.upgradeItem(item, player: &player)
+                            appState.player = player
+                        }
+                    }
                 )
                 .presentationDetents([.large])
             }

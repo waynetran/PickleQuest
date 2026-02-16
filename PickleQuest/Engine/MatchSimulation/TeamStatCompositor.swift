@@ -12,10 +12,12 @@ enum TeamStatCompositor {
         p1Equipment: [Equipment],
         p2Stats: PlayerStats,
         p2Equipment: [Equipment],
-        synergy: TeamSynergy
+        synergy: TeamSynergy,
+        p1Level: Int = 50,
+        p2Level: Int = 50
     ) -> PlayerStats {
-        let p1Effective = statCalc.effectiveStats(base: p1Stats, equipment: p1Equipment)
-        let p2Effective = statCalc.effectiveStats(base: p2Stats, equipment: p2Equipment)
+        let p1Effective = statCalc.effectiveStats(base: p1Stats, equipment: p1Equipment, playerLevel: p1Level)
+        let p2Effective = statCalc.effectiveStats(base: p2Stats, equipment: p2Equipment, playerLevel: p2Level)
 
         var composite = PlayerStats(
             power: avg(p1Effective.power, p2Effective.power),

@@ -3,10 +3,11 @@ import Foundation
 /// Calculates effective stats from base stats + equipment bonuses, with diminishing returns.
 struct StatCalculator: Sendable {
     /// Compute effective stats for a player given their base stats and equipped items.
-    func effectiveStats(base: PlayerStats, equipment: [Equipment]) -> PlayerStats {
+    /// Equipment whose level exceeds playerLevel contributes nothing.
+    func effectiveStats(base: PlayerStats, equipment: [Equipment], playerLevel: Int = 50) -> PlayerStats {
         var result = base
-        let equipBonuses = aggregateBonuses(from: equipment)
-        let setBonuses = aggregateSetBonuses(from: equipment)
+        let equipBonuses = aggregateBonuses(from: equipment, playerLevel: playerLevel)
+        let setBonuses = aggregateSetBonuses(from: equipment, playerLevel: playerLevel)
 
         for type in StatType.allCases {
             let baseValue = base.stat(type)
@@ -50,9 +51,11 @@ struct StatCalculator: Sendable {
     // MARK: - Private
 
     /// Returns active set bonuses for display purposes.
-    func activeSetBonuses(from equipment: [Equipment]) -> [(set: EquipmentSet, activePieces: Int, activeTiers: [SetBonusTier])] {
+    func activeSetBonuses(from equipment: [Equipment], playerLevel: Int = 50) -> [(set: EquipmentSet, activePieces: Int, activeTiers: [SetBonusTier])] {
         var setGroups: [String: Int] = [:]
         for item in equipment {
+            // Skip level-gated items
+            guard item.level <= playerLevel else { continue }
             if let setID = item.setID {
                 setGroups[setID, default: 0] += 1
             }
@@ -67,19 +70,33 @@ struct StatCalculator: Sendable {
         return result
     }
 
-    private func aggregateBonuses(from equipment: [Equipment]) -> [StatType: Int] {
+    private func aggregateBonuses(from equipment: [Equipment], playerLevel: Int) -> [StatType: Int] {
         var bonuses: [StatType: Int] = [:]
         for item in equipment {
+            // Level gate: equipment above player level contributes nothing
+            guard item.level <= playerLevel else { continue }
+
+            let multiplier = item.levelMultiplier
+
+            // Add scaled base stat
+            if let base = item.baseStat {
+                let scaled = Int((Double(base.value) * multiplier).rounded(.down))
+                bonuses[base.stat, default: 0] += scaled
+            }
+
+            // Add scaled bonus stats
             for bonus in item.statBonuses {
-                bonuses[bonus.stat, default: 0] += bonus.value
+                let scaled = Int((Double(bonus.value) * multiplier).rounded(.down))
+                bonuses[bonus.stat, default: 0] += scaled
             }
         }
         return bonuses
     }
 
-    private func aggregateSetBonuses(from equipment: [Equipment]) -> [StatType: Int] {
+    private func aggregateSetBonuses(from equipment: [Equipment], playerLevel: Int) -> [StatType: Int] {
         var setGroups: [String: Int] = [:]
         for item in equipment {
+            guard item.level <= playerLevel else { continue }
             if let setID = item.setID {
                 setGroups[setID, default: 0] += 1
             }

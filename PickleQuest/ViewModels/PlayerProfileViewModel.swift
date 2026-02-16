@@ -38,7 +38,7 @@ final class PlayerProfileViewModel {
     }
 
     func calculateEffectiveStats(for player: Player) -> PlayerStats {
-        statCalculator.effectiveStats(base: player.stats, equipment: equippedItems)
+        statCalculator.effectiveStats(base: player.stats, equipment: equippedItems, playerLevel: player.progression.level)
     }
 
     // MARK: - Private
@@ -46,6 +46,6 @@ final class PlayerProfileViewModel {
     private func loadEquippedItems() async {
         guard let player else { return }
         equippedItems = await inventoryService.getEquippedItems(for: player.equippedItems)
-        effectiveStats = statCalculator.effectiveStats(base: player.stats, equipment: equippedItems)
+        effectiveStats = statCalculator.effectiveStats(base: player.stats, equipment: equippedItems, playerLevel: player.progression.level)
     }
 }

@@ -15,12 +15,25 @@ struct EquipmentCardView: View {
                         .foregroundStyle(.green)
                         .font(.caption)
                 }
+                Text("Lv.\(equipment.level)")
+                    .font(.caption2.bold().monospacedDigit())
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(.blue.opacity(0.15))
+                    .foregroundStyle(.blue)
+                    .clipShape(Capsule())
             }
 
             Text(equipment.name)
                 .font(.caption.bold())
                 .lineLimit(2)
                 .foregroundStyle(equipment.rarity.color)
+
+            if let brandName = equipment.brandName {
+                Text(brandName)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
 
             RarityBadge(rarity: equipment.rarity)
 
@@ -34,6 +47,14 @@ struct EquipmentCardView: View {
                     .clipShape(Capsule())
             }
 
+            // Base stat
+            if let baseStat = equipment.baseStat {
+                Text("+\(baseStat.value) \(baseStat.stat.displayName)")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.cyan)
+            }
+
+            // Bonus stats
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(equipment.statBonuses, id: \.stat) { bonus in
                     Text("+\(bonus.value) \(bonus.stat.displayName)")

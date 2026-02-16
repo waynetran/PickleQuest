@@ -51,6 +51,13 @@ actor MockInventoryService: InventoryService {
         return true
     }
 
+    func upgradeEquipment(_ id: UUID) async -> Equipment? {
+        guard let index = inventory.firstIndex(where: { $0.id == id }) else { return nil }
+        guard !inventory[index].isMaxLevel else { return nil }
+        inventory[index].level += 1
+        return inventory[index]
+    }
+
     // MARK: - Consumables
 
     func getConsumables() async -> [Consumable] {
@@ -86,33 +93,45 @@ actor MockInventoryService: InventoryService {
         [
             Equipment(
                 id: UUID(uuidString: "10000001-0000-0000-0000-000000000001")!,
-                name: "Beginner's Paddle",
+                name: "CourtKraft Hammer",
                 slot: .paddle,
                 rarity: .common,
-                statBonuses: [StatBonus(stat: .power, value: 2), StatBonus(stat: .accuracy, value: 1)],
+                statBonuses: [StatBonus(stat: .accuracy, value: 1)],
                 flavorText: "Every legend starts somewhere. Usually at the free paddle bin.",
                 ability: nil,
-                sellPrice: 25
+                sellPrice: 25,
+                brandID: "court_kraft",
+                modelID: "ck_hammer",
+                level: 1,
+                baseStat: StatBonus(stat: .power, value: 3)
             ),
             Equipment(
                 id: UUID(uuidString: "10000002-0000-0000-0000-000000000002")!,
-                name: "Basic Court Shoes",
+                name: "SwiftSole Dash",
                 slot: .shoes,
                 rarity: .common,
-                statBonuses: [StatBonus(stat: .speed, value: 2), StatBonus(stat: .positioning, value: 1)],
+                statBonuses: [StatBonus(stat: .positioning, value: 1)],
                 flavorText: "They squeak. That's how you know they're working.",
                 ability: nil,
-                sellPrice: 20
+                sellPrice: 20,
+                brandID: "swift_sole",
+                modelID: "ss_dash",
+                level: 1,
+                baseStat: StatBonus(stat: .speed, value: 3)
             ),
             Equipment(
                 id: UUID(uuidString: "10000003-0000-0000-0000-000000000003")!,
-                name: "Cotton T-Shirt",
+                name: "EnduroWear Iron Lung",
                 slot: .shirt,
                 rarity: .common,
-                statBonuses: [StatBonus(stat: .stamina, value: 3)],
+                statBonuses: [],
                 flavorText: "100% cotton, 0% aerodynamics. But hey, it's comfortable.",
                 ability: nil,
-                sellPrice: 15
+                sellPrice: 15,
+                brandID: "enduro_wear",
+                modelID: "ew_ironlung",
+                level: 1,
+                baseStat: StatBonus(stat: .stamina, value: 3)
             )
         ]
     }

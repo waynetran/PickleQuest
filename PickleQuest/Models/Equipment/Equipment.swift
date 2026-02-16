@@ -14,8 +14,45 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
     let visualColor: String?
     var condition: Double
 
+    // Brand/Model/Level system
+    let brandID: String?
+    let modelID: String?
+    var level: Int
+    let baseStat: StatBonus?
+
+    // MARK: - Computed Properties
+
     var totalBonusPoints: Int {
-        statBonuses.reduce(0) { $0 + $1.value }
+        let bonusTotal = statBonuses.reduce(0) { $0 + $1.value }
+        let baseTotal = baseStat?.value ?? 0
+        return bonusTotal + baseTotal
+    }
+
+    var brandName: String? {
+        guard let brandID else { return nil }
+        return EquipmentBrandCatalog.brand(for: brandID)?.name
+    }
+
+    var modelName: String? {
+        guard let modelID else { return nil }
+        return EquipmentBrandCatalog.model(for: modelID)?.name
+    }
+
+    var maxLevel: Int {
+        rarity.maxLevel
+    }
+
+    var isMaxLevel: Bool {
+        level >= maxLevel
+    }
+
+    /// Level multiplier: 1.0 at level 1, +5% per level
+    var levelMultiplier: Double {
+        1.0 + GameConstants.EquipmentLevel.statPercentPerLevel * Double(level - 1)
+    }
+
+    var upgradeCost: Int {
+        GameConstants.EquipmentLevel.upgradeCost(rarity: rarity, targetLevel: level + 1)
     }
 
     /// Condition as a 0-100 integer for display
@@ -46,6 +83,13 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
         return Int(Double(basePrice) * 0.3)
     }
 
+    /// Sell price accounts for level investment
+    var effectiveSellPrice: Int {
+        sellPrice + (level - 1) * GameConstants.EquipmentLevel.levelSellBonus
+    }
+
+    // MARK: - Memberwise Init
+
     init(
         id: UUID,
         name: String,
@@ -58,7 +102,11 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
         ability: EquipmentAbility?,
         sellPrice: Int,
         visualColor: String? = nil,
-        condition: Double = 1.0
+        condition: Double = 1.0,
+        brandID: String? = nil,
+        modelID: String? = nil,
+        level: Int = 1,
+        baseStat: StatBonus? = nil
     ) {
         self.id = id
         self.name = name
@@ -72,6 +120,32 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
         self.sellPrice = sellPrice
         self.visualColor = visualColor
         self.condition = condition
+        self.brandID = brandID
+        self.modelID = modelID
+        self.level = level
+        self.baseStat = baseStat
+    }
+
+    // MARK: - Codable (backward-compatible)
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        slot = try container.decode(EquipmentSlot.self, forKey: .slot)
+        rarity = try container.decode(EquipmentRarity.self, forKey: .rarity)
+        statBonuses = try container.decode([StatBonus].self, forKey: .statBonuses)
+        flavorText = try container.decodeIfPresent(String.self, forKey: .flavorText) ?? ""
+        setID = try container.decodeIfPresent(String.self, forKey: .setID)
+        setName = try container.decodeIfPresent(String.self, forKey: .setName)
+        ability = try container.decodeIfPresent(EquipmentAbility.self, forKey: .ability)
+        sellPrice = try container.decode(Int.self, forKey: .sellPrice)
+        visualColor = try container.decodeIfPresent(String.self, forKey: .visualColor)
+        condition = try container.decodeIfPresent(Double.self, forKey: .condition) ?? 1.0
+        brandID = try container.decodeIfPresent(String.self, forKey: .brandID)
+        modelID = try container.decodeIfPresent(String.self, forKey: .modelID)
+        level = try container.decodeIfPresent(Int.self, forKey: .level) ?? 1
+        baseStat = try container.decodeIfPresent(StatBonus.self, forKey: .baseStat)
     }
 }
 

@@ -125,6 +125,27 @@ enum GameConstants {
         static let setChanceLegendary = 0.50
     }
 
+    // MARK: - Equipment Level
+    enum EquipmentLevel {
+        static let statPercentPerLevel: Double = 0.05  // +5% flat per level
+        static let baseUpgradeCost: Int = 25
+        static let upgradeCostExponent: Double = 1.4
+        static let rarityUpgradeMultiplier: [EquipmentRarity: Double] = [
+            .common: 1.0,
+            .uncommon: 1.5,
+            .rare: 2.5,
+            .epic: 4.0,
+            .legendary: 7.0
+        ]
+        static let levelSellBonus: Int = 5
+
+        static func upgradeCost(rarity: EquipmentRarity, targetLevel: Int) -> Int {
+            let rarityMult = rarityUpgradeMultiplier[rarity] ?? 1.0
+            let base = Double(baseUpgradeCost) * pow(Double(targetLevel), upgradeCostExponent) * rarityMult
+            return Int(base.rounded())
+        }
+    }
+
     // MARK: - Loot
     enum Loot {
         static let winDropCount: Int = 1
