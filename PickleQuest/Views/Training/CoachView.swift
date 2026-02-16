@@ -7,12 +7,11 @@ struct CoachView: View {
 
     var body: some View {
         let stat = coach.dailySpecialtyStat
-        let currentBoost = player.coachingRecord.currentBoost(for: stat)
         let fee = player.coachingRecord.fee(for: coach)
-        let atCap = currentBoost >= GameConstants.Coaching.maxCoachingBoostPerStat
-        let hasSessionToday = player.coachingRecord.hasSessionToday(coachID: coach.id)
+        let coachEnergy = player.coachingRecord.coachRemainingEnergy(coachID: coach.id)
+        let isExhausted = coachEnergy <= 0
         let canAfford = player.wallet.coins >= fee
-        let expectedGain = max(1, Int((player.currentEnergy / 100.0) * Double(coach.level)))
+        let expectedGain = max(1, Int(round((player.currentEnergy / 100.0) * (coachEnergy / 100.0) * Double(coach.level))))
 
         VStack(alignment: .leading, spacing: 12) {
             // Coach header
@@ -51,11 +50,14 @@ struct CoachView: View {
                             .font(.caption2.bold())
                             .foregroundStyle(.orange)
                     }
-                    if hasSessionToday {
-                        Label("Done Today", systemImage: "checkmark.circle.fill")
+                    // Coach energy indicator
+                    HStack(spacing: 3) {
+                        Image(systemName: isExhausted ? "battery.0" : "battery.75")
                             .font(.caption2)
-                            .foregroundStyle(.green)
+                        Text("\(Int(coachEnergy))%")
+                            .font(.caption2.bold().monospacedDigit())
                     }
+                    .foregroundStyle(isExhausted ? .red : coachEnergy <= 20 ? .orange : .green)
                 }
             }
 
@@ -82,14 +84,9 @@ struct CoachView: View {
                             .font(.subheadline.bold())
                     }
 
-                    HStack(spacing: 8) {
-                        Text("+\(expectedGain)")
-                            .font(.caption.bold())
-                            .foregroundStyle(.green)
-                        Text("\(currentBoost)/\(GameConstants.Coaching.maxCoachingBoostPerStat) boosts")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text("+\(expectedGain)")
+                        .font(.caption.bold())
+                        .foregroundStyle(.green)
                 }
 
                 Spacer()
@@ -105,11 +102,11 @@ struct CoachView: View {
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(trainEnabled(hasSession: hasSessionToday, atCap: atCap, canAfford: canAfford) ? .green : .gray)
+                    .background(trainEnabled(isExhausted: isExhausted, canAfford: canAfford) ? .green : .gray)
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
                 }
-                .disabled(!trainEnabled(hasSession: hasSessionToday, atCap: atCap, canAfford: canAfford))
+                .disabled(!trainEnabled(isExhausted: isExhausted, canAfford: canAfford))
             }
             .padding(10)
             .background(Color(.systemGray6))
@@ -124,8 +121,8 @@ struct CoachView: View {
         )
     }
 
-    private func trainEnabled(hasSession: Bool, atCap: Bool, canAfford: Bool) -> Bool {
-        !hasSession && !atCap && canAfford
+    private func trainEnabled(isExhausted: Bool, canAfford: Bool) -> Bool {
+        !isExhausted && canAfford
             && player.currentEnergy >= GameConstants.Training.drillEnergyCost
     }
 }

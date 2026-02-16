@@ -731,7 +731,9 @@ final class MatchAnimator {
     // MARK: - Fire-and-forget SKAction helper (sync call to avoid async hop)
 
     nonisolated private func fireAction(_ node: SKNode, _ action: sending SKAction) {
-        node.run(action)
+        MainActor.assumeIsolated {
+            node.run(action)
+        }
     }
 
     // MARK: - Particles

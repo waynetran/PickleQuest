@@ -14,7 +14,7 @@ actor MockCoachService: CoachService {
             dialogue: CoachDialogue(
                 greeting: "Ready to work on that serve? Let's make it untouchable!",
                 onSession: "Great improvement! Your serve is getting sharper.",
-                onDailyLimit: "That's enough for today. Rest up and come back tomorrow!"
+                onExhausted: "That's enough for today. Rest up and come back tomorrow!"
             ),
             portraitName: "coach_maria"
         ),
@@ -26,7 +26,7 @@ actor MockCoachService: CoachService {
             dialogue: CoachDialogue(
                 greeting: "Court movement is everything. Let's get those feet moving!",
                 onSession: "You're covering the court much better now!",
-                onDailyLimit: "Your legs need recovery. See you tomorrow!"
+                onExhausted: "Your legs need recovery. See you tomorrow!"
             ),
             portraitName: "coach_darius"
         ),
@@ -38,7 +38,7 @@ actor MockCoachService: CoachService {
             dialogue: CoachDialogue(
                 greeting: "Spin changes everything. Let me show you the angles.",
                 onSession: "Beautiful! That spin will confuse your opponents.",
-                onDailyLimit: "Your wrist needs rest. Practice what you learned!"
+                onExhausted: "Your wrist needs rest. Practice what you learned!"
             ),
             portraitName: "coach_yuki"
         ),
@@ -50,7 +50,7 @@ actor MockCoachService: CoachService {
             dialogue: CoachDialogue(
                 greeting: "Defense wins championships. Let's build that wall.",
                 onSession: "Nothing's getting past you now!",
-                onDailyLimit: "Even walls need maintenance. Come back tomorrow."
+                onExhausted: "Even walls need maintenance. Come back tomorrow."
             ),
             portraitName: "coach_reginald"
         ),
@@ -62,7 +62,7 @@ actor MockCoachService: CoachService {
             dialogue: CoachDialogue(
                 greeting: "The mind controls the paddle. Let's sharpen your focus.",
                 onSession: "You're finding that inner calm. Keep it up.",
-                onDailyLimit: "Meditation takes time. Reflect on today's lesson."
+                onExhausted: "Meditation takes time. Reflect on today's lesson."
             ),
             portraitName: "coach_zen"
         ),
@@ -74,7 +74,7 @@ actor MockCoachService: CoachService {
             dialogue: CoachDialogue(
                 greeting: "Every shot is a choice. Let's make every choice count.",
                 onSession: "Your court IQ just went up a level!",
-                onDailyLimit: "Study today's patterns. I'll have new ones tomorrow."
+                onExhausted: "Study today's patterns. I'll have new ones tomorrow."
             ),
             portraitName: "coach_sofia"
         )

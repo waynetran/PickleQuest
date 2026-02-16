@@ -6,6 +6,7 @@ struct PlayerChooserView: View {
     @State private var savedPlayers: [SavedPlayerSummary] = []
     @State private var isLoading = true
     @State private var deletingPlayerID: UUID?
+    @State private var loadError: String?
 
     private let columns = [
         GridItem(.flexible(), spacing: 16),
@@ -17,17 +18,19 @@ struct PlayerChooserView: View {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(savedPlayers) { summary in
-                        PlayerSlotCard(summary: summary)
-                            .onTapGesture {
-                                Task { await loadAndContinue(id: summary.id) }
+                        Button {
+                            Task { await loadAndContinue(id: summary.id) }
+                        } label: {
+                            PlayerSlotCard(summary: summary)
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                deletingPlayerID = summary.id
+                            } label: {
+                                Label("Delete", systemImage: "trash")
                             }
-                            .contextMenu {
-                                Button(role: .destructive) {
-                                    deletingPlayerID = summary.id
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
+                        }
                     }
 
                     // New character card
@@ -53,6 +56,14 @@ struct PlayerChooserView: View {
                 }
             } message: {
                 Text("This cannot be undone.")
+            }
+            .alert("Failed to Load", isPresented: Binding(
+                get: { loadError != nil },
+                set: { if !$0 { loadError = nil } }
+            )) {
+                Button("OK", role: .cancel) { loadError = nil }
+            } message: {
+                Text(loadError ?? "Unknown error")
             }
             .task {
                 await refreshList()
@@ -89,6 +100,7 @@ struct PlayerChooserView: View {
         isLoading = false
     }
 
+    @MainActor
     private func loadAndContinue(id: UUID) async {
         do {
             let bundle = try await container.persistenceService.loadPlayer(id: id)
@@ -105,7 +117,7 @@ struct PlayerChooserView: View {
                 appState.appPhase = .tutorialMatch
             }
         } catch {
-            // If load fails, stay on chooser
+            loadError = error.localizedDescription
         }
     }
 

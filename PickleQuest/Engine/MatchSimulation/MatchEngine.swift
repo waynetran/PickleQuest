@@ -149,7 +149,7 @@ actor MatchEngine {
     func simulate() -> AsyncStream<MatchEvent> {
         AsyncStream { continuation in
             Task {
-                await runMatch(continuation: continuation)
+                runMatch(continuation: continuation)
                 continuation.finish()
             }
         }
@@ -589,11 +589,8 @@ actor MatchEngine {
     }
 
     private func calculateCoins(didWin: Bool) -> Int {
-        if didWin {
-            return GameConstants.Economy.matchWinBaseReward
-        } else {
-            return GameConstants.Economy.matchLossBaseReward
-        }
+        // Rec matches don't award coins — coins come from tournaments and wagers
+        return 0
     }
 
     // MARK: - Action Methods

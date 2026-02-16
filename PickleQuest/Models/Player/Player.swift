@@ -21,6 +21,35 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
     var coachingRecord: CoachingRecord = .empty
     var dailyChallengeState: DailyChallengeState? = nil
 
+    init(id: UUID, name: String, stats: PlayerStats, progression: PlayerProgression,
+         equippedItems: [EquipmentSlot: UUID], wallet: Wallet, duprProfile: DUPRProfile,
+         matchHistory: [MatchHistoryEntry] = [], appearance: CharacterAppearance = .defaultPlayer,
+         repProfile: RepProfile = .starter, consumables: [Consumable] = [],
+         energy: Double = GameConstants.PersistentEnergy.maxEnergy, lastMatchDate: Date? = nil,
+         discoveredCourtIDs: Set<UUID> = [], courtLadders: [CourtLadder] = [],
+         courtPerks: [CourtPerk] = [], personality: NPCPersonality = .allRounder,
+         coachingRecord: CoachingRecord = .empty, dailyChallengeState: DailyChallengeState? = nil) {
+        self.id = id
+        self.name = name
+        self.stats = stats
+        self.progression = progression
+        self.equippedItems = equippedItems
+        self.wallet = wallet
+        self.duprProfile = duprProfile
+        self.matchHistory = matchHistory
+        self.appearance = appearance
+        self.repProfile = repProfile
+        self.consumables = consumables
+        self.energy = energy
+        self.lastMatchDate = lastMatchDate
+        self.discoveredCourtIDs = discoveredCourtIDs
+        self.courtLadders = courtLadders
+        self.courtPerks = courtPerks
+        self.personality = personality
+        self.coachingRecord = coachingRecord
+        self.dailyChallengeState = dailyChallengeState
+    }
+
     var duprRating: Double {
         duprProfile.rating
     }
@@ -45,6 +74,31 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
 
     var hasPaddleEquipped: Bool {
         equippedItems[.paddle] != nil
+    }
+
+    // MARK: - Codable (backwards-compatible with older saves)
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        stats = try c.decode(PlayerStats.self, forKey: .stats)
+        progression = try c.decode(PlayerProgression.self, forKey: .progression)
+        equippedItems = try c.decode([EquipmentSlot: UUID].self, forKey: .equippedItems)
+        wallet = try c.decode(Wallet.self, forKey: .wallet)
+        duprProfile = try c.decode(DUPRProfile.self, forKey: .duprProfile)
+        matchHistory = try c.decodeIfPresent([MatchHistoryEntry].self, forKey: .matchHistory) ?? []
+        appearance = try c.decodeIfPresent(CharacterAppearance.self, forKey: .appearance) ?? .defaultPlayer
+        repProfile = try c.decodeIfPresent(RepProfile.self, forKey: .repProfile) ?? .starter
+        consumables = try c.decodeIfPresent([Consumable].self, forKey: .consumables) ?? []
+        energy = try c.decodeIfPresent(Double.self, forKey: .energy) ?? GameConstants.PersistentEnergy.maxEnergy
+        lastMatchDate = try c.decodeIfPresent(Date.self, forKey: .lastMatchDate)
+        discoveredCourtIDs = try c.decodeIfPresent(Set<UUID>.self, forKey: .discoveredCourtIDs) ?? []
+        courtLadders = try c.decodeIfPresent([CourtLadder].self, forKey: .courtLadders) ?? []
+        courtPerks = try c.decodeIfPresent([CourtPerk].self, forKey: .courtPerks) ?? []
+        personality = try c.decodeIfPresent(NPCPersonality.self, forKey: .personality) ?? .allRounder
+        coachingRecord = try c.decodeIfPresent(CoachingRecord.self, forKey: .coachingRecord) ?? .empty
+        dailyChallengeState = try c.decodeIfPresent(DailyChallengeState.self, forKey: .dailyChallengeState)
     }
 
     static func newPlayer(name: String) -> Player {

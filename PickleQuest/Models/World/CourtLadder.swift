@@ -37,4 +37,19 @@ struct CourtPerk: Codable, Equatable, Sendable {
     var isFullyDominated: Bool {
         singlesAlphaDefeated && doublesAlphaDefeated
     }
+
+    init(courtID: UUID, singlesAlphaDefeated: Bool = false, doublesAlphaDefeated: Bool = false) {
+        self.courtID = courtID
+        self.singlesAlphaDefeated = singlesAlphaDefeated
+        self.doublesAlphaDefeated = doublesAlphaDefeated
+    }
+
+    // MARK: - Codable (backwards-compatible with older saves)
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        courtID = try c.decode(UUID.self, forKey: .courtID)
+        singlesAlphaDefeated = try c.decodeIfPresent(Bool.self, forKey: .singlesAlphaDefeated) ?? false
+        doublesAlphaDefeated = try c.decodeIfPresent(Bool.self, forKey: .doublesAlphaDefeated) ?? false
+    }
 }

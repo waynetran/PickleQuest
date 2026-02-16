@@ -132,7 +132,7 @@ struct MapContentView: View {
                 if !mapVM.isStickyMode {
                     cameraPosition = .region(MKCoordinateRegion(
                         center: coord,
-                        span: MKCoordinateSpan(latitudeDelta: 0.004, longitudeDelta: 0.004)
+                        span: MKCoordinateSpan(latitudeDelta: 0.002, longitudeDelta: 0.002)
                     ))
                 }
                 Task { await mapVM.generateCourtsIfNeeded(around: coord) }

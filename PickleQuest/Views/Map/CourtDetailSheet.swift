@@ -184,7 +184,7 @@ struct CourtDetailSheet: View {
     private var ladderSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Court Ladder")
+                Text("Challenge Ladder")
                     .font(.headline)
                 Spacer()
                 if let ladder {
@@ -201,13 +201,13 @@ struct CourtDetailSheet: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal)
             } else {
-                // Alpha boss card (top of ladder)
-                alphaCard
-
-                // Regular NPCs in reverse order (strongest at top, weakest at bottom)
-                ForEach(Array(npcs.enumerated().reversed()), id: \.element.id) { index, npc in
+                // Regular NPCs in natural order (weakest at top, strongest at bottom)
+                ForEach(Array(npcs.enumerated()), id: \.element.id) { index, npc in
                     ladderRungCard(npc: npc, position: index)
                 }
+
+                // Alpha boss card (bottom of ladder)
+                alphaCard
             }
         }
     }

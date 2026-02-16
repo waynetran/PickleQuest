@@ -7,8 +7,8 @@ struct MatchActionButtons: View {
     @State private var showNoItemsMessage = false
 
     var body: some View {
-        VStack {
-            // Right-side action buttons
+        ZStack {
+            // Right-side action buttons (vertically centered)
             HStack {
                 Spacer()
                 VStack(spacing: 12) {
@@ -60,26 +60,31 @@ struct MatchActionButtons: View {
                 .padding(.trailing, 12)
             }
 
-            Spacer()
-
-            // Skip button at bottom
+            // Skip button at bottom-right
             if !viewModel.isSkipping {
-                Button {
-                    Task { await viewModel.skipMatch() }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "forward.fill")
-                            .font(.system(size: 16))
-                        Text("Skip")
-                            .font(.system(size: 16, weight: .bold))
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button {
+                            Task { await viewModel.skipMatch() }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "forward.fill")
+                                    .font(.system(size: 16))
+                                Text("Skip")
+                                    .font(.system(size: 16, weight: .bold))
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 28)
+                            .padding(.vertical, 12)
+                            .background(.black.opacity(0.6))
+                            .clipShape(Capsule())
+                        }
+                        .padding(.trailing, 24)
+                        .padding(.bottom, 48)
                     }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 12)
-                    .background(.black.opacity(0.6))
-                    .clipShape(Capsule())
                 }
-                .padding(.bottom, 24)
             }
         }
         .alert("Resign Match?", isPresented: $showResignConfirm) {

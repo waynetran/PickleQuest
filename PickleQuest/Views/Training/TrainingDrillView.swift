@@ -154,9 +154,8 @@ struct TrainingDrillView: View {
     private func trainingPreviewSection(vm: TrainingViewModel) -> some View {
         let stat = coach.dailySpecialtyStat
         let fee = appState.player.coachingRecord.fee(for: coach)
-        let expectedGain = vm.expectedGain(energy: appState.player.currentEnergy)
-        let currentBoost = appState.player.coachingRecord.currentBoost(for: stat)
-        let hasSession = appState.player.coachingRecord.hasSessionToday(coachID: coach.id)
+        let coachEnergy = appState.player.coachingRecord.coachRemainingEnergy(coachID: coach.id)
+        let expectedGain = vm.expectedGain(playerEnergy: appState.player.currentEnergy, coachEnergy: coachEnergy)
 
         return VStack(alignment: .leading, spacing: 10) {
             Text("Training Details")
@@ -184,9 +183,9 @@ struct TrainingDrillView: View {
                     .foregroundStyle(.green)
             }
 
-            // Energy bar
+            // Player energy bar
             HStack {
-                Text("Energy")
+                Text("Your Energy")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -194,21 +193,21 @@ struct TrainingDrillView: View {
                     .font(.caption.bold().monospacedDigit())
             }
 
-            // Coaching progress
+            // Coach energy
             HStack {
-                Text("Coaching Boosts")
+                Text("Coach Energy")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(currentBoost)/\(GameConstants.Coaching.maxCoachingBoostPerStat)")
-                    .font(.caption.bold())
-                    .foregroundStyle(currentBoost >= GameConstants.Coaching.maxCoachingBoostPerStat ? .red : .secondary)
+                Text("\(Int(coachEnergy))%")
+                    .font(.caption.bold().monospacedDigit())
+                    .foregroundStyle(coachEnergy <= 20 ? .orange : .secondary)
             }
 
-            if hasSession {
-                Label("Already trained today", systemImage: "checkmark.circle.fill")
+            if coachEnergy <= 0 {
+                Label("Coach is exhausted for today", systemImage: "battery.0")
                     .font(.caption)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(.red)
             }
         }
         .padding()
@@ -250,12 +249,11 @@ struct TrainingDrillView: View {
     }
 
     private func canStart(vm: TrainingViewModel) -> Bool {
-        let stat = coach.dailySpecialtyStat
         let fee = appState.player.coachingRecord.fee(for: coach)
+        let coachEnergy = appState.player.coachingRecord.coachRemainingEnergy(coachID: coach.id)
         return appState.player.wallet.coins >= fee
             && appState.player.currentEnergy >= GameConstants.Training.drillEnergyCost
-            && !appState.player.coachingRecord.hasSessionToday(coachID: coach.id)
-            && appState.player.coachingRecord.canTrain(stat: stat)
+            && coachEnergy > 0
     }
 
     // MARK: - Drill Scene + Results

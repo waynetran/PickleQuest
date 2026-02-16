@@ -16,9 +16,14 @@ final class TrainingViewModel {
         self.coach = coach
     }
 
-    /// Expected stat gain based on current energy and coach level.
-    func expectedGain(energy: Double) -> Int {
-        max(1, Int((energy / 100.0) * Double(coach.level)))
+    private static let coachLevelGains: [Int: Int] = [
+        1: 2, 2: 3, 3: 4, 4: 6, 5: 8
+    ]
+
+    /// Expected stat gain based on both player and coach energy.
+    func expectedGain(playerEnergy: Double, coachEnergy: Double) -> Int {
+        let baseGain = Self.coachLevelGains[coach.level] ?? coach.level
+        return max(1, Int(round(Double(baseGain) * (playerEnergy / 100.0) * (coachEnergy / 100.0))))
     }
 
     func startDrill(player: inout Player) async {
@@ -34,15 +39,10 @@ final class TrainingViewModel {
             return
         }
 
-        // Check daily limit
-        guard !player.coachingRecord.hasSessionToday(coachID: coach.id) else {
-            errorMessage = coach.dialogue.onDailyLimit
-            return
-        }
-
-        // Check stat cap
-        guard player.coachingRecord.canTrain(stat: stat) else {
-            errorMessage = "Max coaching reached for \(stat.displayName) (+\(GameConstants.Coaching.maxCoachingBoostPerStat))"
+        // Check coach energy
+        let coachEnergy = player.coachingRecord.coachRemainingEnergy(coachID: coach.id)
+        guard coachEnergy > 0 else {
+            errorMessage = coach.dialogue.onExhausted
             return
         }
 
@@ -63,12 +63,19 @@ final class TrainingViewModel {
 
         isSimulating = true
 
-        // Run simulation
+        // Run simulation with both energies
         let result = await trainingService.performDrill(
             drill,
             stat: stat,
             coachLevel: coach.level,
-            playerEnergy: player.currentEnergy
+            playerEnergy: player.currentEnergy,
+            coachEnergy: coachEnergy
+        )
+
+        // Drain coach energy
+        player.coachingRecord.drainCoach(
+            coachID: coach.id,
+            amount: GameConstants.Coaching.coachDrainPerSession
         )
 
         // Apply stat gain

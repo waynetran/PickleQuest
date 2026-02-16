@@ -33,10 +33,19 @@ actor SwiftDataPersistenceService: PersistenceService {
         }
 
         let decoder = JSONDecoder()
-        let player = try decoder.decode(Player.self, from: saved.playerData)
-        let inventory = try decoder.decode([Equipment].self, from: saved.inventoryData)
-        let consumables = try decoder.decode([Consumable].self, from: saved.consumablesData)
-        let fogCells = try decoder.decode(Set<FogCell>.self, from: saved.fogCellsData)
+        let player: Player
+        let inventory: [Equipment]
+        let consumables: [Consumable]
+        let fogCells: Set<FogCell>
+
+        do { player = try decoder.decode(Player.self, from: saved.playerData) }
+        catch { throw PersistenceError.decodeFailed(model: "Player", detail: "\(error)") }
+        do { inventory = try decoder.decode([Equipment].self, from: saved.inventoryData) }
+        catch { throw PersistenceError.decodeFailed(model: "Equipment", detail: "\(error)") }
+        do { consumables = try decoder.decode([Consumable].self, from: saved.consumablesData) }
+        catch { throw PersistenceError.decodeFailed(model: "Consumable", detail: "\(error)") }
+        do { fogCells = try decoder.decode(Set<FogCell>.self, from: saved.fogCellsData) }
+        catch { throw PersistenceError.decodeFailed(model: "FogCell", detail: "\(error)") }
 
         return SavedPlayerBundle(
             player: player,
@@ -132,10 +141,12 @@ actor SwiftDataPersistenceService: PersistenceService {
 
 enum PersistenceError: Error, LocalizedError {
     case playerNotFound
+    case decodeFailed(model: String, detail: String)
 
     var errorDescription: String? {
         switch self {
         case .playerNotFound: return "Saved player not found."
+        case .decodeFailed(let model, let detail): return "Failed to decode \(model): \(detail)"
         }
     }
 }

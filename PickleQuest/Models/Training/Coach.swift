@@ -43,7 +43,7 @@ struct Coach: Identifiable, Sendable {
             return formatter.string(from: Date())
         }()
         let combined = id.uuidString + dateString
-        let hash = abs(combined.hashValue)
+        let hash = djb2Hash(combined)
         let allStats = StatType.allCases
         return allStats[hash % allStats.count]
     }
@@ -53,10 +53,9 @@ struct Coach: Identifiable, Sendable {
         DrillType.forStat(dailySpecialtyStat)
     }
 
-    /// Training fee accounting for existing boosts (diminishing returns).
-    func trainingFee(existingBoosts: Int) -> Int {
-        let multiplier = pow(GameConstants.Coaching.feeDoublePerExistingBoost, Double(existingBoosts))
-        var fee = Int(Double(baseFee) * multiplier)
+    /// Flat training fee (with alpha discount if applicable).
+    func trainingFee() -> Int {
+        var fee = baseFee
         if isAlphaCoach && alphaDefeated {
             fee = Int(Double(fee) * GameConstants.Coaching.alphaDefeatedDiscount)
         }
@@ -77,7 +76,7 @@ struct Coach: Identifiable, Sendable {
                     ? "You beat me fair and square. Let me teach you what I know — at a discount."
                     : "I run this court. Pay up if you want to learn from the best.",
                 onSession: "Not bad. You might actually have some potential.",
-                onDailyLimit: "That's enough for today. Come back tomorrow."
+                onExhausted: "I'm spent for today. Come back tomorrow."
             ),
             portraitName: npc.portraitName,
             isAlphaCoach: true,
@@ -107,35 +106,70 @@ struct Coach: Identifiable, Sendable {
     )
 }
 
+/// Deterministic hash (djb2) — stable across process launches unlike String.hashValue.
+private func djb2Hash(_ string: String) -> Int {
+    var hash: UInt64 = 5381
+    for byte in string.utf8 {
+        hash = hash &* 33 &+ UInt64(byte)
+    }
+    return Int(hash % UInt64(Int.max))
+}
+
 struct CoachDialogue: Sendable {
     let greeting: String
     let onSession: String
-    let onDailyLimit: String
+    let onExhausted: String
+}
+
+struct CoachEnergyEntry: Codable, Equatable, Sendable {
+    var energy: Double
+    var date: Date
 }
 
 struct CoachingRecord: Codable, Equatable, Sendable {
     var sessionsToday: [String: Date] // coachID string → last session date
     var statBoosts: [StatType: Int]   // stat → total coaching boosts applied
+    var coachDailyEnergy: [String: CoachEnergyEntry] // coachID → energy for the day
 
-    static let empty = CoachingRecord(sessionsToday: [:], statBoosts: [:])
+    init(sessionsToday: [String: Date] = [:], statBoosts: [StatType: Int] = [:], coachDailyEnergy: [String: CoachEnergyEntry] = [:]) {
+        self.sessionsToday = sessionsToday
+        self.statBoosts = statBoosts
+        self.coachDailyEnergy = coachDailyEnergy
+    }
 
-    func hasSessionToday(coachID: UUID) -> Bool {
-        guard let lastSession = sessionsToday[coachID.uuidString] else { return false }
-        return Calendar.current.isDateInToday(lastSession)
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionsToday = try c.decodeIfPresent([String: Date].self, forKey: .sessionsToday) ?? [:]
+        statBoosts = try c.decodeIfPresent([StatType: Int].self, forKey: .statBoosts) ?? [:]
+        coachDailyEnergy = try c.decodeIfPresent([String: CoachEnergyEntry].self, forKey: .coachDailyEnergy) ?? [:]
+    }
+
+    static let empty = CoachingRecord(sessionsToday: [:], statBoosts: [:], coachDailyEnergy: [:])
+
+    /// Remaining energy for a coach today (100% if no sessions yet).
+    func coachRemainingEnergy(coachID: UUID) -> Double {
+        guard let entry = coachDailyEnergy[coachID.uuidString],
+              Calendar.current.isDateInToday(entry.date) else {
+            return GameConstants.Coaching.coachMaxEnergy
+        }
+        return max(0, entry.energy)
+    }
+
+    /// Drain a coach's energy after a session.
+    mutating func drainCoach(coachID: UUID, amount: Double) {
+        let key = coachID.uuidString
+        var current = coachRemainingEnergy(coachID: coachID)
+        current = max(0, current - amount)
+        coachDailyEnergy[key] = CoachEnergyEntry(energy: current, date: Date())
     }
 
     func currentBoost(for stat: StatType) -> Int {
         statBoosts[stat] ?? 0
     }
 
-    /// Fee for training with a coach (uses coach's daily specialty stat).
+    /// Flat fee for training with a coach.
     func fee(for coach: Coach) -> Int {
-        let existing = currentBoost(for: coach.dailySpecialtyStat)
-        return coach.trainingFee(existingBoosts: existing)
-    }
-
-    func canTrain(stat: StatType) -> Bool {
-        currentBoost(for: stat) < GameConstants.Coaching.maxCoachingBoostPerStat
+        coach.trainingFee()
     }
 
     mutating func recordSession(coachID: UUID, stat: StatType, amount: Int) {
@@ -147,6 +181,9 @@ struct CoachingRecord: Codable, Equatable, Sendable {
         let calendar = Calendar.current
         sessionsToday = sessionsToday.filter { _, date in
             calendar.isDateInToday(date)
+        }
+        coachDailyEnergy = coachDailyEnergy.filter { _, entry in
+            calendar.isDateInToday(entry.date)
         }
     }
 }

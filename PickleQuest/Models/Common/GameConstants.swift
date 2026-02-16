@@ -180,7 +180,7 @@ enum GameConstants {
     // MARK: - Persistent Energy
     enum PersistentEnergy {
         static let maxEnergy = 100.0
-        static let minEnergy = 50.0          // floor between matches
+        static let minEnergy = 0.0           // no floor — energy can reach 0%
         static let baseLossDrain = 10.0      // -10% on loss
         static let suprGapDrainBonus = 5.0   // +5% per 1.0 SUPR gap
         static let maxDrainPerMatch = 20.0
@@ -212,7 +212,7 @@ enum GameConstants {
     // MARK: - Economy
     enum Economy {
         static let startingCoins: Int = 500
-        static let matchWinBaseReward: Int = 100
+        static let matchWinBaseReward: Int = 0   // Rec matches: no coins (tournaments/wagers only)
         static let matchLossBaseReward: Int = 0
         static let difficultyBonusMultiplier: Double = 0.5
     }
@@ -270,12 +270,11 @@ enum GameConstants {
         static let coachCourtPercentage: Double = 0.5 // ~50% of courts get a coach
         static let alphaCoachChance: Double = 0.8 // 80% of coach courts use the alpha NPC
         static let alphaDefeatedDiscount: Double = 0.5 // 50% off when alpha is defeated
-        static let sessionsPerCoachPerDay: Int = 1
-        static let coachLevelFees: [Int: Int] = [ // level → base fee
-            1: 200, 2: 500, 3: 1000, 4: 2000, 5: 3000
+        static let coachLevelFees: [Int: Int] = [ // level → fee (realistic coaching rates)
+            1: 40, 2: 75, 3: 150, 4: 500, 5: 1500
         ]
-        static let feeDoublePerExistingBoost: Double = 2.0 // fee doubles per existing boost
-        static let maxCoachingBoostPerStat: Int = 5
+        static let coachMaxEnergy: Double = 100.0
+        static let coachDrainPerSession: Double = 20.0  // each session drains 20% coach energy
     }
 
     // MARK: - Daily Challenges

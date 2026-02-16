@@ -17,8 +17,8 @@ enum CharacterAnimationState: Hashable, Sendable {
 
     var sheetRow: Int {
         switch self {
-        case .idleBack:    return 0
-        case .idleFront:   return 1
+        case .idleBack:    return 1
+        case .idleFront:   return 0
         case .walkToward:  return 2
         case .walkAway:    return 3
         case .walkLeft:    return 4

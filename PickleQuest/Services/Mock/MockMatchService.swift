@@ -120,7 +120,7 @@ final class MockMatchService: MatchService {
 
         // Equipment durability (only on loss, only wearable slots)
         let suprGap = opponent.duprRating - player.duprRating
-        var brokenEquipment: [Equipment] = []
+        let brokenEquipment: [Equipment] = []
 
         if !result.didPlayerWin {
             let baseWear = GameConstants.Durability.baseLossWear
