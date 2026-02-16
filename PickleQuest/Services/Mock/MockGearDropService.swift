@@ -73,20 +73,25 @@ actor MockGearDropService: GearDropService {
             return []
         }
 
-        // Spawn 1-2 field drops
+        // Spawn 1-2 field drops, snapped to safe walkable locations
         let count = Int.random(in: 1...2)
         var newDrops: [GearDrop] = []
 
         for _ in 0..<count {
-            let coord = spawnEngine.randomCoordinate(
+            let candidate = spawnEngine.randomCoordinate(
                 around: coordinate,
                 radius: GameConstants.GearDrop.spawnRadius
             )
+            guard let safeCoord = await snapToSafeCoordinate(
+                candidate: candidate,
+                from: coordinate
+            ) else { continue }
+
             let rarity = spawnEngine.rollRarity()
             let drop = GearDrop(
                 type: .field,
-                latitude: coord.latitude,
-                longitude: coord.longitude,
+                latitude: safeCoord.latitude,
+                longitude: safeCoord.longitude,
                 rarity: rarity,
                 expiresAt: Date().addingTimeInterval(GameConstants.GearDrop.fieldDespawnTime)
             )
@@ -117,11 +122,22 @@ actor MockGearDropService: GearDropService {
             let rarityBoost = GameConstants.GearDrop.courtDifficultyRarityBoost[court.primaryDifficulty] ?? 0
             let rarity = spawnEngine.rollRarity(boost: rarityBoost)
 
-            // Offset slightly from court coordinate
+            // Offset slightly from court coordinate, snapped to safe location
+            let candidate = CLLocationCoordinate2D(
+                latitude: court.latitude + 0.00012,
+                longitude: court.longitude - 0.00012
+            )
+            let courtCoord = CLLocationCoordinate2D(latitude: court.latitude, longitude: court.longitude)
+            let safeCoord = await snapToSafeCoordinate(
+                candidate: candidate,
+                from: courtCoord,
+                maxRetries: 1
+            ) ?? candidate // Courts are real places, so fallback is acceptable
+
             let drop = GearDrop(
                 type: .courtCache,
-                latitude: court.latitude + 0.00012,
-                longitude: court.longitude - 0.00012,
+                latitude: safeCoord.latitude,
+                longitude: safeCoord.longitude,
                 rarity: rarity,
                 expiresAt: Date().addingTimeInterval(GameConstants.GearDrop.courtCacheCooldown),
                 courtID: court.id,
@@ -403,15 +419,20 @@ actor MockGearDropService: GearDropService {
 
         for _ in 0..<count {
             let distance = Double.random(in: 500...GameConstants.GearDrop.contestedVisibilityRadius)
-            let coord = spawnEngine.randomCoordinate(around: coordinate, radius: distance)
+            let candidate = spawnEngine.randomCoordinate(around: coordinate, radius: distance)
+            guard let safeCoord = await snapToSafeCoordinate(
+                candidate: candidate,
+                from: coordinate
+            ) else { continue }
+
             let rarity = spawnEngine.rollRarity(boost: 0.20, floor: .rare)
             let difficulties: [NPCDifficulty] = [.advanced, .expert, .master]
             let guardianDifficulty = difficulties.randomElement() ?? .advanced
 
             let drop = GearDrop(
                 type: .contested,
-                latitude: coord.latitude,
-                longitude: coord.longitude,
+                latitude: safeCoord.latitude,
+                longitude: safeCoord.longitude,
                 rarity: rarity,
                 expiresAt: Date().addingTimeInterval(GameConstants.GearDrop.fieldDespawnTime * 2),
                 guardianDifficulty: guardianDifficulty
@@ -437,10 +458,17 @@ actor MockGearDropService: GearDropService {
 
             let cellCenter = FogOfWar.coordinate(for: cell)
 
+            // Snap to a safe walkable location
+            guard let safeCoord = await snapToSafeCoordinate(
+                candidate: cellCenter,
+                from: cellCenter,
+                maxRetries: 1
+            ) else { continue }
+
             let drop = GearDrop(
                 type: .fogStash,
-                latitude: cellCenter.latitude,
-                longitude: cellCenter.longitude,
+                latitude: safeCoord.latitude,
+                longitude: safeCoord.longitude,
                 rarity: rarity,
                 expiresAt: Date().addingTimeInterval(GameConstants.GearDrop.fieldDespawnTime),
                 fogCell: cell
@@ -498,6 +526,58 @@ actor MockGearDropService: GearDropService {
 
     func removeExpiredDrops() async {
         activeDrops.removeAll { $0.isExpired }
+    }
+
+    // MARK: - Safe Coordinate Snapping
+
+    /// Snap a candidate coordinate to the nearest walkable location using MKDirections.
+    /// Walking directions only route on public streets/trails — avoids water, private land,
+    /// highways, and other dangerous/inaccessible areas.
+    /// Returns nil if no walkable point is found after retries.
+    private func snapToSafeCoordinate(
+        candidate: CLLocationCoordinate2D,
+        from playerLocation: CLLocationCoordinate2D,
+        maxRetries: Int = 2
+    ) async -> CLLocationCoordinate2D? {
+        var current = candidate
+        for attempt in 0...maxRetries {
+            let request = MKDirections.Request()
+            request.source = MKMapItem(placemark: MKPlacemark(coordinate: playerLocation))
+            request.destination = MKMapItem(placemark: MKPlacemark(coordinate: current))
+            request.transportType = .walking
+
+            do {
+                let directions = MKDirections(request: request)
+                let response = try await directions.calculate()
+                if let route = response.routes.first {
+                    // Use the route's actual destination — guaranteed walkable
+                    let pointCount = route.polyline.pointCount
+                    if pointCount > 0 {
+                        let points = route.polyline.points()
+                        return points[pointCount - 1].coordinate
+                    }
+                }
+            } catch {
+                // Directions failed — try a jittered coordinate on retry
+                if attempt < maxRetries {
+                    let jitter = 0.001 * Double(attempt + 1)
+                    current = CLLocationCoordinate2D(
+                        latitude: candidate.latitude + Double.random(in: -jitter...jitter),
+                        longitude: candidate.longitude + Double.random(in: -jitter...jitter)
+                    )
+                    continue
+                }
+            }
+            // If first attempt fails without error but no route, try jittered
+            if attempt < maxRetries {
+                let jitter = 0.001 * Double(attempt + 1)
+                current = CLLocationCoordinate2D(
+                    latitude: candidate.latitude + Double.random(in: -jitter...jitter),
+                    longitude: candidate.longitude + Double.random(in: -jitter...jitter)
+                )
+            }
+        }
+        return nil
     }
 
     // MARK: - Internal helpers
