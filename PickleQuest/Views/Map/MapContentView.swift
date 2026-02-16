@@ -35,6 +35,7 @@ struct MapContentView: View {
     @State private var walkResetTask: Task<Void, Never>?
     @State private var discoveredCourtName: String?
     @State private var showChallenges = false
+    @State private var gearDropToastMessage: String?
 
     var body: some View {
         @Bindable var mapState = mapVM
@@ -111,6 +112,39 @@ struct MapContentView: View {
                     }
                     Spacer()
                 }
+            }
+
+            // Trail banner
+            if let trail = appState.player.gearDropState?.activeTrail, !trail.isExpired {
+                VStack {
+                    TrailBannerView(
+                        trail: trail,
+                        collectedIDs: appState.player.gearDropState?.collectedDropIDs ?? []
+                    )
+                    .padding(.top, 8)
+                    Spacer()
+                }
+            }
+
+            // Gear drop toast
+            if let toast = gearDropToastMessage ?? mapVM.gearDropToast {
+                VStack {
+                    Spacer()
+                    HStack(spacing: 8) {
+                        Image(systemName: "bag.fill")
+                            .foregroundStyle(.orange)
+                        Text(toast)
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(.black.opacity(0.8))
+                    .clipShape(Capsule())
+                    .padding(.bottom, 120)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.easeInOut(duration: 0.4), value: gearDropToastMessage)
             }
 
             // Court discovery notification
@@ -284,6 +318,37 @@ struct MapContentView: View {
                     .environment(appState)
             }
         }
+        .sheet(isPresented: Bindable(mapVM).showGearDropReveal) {
+            if let drop = mapVM.selectedGearDrop {
+                GearDropRevealSheet(
+                    drop: drop,
+                    equipment: mapVM.gearDropLoot,
+                    coins: mapVM.gearDropCoins,
+                    lootDecisions: Bindable(mapVM).gearDropLootDecisions,
+                    onDismiss: {
+                        processGearDropLoot()
+                        mapVM.showGearDropReveal = false
+                        mapVM.selectedGearDrop = nil
+                    }
+                )
+            }
+        }
+        .sheet(isPresented: Bindable(mapVM).showContestedSheet) {
+            if let drop = mapVM.selectedContestedDrop {
+                ContestedDropSheet(
+                    drop: drop,
+                    onChallenge: {
+                        mapVM.showContestedSheet = false
+                        // TODO: Start contested match against generated NPC
+                        mapVM.gearDropToast = "Contested matches coming soon!"
+                    },
+                    onCancel: {
+                        mapVM.showContestedSheet = false
+                        mapVM.selectedContestedDrop = nil
+                    }
+                )
+            }
+        }
         .sheet(isPresented: $showChallenges) {
             if let challengeState = mapVM.dailyChallengeState {
                 NavigationStack {
@@ -360,6 +425,19 @@ struct MapContentView: View {
                     .annotationTitles(.hidden)
                 }
             }
+
+            // Gear drop annotations
+            ForEach(mapVM.activeGearDrops) { drop in
+                let playerLoc = mapVM.effectiveLocation(devOverride: appState.locationOverride)
+                let inRange = playerLoc.map { mapVM.isDropInRange(drop, playerLocation: $0) } ?? false
+                Annotation("", coordinate: drop.coordinate) {
+                    GearDropAnnotationView(drop: drop, isInRange: inRange) {
+                        let loc = mapVM.effectiveLocation(devOverride: appState.locationOverride)
+                        handleGearDropTap(drop, playerLocation: loc)
+                    }
+                }
+                .annotationTitles(.hidden)
+            }
         }
         .mapControls {
             MapCompass()
@@ -397,6 +475,9 @@ struct MapContentView: View {
         // Reset coaching daily sessions
         appState.player.coachingRecord.resetDailySessions()
 
+        // Reset gear drop daily counters
+        appState.player.gearDropState?.resetDailyIfNeeded()
+
         if let override = appState.locationOverride {
             await mapVM.generateCourtsIfNeeded(around: override)
             runDiscoveryCheck()
@@ -431,7 +512,11 @@ struct MapContentView: View {
 
     private func runDiscoveryCheck() {
         guard let loc = mapVM.effectiveLocation(devOverride: appState.locationOverride) else { return }
+
+        // Capture fog cells before reveal for stash detection
+        let previousCells = appState.revealedFogCells
         appState.revealFog(around: loc.coordinate)
+        let newCells = appState.revealedFogCells.subtracting(previousCells)
 
         let newIDs = mapVM.checkDiscovery(
             playerLocation: loc,
@@ -454,6 +539,108 @@ struct MapContentView: View {
                 Task { await mapVM.selectCourt(court) }
             }
         }
+
+        // Refresh gear drops
+        Task {
+            // Initialize gear drop state if needed
+            if appState.player.gearDropState == nil {
+                appState.player.gearDropState = GearDropState()
+            }
+
+            // Check fog stashes for newly revealed cells
+            if !newCells.isEmpty {
+                await mapVM.checkFogStashes(
+                    newlyRevealed: newCells,
+                    allRevealed: appState.revealedFogCells
+                )
+                if mapVM.gearDropToast != nil {
+                    showGearDropToast(mapVM.gearDropToast!)
+                    mapVM.gearDropToast = nil
+                }
+            }
+
+            // Refresh all gear drops
+            let discoveredCourts = mapVM.courts.filter {
+                appState.player.discoveredCourtIDs.contains($0.id)
+            }
+            var state = appState.player.gearDropState ?? GearDropState()
+            await mapVM.refreshGearDrops(
+                around: loc.coordinate,
+                state: &state,
+                discoveredCourts: discoveredCourts
+            )
+            appState.player.gearDropState = state
+        }
+    }
+
+    private func handleGearDropTap(_ drop: GearDrop, playerLocation: CLLocation?) {
+        guard let playerLocation else { return }
+
+        guard mapVM.isDropInRange(drop, playerLocation: playerLocation) else {
+            showGearDropToast("Walk closer to pick up!")
+            return
+        }
+
+        if drop.type == .courtCache && !drop.isUnlocked {
+            showGearDropToast("Win a match at this court to unlock!")
+            return
+        }
+
+        if drop.type == .contested {
+            mapVM.selectedContestedDrop = drop
+            mapVM.showContestedSheet = true
+            return
+        }
+
+        Task {
+            await mapVM.collectGearDrop(drop, playerLevel: appState.player.progression.level)
+        }
+    }
+
+    private func showGearDropToast(_ message: String) {
+        gearDropToastMessage = message
+        Task {
+            try? await Task.sleep(for: .seconds(2.5))
+            if gearDropToastMessage == message {
+                gearDropToastMessage = nil
+            }
+        }
+    }
+
+    private func processGearDropLoot() {
+        // Add kept/equipped loot to player decisions — actual inventory update happens elsewhere
+        // For now, gear drop loot is auto-kept (simplified)
+        for item in mapVM.gearDropLoot {
+            if mapVM.gearDropLootDecisions[item.id] == nil {
+                mapVM.gearDropLootDecisions[item.id] = .keep
+            }
+        }
+
+        // Add coins
+        appState.player.wallet.coins += mapVM.gearDropCoins
+
+        // Mark drop as collected
+        if let drop = mapVM.selectedGearDrop {
+            appState.player.gearDropState?.collectedDropIDs.insert(drop.id)
+
+            // Court cache cooldown
+            if drop.type == .courtCache, let courtID = drop.courtID {
+                appState.player.gearDropState?.courtCacheCooldowns[courtID] =
+                    Date().addingTimeInterval(GameConstants.GearDrop.courtCacheCooldown)
+            }
+
+            // Field drop counter
+            if drop.type == .field {
+                appState.player.gearDropState?.fieldDropsCollectedToday += 1
+            }
+
+            // Contested counter
+            if drop.type == .contested {
+                appState.player.gearDropState?.contestedDropsClaimed += 1
+            }
+        }
+
+        showGearDropToast("Gear collected!")
     }
 
     // MARK: - Bottom Bar

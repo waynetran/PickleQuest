@@ -293,6 +293,39 @@ enum GameConstants {
         static let drillAnimationDuration: Double = 4.0
     }
 
+    // MARK: - Drill Physics (Interactive Mini-Games)
+    enum DrillPhysics {
+        static let gravity: CGFloat = 1.8           // logical units/sec² (reduced for higher arcs)
+        static let bounceDamping: CGFloat = 0.6     // vz retained after bounce
+        static let courtFriction: CGFloat = 0.85    // vx/vy retained after bounce
+        static let netLogicalHeight: CGFloat = 0.08 // net height in court-space units
+        static let spinCurveFactor: CGFloat = 0.15  // max lateral curve from spin stat
+
+        // Shot speeds (court units per second) — halved for playability
+        static let baseShotSpeed: CGFloat = 0.4
+        static let maxShotSpeed: CGFloat = 1.0
+        static let dinkShotSpeed: CGFloat = 0.25
+
+        // Player hitbox (court-space units)
+        static let baseHitboxRadius: CGFloat = 0.06
+        static let positioningHitboxBonus: CGFloat = 0.04
+
+        // Player movement (court units per second)
+        static let baseMoveSpeed: CGFloat = 0.4
+        static let maxMoveSpeedBonus: CGFloat = 0.8
+
+        // Contact quality — affects shot power and accuracy
+        static let centerHitPowerBonus: CGFloat = 0.3    // bonus power for dead-center hit
+        static let heightPowerBonus: CGFloat = 0.4        // bonus power for high ball (overhead smash)
+        static let edgeHitPowerPenalty: CGFloat = 0.5     // power reduction for edge hits
+        static let edgePopUpChance: CGFloat = 0.35        // chance of a pop-up on edge/low hit
+        static let popUpArc: CGFloat = 0.9                // high arc for pop-up shots
+
+        // Drill ball count
+        static let drillBallCount: Int = 10
+        static let feedDelay: TimeInterval = 0.8
+    }
+
     // MARK: - Coaching
     enum Coaching {
         static let coachCourtPercentage: Double = 0.5 // ~50% of courts get a coach
@@ -326,6 +359,40 @@ enum GameConstants {
         static let hustlerMinPurse: Int = 1000
         static let hustlerMaxPurse: Int = 3000
         static let hustlerResetInterval: TimeInterval = 3600 // 1 hour
+    }
+
+    // MARK: - Gear Drops
+    enum GearDrop {
+        // Field drops
+        static let fieldSpawnIntervalMin: TimeInterval = 900   // 15 minutes minimum
+        static let fieldSpawnIntervalMax: TimeInterval = 1200  // 20 minutes maximum
+        static let fieldDespawnTime: TimeInterval = 1800       // 30 minutes
+        static let maxActiveFieldDrops: Int = 3
+        static let spawnRadius: Double = 300                   // meters
+        static let pickupRadius: Double = 50                   // meters
+
+        // Court caches
+        static let courtCacheCooldown: TimeInterval = 14400    // 4 hours
+        static let courtDifficultyRarityBoost: [NPCDifficulty: Double] = [
+            .beginner: 0.0,
+            .intermediate: 0.05,
+            .advanced: 0.10,
+            .expert: 0.15,
+            .master: 0.25
+        ]
+
+        // Trail drops
+        static let trailWaypointCountRange: ClosedRange<Int> = 5...8
+        static let trailTimeLimit: TimeInterval = 7200         // 2 hours
+        static let trailSpacing: Double = 200                  // meters between waypoints
+
+        // Contested drops
+        static let contestedMaxPerDay: Int = 2
+        static let contestedVisibilityRadius: Double = 2000    // meters
+
+        // Fog stashes
+        static let fogStashChancePerCell: Double = 0.02        // 2% per newly revealed cell
+        static let remotenessRarityBoost: Double = 0.15        // max boost for isolated cells
     }
 
     // MARK: - XP

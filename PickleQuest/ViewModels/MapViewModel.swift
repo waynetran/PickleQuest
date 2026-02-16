@@ -11,6 +11,7 @@ final class MapViewModel {
     private let npcService: NPCService
     private let coachService: CoachService
     private let dailyChallengeService: DailyChallengeService
+    private let gearDropService: GearDropService
     let locationManager: LocationManager
 
     var courts: [Court] = []
@@ -34,6 +35,18 @@ final class MapViewModel {
     // Daily challenges
     var dailyChallengeState: DailyChallengeState?
 
+    // Gear drop state
+    var activeGearDrops: [GearDrop] = []
+    var selectedGearDrop: GearDrop?
+    var gearDropLoot: [Equipment] = []
+    var gearDropCoins: Int = 0
+    var showGearDropReveal = false
+    var gearDropLootDecisions: [UUID: LootDecision] = [:]
+    var gearDropToast: String?
+    var pendingCourtCacheDrop: GearDrop?
+    var showContestedSheet = false
+    var selectedContestedDrop: GearDrop?
+
     // Dev mode movement
     var isStickyMode = false
     var lastCameraRegion: MKCoordinateRegion?
@@ -47,6 +60,7 @@ final class MapViewModel {
         npcService: NPCService,
         coachService: CoachService,
         dailyChallengeService: DailyChallengeService,
+        gearDropService: GearDropService,
         locationManager: LocationManager
     ) {
         self.courtService = courtService
@@ -54,6 +68,7 @@ final class MapViewModel {
         self.npcService = npcService
         self.coachService = coachService
         self.dailyChallengeService = dailyChallengeService
+        self.gearDropService = gearDropService
         self.locationManager = locationManager
     }
 
@@ -269,5 +284,115 @@ final class MapViewModel {
     func updateStickyLocation(center: CLLocationCoordinate2D, appState: AppState) {
         guard appState.isDevMode, isStickyMode else { return }
         appState.locationOverride = center
+    }
+
+    // MARK: - Gear Drops
+
+    /// Refresh all gear drops — called on location change.
+    func refreshGearDrops(
+        around coordinate: CLLocationCoordinate2D,
+        state: inout GearDropState,
+        discoveredCourts: [Court]
+    ) async {
+        // Daily reset
+        state.resetDailyIfNeeded()
+
+        // Remove expired
+        await gearDropService.removeExpiredDrops()
+
+        // Spawn field drops
+        let fieldDrops = await gearDropService.checkAndSpawnFieldDrops(around: coordinate, state: state)
+        if !fieldDrops.isEmpty {
+            state.lastFieldSpawnTime = Date()
+        }
+
+        // Generate court caches at discovered courts
+        let _ = await gearDropService.generateCourtCaches(courts: discoveredCourts, state: state)
+
+        // Spawn contested drops
+        let _ = await gearDropService.spawnContestedDrops(around: coordinate, state: state)
+
+        // Refresh active drops list
+        activeGearDrops = await gearDropService.getActiveDrops()
+    }
+
+    /// Check fog stashes for newly revealed cells.
+    func checkFogStashes(newlyRevealed: Set<FogCell>, allRevealed: Set<FogCell>) async {
+        let stashes = await gearDropService.checkFogStashes(
+            newlyRevealed: newlyRevealed,
+            allRevealed: allRevealed
+        )
+        if !stashes.isEmpty {
+            activeGearDrops.append(contentsOf: stashes)
+            gearDropToast = "Hidden stash found!"
+        }
+    }
+
+    /// Check if a drop is within pickup range.
+    func isDropInRange(_ drop: GearDrop, playerLocation: CLLocation) -> Bool {
+        let dropLocation = CLLocation(latitude: drop.latitude, longitude: drop.longitude)
+        return playerLocation.distance(from: dropLocation) <= GameConstants.GearDrop.pickupRadius
+    }
+
+    /// Handle tapping a gear drop on the map.
+    func handleGearDropTap(_ drop: GearDrop, playerLocation: CLLocation?) {
+        guard let playerLocation else { return }
+
+        // Check range
+        guard isDropInRange(drop, playerLocation: playerLocation) else {
+            gearDropToast = "Walk closer to pick up!"
+            return
+        }
+
+        // Court cache: must be unlocked
+        if drop.type == .courtCache && !drop.isUnlocked {
+            gearDropToast = "Win a match at this court to unlock!"
+            return
+        }
+
+        // Contested: show challenge sheet
+        if drop.type == .contested {
+            selectedContestedDrop = drop
+            showContestedSheet = true
+            return
+        }
+
+        // Collect the drop
+        Task {
+            await collectGearDrop(drop, playerLevel: 1) // playerLevel passed from caller
+        }
+    }
+
+    /// Collect a gear drop and show the reveal sheet.
+    func collectGearDrop(_ drop: GearDrop, playerLevel: Int) async {
+        let result = await gearDropService.collectDrop(drop, playerLevel: playerLevel)
+        gearDropLoot = result.equipment
+        gearDropCoins = result.coins
+        gearDropLootDecisions = [:]
+        selectedGearDrop = drop
+        showGearDropReveal = true
+
+        // Remove from active list
+        activeGearDrops.removeAll { $0.id == drop.id }
+    }
+
+    /// Unlock court cache after winning a match at a court.
+    func unlockCourtCacheIfNeeded(courtID: UUID) async -> GearDrop? {
+        guard let mockService = gearDropService as? MockGearDropService else { return nil }
+        guard let unlockedDrop = await mockService.unlockCourtCache(courtID: courtID) else { return nil }
+
+        // Update active drops
+        if let index = activeGearDrops.firstIndex(where: { $0.id == unlockedDrop.id }) {
+            activeGearDrops[index] = unlockedDrop
+        }
+
+        return unlockedDrop
+    }
+
+    /// Start a trail route.
+    func startTrailRoute(around coordinate: CLLocationCoordinate2D, playerLevel: Int) async -> TrailRoute {
+        let route = await gearDropService.generateTrailRoute(around: coordinate, playerLevel: playerLevel)
+        activeGearDrops = await gearDropService.getActiveDrops()
+        return route
     }
 }

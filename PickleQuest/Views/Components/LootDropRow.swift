@@ -2,7 +2,7 @@ import SwiftUI
 
 struct LootDropRow: View {
     let equipment: Equipment
-    @Binding var decision: MatchViewModel.LootDecision?
+    @Binding var decision: LootDecision?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {

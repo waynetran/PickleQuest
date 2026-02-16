@@ -9,8 +9,7 @@ final class MatchViewModel {
     private let matchService: MatchService
     private let npcService: NPCService
 
-    // Loot decisions
-    enum LootDecision { case equip, keep }
+    // Loot decisions (LootDecision enum is in Models/Common/LootDecision.swift)
     var lootDecisions: [UUID: LootDecision] = [:]
 
     var hasUnhandledLoot: Bool {

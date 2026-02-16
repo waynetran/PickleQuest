@@ -31,6 +31,7 @@ struct MatchHubView: View {
                         npcService: container.npcService,
                         coachService: container.coachService,
                         dailyChallengeService: container.dailyChallengeService,
+                        gearDropService: container.gearDropService,
                         locationManager: container.locationManager
                     )
                 }
