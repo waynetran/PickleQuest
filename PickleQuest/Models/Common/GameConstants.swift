@@ -326,6 +326,14 @@ enum GameConstants {
         static let serveSwipeMaxPower: CGFloat = 200
         static let serveSwipeAngleRange: CGFloat = 0.5
 
+        // Stamina (sprint system in drills — separate from persistent energy)
+        static let maxStamina: CGFloat = 100
+        static let sprintDrainRate: CGFloat = 25        // per second while sprinting
+        static let staminaRecoveryRate: CGFloat = 15    // per second while walking/standing
+        static let staminaRecoveryDelay: CGFloat = 0.8  // seconds after sprint ends before recovery
+        static let maxSprintSpeedBoost: CGFloat = 1.0   // 100% max speed boost
+        static let playerPositioningOffset: CGFloat = 0.04 // half-sprite court units for kitchen clamp
+
         // Cone targets (accuracy drill)
         static let accuracyConeTargets: [(nx: CGFloat, ny: CGFloat)] = [
             (0.25, 0.75), (0.50, 0.85), (0.75, 0.75)

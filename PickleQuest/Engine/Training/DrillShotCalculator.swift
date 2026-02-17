@@ -9,6 +9,7 @@ enum DrillShotCalculator {
         let targetNX: CGFloat      // target X in court space
         let targetNY: CGFloat      // target Y in court space
         let shotType: ShotType
+        let topspinFactor: CGFloat // -1 = backspin, 0 = flat, +1 = topspin
     }
 
     enum ShotType: Sendable {
@@ -16,7 +17,18 @@ enum DrillShotCalculator {
         case backhand
     }
 
-    /// Player-selected shot intensity from Soft/Hard buttons.
+    /// Player-selected shot modes — combinable toggles.
+    struct ShotMode: OptionSet, Sendable {
+        let rawValue: UInt
+        static let power   = ShotMode(rawValue: 1 << 0) // drive — more speed, more scatter
+        static let reset   = ShotMode(rawValue: 1 << 1) // lob to kitchen — mutually exclusive with power
+        static let slice   = ShotMode(rawValue: 1 << 2) // backspin — low arc, less power
+        static let topspin = ShotMode(rawValue: 1 << 3) // topspin — flatter arc, more power
+        static let angled  = ShotMode(rawValue: 1 << 4) // cross-court sideline target
+        static let focus   = ShotMode(rawValue: 1 << 5) // accuracy boost, drains stamina
+    }
+
+    /// Legacy intensity enum — still used by coach shots internally.
     enum ShotIntensity: Sendable {
         case soft   // dink/drop — targets opponent's kitchen, high arc, low power
         case medium // default rally shot
@@ -90,7 +102,8 @@ enum DrillShotCalculator {
             arc: arc,
             targetNX: targetNX,
             targetNY: targetNY,
-            shotType: shotType
+            shotType: shotType,
+            topspinFactor: 0
         )
     }
 
@@ -113,17 +126,42 @@ enum DrillShotCalculator {
         }
     }
 
+    /// Calculate the arc value needed so the ball lands at the target distance.
+    /// Uses projectile physics: arc is the value passed to launch(), which sets vz = arc * speed * 2.0.
+    /// Returns the arc such that h(travelTime) ≈ 0, with a margin for net clearance.
+    private static func arcToLandAt(
+        distanceNY: CGFloat,
+        power: CGFloat,
+        initialHeight: CGFloat = 0.05,
+        arcMargin: CGFloat = 1.15 // 15% extra arc for net clearance margin
+    ) -> CGFloat {
+        let P = GameConstants.DrillPhysics.self
+        let speed = P.baseShotSpeed + power * (P.maxShotSpeed - P.baseShotSpeed)
+        guard speed > 0.01, distanceNY > 0.01 else { return 0.3 }
+
+        // Time for ball to travel to target (horizontal speed ≈ total speed for mostly-forward shots)
+        let travelTime = distanceNY / speed
+
+        // Solve for vz so that h(t) = 0 at travelTime:
+        // 0 = h0 + vz*t - 0.5*g*t²  →  vz = (0.5*g*t² - h0) / t
+        let vzNeeded = (0.5 * P.gravity * travelTime * travelTime - initialHeight) / travelTime
+
+        // Convert vz to arc: launch() does vz = arc * speed * 2.0
+        let arc = vzNeeded / (speed * 2.0)
+        return max(0.08, arc * arcMargin)
+    }
+
     /// Generate a shot for the player.
     /// - ballHeight: ball height at time of contact (logical units)
     /// - courtNY: player's current court position (0=near baseline, 0.5=net)
-    /// - intensity: soft (drop/dink), medium (default), hard (drive/speed-up)
+    /// - modes: combinable shot mode toggles (power, reset, slice, topspin, angled)
     static func calculatePlayerShot(
         stats: PlayerStats,
         ballApproachFromLeft: Bool,
         drillType: DrillType,
         ballHeight: CGFloat = 0.0,
         courtNY: CGFloat = 0.1,
-        intensity: ShotIntensity = .medium
+        modes: ShotMode = []
     ) -> ShotResult {
         let P = GameConstants.DrillPhysics.self
 
@@ -135,89 +173,136 @@ enum DrillShotCalculator {
         // Shot type from ball approach direction
         let shotType: ShotType = ballApproachFromLeft ? .backhand : .forehand
 
-        // Distance from net (0.5) — closer to net = shorter distance to cover
-        let distFromNet = abs(0.5 - courtNY)  // 0.0 at net, ~0.5 at baseline
+        // --- Reset mode: soft lob to kitchen (mutually exclusive with power) ---
+        if modes.contains(.reset) {
+            let resetPower = CGFloat.random(in: 0.15...0.35)
+            let resetArc = CGFloat.random(in: 0.55...0.75)
+            var targetNX = CGFloat.random(in: 0.25...0.75)
+            var targetNY = CGFloat.random(in: 0.52...0.66)
 
-        // Base power from stats
+            // Angled modifier on reset
+            if modes.contains(.angled) {
+                if ballApproachFromLeft { targetNX = 0.90 } else { targetNX = 0.10 }
+            }
+
+            let spinDirection: CGFloat = Bool.random() ? 1.0 : -1.0
+            let spinCurve = spinDirection * (spinStat / 99.0) * 0.3
+            targetNX = max(0.05, min(0.95, targetNX))
+            targetNY = max(0.52, min(0.68, targetNY))
+
+            return ShotResult(
+                power: resetPower,
+                accuracy: 1.0,
+                spinCurve: spinCurve,
+                arc: resetArc,
+                targetNX: targetNX,
+                targetNY: targetNY,
+                shotType: shotType,
+                topspinFactor: 0
+            )
+        }
+
+        // --- Base shot (default medium behavior) ---
         var power: CGFloat
-        if intensity == .soft || drillType == .dinkingDrill {
-            // Soft: dink/drop shot — low power, touch-based
+        var arc: CGFloat
+        var scatter: CGFloat = 0
+        var topspinFactor: CGFloat = 0
+        var targetNX: CGFloat
+        var targetNY: CGFloat
+
+        if drillType == .dinkingDrill && modes.isEmpty {
             power = 0.15 + (powerStat / 99.0) * 0.20
-        } else if drillType == .baselineRally && intensity == .medium {
+        } else if drillType == .baselineRally && modes.isEmpty {
             power = 0.5 + (powerStat / 99.0) * 0.5
-        } else if intensity == .hard {
-            // Hard: 20% more power — drive/speed-up
-            let basePower = 0.5 + (powerStat / 99.0) * 0.5
-            power = basePower * 1.2
         } else {
             power = 0.3 + (powerStat / 99.0) * 0.7
-
-            // Height bonus: higher ball at contact = more power (overhead smash)
             let heightBonus = min(ballHeight / 0.15, 1.0) * P.heightPowerBonus
             power += heightBonus
         }
 
+        // Default target by drill type
+        let (baseNX, baseNY) = targetForDrill(drillType)
+        targetNX = baseNX
+        if drillType == .dinkingDrill {
+            targetNY = max(0.52, min(0.68, baseNY))
+        } else if drillType == .baselineRally {
+            targetNY = max(0.75, min(0.95, baseNY))
+        } else {
+            targetNY = max(0.55, min(0.95, baseNY))
+        }
+
+        // --- Apply mode modifiers ---
+
+        // Power mode: full power, aims 1-2ft inside baseline (ny ≈ 0.90–0.95)
+        if modes.contains(.power) {
+            power = 0.85 + (powerStat / 99.0) * 0.15 // 0.85–1.0
+            let scatterMultiplier = 1.2 + (1.0 - accuracyStat / 99.0) * 0.3
+            let controlFactor = 1.0 - ((accuracyStat + consistencyStat) / 198.0) * 0.7
+            scatter = 0.08 * controlFactor * scatterMultiplier
+            // Target 1-2ft inside baseline (≈ 0.90–0.95 ny)
+            targetNY = CGFloat.random(in: 0.90...0.95)
+        }
+
+        // Slice: slightly less power, backspin — skids after bounce
+        if modes.contains(.slice) {
+            power *= 0.85
+            topspinFactor = -0.7
+        }
+
+        // Topspin: slightly slower initial, dips in flight, accelerates after bounce
+        if modes.contains(.topspin) {
+            power *= 0.90
+            topspinFactor = 0.8
+        }
+
+        // Angled: target sidelines (~2ft from line = ~0.10 or 0.90 nx)
+        if modes.contains(.angled) {
+            if ballApproachFromLeft {
+                targetNX = 0.90
+            } else {
+                targetNX = 0.10
+            }
+        }
+
+        // Focus: boost accuracy — significantly reduce scatter
+        if modes.contains(.focus) {
+            scatter *= 0.3  // 70% less scatter
+        }
+
         power = max(0.15, min(1.0, power))
 
-        // Scatter: hard shots are riskier — more deviation inversely scaled by accuracy/consistency
-        var scatter: CGFloat = 0
-        if intensity == .hard {
-            let controlFactor = 1.0 - ((accuracyStat + consistencyStat) / 198.0) * 0.7
-            scatter = 0.08 * controlFactor  // max ±0.08 scatter, reduced by stats
+        // --- Physics-based arc calculation ---
+        // Calculate the distance from player to target, then compute the exact arc
+        // needed so the ball lands at that distance (with net clearance margin).
+        let distToTarget = abs(targetNY - courtNY)
+
+        if drillType == .dinkingDrill && modes.isEmpty {
+            // Dinks use high loopy arc (not physics-targeted, they're touch shots)
+            arc = CGFloat.random(in: 0.5...0.7)
+        } else {
+            // Compute arc to land at target
+            var margin: CGFloat = 1.15  // 15% net clearance margin
+            if modes.contains(.topspin) {
+                // Topspin dips in flight (Magnus), so needs ~2x higher initial arc
+                // to clear the net, then dips down onto the court
+                margin = 1.8
+            } else if modes.contains(.slice) {
+                // Slice floats slightly (backspin Magnus), can be flatter
+                margin = 0.95
+            } else if modes.contains(.power) {
+                // Power: flat and fast, just enough to clear net
+                margin = 1.10
+            }
+            arc = arcToLandAt(distanceNY: distToTarget, power: power, arcMargin: margin)
         }
+
+        // Apply scatter
         let scatterX = scatter > 0 ? CGFloat.random(in: -scatter...scatter) : 0
         let scatterY = scatter > 0 ? CGFloat.random(in: -scatter...scatter) : 0
 
         // Spin
         let spinDirection: CGFloat = Bool.random() ? 1.0 : -1.0
         let spinCurve = spinDirection * (spinStat / 99.0)
-
-        // Arc scales with distance from net and intensity
-        let distanceFactor = min(distFromNet / 0.5, 1.0)  // 0.0 at net, 1.0 at baseline
-        var arc: CGFloat
-        if intensity == .soft {
-            // Soft: high arc (lob/drop), always floaty
-            arc = CGFloat.random(in: 0.55...0.75)
-        } else if intensity == .hard {
-            // Hard: flat and fast
-            let baseArc: CGFloat = 0.10 + distanceFactor * 0.15  // 0.10–0.25
-            arc = baseArc + CGFloat.random(in: -0.03...0.03)
-        } else {
-            switch drillType {
-            case .dinkingDrill:
-                arc = CGFloat.random(in: 0.5...0.7)
-            case .baselineRally:
-                let baseArc: CGFloat = 0.30 + distanceFactor * 0.30
-                arc = baseArc + CGFloat.random(in: -0.05...0.05)
-            default:
-                let baseArc: CGFloat = 0.20 + distanceFactor * 0.20
-                arc = baseArc + CGFloat.random(in: -0.05...0.05)
-            }
-        }
-
-        // Target: intensity overrides drill-type defaults
-        var targetNX: CGFloat
-        var targetNY: CGFloat
-        if intensity == .soft {
-            // Soft: aim for opponent's kitchen zone (0.52–0.66)
-            targetNX = CGFloat.random(in: 0.25...0.75)
-            targetNY = CGFloat.random(in: 0.52...0.66)
-        } else if intensity == .hard {
-            // Hard: aim deep + toward sidelines (passing shot)
-            let side = Bool.random()
-            targetNX = side ? CGFloat.random(in: 0.10...0.30) : CGFloat.random(in: 0.70...0.90)
-            targetNY = CGFloat.random(in: 0.75...0.98)
-        } else {
-            let (baseNX, baseNY) = targetForDrill(drillType)
-            targetNX = baseNX
-            if drillType == .dinkingDrill {
-                targetNY = max(0.52, min(0.68, baseNY))
-            } else if drillType == .baselineRally {
-                targetNY = max(0.75, min(0.95, baseNY))
-            } else {
-                targetNY = max(0.55, min(0.95, baseNY))
-            }
-        }
 
         targetNX = max(0.05, min(0.95, targetNX + scatterX))
         targetNY = max(0.52, min(0.98, targetNY + scatterY))
@@ -229,7 +314,8 @@ enum DrillShotCalculator {
             arc: arc,
             targetNX: targetNX,
             targetNY: targetNY,
-            shotType: shotType
+            shotType: shotType,
+            topspinFactor: topspinFactor
         )
     }
 
@@ -306,7 +392,8 @@ enum DrillShotCalculator {
             arc: arc,
             targetNX: max(0.05, min(0.95, targetNX + scatterX)),
             targetNY: max(0.05, min(0.45, targetNY + scatterY)),
-            shotType: shotType
+            shotType: shotType,
+            topspinFactor: 0
         )
     }
 }

@@ -29,23 +29,38 @@ final class InteractiveDrillScene: SKScene {
     private var swipeTouchStart: CGPoint?
     private var swipeTouchStartTime: TimeInterval?
 
-    // HUD
-    private var ballCountLabel: SKLabelNode!
-    private var scoreLabel: SKLabelNode!
-    private var rallyLabel: SKLabelNode!
+    // HUD container
+    private var hudContainer: SKNode!
+    private var hudBackground: SKShapeNode!
     private var outcomeLabel: SKLabelNode!
+
+    // HUD row nodes (label + bar bg + bar fill + value label per row)
+    private var hudRow1Label: SKLabelNode!
+    private var hudRow1BarBg: SKShapeNode!
+    private var hudRow1BarFill: SKShapeNode!
+    private var hudRow1Value: SKLabelNode!
+    private var hudRow2Label: SKLabelNode!
+    private var hudRow2BarBg: SKShapeNode!
+    private var hudRow2BarFill: SKShapeNode!
+    private var hudRow2Value: SKLabelNode!
+    private var hudStaminaLabel: SKLabelNode!
+    private var hudStaminaBarBg: SKShapeNode!
+    private var hudStaminaBarFill: SKShapeNode!
+    private var hudStaminaValue: SKLabelNode!
+    private var hudStarsLabel: SKLabelNode! // stars row (last)
 
     // Cone targets (return of serve)
     private var coneNodes: [SKShapeNode] = []
 
-    // Shot intensity buttons
-    private var softButton: SKNode!
-    private var hardButton: SKNode!
-    private var softButtonBg: SKShapeNode!
-    private var hardButtonBg: SKShapeNode!
-    private var activeShotIntensity: DrillShotCalculator.ShotIntensity = .medium
-    private var softTouch: UITouch?
-    private var hardTouch: UITouch?
+    // Shot mode toggle buttons (5 modes)
+    private var activeShotModes: DrillShotCalculator.ShotMode = []
+    private var shotModeButtons: [SKNode] = []
+    private var shotModeBgs: [SKShapeNode] = []
+    private var shotModeTouch: UITouch?
+
+    // Stamina
+    private var stamina: CGFloat = GameConstants.DrillPhysics.maxStamina
+    private var timeSinceLastSprint: CGFloat = 10 // start recovered
 
     // Speech bubble
     private var speechBubbleNode: SKNode!
@@ -149,9 +164,7 @@ final class InteractiveDrillScene: SKScene {
     /// Called from SwiftUI when the player taps "Let's Play Pickleball!".
     func beginDrill() {
         guard phase == .waitingToStart else { return }
-        ballCountLabel.alpha = 1
-        scoreLabel.alpha = 1
-        rallyLabel.alpha = 1
+        hudContainer.alpha = 1
         startPlaying()
     }
 
@@ -203,13 +216,14 @@ final class InteractiveDrillScene: SKScene {
         ballShadow.alpha = 0
         addChild(ballShadow)
 
-        // Joystick (floating — appears at touch point)
+        // Joystick (visible at default position, centers on touch)
         joystickBase = SKShapeNode(circleOfRadius: joystickBaseRadius)
         joystickBase.fillColor = UIColor(white: 0.15, alpha: 0.5)
         joystickBase.strokeColor = UIColor(white: 0.6, alpha: 0.3)
         joystickBase.lineWidth = 2
         joystickBase.zPosition = 15
-        joystickBase.alpha = 0
+        joystickBase.position = joystickDefaultPosition
+        joystickBase.alpha = 0.4
         addChild(joystickBase)
 
         joystickKnob = SKShapeNode(circleOfRadius: joystickKnobRadius)
@@ -217,7 +231,8 @@ final class InteractiveDrillScene: SKScene {
         joystickKnob.strokeColor = UIColor(white: 1.0, alpha: 0.4)
         joystickKnob.lineWidth = 1.5
         joystickKnob.zPosition = 16
-        joystickKnob.alpha = 0
+        joystickKnob.position = joystickDefaultPosition
+        joystickKnob.alpha = 0.4
         addChild(joystickKnob)
 
         // Shot intensity buttons (right side, only for joystick drills)
@@ -273,72 +288,94 @@ final class InteractiveDrillScene: SKScene {
     }
 
     private func buildShotButtons() {
+        typealias SM = DrillShotCalculator.ShotMode
+
         let buttonWidth: CGFloat = 70
         let buttonHeight: CGFloat = 36
         let cornerRadius: CGFloat = 10
-        let rightEdge = AC.sceneWidth - 16
-        let bottomY: CGFloat = 80
+        let gap: CGFloat = 8
+        let buttonX = AC.sceneWidth - 51
 
-        // Soft button (bottom-right, lower)
-        softButton = SKNode()
-        softButton.position = CGPoint(x: rightEdge - buttonWidth / 2, y: bottomY)
-        softButton.zPosition = 20
-        softButton.name = "softButton"
+        let defs: [(name: String, color: UIColor, mode: SM)] = [
+            ("Power", .systemRed, .power),
+            ("Reset", .systemTeal, .reset),
+            ("Slice", .systemPurple, .slice),
+            ("Topspin", .systemGreen, .topspin),
+            ("Angled", .systemOrange, .angled),
+            ("Focus", .systemYellow, .focus),
+        ]
 
-        softButtonBg = SKShapeNode(rect: CGRect(
-            x: -buttonWidth / 2, y: -buttonHeight / 2,
-            width: buttonWidth, height: buttonHeight
-        ), cornerRadius: cornerRadius)
-        softButtonBg.fillColor = UIColor.systemTeal.withAlphaComponent(0.5)
-        softButtonBg.strokeColor = UIColor.systemTeal.withAlphaComponent(0.8)
-        softButtonBg.lineWidth = 1.5
-        softButton.addChild(softButtonBg)
+        // Vertically center 6 buttons around y=350
+        let totalHeight = CGFloat(defs.count) * buttonHeight + CGFloat(defs.count - 1) * gap
+        let startY = 350 - totalHeight / 2 + buttonHeight / 2
 
-        let softLabel = SKLabelNode(text: "Soft")
-        softLabel.fontName = "AvenirNext-Bold"
-        softLabel.fontSize = 15
-        softLabel.fontColor = .white
-        softLabel.verticalAlignmentMode = .center
-        softLabel.horizontalAlignmentMode = .center
-        softButton.addChild(softLabel)
-        addChild(softButton)
+        for (i, def) in defs.enumerated() {
+            let btn = SKNode()
+            let y = startY + CGFloat(i) * (buttonHeight + gap)
+            btn.position = CGPoint(x: buttonX, y: y)
+            btn.zPosition = 20
+            btn.name = "shotMode_\(i)"
 
-        // Hard button (above soft)
-        hardButton = SKNode()
-        hardButton.position = CGPoint(x: rightEdge - buttonWidth / 2, y: bottomY + buttonHeight + 12)
-        hardButton.zPosition = 20
-        hardButton.name = "hardButton"
+            let bg = SKShapeNode(rect: CGRect(
+                x: -buttonWidth / 2, y: -buttonHeight / 2,
+                width: buttonWidth, height: buttonHeight
+            ), cornerRadius: cornerRadius)
+            bg.fillColor = def.color.withAlphaComponent(0.35)
+            bg.strokeColor = def.color.withAlphaComponent(0.6)
+            bg.lineWidth = 1.5
+            btn.addChild(bg)
 
-        hardButtonBg = SKShapeNode(rect: CGRect(
-            x: -buttonWidth / 2, y: -buttonHeight / 2,
-            width: buttonWidth, height: buttonHeight
-        ), cornerRadius: cornerRadius)
-        hardButtonBg.fillColor = UIColor.systemRed.withAlphaComponent(0.5)
-        hardButtonBg.strokeColor = UIColor.systemRed.withAlphaComponent(0.8)
-        hardButtonBg.lineWidth = 1.5
-        hardButton.addChild(hardButtonBg)
+            let label = SKLabelNode(text: def.name)
+            label.fontName = "AvenirNext-Bold"
+            label.fontSize = def.name.count > 6 ? 12 : 14
+            label.fontColor = .white
+            label.verticalAlignmentMode = .center
+            label.horizontalAlignmentMode = .center
+            btn.addChild(label)
 
-        let hardLabel = SKLabelNode(text: "Hard")
-        hardLabel.fontName = "AvenirNext-Bold"
-        hardLabel.fontSize = 15
-        hardLabel.fontColor = .white
-        hardLabel.verticalAlignmentMode = .center
-        hardLabel.horizontalAlignmentMode = .center
-        hardButton.addChild(hardLabel)
-        addChild(hardButton)
+            addChild(btn)
+            shotModeButtons.append(btn)
+            shotModeBgs.append(bg)
+        }
+    }
+
+    private func toggleShotMode(at index: Int) {
+        typealias SM = DrillShotCalculator.ShotMode
+        let modes: [SM] = [.power, .reset, .slice, .topspin, .angled, .focus]
+        guard index < modes.count else { return }
+
+        let mode = modes[index]
+
+        if activeShotModes.contains(mode) {
+            activeShotModes.remove(mode)
+        } else {
+            // Power/Reset mutually exclusive; Topspin/Slice mutually exclusive
+            if mode == .power {
+                activeShotModes.remove(.reset)
+            } else if mode == .reset {
+                activeShotModes.remove(.power)
+            } else if mode == .topspin {
+                activeShotModes.remove(.slice)
+            } else if mode == .slice {
+                activeShotModes.remove(.topspin)
+            }
+            activeShotModes.insert(mode)
+        }
+        updateShotButtonVisuals()
     }
 
     private func updateShotButtonVisuals() {
-        let softActive = activeShotIntensity == .soft
-        let hardActive = activeShotIntensity == .hard
-        softButtonBg?.fillColor = softActive
-            ? UIColor.systemTeal.withAlphaComponent(0.9)
-            : UIColor.systemTeal.withAlphaComponent(0.5)
-        softButtonBg?.lineWidth = softActive ? 3.0 : 1.5
-        hardButtonBg?.fillColor = hardActive
-            ? UIColor.systemRed.withAlphaComponent(0.9)
-            : UIColor.systemRed.withAlphaComponent(0.5)
-        hardButtonBg?.lineWidth = hardActive ? 3.0 : 1.5
+        typealias SM = DrillShotCalculator.ShotMode
+        let modes: [SM] = [.power, .reset, .slice, .topspin, .angled, .focus]
+        let colors: [UIColor] = [.systemRed, .systemTeal, .systemPurple, .systemGreen, .systemOrange, .systemYellow]
+
+        for (i, bg) in shotModeBgs.enumerated() {
+            guard i < modes.count else { break }
+            let isActive = activeShotModes.contains(modes[i])
+            bg.fillColor = colors[i].withAlphaComponent(isActive ? 0.85 : 0.35)
+            bg.strokeColor = colors[i].withAlphaComponent(isActive ? 1.0 : 0.6)
+            bg.lineWidth = isActive ? 3.0 : 1.5
+        }
     }
 
     private func hitTestButton(_ node: SKNode?, at pos: CGPoint, size: CGSize = CGSize(width: 70, height: 36)) -> Bool {
@@ -433,32 +470,97 @@ final class InteractiveDrillScene: SKScene {
 
     private func setupHUD() {
         let fontName = AC.Text.fontName
+        let margin: CGFloat = 8
+        let containerWidth: CGFloat = AC.sceneWidth - margin * 2
+        let rowHeight: CGFloat = 20
+        let barHeight: CGFloat = 10
+        let labelX: CGFloat = 10
+        let barX: CGFloat = 62
+        let barWidth = containerWidth - barX - 10
+        let padding: CGFloat = 8
+        let rowCount: CGFloat = 4 // row1, row2, stamina, stars
+        let containerHeight = rowCount * rowHeight + padding * 2
 
-        ballCountLabel = SKLabelNode(text: "Round 0/\(scorekeeper.totalRounds)")
-        ballCountLabel.fontName = fontName
-        ballCountLabel.fontSize = 24
-        ballCountLabel.fontColor = .white
-        ballCountLabel.position = CGPoint(x: AC.sceneWidth / 2, y: AC.sceneHeight - 60)
-        ballCountLabel.zPosition = AC.ZPositions.text
-        addChild(ballCountLabel)
+        // Store bar width for updateHUD
+        hudBarWidthCurrent = barWidth
 
-        scoreLabel = SKLabelNode(text: "Returns: 0")
-        scoreLabel.fontName = fontName
-        scoreLabel.fontSize = 18
-        scoreLabel.fontColor = .white
-        scoreLabel.horizontalAlignmentMode = .left
-        scoreLabel.position = CGPoint(x: 20, y: AC.sceneHeight - 90)
-        scoreLabel.zPosition = AC.ZPositions.text
-        addChild(scoreLabel)
+        // Container — full width
+        hudContainer = SKNode()
+        hudContainer.position = CGPoint(x: margin, y: AC.sceneHeight - 8 - containerHeight)
+        hudContainer.zPosition = AC.ZPositions.text - 0.2
+        hudContainer.alpha = 0
+        addChild(hudContainer)
 
-        rallyLabel = SKLabelNode(text: "")
-        rallyLabel.fontName = fontName
-        rallyLabel.fontSize = 18
-        rallyLabel.fontColor = .white
-        rallyLabel.horizontalAlignmentMode = .right
-        rallyLabel.position = CGPoint(x: AC.sceneWidth - 20, y: AC.sceneHeight - 90)
-        rallyLabel.zPosition = AC.ZPositions.text
-        addChild(rallyLabel)
+        hudBackground = SKShapeNode(rect: CGRect(
+            x: 0, y: 0, width: containerWidth, height: containerHeight
+        ), cornerRadius: 10)
+        hudBackground.fillColor = UIColor(white: 0, alpha: 0.55)
+        hudBackground.strokeColor = UIColor(white: 1, alpha: 0.12)
+        hudBackground.lineWidth = 1
+        hudContainer.addChild(hudBackground)
+
+        // Helper: label + bar bg + bar fill + value label inside bar
+        func makeRow(y: CGFloat, labelText: String) -> (SKLabelNode, SKShapeNode, SKShapeNode, SKLabelNode) {
+            let label = SKLabelNode(text: labelText)
+            label.fontName = fontName
+            label.fontSize = 11
+            label.fontColor = UIColor(white: 0.85, alpha: 1)
+            label.horizontalAlignmentMode = .left
+            label.verticalAlignmentMode = .center
+            label.position = CGPoint(x: labelX, y: y)
+            label.zPosition = 1
+
+            let bg = SKShapeNode(rect: CGRect(x: 0, y: -barHeight / 2, width: barWidth, height: barHeight), cornerRadius: 4)
+            bg.fillColor = UIColor(white: 0.2, alpha: 0.8)
+            bg.strokeColor = .clear
+            bg.position = CGPoint(x: barX, y: y)
+            bg.zPosition = 1
+
+            let fill = SKShapeNode(rect: CGRect(x: 0, y: -barHeight / 2, width: barWidth, height: barHeight), cornerRadius: 4)
+            fill.fillColor = .systemCyan
+            fill.strokeColor = .clear
+            fill.position = CGPoint(x: barX, y: y)
+            fill.zPosition = 2
+
+            // Value text inside bar, right-aligned
+            let value = SKLabelNode(text: "")
+            value.fontName = fontName
+            value.fontSize = 9
+            value.fontColor = .white
+            value.horizontalAlignmentMode = .right
+            value.verticalAlignmentMode = .center
+            value.position = CGPoint(x: barX + barWidth - 4, y: y)
+            value.zPosition = 3
+
+            hudContainer.addChild(label)
+            hudContainer.addChild(bg)
+            hudContainer.addChild(fill)
+            hudContainer.addChild(value)
+            return (label, bg, fill, value)
+        }
+
+        // Rows from top to bottom
+        let row1Y = containerHeight - padding - rowHeight * 0.5
+        let row2Y = row1Y - rowHeight
+        let row3Y = row2Y - rowHeight
+        let row4Y = row3Y - rowHeight
+
+        (hudRow1Label, hudRow1BarBg, hudRow1BarFill, hudRow1Value) = makeRow(y: row1Y, labelText: "Round")
+        (hudRow2Label, hudRow2BarBg, hudRow2BarFill, hudRow2Value) = makeRow(y: row2Y, labelText: "Shots")
+
+        // Row 3: stamina
+        (hudStaminaLabel, hudStaminaBarBg, hudStaminaBarFill, hudStaminaValue) = makeRow(y: row3Y, labelText: "Stamina")
+
+        // Row 4: stars (no bar, just a label)
+        hudStarsLabel = SKLabelNode(text: "")
+        hudStarsLabel.fontName = fontName
+        hudStarsLabel.fontSize = 13
+        hudStarsLabel.fontColor = UIColor.systemYellow
+        hudStarsLabel.horizontalAlignmentMode = .left
+        hudStarsLabel.verticalAlignmentMode = .center
+        hudStarsLabel.position = CGPoint(x: labelX, y: row4Y)
+        hudStarsLabel.zPosition = 1
+        hudContainer.addChild(hudStarsLabel)
 
         // Outcome indicator (center of court)
         outcomeLabel = SKLabelNode(text: "")
@@ -469,10 +571,6 @@ final class InteractiveDrillScene: SKScene {
         outcomeLabel.zPosition = AC.ZPositions.text + 1
         outcomeLabel.alpha = 0
         addChild(outcomeLabel)
-
-        ballCountLabel.alpha = 0
-        scoreLabel.alpha = 0
-        rallyLabel.alpha = 0
     }
 
     private func startPlaying() {
@@ -500,20 +598,18 @@ final class InteractiveDrillScene: SKScene {
 
             guard phase == .playing || phase == .feedPause else { return }
 
-            // Check shot buttons first
+            // Check shot mode buttons first
             if drillConfig.inputMode == .joystick {
-                if hitTestButton(softButton, at: pos) {
-                    softTouch = touch
-                    activeShotIntensity = activeShotIntensity == .soft ? .medium : .soft
-                    updateShotButtonVisuals()
-                    continue
+                var hitButton = false
+                for (i, btn) in shotModeButtons.enumerated() {
+                    if hitTestButton(btn, at: pos) {
+                        shotModeTouch = touch
+                        toggleShotMode(at: i)
+                        hitButton = true
+                        break
+                    }
                 }
-                if hitTestButton(hardButton, at: pos) {
-                    hardTouch = touch
-                    activeShotIntensity = activeShotIntensity == .hard ? .medium : .hard
-                    updateShotButtonVisuals()
-                    continue
-                }
+                if hitButton { continue }
             }
 
             // Otherwise start joystick
@@ -522,6 +618,7 @@ final class InteractiveDrillScene: SKScene {
             joystickTouch = touch
             joystickOrigin = pos
 
+            // Move joystick to touch point, full alpha
             joystickBase.position = pos
             joystickKnob.position = pos
             joystickBase.alpha = 1
@@ -537,17 +634,19 @@ final class InteractiveDrillScene: SKScene {
         let dy = pos.y - joystickOrigin.y
         let dist = sqrt(dx * dx + dy * dy)
 
-        if dist <= joystickBaseRadius {
+        // Knob visual clamped to 1.5x base radius
+        let maxVisualDist = joystickBaseRadius * 1.5
+        if dist <= maxVisualDist {
             joystickKnob.position = pos
         } else {
             joystickKnob.position = CGPoint(
-                x: joystickOrigin.x + (dx / dist) * joystickBaseRadius,
-                y: joystickOrigin.y + (dy / dist) * joystickBaseRadius
+                x: joystickOrigin.x + (dx / dist) * maxVisualDist,
+                y: joystickOrigin.y + (dy / dist) * maxVisualDist
             )
         }
 
-        let clamped = min(dist, joystickBaseRadius)
-        joystickMagnitude = clamped / joystickBaseRadius
+        // Magnitude can exceed 1.0 (sprint zone up to 1.5)
+        joystickMagnitude = min(dist / joystickBaseRadius, 1.5)
         if dist > 1.0 {
             joystickDirection = CGVector(dx: dx / dist, dy: dy / dist)
         }
@@ -564,12 +663,8 @@ final class InteractiveDrillScene: SKScene {
                 return
             }
 
-            if touch === softTouch {
-                softTouch = nil
-                continue
-            }
-            if touch === hardTouch {
-                hardTouch = nil
+            if touch === shotModeTouch {
+                shotModeTouch = nil
                 continue
             }
             if touch === joystickTouch {
@@ -583,18 +678,22 @@ final class InteractiveDrillScene: SKScene {
         swipeTouchStart = nil
         swipeTouchStartTime = nil
         for touch in touches {
-            if touch === softTouch { softTouch = nil }
-            if touch === hardTouch { hardTouch = nil }
+            if touch === shotModeTouch { shotModeTouch = nil }
             if touch === joystickTouch { resetJoystick() }
         }
     }
+
+    private let joystickDefaultPosition = CGPoint(x: MatchAnimationConstants.sceneWidth / 2, y: 100)
 
     private func resetJoystick() {
         joystickTouch = nil
         joystickDirection = .zero
         joystickMagnitude = 0
-        joystickBase.alpha = 0
-        joystickKnob.alpha = 0
+        // Snap back to default position at 40% alpha
+        joystickBase.position = joystickDefaultPosition
+        joystickKnob.position = joystickDefaultPosition
+        joystickBase.alpha = 0.4
+        joystickKnob.alpha = 0.4
     }
 
     // MARK: - Serve Swipe Handling
@@ -715,14 +814,57 @@ final class InteractiveDrillScene: SKScene {
     private func movePlayer(dt: CGFloat) {
         guard joystickMagnitude > 0.1 else {
             playerAnimator.play(.ready)
+            // Recover stamina when standing still
+            timeSinceLastSprint += dt
+            if timeSinceLastSprint >= P.staminaRecoveryDelay {
+                stamina = min(P.maxStamina, stamina + P.staminaRecoveryRate * dt)
+            }
             return
         }
 
-        let speed = playerMoveSpeed * joystickMagnitude
+        // Base speed from normal magnitude (capped at 1.0)
+        let normalMag = min(joystickMagnitude, 1.0)
+        var speed = playerMoveSpeed * normalMag
+
+        // Sprint zone: magnitude > 1.0
+        let isSprinting = joystickMagnitude > 1.0 && stamina > 0
+        if isSprinting {
+            let sprintFraction = min((joystickMagnitude - 1.0) / 0.5, 1.0)
+            let sprintBonus = sprintFraction * P.maxSprintSpeedBoost * playerMoveSpeed
+            speed += sprintBonus
+            stamina = max(0, stamina - P.sprintDrainRate * dt)
+            timeSinceLastSprint = 0
+        } else {
+            // Not sprinting — recover after delay
+            timeSinceLastSprint += dt
+            if timeSinceLastSprint >= P.staminaRecoveryDelay {
+                stamina = min(P.maxStamina, stamina + P.staminaRecoveryRate * dt)
+            }
+        }
+
+        // Power and Focus modes drain stamina even when not sprinting
+        if activeShotModes.contains(.power) {
+            stamina = max(0, stamina - P.sprintDrainRate * 0.5 * dt)
+        }
+        if activeShotModes.contains(.focus) {
+            stamina = max(0, stamina - P.sprintDrainRate * 0.4 * dt)
+        }
+
+        // Joystick visual: turn red when sprinting
+        if isSprinting {
+            joystickBase.strokeColor = UIColor.systemRed.withAlphaComponent(0.8)
+            joystickBase.fillColor = UIColor.systemRed.withAlphaComponent(0.2)
+            joystickKnob.fillColor = UIColor.systemRed.withAlphaComponent(0.7)
+        } else if joystickTouch != nil {
+            joystickBase.strokeColor = UIColor(white: 0.6, alpha: 0.3)
+            joystickBase.fillColor = UIColor(white: 0.15, alpha: 0.5)
+            joystickKnob.fillColor = UIColor(white: 0.8, alpha: 0.6)
+        }
+
         playerNX += joystickDirection.dx * speed * dt
         playerNY += joystickDirection.dy * speed * dt
 
-        // Clamp to movable range
+        // Clamp to movable range — player can go right up to the kitchen line
         playerNX = max(drillConfig.playerMinNX, min(drillConfig.playerMaxNX, playerNX))
         playerNY = max(drillConfig.playerMinNY, min(drillConfig.playerMaxNY, playerNY))
 
@@ -754,12 +896,25 @@ final class InteractiveDrillScene: SKScene {
 
         scorekeeper.onSuccessfulReturn()
 
-        // Check rally completion for rally mode
+        // Check rally completion for rally mode — stop the point immediately
         if scorekeeper.scoringMode == .rallyStreak,
            scorekeeper.currentConsecutiveReturns >= drillConfig.rallyShotsRequired {
             scorekeeper.onRallyCompleted()
             let msg = coachPersonality.rallyCompleteLine(requiredShots: drillConfig.rallyShotsRequired)
             showCoachSpeech(msg, duration: 2.5)
+
+            // End the point — rally requirement met
+            ballSim.reset()
+            ballNode.alpha = 0
+            ballShadow.alpha = 0
+            scorekeeper.onRallyEnd()
+            scorekeeper.onRoundAttempted()
+            showIndicator("Rally!", color: .systemGreen, duration: 0.8)
+
+            phase = .feedPause
+            feedPauseTimer = P.feedDelay + 2.5
+            updateHUD()
+            return
         }
 
         let ballFromLeft = ballSim.courtX < playerNX
@@ -769,7 +924,7 @@ final class InteractiveDrillScene: SKScene {
             drillType: drill.type,
             ballHeight: ballSim.height,
             courtNY: playerNY,
-            intensity: activeShotIntensity
+            modes: activeShotModes
         )
 
         let animState: CharacterAnimationState = shot.shotType == .forehand ? .forehand : .backhand
@@ -780,7 +935,8 @@ final class InteractiveDrillScene: SKScene {
             toward: CGPoint(x: shot.targetNX, y: shot.targetNY),
             power: shot.power,
             arc: shot.arc,
-            spin: shot.spinCurve
+            spin: shot.spinCurve,
+            topspin: shot.topspinFactor
         )
         ballSim.lastHitByPlayer = true
         previousBallNY = ballSim.courtY
@@ -942,9 +1098,23 @@ final class InteractiveDrillScene: SKScene {
     }
 
     private func onBallDead(outcome: PointOutcome) {
+        let lastHitByPlayer = ballSim.lastHitByPlayer
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
+
+        // Determine if the player won the point
+        let playerWon: Bool
+        switch outcome {
+        case .winner, .serveIn: playerWon = true
+        case .doubleBounce, .serveFault: playerWon = false
+        case .net, .out: playerWon = !lastHitByPlayer
+        }
+
+        if playerWon {
+            scorekeeper.onPlayerWonPoint()
+        }
+
         scorekeeper.onRallyEnd()
         scorekeeper.onRoundAttempted()
         showOutcome(outcome)
@@ -987,6 +1157,9 @@ final class InteractiveDrillScene: SKScene {
             feedNewBall()
         case .servePractice:
             phase = .waitingForServe
+            // Show coaching tip before each serve
+            let tip = coachPersonality.feedTip(drillType: drill.type)
+            showCoachSpeech(tip, duration: 2.5)
         case .accuracyDrill, .returnOfServe:
             phase = .playing
             feedNewBall()
@@ -1017,6 +1190,10 @@ final class InteractiveDrillScene: SKScene {
     private func feedNewBall() {
         scorekeeper.onBallFed()
 
+        // Show a coaching tip before each feed
+        let tip = coachPersonality.feedTip(drillType: drill.type)
+        showCoachSpeech(tip, duration: 2.5)
+
         switch drill.type {
         case .baselineRally, .dinkingDrill:
             coachAI.feedBall(ball: ballSim)
@@ -1041,6 +1218,18 @@ final class InteractiveDrillScene: SKScene {
         let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, playerNY)))
         playerNode.setScale(AC.Sprites.nearPlayerScale * pScale)
         playerNode.zPosition = AC.ZPositions.nearPlayer - CGFloat(playerNY) * 0.1
+
+        // Gradually tint red when sprinting and losing stamina
+        let staminaPct = stamina / P.maxStamina
+        let isSprinting = joystickMagnitude > 1.0 && stamina > 0
+        if isSprinting || staminaPct < 1.0 {
+            let redAmount = 1.0 - staminaPct // 0 = full stamina (white), 1 = empty (red)
+            let tint = UIColor(red: 1.0, green: 1.0 - redAmount * 0.6, blue: 1.0 - redAmount * 0.7, alpha: 1.0)
+            playerNode.color = tint
+            playerNode.colorBlendFactor = redAmount * 0.5
+        } else {
+            playerNode.colorBlendFactor = 0
+        }
     }
 
     private func syncCoachPosition() {
@@ -1079,27 +1268,92 @@ final class InteractiveDrillScene: SKScene {
 
     // MARK: - HUD
 
+    private var hudBarWidthCurrent: CGFloat = 100
+    private let hudBarHeight: CGFloat = 10
+
     private func updateHUD() {
+        let total = scorekeeper.totalRounds
+
         switch scorekeeper.scoringMode {
         case .rallyStreak:
-            ballCountLabel.text = "Rally \(scorekeeper.ralliesCompleted + 1)/\(scorekeeper.totalRounds)"
-            scoreLabel.text = "Returns: \(scorekeeper.currentConsecutiveReturns)/\(drillConfig.rallyShotsRequired)"
-            rallyLabel.text = "Completed: \(scorekeeper.ralliesCompleted)"
+            let rallyNum = min(scorekeeper.ralliesCompleted + 1, total)
+            hudRow1Label.text = "Rally"
+            hudRow1Value.text = "\(rallyNum)/\(total)"
+            updateBarFill(hudRow1BarFill, fraction: CGFloat(rallyNum) / CGFloat(total), color: .systemCyan)
+
+            let shots = scorekeeper.currentConsecutiveReturns
+            let required = drillConfig.rallyShotsRequired
+            hudRow2Label.text = "Shots"
+            hudRow2Value.text = "\(shots)/\(required)"
+            updateBarFill(hudRow2BarFill, fraction: CGFloat(shots) / CGFloat(max(1, required)), color: .systemBlue)
+
+            // Stars for completed rallies
+            let completed = scorekeeper.ralliesCompleted
+            let filled = String(repeating: "\u{2605}", count: min(completed, total))
+            let empty = String(repeating: "\u{2606}", count: max(0, total - completed))
+            hudStarsLabel.text = filled + empty
+
         case .serveAccuracy:
-            let sideText = serveCount <= 5 ? "Right Side" : "Left Side"
-            ballCountLabel.text = "Serve \(scorekeeper.totalRoundsAttempted + 1)/\(scorekeeper.totalRounds)"
-            scoreLabel.text = sideText
-            rallyLabel.text = "In: \(scorekeeper.successfulReturns)"
+            let attemptNum = min(scorekeeper.totalRoundsAttempted + 1, total)
+            hudRow1Label.text = "Serve"
+            hudRow1Value.text = "\(attemptNum)/\(total)"
+            updateBarFill(hudRow1BarFill, fraction: CGFloat(attemptNum) / CGFloat(total), color: .systemCyan)
+
+            let sideText = serveCount <= 5 ? "Right" : "Left"
+            hudRow2Label.text = sideText
+            hudRow2Value.text = "In: \(scorekeeper.successfulReturns)"
+            let inPct = CGFloat(scorekeeper.successfulReturns) / CGFloat(max(1, scorekeeper.totalRoundsAttempted))
+            updateBarFill(hudRow2BarFill, fraction: inPct, color: .systemBlue)
+
+            let filled = String(repeating: "\u{2605}", count: scorekeeper.successfulReturns)
+            let empty = String(repeating: "\u{2606}", count: max(0, total - scorekeeper.successfulReturns))
+            hudStarsLabel.text = filled + empty
+
         case .returnTarget:
-            let roundNum = min(scorekeeper.totalRoundsAttempted + 1, scorekeeper.totalRounds)
-            ballCountLabel.text = "Return \(roundNum)/\(scorekeeper.totalRounds)"
-            if drill.type == .returnOfServe {
-                let sideText = scorekeeper.totalRoundsAttempted < 5 ? "Coach: Left" : "Coach: Right"
-                scoreLabel.text = "\(sideText) · Returns: \(scorekeeper.successfulReturns)"
-            } else {
-                scoreLabel.text = "Returns: \(scorekeeper.successfulReturns)"
-            }
-            rallyLabel.text = "Cone Hits: \(scorekeeper.coneHits)"
+            let roundNum = min(scorekeeper.totalRoundsAttempted + 1, total)
+            hudRow1Label.text = "Return"
+            hudRow1Value.text = "\(roundNum)/\(total)"
+            updateBarFill(hudRow1BarFill, fraction: CGFloat(roundNum) / CGFloat(total), color: .systemCyan)
+
+            hudRow2Label.text = "Cones"
+            hudRow2Value.text = "\(scorekeeper.coneHits)"
+            let conePct = CGFloat(scorekeeper.coneHits) / CGFloat(max(1, total))
+            updateBarFill(hudRow2BarFill, fraction: conePct, color: .systemOrange)
+
+            let filled = String(repeating: "\u{2605}", count: scorekeeper.successfulReturns)
+            let empty = String(repeating: "\u{2606}", count: max(0, total - scorekeeper.successfulReturns))
+            hudStarsLabel.text = filled + empty
+        }
+
+        // Stamina bar
+        updateStaminaBar()
+    }
+
+    private func updateBarFill(_ fill: SKShapeNode, fraction: CGFloat, color: UIColor) {
+        let pct = max(0, min(1, fraction))
+        let w = max(1, hudBarWidthCurrent * pct)
+        fill.path = UIBezierPath(
+            roundedRect: CGRect(x: 0, y: -hudBarHeight / 2, width: w, height: hudBarHeight),
+            cornerRadius: 4
+        ).cgPath
+        fill.fillColor = color
+    }
+
+    private func updateStaminaBar() {
+        let pct = stamina / P.maxStamina
+        hudStaminaValue.text = "\(Int(stamina))%"
+        let w = max(1, hudBarWidthCurrent * pct)
+        hudStaminaBarFill.path = UIBezierPath(
+            roundedRect: CGRect(x: 0, y: -hudBarHeight / 2, width: w, height: hudBarHeight),
+            cornerRadius: 4
+        ).cgPath
+
+        if pct > 0.5 {
+            hudStaminaBarFill.fillColor = .systemGreen
+        } else if pct > 0.25 {
+            hudStaminaBarFill.fillColor = .systemYellow
+        } else {
+            hudStaminaBarFill.fillColor = .systemRed
         }
     }
 

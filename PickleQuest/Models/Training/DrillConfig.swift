@@ -34,22 +34,22 @@ struct DrillConfig: Sendable {
                 playerMinNX: 0.0, playerMaxNX: 1.0,
                 inputMode: .joystick,
                 rallyShotsRequired: 5,
-                totalRounds: 10,
+                totalRounds: 5,
                 showConeTargets: false,
-                instructions: "Use the joystick to move.\nGet 5 returns in a row to complete a rally.\nComplete 10 rallies!"
+                instructions: "Rally 5 shots in a row to score a point.\nComplete 5 rallies to finish!\n\nTry Topspin for aggressive drives.\nUse Power + Focus for deep baseline shots."
             )
         case .dinkingDrill:
             return DrillConfig(
                 drillType: .dinkingDrill,
-                playerStartNX: 0.5, playerStartNY: 0.30,
+                playerStartNX: 0.5, playerStartNY: 0.318,
                 coachStartNX: 0.5, coachStartNY: 0.82,
-                playerMinNY: 0.15, playerMaxNY: 0.31,
+                playerMinNY: 0.15, playerMaxNY: 0.318,
                 playerMinNX: 0.0, playerMaxNX: 1.0,
                 inputMode: .joystick,
                 rallyShotsRequired: 5,
-                totalRounds: 10,
+                totalRounds: 5,
                 showConeTargets: false,
-                instructions: "Use the joystick to move.\nGet 5 returns in a row to complete a rally.\nComplete 10 rallies!"
+                instructions: "Dink 5 soft shots in a row to score.\nComplete 5 rallies to finish!\n\nUse Reset for soft dinks over the net.\nSlice keeps the ball low after the bounce."
             )
         case .servePractice:
             return DrillConfig(
@@ -62,7 +62,7 @@ struct DrillConfig: Sendable {
                 rallyShotsRequired: 0,
                 totalRounds: 10,
                 showConeTargets: false,
-                instructions: "Swipe up to serve!\nAngle your swipe to aim left or right.\n5 serves each side!"
+                instructions: "Swipe up to serve!\nAngle your swipe to aim left or right.\n5 serves each side!\n\nSmooth upward motion — contact at waist level.\nAim small, miss small."
             )
         case .accuracyDrill:
             return DrillConfig(
@@ -75,7 +75,7 @@ struct DrillConfig: Sendable {
                 rallyShotsRequired: 0,
                 totalRounds: 10,
                 showConeTargets: true,
-                instructions: "Return the coach's serves!\nAim for the cones on the other side.\n10 serves to return!"
+                instructions: "Return the coach's serves!\nAim for the cones on the other side.\n\nUse Focus for pinpoint accuracy.\nAngled shots target the sidelines."
             )
         case .returnOfServe:
             return DrillConfig(
@@ -88,7 +88,7 @@ struct DrillConfig: Sendable {
                 rallyShotsRequired: 0,
                 totalRounds: 10,
                 showConeTargets: true,
-                instructions: "Return the coach's cross-court serves!\nAim for the cones on their side.\n5 serves from each side!"
+                instructions: "Return the coach's cross-court serves!\nAim for the cones on their side.\n\nDeep returns pin the server back.\nUse Focus + Angled for cone targets."
             )
         }
     }

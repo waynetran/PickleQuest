@@ -16,6 +16,7 @@ final class DrillScorekeeper {
     var currentConsecutiveReturns: Int = 0
     var coneHits: Int = 0
     var totalRoundsAttempted: Int = 0
+    private var currentRallyCompleted = false
 
     let totalRounds: Int
     let rallyShotsRequired: Int
@@ -59,10 +60,21 @@ final class DrillScorekeeper {
         }
     }
 
-    /// Called when the player completes 5 consecutive returns in rally mode.
+    /// Called when the player completes the required consecutive returns in rally mode,
+    /// or when the player wins the point outright.
     func onRallyCompleted() {
+        guard !currentRallyCompleted else { return }
+        currentRallyCompleted = true
         ralliesCompleted += 1
         currentConsecutiveReturns = 0
+    }
+
+    /// Called when the player wins the point (opponent error or winner).
+    /// In rally mode, this counts as a completed rally even if < required shots.
+    func onPlayerWonPoint() {
+        if scoringMode == .rallyStreak {
+            onRallyCompleted()
+        }
     }
 
     func onBallFed() {
@@ -78,6 +90,7 @@ final class DrillScorekeeper {
         if scoringMode == .rallyStreak {
             currentConsecutiveReturns = 0
         }
+        currentRallyCompleted = false
     }
 
     func onConeHit() {
@@ -85,7 +98,12 @@ final class DrillScorekeeper {
     }
 
     var isAllRoundsComplete: Bool {
-        totalRoundsAttempted >= totalRounds
+        switch scoringMode {
+        case .rallyStreak:
+            return ralliesCompleted >= totalRounds
+        case .serveAccuracy, .returnTarget:
+            return totalRoundsAttempted >= totalRounds
+        }
     }
 
     var successRate: Double {
@@ -147,7 +165,8 @@ final class DrillScorekeeper {
             longestRally: longestRally,
             performanceGrade: performanceGrade,
             ralliesCompleted: ralliesCompleted,
-            coneHits: coneHits
+            coneHits: coneHits,
+            totalRounds: totalRounds
         )
     }
 }

@@ -380,6 +380,112 @@ struct CoachPersonality: Sendable {
         return lines.randomElement()!
     }
 
+    // MARK: - Feed Tips (real coaching + personality mix)
+
+    /// Real coaching tip or personality-flavored encouragement shown before each feed.
+    func feedTip(drillType: DrillType) -> String {
+        // 60% real technique tip, 40% personality encouragement
+        if CGFloat.random(in: 0...1) < 0.6 {
+            return Self.coachingTip(for: drillType)
+        } else {
+            return encouragementLine()
+        }
+    }
+
+    private func encouragementLine() -> String {
+        let lines: [String]
+        switch type {
+        case .enthusiastic:
+            lines = ["You got this!", "Let's go! I believe in you!", "Keep that energy up!", "You're doing great!"]
+        case .grumpy:
+            lines = ["Again.", "Focus up.", "Don't waste my time.", "Show me something."]
+        case .chill:
+            lines = ["Take your time.", "Just feel it out.", "No pressure, just vibes.", "Stay loose."]
+        case .jokester:
+            lines = ["Ready? Don't blink!", "This one's gonna be good!", "Plot twist incoming!", "Here we go again!"]
+        case .drill_sergeant:
+            lines = ["Eyes forward!", "Stay sharp!", "No slacking!", "Execute!"]
+        case .zen:
+            lines = ["Breathe.", "Be present.", "Clear your mind.", "Feel the court."]
+        case .hype:
+            lines = ["HERE WE GO!!", "LET'S GET IT!!", "ENERGY UP!!", "THIS IS YOUR MOMENT!!"]
+        }
+        return lines.randomElement()!
+    }
+
+    /// Real, actionable coaching tips per drill type.
+    private static func coachingTip(for drillType: DrillType) -> String {
+        let tips: [String]
+        switch drillType {
+        case .dinkingDrill:
+            tips = [
+                "Soft hands — let the paddle absorb the ball.",
+                "Stay low! Bend your knees, not your back.",
+                "Aim for their feet, make them hit up.",
+                "Push from the shoulder, keep it compact.",
+                "Cross-court dinks have more margin over the net.",
+                "Keep your paddle up and out front, always.",
+                "Change the pace — throw in a slow one.",
+                "Watch their paddle face, it tells you where it's going.",
+                "Move your feet! Shuffle and set up, don't reach.",
+                "Patient! A dink rally is chess, not boxing.",
+            ]
+        case .baselineRally:
+            tips = [
+                "Deep balls! Push them past the service line.",
+                "Get your feet set before you swing.",
+                "Follow through toward your target.",
+                "Hit through the ball — drive forward, don't chop.",
+                "Reset to center after every shot.",
+                "Add topspin for margin — brush up the ball.",
+                "Contact point out front, not beside you.",
+                "Keep it low over the net — high balls are attackable.",
+                "Use your legs! Power comes from the ground up.",
+                "Consistent depth beats flashy power every time.",
+            ]
+        case .servePractice:
+            tips = [
+                "Serve deep! A short serve is a gift.",
+                "Low and flat to their backhand side.",
+                "Follow through up and out — don't stop short.",
+                "Mix up placement: wide, center, at the body.",
+                "Relax your grip — a death grip kills touch.",
+                "Contact at waist level, smooth upward motion.",
+                "A reliable serve beats a hard serve. Get it in.",
+                "Pick your spot before you serve. Aim small, miss small.",
+                "Add spin variation — small changes disrupt timing.",
+                "Same toss every time — consistency starts there.",
+            ]
+        case .accuracyDrill:
+            tips = [
+                "Aim for a spot, not a general area.",
+                "Eyes on contact! Watch ball hit paddle.",
+                "Control the paddle angle — degrees matter.",
+                "Slow down to speed up. Accuracy first.",
+                "Hit to the open court — make them move.",
+                "Shorten your backswing for more control.",
+                "Aim two feet inside the lines — give yourself margin.",
+                "Commit to your target. Don't change mid-swing.",
+                "Target the transition zone — hardest place to return from.",
+                "Down the middle solves the riddle.",
+            ]
+        case .returnOfServe:
+            tips = [
+                "Deep return every time — pin them at the baseline.",
+                "Split step as they contact the ball.",
+                "Get to the kitchen line after your return!",
+                "Block hard serves back deep — don't overswing.",
+                "Return to their backhand — most players are weaker there.",
+                "Watch the server's paddle angle, not their body.",
+                "High, deep, and boring wins. Save hero shots for later.",
+                "Stay loose on your feet — flat-footed returns are weak.",
+                "Take the ball early — steal their recovery time.",
+                "A deep return is your ticket to the net.",
+            ]
+        }
+        return tips.randomElement()!
+    }
+
     // MARK: - End of Drill
 
     func drillEndLine(grade: PerformanceGrade) -> String {

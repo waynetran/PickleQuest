@@ -17,6 +17,9 @@ final class DrillBallSimulation {
     // Spin curve applied each frame
     var spinCurve: CGFloat = 0
 
+    // Topspin/backspin factor (-1 = backspin, 0 = flat, +1 = topspin)
+    var topspinFactor: CGFloat = 0
+
     var bounceCount: Int = 0
     var isActive: Bool = false
     var lastHitByPlayer: Bool = false
@@ -37,6 +40,13 @@ final class DrillBallSimulation {
         // Apply gravity
         vz -= P.gravity * dt
 
+        // Magnus effect: topspin pulls ball down faster, backspin holds it up
+        // Topspin: extra downward acceleration (ball dips)
+        // Slice: slight upward force (ball floats/hangs)
+        if topspinFactor != 0 && height > 0 {
+            vz -= topspinFactor * 0.6 * dt
+        }
+
         // Update height
         height += vz * dt
 
@@ -48,6 +58,19 @@ final class DrillBallSimulation {
             vx *= P.courtFriction
             vy *= P.courtFriction
 
+            // Topspin/backspin effects on bounce
+            // Topspin: accelerates 30% after bounce, stays low (kills bounce height)
+            // Slice (backspin): skids forward, stays very low after bounce
+            if topspinFactor > 0 {
+                // Topspin: big forward acceleration, flatten bounce
+                vy *= (1.0 + topspinFactor * 0.30)
+                vz *= (1.0 - topspinFactor * 0.4)  // much flatter bounce
+            } else if topspinFactor < 0 {
+                // Slice/backspin: skid — less forward speed lost, very low bounce
+                vy *= (1.0 + topspinFactor * 0.05)  // slight slowdown
+                vz *= (1.0 + topspinFactor * 0.35)  // kills bounce height (stays low)
+            }
+
             // Kill very small bounces
             if abs(vz) < 0.05 {
                 vz = 0
@@ -55,7 +78,7 @@ final class DrillBallSimulation {
         }
     }
 
-    func launch(from origin: CGPoint, toward target: CGPoint, power: CGFloat, arc: CGFloat, spin: CGFloat) {
+    func launch(from origin: CGPoint, toward target: CGPoint, power: CGFloat, arc: CGFloat, spin: CGFloat, topspin: CGFloat = 0) {
         courtX = origin.x
         courtY = origin.y
         height = 0.05  // slightly above ground for visual clarity
@@ -82,6 +105,9 @@ final class DrillBallSimulation {
 
         // Spin sets lateral curve
         spinCurve = spin * P.spinCurveFactor
+
+        // Store topspin/backspin factor
+        topspinFactor = topspin
 
         bounceCount = 0
         activeTime = 0
@@ -120,6 +146,7 @@ final class DrillBallSimulation {
         vy = 0
         vz = 0
         spinCurve = 0
+        topspinFactor = 0
         bounceCount = 0
         isActive = false
         lastHitByPlayer = false

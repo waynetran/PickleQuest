@@ -11,6 +11,7 @@ struct InteractiveDrillResult: Sendable {
     let performanceGrade: PerformanceGrade
     let ralliesCompleted: Int
     let coneHits: Int
+    let totalRounds: Int
 }
 
 enum PerformanceGrade: String, Sendable {

@@ -171,7 +171,7 @@ struct InteractiveDrillView: View {
                 if result.drill.type == .baselineRally || result.drill.type == .dinkingDrill {
                     // Rally drills: show rallies completed + best streak
                     VStack(spacing: 4) {
-                        Text("\(result.ralliesCompleted)/10")
+                        Text("\(result.ralliesCompleted)/\(result.totalRounds)")
                             .font(.title2.bold().monospacedDigit())
                         Text("Rallies")
                             .font(.caption)
