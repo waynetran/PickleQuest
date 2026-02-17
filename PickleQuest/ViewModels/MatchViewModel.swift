@@ -147,17 +147,16 @@ final class MatchViewModel {
         await runEngineStream(engine: newEngine, player: player, opponent: opponent)
     }
 
-    func startInteractiveMatch(player: Player, opponent: NPC, courtName: String = "", wagerAmount: Int = 0) {
-        selectedNPC = opponent
-        self.courtName = courtName
-        self.playerName = player.name
-        self.wagerAmount = wagerAmount
-        self.isHustlerMatch = opponent.isHustler
-        isDoublesMode = false
+    /// Switch from a simulated match (already in .simulating state) to interactive mode.
+    /// Discards the running engine and transitions to .interactiveMatch.
+    func switchToInteractive(player: Player) {
+        guard let opponent = selectedNPC else { return }
 
-        playerAppearance = player.appearance
-        opponentAppearance = AppearanceGenerator.appearance(for: opponent)
+        // Discard the running simulation engine
+        engine = nil
+        courtScene = nil
 
+        // Reconfigure for interactive match scoring
         let effectiveRated = effectiveIsRated(
             playerRating: player.duprRating,
             opponentRating: opponent.duprRating
@@ -171,7 +170,6 @@ final class MatchViewModel {
             wagerAmount: wagerAmount
         )
 
-        resetMatchState()
         matchState = .interactiveMatch
     }
 

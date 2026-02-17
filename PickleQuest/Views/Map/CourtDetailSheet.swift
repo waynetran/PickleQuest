@@ -16,7 +16,6 @@ struct CourtDetailSheet: View {
     let player: Player
     @Binding var isRated: Bool
     @Binding var isDoublesMode: Bool
-    @Binding var matchPlayMode: MatchPlayMode
     let onChallenge: (NPC) -> Void
     let onDoublesChallenge: (NPC, NPC) -> Void
     let onTournament: () -> Void
@@ -30,9 +29,6 @@ struct CourtDetailSheet: View {
                     courtHeader
                     Divider()
                     matchModeToggle
-                    if !isDoublesMode {
-                        matchPlayModeToggle
-                    }
                     ratedToggle
                     perkBadges
                     coachSection
@@ -114,17 +110,6 @@ struct CourtDetailSheet: View {
         Picker("Mode", selection: $isDoublesMode) {
             Text("Singles").tag(false)
             Text("Doubles").tag(true)
-        }
-        .pickerStyle(.segmented)
-        .padding(.horizontal)
-    }
-
-    // MARK: - Match Play Mode Toggle
-
-    private var matchPlayModeToggle: some View {
-        Picker("Match Type", selection: $matchPlayMode) {
-            Text("Simulated").tag(MatchPlayMode.simulated)
-            Text("Interactive").tag(MatchPlayMode.interactive)
         }
         .pickerStyle(.segmented)
         .padding(.horizontal)

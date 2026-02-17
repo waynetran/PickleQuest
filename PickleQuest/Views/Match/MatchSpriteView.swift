@@ -3,8 +3,10 @@ import SpriteKit
 
 struct MatchSpriteView: View {
     let viewModel: MatchViewModel
+    @Environment(AppState.self) private var appState
     @State private var scene: MatchCourtScene?
     @State private var showPreMatchOverlay = true
+    @State private var selectedPlayMode: MatchPlayMode = .simulated
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -109,35 +111,61 @@ struct MatchSpriteView: View {
         }
     }
 
+    // MARK: - Pre-Match Overlay
+
     private var preMatchOverlay: some View {
         let opponentName = viewModel.selectedNPC?.name ?? "Opponent"
         let matchType = viewModel.isDoublesMode ? "Doubles" : "Singles"
 
         return VStack(spacing: 16) {
+            // Opponent info
             Text("vs \(opponentName)")
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
                 .foregroundStyle(.green)
 
-            Text(matchType)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 10) {
-                actionRow(icon: "pause.circle", title: "Timeout", desc: "Call a timeout to pause play and regroup")
-                actionRow(icon: "sparkles", title: "Item", desc: "Use a consumable item for a temporary boost")
-                actionRow(icon: "exclamationmark.triangle", title: "Hook", desc: "Challenge a close line call")
-                actionRow(icon: "flag", title: "Resign", desc: "Forfeit the match")
-                actionRow(icon: "forward.fill", title: "Skip", desc: "Fast-forward to the end")
+            if let npc = viewModel.selectedNPC {
+                HStack(spacing: 8) {
+                    Text("DUPR \(String(format: "%.1f", npc.duprRating))")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.secondary)
+                    DifficultyBadge(difficulty: npc.difficulty)
+                    Text(matchType)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Divider()
 
+            // Watch / Play mode picker (singles only)
+            if !viewModel.isDoublesMode {
+                Picker("Match Mode", selection: $selectedPlayMode) {
+                    Text("Watch Match").tag(MatchPlayMode.simulated)
+                    Text("Play Match").tag(MatchPlayMode.interactive)
+                }
+                .pickerStyle(.segmented)
+            }
+
+            // Mode-specific content
+            if selectedPlayMode == .interactive && !viewModel.isDoublesMode {
+                interactiveInstructions
+            } else {
+                simulatedInstructions
+            }
+
+            Divider()
+
+            // Start button
             Button {
-                showPreMatchOverlay = false
+                if selectedPlayMode == .interactive && !viewModel.isDoublesMode {
+                    viewModel.switchToInteractive(player: appState.player)
+                } else {
+                    showPreMatchOverlay = false
+                }
             } label: {
-                Text("Let's Play Pickleball!")
+                Text(selectedPlayMode == .interactive && !viewModel.isDoublesMode
+                     ? "Start Match"
+                     : "Let's Play Pickleball!")
                     .font(.title2.bold())
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -150,6 +178,40 @@ struct MatchSpriteView: View {
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .padding()
+    }
+
+    // MARK: - Interactive Instructions
+
+    private var interactiveInstructions: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            actionRow(icon: "arrow.up.and.down.and.arrow.left.and.right",
+                      title: "Move",
+                      desc: "Joystick to move. Push further to sprint.")
+            actionRow(icon: "hand.draw",
+                      title: "Serve",
+                      desc: "Swipe up to serve. Angle and distance control aim and power.")
+            actionRow(icon: "hand.tap",
+                      title: "Shot Modes",
+                      desc: "Toggle Power, Slice, Topspin, Angled, Reset, or Focus before hitting.")
+            actionRow(icon: "bolt.fill",
+                      title: "Stamina",
+                      desc: "Sprinting and Power/Focus modes drain stamina. Stop moving to recover. Low stamina weakens your shots!")
+            actionRow(icon: "sportscourt",
+                      title: "Scoring",
+                      desc: "Side-out singles to 11, win by 2. Only the server can score.")
+        }
+    }
+
+    // MARK: - Simulated Instructions
+
+    private var simulatedInstructions: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            actionRow(icon: "pause.circle", title: "Timeout", desc: "Call a timeout to pause play and regroup")
+            actionRow(icon: "sparkles", title: "Item", desc: "Use a consumable item for a temporary boost")
+            actionRow(icon: "exclamationmark.triangle", title: "Hook", desc: "Challenge a close line call")
+            actionRow(icon: "flag", title: "Resign", desc: "Forfeit the match")
+            actionRow(icon: "forward.fill", title: "Skip", desc: "Fast-forward to the end")
+        }
     }
 
     private func actionRow(icon: String, title: String, desc: String) -> some View {

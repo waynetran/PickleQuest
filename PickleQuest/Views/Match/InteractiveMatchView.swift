@@ -12,7 +12,6 @@ struct InteractiveMatchView: View {
     let onComplete: (MatchResult) -> Void
 
     @State private var matchResult: MatchResult?
-    @State private var showInstructions = true
     @State private var scene: InteractiveMatchScene?
 
     var body: some View {
@@ -26,17 +25,8 @@ struct InteractiveMatchView: View {
                     .ignoresSafeArea()
             }
 
-            // Instruction overlay (before match starts)
-            if showInstructions {
-                VStack {
-                    Spacer()
-                    instructionOverlay
-                }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-
             // Exit button (top right, during active match only)
-            if !showInstructions && matchResult == nil {
+            if matchResult == nil {
                 VStack {
                     HStack {
                         Spacer()
@@ -66,11 +56,14 @@ struct InteractiveMatchView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: showInstructions)
         .animation(.easeInOut(duration: 0.3), value: matchResult != nil)
         .navigationBarBackButtonHidden(true)
         .task {
-            scene = makeScene()
+            guard scene == nil else { return }
+            let newScene = makeScene()
+            scene = newScene
+            // Auto-start the match immediately — instructions were already shown
+            newScene.beginMatch()
         }
     }
 
@@ -85,60 +78,6 @@ struct InteractiveMatchView: View {
                 matchResult = result
             }
         )
-    }
-
-    // MARK: - Instruction Overlay
-
-    private var instructionOverlay: some View {
-        VStack(spacing: 16) {
-            // NPC info
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(npc.name)
-                        .font(.system(size: 24, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.white)
-                    Text("DUPR \(String(format: "%.1f", npc.duprRating))")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.secondary)
-                    DifficultyBadge(difficulty: npc.difficulty)
-                }
-                Spacer()
-            }
-
-            Divider()
-
-            Text("Interactive Match — Singles to 11")
-                .font(.headline)
-                .foregroundStyle(.green)
-
-            VStack(spacing: 4) {
-                Label("Joystick to move, push further to sprint", systemImage: "arrow.up.and.down.and.arrow.left.and.right")
-                Label("Buttons to select shot modes", systemImage: "hand.tap")
-                Label("Swipe up to serve", systemImage: "hand.draw")
-                Label("Side-out scoring, win by 2", systemImage: "sportscourt")
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-
-            Divider()
-
-            Button {
-                showInstructions = false
-                scene?.beginMatch()
-            } label: {
-                Text("Start Match")
-                    .font(.title2.bold())
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(.green)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-        }
-        .padding()
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .padding()
     }
 
     // MARK: - Result Overlay
