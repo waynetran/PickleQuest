@@ -49,7 +49,7 @@ struct NPC: Identifiable, Codable, Equatable, Hashable, Sendable {
     }
     /// Create a practice match opponent at a target DUPR rating.
     static func practiceOpponent(dupr: Double) -> NPC {
-        let baseStats = StatProfileLoader.shared.toPlayerStats(dupr: dupr)
+        let baseStats = StatProfileLoader.shared.toNPCStats(dupr: dupr)
         // Add ±20% variance per stat for natural variety
         func vary(_ base: Int) -> Int {
             let variance = max(3, base / 5)

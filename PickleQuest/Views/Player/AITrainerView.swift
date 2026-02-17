@@ -7,8 +7,11 @@ struct AITrainerView: View {
         List {
             controlSection
             progressSection
-            if !viewModel.session.winRateResults.isEmpty {
-                winRateSection
+            if !viewModel.session.npcVsNPCResults.isEmpty {
+                pointDiffSection
+            }
+            if !viewModel.session.playerVsNPCResults.isEmpty {
+                playerVsNPCSection
             }
             if let report = viewModel.report {
                 reportSection(report)
@@ -32,7 +35,7 @@ struct AITrainerView: View {
                 }
             }
         } footer: {
-            Text("Runs NPC-vs-NPC matches across DUPR pairings to optimize rally probability constants using evolution strategy.")
+            Text("Optimizes NPC stat profiles so match simulation produces DUPR-expected point differentials (1.2 pts per 0.1 DUPR gap).")
         }
     }
 
@@ -41,7 +44,7 @@ struct AITrainerView: View {
     private var progressSection: some View {
         Section("Progress") {
             LabeledContent("Generation") {
-                Text("\(viewModel.session.generation) / 200")
+                Text("\(viewModel.session.generation) / 300")
                     .monospacedDigit()
             }
             .font(.subheadline)
@@ -74,32 +77,80 @@ struct AITrainerView: View {
         }
     }
 
-    // MARK: - Win Rate Table
+    // MARK: - NPC-vs-NPC Point Diff Table
 
-    private var winRateSection: some View {
-        Section("Win Rates") {
-            ForEach(viewModel.session.winRateResults) { entry in
+    private var pointDiffSection: some View {
+        Section("NPC Point Differentials") {
+            ForEach(viewModel.session.npcVsNPCResults) { entry in
                 HStack {
                     Text(String(format: "%.1f vs %.1f", entry.higherDUPR, entry.lowerDUPR))
                         .font(.caption.monospacedDigit())
                         .frame(width: 100, alignment: .leading)
 
-                    let diff = abs(entry.actualWinRate - entry.targetWinRate)
-                    let color: Color = diff < 0.03 ? .green : diff < 0.08 ? .yellow : .red
+                    let diff = abs(entry.actualPointDiff - entry.targetPointDiff)
+                    let color: Color = diff < 1.0 ? .green : diff < 3.0 ? .yellow : .red
 
-                    Text(String(format: "%.0f%%", entry.actualWinRate * 100))
+                    Text(String(format: "%+.1f", entry.actualPointDiff))
                         .font(.caption.bold().monospacedDigit())
                         .foregroundStyle(color)
 
-                    Text(String(format: "(target %.0f%%)", entry.targetWinRate * 100))
+                    Text(String(format: "(target %+.1f)", entry.targetPointDiff))
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.secondary)
 
                     Spacer()
 
-                    Text(String(format: "±%.1f", entry.avgScoreMargin))
+                    Text(String(format: "%.0f%%", entry.actualWinRate * 100))
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    // MARK: - Player-vs-NPC Balance
+
+    private var playerVsNPCSection: some View {
+        Section("Player vs NPC Balance") {
+            ForEach(viewModel.session.playerVsNPCResults) { entry in
+                HStack {
+                    Text(String(format: "DUPR %.1f", entry.dupr))
+                        .font(.caption.monospacedDigit())
+                        .frame(width: 80, alignment: .leading)
+
+                    Text(String(format: "+%d equip", entry.npcEquipBonus))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    let diff = abs(entry.actualPointDiff - entry.targetPointDiff)
+                    let color: Color = diff < 1.0 ? .green : diff < 2.0 ? .yellow : .red
+
+                    Text(String(format: "%+.1f pts", entry.actualPointDiff))
+                        .font(.caption.bold().monospacedDigit())
+                        .foregroundStyle(color)
+                }
+            }
+
+            if let starter = viewModel.session.starterBalance {
+                HStack {
+                    Text("Starter")
+                        .font(.caption.monospacedDigit())
+                        .frame(width: 80, alignment: .leading)
+
+                    Text("vs NPC 2.0")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    let diff = abs(starter.actualPointDiff - starter.targetPointDiff)
+                    let color: Color = diff < 1.0 ? .green : diff < 2.0 ? .yellow : .red
+
+                    Text(String(format: "%+.1f pts", starter.actualPointDiff))
+                        .font(.caption.bold().monospacedDigit())
+                        .foregroundStyle(color)
                 }
             }
         }
@@ -132,34 +183,29 @@ struct AITrainerView: View {
             ShareLink(
                 item: report.formattedReport(),
                 subject: Text("PickleQuest AI Training Report"),
-                message: Text("Training results from PickleQuest AI parameter optimizer")
+                message: Text("Training results from PickleQuest AI stat profile optimizer")
             ) {
                 Label("Share Report", systemImage: "square.and.arrow.up")
             }
 
-            // Show optimized parameters
-            DisclosureGroup("Optimized Parameters") {
-                let defaults = SimulationParameters.defaults.toArray()
-                let current = report.parameters.toArray()
-                let names = SimulationParameters.parameterNames
+            // Show optimized stat profiles by DUPR
+            DisclosureGroup("Stat Profiles by DUPR") {
+                let profiles = report.statProfiles()
+                let names = SimulationParameters.statNames
 
-                ForEach(0..<names.count, id: \.self) { i in
-                    HStack {
-                        Text(names[i])
-                            .font(.caption2)
-                            .lineLimit(1)
-                        Spacer()
-                        Text(String(format: "%.4f", current[i]))
-                            .font(.caption2.bold().monospacedDigit())
-                        if abs(current[i] - defaults[i]) > 0.0001 {
-                            Image(systemName: "arrow.left.arrow.right")
-                                .font(.caption2)
-                                .foregroundStyle(.orange)
-                            Text(String(format: "%.4f", defaults[i]))
-                                .font(.caption2.monospacedDigit())
-                                .foregroundStyle(.secondary)
+                ForEach(profiles) { profile in
+                    DisclosureGroup("DUPR \(String(format: "%.1f", profile.dupr))") {
+                        ForEach(0..<names.count, id: \.self) { i in
+                            HStack {
+                                Text(names[i].capitalized)
+                                    .font(.caption2)
+                                Spacer()
+                                Text("\(profile.stats[i])")
+                                    .font(.caption2.bold().monospacedDigit())
+                            }
                         }
                     }
+                    .font(.caption)
                 }
             }
             .font(.subheadline)

@@ -7,7 +7,7 @@ struct StatProfileTrainingTests {
 
     /// Run ES optimizer headlessly and write optimized stat profiles to JSON.
     ///
-    /// This test takes ~2-3 minutes. Run explicitly:
+    /// This test takes ~5-10 minutes. Run explicitly:
     /// ```
     /// xcodebuild test -project PickleQuest.xcodeproj -scheme PickleQuest \
     ///   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
@@ -47,5 +47,8 @@ struct StatProfileTrainingTests {
         let decoded = try JSONDecoder().decode(SimulationParameters.self, from: readBack)
         #expect(decoded.slopes.count == 11)
         #expect(decoded.offsets.count == 11)
+        #expect(decoded.playerStarterStats.count == 11)
+        #expect(decoded.npcEquipSlope >= 0)
+        #expect(decoded.npcEquipOffset >= 0)
     }
 }

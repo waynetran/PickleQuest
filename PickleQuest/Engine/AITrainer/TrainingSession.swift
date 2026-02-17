@@ -5,35 +5,41 @@ import Foundation
 /// Configuration constants for the AI training system.
 /// Extracted from TrainingSession to avoid @MainActor isolation on constants.
 private enum TrainingConfig {
-    static let populationSize = 20
+    static let populationSize = 30
     static let sigma: Double = 0.05
     static let learningRate: Double = 0.01
     static let matchesPerPair = 200
-    static let maxGenerations = 200
+    static let maxGenerations = 300
     static let convergenceThreshold: Double = 0.001
-    static let convergencePatience = 10
+    static let convergencePatience = 15
 
     // Fitness weights
-    static let winRateMSEWeight: Double = 1.0
-    static let scoreMarginWeight: Double = 0.3
+    static let npcPointDiffWeight: Double = 1.0
+    static let playerVsNPCPointDiffWeight: Double = 0.8
+    static let starterPointDiffWeight: Double = 0.5
     static let rallyLengthWeight: Double = 0.1
     static let targetRallyLength: Double = 6.5
+
+    // Player-vs-NPC target: player (bare stats) should lose by ~2 points without equipment
+    static let playerVsNPCTargetDiff: Double = -2.0
+    // Starter target: new player vs NPC at DUPR 2.0 should be even
+    static let starterTargetDiff: Double = 0.0
 }
 
 struct TrainingTestPair: Sendable {
     let higherDUPR: Double
     let lowerDUPR: Double
-    let targetWinRate: Double
-    let targetMargin: Double
+    /// Expected signed point differential: higher player score minus lower player score.
+    /// Based on DUPR formula: 1.2 points per 0.1 DUPR gap (12.0 per 1.0 gap) in an 11-point game.
+    let targetPointDiff: Double
 }
 
-/// Elo-style expected win rate: `1/(1+10^(gap*100/400))`
+/// DUPR-based expected point differential: `gap * 12.0` points per game to 11.
 private func makeTestPair(higher: Double, lower: Double) -> TrainingTestPair {
     let gap = higher - lower
-    let expectedWinRate = 1.0 / (1.0 + pow(10.0, -gap * 100.0 / 400.0))
-    let targetMargin = gap * 2.5
+    let targetPointDiff = gap * 12.0
     return TrainingTestPair(higherDUPR: higher, lowerDUPR: lower,
-                            targetWinRate: expectedWinRate, targetMargin: targetMargin)
+                            targetPointDiff: targetPointDiff)
 }
 
 private let allTestPairs: [TrainingTestPair] = {
@@ -55,10 +61,14 @@ private let allTestPairs: [TrainingTestPair] = {
     return pairs
 }()
 
+/// Player-vs-NPC test pairs: player uses bare stats, NPC uses stats + virtual equipment.
+private let playerVsNPCTestDUPRs: [Double] = [2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
+
 // MARK: - Training Session
 
 /// Natural Evolution Strategy trainer that optimizes `SimulationParameters`
-/// so that NPC-vs-NPC match win rates match real-world DUPR expectations.
+/// (per-stat mapping coefficients) so that NPC-vs-NPC match point differentials match
+/// real-world DUPR expectations, and player-vs-NPC balance is calibrated.
 @Observable
 @MainActor
 final class TrainingSession {
@@ -69,7 +79,9 @@ final class TrainingSession {
     var currentFitness: Double = .infinity
     var bestFitness: Double = .infinity
     var bestParameters: SimulationParameters = .defaults
-    var winRateResults: [TrainingReport.WinRateEntry] = []
+    var npcVsNPCResults: [TrainingReport.PointDiffEntry] = []
+    var playerVsNPCResults: [TrainingReport.PlayerVsNPCEntry] = []
+    var starterBalance: TrainingReport.PlayerVsNPCEntry?
     var avgRallyLength: Double = 0
     var isRunning: Bool = false
     var progress: Double = 0
@@ -156,8 +168,8 @@ final class TrainingSession {
                 bestParameters = currentParams
             }
 
-            // Update win rate table for UI
-            updateWinRateTable(params: currentParams, seed: UInt64(generation * 10000))
+            // Update tables for UI
+            updateResultsTables(params: currentParams, seed: UInt64(generation * 10000))
 
             // Convergence check
             if abs(previousBestFitness - bestFitness) < TrainingConfig.convergenceThreshold {
@@ -180,13 +192,17 @@ final class TrainingSession {
 
         // Final evaluation with more matches for the report
         let finalParams = SimulationParameters(fromArray: bestTheta).clamped()
-        let finalEntries = evaluateDetailed(params: finalParams, seed: 42, matchCount: 500)
+        let finalNPCEntries = evaluateNPCDetailed(params: finalParams, seed: 42, matchCount: 500)
+        let finalPlayerEntries = evaluatePlayerVsNPCDetailed(params: finalParams, seed: 42, matchCount: 500)
+        let finalStarterEntry = evaluateStarterDetailed(params: finalParams, seed: 42, matchCount: 500)
 
         return TrainingReport(
             parameters: finalParams,
             fitnessScore: bestFitness,
             generationCount: generation,
-            winRateTable: finalEntries,
+            npcVsNPCTable: finalNPCEntries,
+            playerVsNPCTable: finalPlayerEntries,
+            starterBalance: finalStarterEntry,
             avgRallyLength: avgRallyLength,
             elapsedSeconds: elapsed
         )
@@ -199,127 +215,272 @@ final class TrainingSession {
     // MARK: - Fitness Evaluation
 
     private nonisolated func evaluateFitness(params: SimulationParameters, seed: UInt64) -> Double {
-        var winRateMSE = 0.0
-        var marginMSE = 0.0
+        var npcPointDiffMSE = 0.0
         var totalRallySum = 0.0
-        var totalMatches = 0
+        var npcMatchCount = 0
 
+        // NPC-vs-NPC: target point differential from DUPR formula
         for (pairIdx, pair) in allTestPairs.enumerated() {
-            let higherStats = NPC.practiceOpponent(dupr: pair.higherDUPR).stats
-            let lowerStats = NPC.practiceOpponent(dupr: pair.lowerDUPR).stats
+            let higherStats = params.toPlayerStats(dupr: pair.higherDUPR)
+            let lowerStats = params.toPlayerStats(dupr: pair.lowerDUPR)
 
-            var higherWins = 0
-            var totalMargin = 0.0
+            var totalPointDiff = 0.0
             var totalRallies = 0.0
 
             for m in 0..<TrainingConfig.matchesPerPair {
                 let matchSeed = seed &+ UInt64(pairIdx * 10000 + m)
                 let rng = SeededRandomSource(seed: matchSeed)
-                let sim = LightweightMatchSimulator(params: params, rng: rng)
+                let sim = LightweightMatchSimulator(rng: rng)
                 let result = sim.simulateMatch(playerStats: higherStats, opponentStats: lowerStats)
 
-                if result.winnerSide == .player { higherWins += 1 }
-                totalMargin += Double(abs(result.playerScore - result.opponentScore))
+                // Signed: higher player's score minus lower player's score
+                totalPointDiff += Double(result.playerScore - result.opponentScore)
                 totalRallies += Double(result.totalRallyShots) / Double(max(1, result.totalRallies))
             }
 
-            let actualRate = Double(higherWins) / Double(TrainingConfig.matchesPerPair)
-            let rateDiff = actualRate - pair.targetWinRate
-            winRateMSE += rateDiff * rateDiff
-
-            let avgMargin = totalMargin / Double(TrainingConfig.matchesPerPair)
-            let marginDiff = avgMargin - pair.targetMargin
-            marginMSE += marginDiff * marginDiff
+            let avgPointDiff = totalPointDiff / Double(TrainingConfig.matchesPerPair)
+            let diffError = avgPointDiff - pair.targetPointDiff
+            npcPointDiffMSE += diffError * diffError
 
             totalRallySum += totalRallies / Double(TrainingConfig.matchesPerPair)
-            totalMatches += 1
+            npcMatchCount += 1
         }
 
-        winRateMSE /= Double(totalMatches)
-        marginMSE /= Double(totalMatches)
+        npcPointDiffMSE /= Double(npcMatchCount)
 
-        let avgRally = totalRallySum / Double(totalMatches)
+        // Player-vs-NPC: player (bare stats) vs NPC (stats + virtual equip) at same DUPR
+        var playerVsNPCMSE = 0.0
+        for (idx, dupr) in playerVsNPCTestDUPRs.enumerated() {
+            let playerStats = params.toPlayerStats(dupr: dupr)
+            let npcStats = params.toNPCStats(dupr: dupr)
+
+            var totalPointDiff = 0.0
+            for m in 0..<TrainingConfig.matchesPerPair {
+                let matchSeed = seed &+ UInt64((allTestPairs.count + idx) * 10000 + m)
+                let rng = SeededRandomSource(seed: matchSeed)
+                let sim = LightweightMatchSimulator(rng: rng)
+                let result = sim.simulateMatch(playerStats: playerStats, opponentStats: npcStats)
+                totalPointDiff += Double(result.playerScore - result.opponentScore)
+            }
+
+            let avgPointDiff = totalPointDiff / Double(TrainingConfig.matchesPerPair)
+            let diffError = avgPointDiff - TrainingConfig.playerVsNPCTargetDiff
+            playerVsNPCMSE += diffError * diffError
+        }
+        playerVsNPCMSE /= Double(playerVsNPCTestDUPRs.count)
+
+        // Starter validation: trained starter stats vs NPC at DUPR 2.0 (with equip)
+        let starterStats = params.toPlayerStarterStats()
+        let starterNPCStats = params.toNPCStats(dupr: 2.0)
+        var starterPointDiff = 0.0
+        for m in 0..<TrainingConfig.matchesPerPair {
+            let matchSeed = seed &+ UInt64((allTestPairs.count + playerVsNPCTestDUPRs.count) * 10000 + m)
+            let rng = SeededRandomSource(seed: matchSeed)
+            let sim = LightweightMatchSimulator(rng: rng)
+            let result = sim.simulateMatch(playerStats: starterStats, opponentStats: starterNPCStats)
+            starterPointDiff += Double(result.playerScore - result.opponentScore)
+        }
+        let avgStarterDiff = starterPointDiff / Double(TrainingConfig.matchesPerPair)
+        let starterError = avgStarterDiff - TrainingConfig.starterTargetDiff
+        let starterMSE = starterError * starterError
+
+        let avgRally = totalRallySum / Double(npcMatchCount)
         let rallyDiff = avgRally - TrainingConfig.targetRallyLength
         let rallyPenalty = rallyDiff * rallyDiff
 
-        return winRateMSE * TrainingConfig.winRateMSEWeight
-             + marginMSE * TrainingConfig.scoreMarginWeight
+        return npcPointDiffMSE * TrainingConfig.npcPointDiffWeight
+             + playerVsNPCMSE * TrainingConfig.playerVsNPCPointDiffWeight
+             + starterMSE * TrainingConfig.starterPointDiffWeight
              + rallyPenalty * TrainingConfig.rallyLengthWeight
     }
 
-    private func updateWinRateTable(params: SimulationParameters, seed: UInt64) {
-        var entries: [TrainingReport.WinRateEntry] = []
+    private func updateResultsTables(params: SimulationParameters, seed: UInt64) {
+        var npcEntries: [TrainingReport.PointDiffEntry] = []
         var totalAvgRally = 0.0
+        let sampleSize = 100
 
         for (pairIdx, pair) in allTestPairs.enumerated() {
-            let higherStats = NPC.practiceOpponent(dupr: pair.higherDUPR).stats
-            let lowerStats = NPC.practiceOpponent(dupr: pair.lowerDUPR).stats
+            let higherStats = params.toPlayerStats(dupr: pair.higherDUPR)
+            let lowerStats = params.toPlayerStats(dupr: pair.lowerDUPR)
 
             var higherWins = 0
-            var totalMargin = 0.0
+            var totalPointDiff = 0.0
             var totalRallies = 0.0
-            let sampleSize = 100
 
             for m in 0..<sampleSize {
                 let matchSeed = seed &+ UInt64(pairIdx * 10000 + m)
                 let rng = SeededRandomSource(seed: matchSeed)
-                let sim = LightweightMatchSimulator(params: params, rng: rng)
+                let sim = LightweightMatchSimulator(rng: rng)
                 let result = sim.simulateMatch(playerStats: higherStats, opponentStats: lowerStats)
 
                 if result.winnerSide == .player { higherWins += 1 }
-                totalMargin += Double(abs(result.playerScore - result.opponentScore))
+                totalPointDiff += Double(result.playerScore - result.opponentScore)
                 totalRallies += Double(result.totalRallyShots) / Double(max(1, result.totalRallies))
             }
 
-            let actualRate = Double(higherWins) / Double(sampleSize)
-            let avgMargin = totalMargin / Double(sampleSize)
+            let actualPointDiff = totalPointDiff / Double(sampleSize)
+            let actualWinRate = Double(higherWins) / Double(sampleSize)
             totalAvgRally += totalRallies / Double(sampleSize)
 
-            entries.append(TrainingReport.WinRateEntry(
+            npcEntries.append(TrainingReport.PointDiffEntry(
                 higherDUPR: pair.higherDUPR,
                 lowerDUPR: pair.lowerDUPR,
-                actualWinRate: actualRate,
-                targetWinRate: pair.targetWinRate,
-                matchesPlayed: sampleSize,
-                avgScoreMargin: avgMargin
+                actualPointDiff: actualPointDiff,
+                targetPointDiff: pair.targetPointDiff,
+                actualWinRate: actualWinRate,
+                matchesPlayed: sampleSize
             ))
         }
 
-        winRateResults = entries
+        // Player-vs-NPC entries
+        var pvnEntries: [TrainingReport.PlayerVsNPCEntry] = []
+        for (idx, dupr) in playerVsNPCTestDUPRs.enumerated() {
+            let playerStats = params.toPlayerStats(dupr: dupr)
+            let npcStats = params.toNPCStats(dupr: dupr)
+
+            var playerWins = 0
+            var totalPointDiff = 0.0
+
+            for m in 0..<sampleSize {
+                let matchSeed = seed &+ UInt64((allTestPairs.count + idx) * 10000 + m)
+                let rng = SeededRandomSource(seed: matchSeed)
+                let sim = LightweightMatchSimulator(rng: rng)
+                let result = sim.simulateMatch(playerStats: playerStats, opponentStats: npcStats)
+
+                if result.winnerSide == .player { playerWins += 1 }
+                totalPointDiff += Double(result.playerScore - result.opponentScore)
+            }
+
+            pvnEntries.append(TrainingReport.PlayerVsNPCEntry(
+                dupr: dupr,
+                npcEquipBonus: params.npcEquipmentBonus(dupr: dupr),
+                actualPointDiff: totalPointDiff / Double(sampleSize),
+                targetPointDiff: TrainingConfig.playerVsNPCTargetDiff,
+                actualWinRate: Double(playerWins) / Double(sampleSize),
+                matchesPlayed: sampleSize
+            ))
+        }
+
+        // Starter balance
+        let starterStats = params.toPlayerStarterStats()
+        let starterNPCStats = params.toNPCStats(dupr: 2.0)
+        var starterWins = 0
+        var starterPointDiff = 0.0
+        for m in 0..<sampleSize {
+            let matchSeed = seed &+ UInt64((allTestPairs.count + playerVsNPCTestDUPRs.count) * 10000 + m)
+            let rng = SeededRandomSource(seed: matchSeed)
+            let sim = LightweightMatchSimulator(rng: rng)
+            let result = sim.simulateMatch(playerStats: starterStats, opponentStats: starterNPCStats)
+            if result.winnerSide == .player { starterWins += 1 }
+            starterPointDiff += Double(result.playerScore - result.opponentScore)
+        }
+
+        npcVsNPCResults = npcEntries
+        playerVsNPCResults = pvnEntries
+        starterBalance = TrainingReport.PlayerVsNPCEntry(
+            dupr: 2.0,
+            npcEquipBonus: params.npcEquipmentBonus(dupr: 2.0),
+            actualPointDiff: starterPointDiff / Double(sampleSize),
+            targetPointDiff: TrainingConfig.starterTargetDiff,
+            actualWinRate: Double(starterWins) / Double(sampleSize),
+            matchesPlayed: sampleSize
+        )
         avgRallyLength = totalAvgRally / Double(allTestPairs.count)
     }
 
-    private nonisolated func evaluateDetailed(params: SimulationParameters, seed: UInt64, matchCount: Int) -> [TrainingReport.WinRateEntry] {
-        var entries: [TrainingReport.WinRateEntry] = []
+    // MARK: - Detailed Evaluation (for final report)
+
+    private nonisolated func evaluateNPCDetailed(params: SimulationParameters, seed: UInt64, matchCount: Int) -> [TrainingReport.PointDiffEntry] {
+        var entries: [TrainingReport.PointDiffEntry] = []
 
         for (pairIdx, pair) in allTestPairs.enumerated() {
-            let higherStats = NPC.practiceOpponent(dupr: pair.higherDUPR).stats
-            let lowerStats = NPC.practiceOpponent(dupr: pair.lowerDUPR).stats
+            let higherStats = params.toPlayerStats(dupr: pair.higherDUPR)
+            let lowerStats = params.toPlayerStats(dupr: pair.lowerDUPR)
 
             var higherWins = 0
-            var totalMargin = 0.0
+            var totalPointDiff = 0.0
 
             for m in 0..<matchCount {
                 let matchSeed = seed &+ UInt64(pairIdx * 10000 + m)
                 let rng = SeededRandomSource(seed: matchSeed)
-                let sim = LightweightMatchSimulator(params: params, rng: rng)
+                let sim = LightweightMatchSimulator(rng: rng)
                 let result = sim.simulateMatch(playerStats: higherStats, opponentStats: lowerStats)
 
                 if result.winnerSide == .player { higherWins += 1 }
-                totalMargin += Double(abs(result.playerScore - result.opponentScore))
+                totalPointDiff += Double(result.playerScore - result.opponentScore)
             }
 
-            entries.append(TrainingReport.WinRateEntry(
+            entries.append(TrainingReport.PointDiffEntry(
                 higherDUPR: pair.higherDUPR,
                 lowerDUPR: pair.lowerDUPR,
+                actualPointDiff: totalPointDiff / Double(matchCount),
+                targetPointDiff: pair.targetPointDiff,
                 actualWinRate: Double(higherWins) / Double(matchCount),
-                targetWinRate: pair.targetWinRate,
-                matchesPlayed: matchCount,
-                avgScoreMargin: totalMargin / Double(matchCount)
+                matchesPlayed: matchCount
             ))
         }
 
         return entries
+    }
+
+    private nonisolated func evaluatePlayerVsNPCDetailed(params: SimulationParameters, seed: UInt64, matchCount: Int) -> [TrainingReport.PlayerVsNPCEntry] {
+        var entries: [TrainingReport.PlayerVsNPCEntry] = []
+
+        for (idx, dupr) in playerVsNPCTestDUPRs.enumerated() {
+            let playerStats = params.toPlayerStats(dupr: dupr)
+            let npcStats = params.toNPCStats(dupr: dupr)
+
+            var playerWins = 0
+            var totalPointDiff = 0.0
+
+            for m in 0..<matchCount {
+                let matchSeed = seed &+ UInt64((allTestPairs.count + idx) * 10000 + m)
+                let rng = SeededRandomSource(seed: matchSeed)
+                let sim = LightweightMatchSimulator(rng: rng)
+                let result = sim.simulateMatch(playerStats: playerStats, opponentStats: npcStats)
+
+                if result.winnerSide == .player { playerWins += 1 }
+                totalPointDiff += Double(result.playerScore - result.opponentScore)
+            }
+
+            entries.append(TrainingReport.PlayerVsNPCEntry(
+                dupr: dupr,
+                npcEquipBonus: params.npcEquipmentBonus(dupr: dupr),
+                actualPointDiff: totalPointDiff / Double(matchCount),
+                targetPointDiff: TrainingConfig.playerVsNPCTargetDiff,
+                actualWinRate: Double(playerWins) / Double(matchCount),
+                matchesPlayed: matchCount
+            ))
+        }
+
+        return entries
+    }
+
+    private nonisolated func evaluateStarterDetailed(params: SimulationParameters, seed: UInt64, matchCount: Int) -> TrainingReport.PlayerVsNPCEntry {
+        let starterStats = params.toPlayerStarterStats()
+        let npcStats = params.toNPCStats(dupr: 2.0)
+
+        var playerWins = 0
+        var totalPointDiff = 0.0
+
+        for m in 0..<matchCount {
+            let matchSeed = seed &+ UInt64((allTestPairs.count + playerVsNPCTestDUPRs.count) * 10000 + m)
+            let rng = SeededRandomSource(seed: matchSeed)
+            let sim = LightweightMatchSimulator(rng: rng)
+            let result = sim.simulateMatch(playerStats: starterStats, opponentStats: npcStats)
+
+            if result.winnerSide == .player { playerWins += 1 }
+            totalPointDiff += Double(result.playerScore - result.opponentScore)
+        }
+
+        return TrainingReport.PlayerVsNPCEntry(
+            dupr: 2.0,
+            npcEquipBonus: params.npcEquipmentBonus(dupr: 2.0),
+            actualPointDiff: totalPointDiff / Double(matchCount),
+            targetPointDiff: TrainingConfig.starterTargetDiff,
+            actualWinRate: Double(playerWins) / Double(matchCount),
+            matchesPlayed: matchCount
+        )
     }
 
     // MARK: - Gaussian Noise (Box-Muller)

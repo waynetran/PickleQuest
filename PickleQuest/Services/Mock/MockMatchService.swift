@@ -17,9 +17,12 @@ final class MockMatchService: MatchService {
         let equippedItems = await inventoryService.getEquippedItems(for: player.equippedItems)
         let suprGap = opponent.duprRating - player.duprRating
 
+        // Apply NPC virtual equipment bonus (simulates gear the NPC "has")
+        let opponentStats = boostedNPCStats(base: opponent.stats, dupr: opponent.duprRating)
+
         return MatchEngine(
             playerStats: player.stats,
-            opponentStats: opponent.stats,
+            opponentStats: opponentStats,
             playerEquipment: equippedItems,
             playerName: player.name,
             opponentName: opponent.name,
@@ -50,9 +53,14 @@ final class MockMatchService: MatchService {
         let teamSynergy = TeamSynergy.calculate(p1: player.personality, p2: partner.personality)
         let opponentSynergy = TeamSynergy.calculate(p1: opponent1.personality, p2: opponent2.personality)
 
+        // Apply NPC virtual equipment bonus to all NPC participants
+        let opp1Stats = boostedNPCStats(base: opponent1.stats, dupr: opponent1.duprRating)
+        let opp2Stats = boostedNPCStats(base: opponent2.stats, dupr: opponent2.duprRating)
+        let partnerBoostedStats = boostedNPCStats(base: partner.stats, dupr: partner.duprRating)
+
         return MatchEngine(
             playerStats: player.stats,
-            opponentStats: opponent1.stats,
+            opponentStats: opp1Stats,
             playerEquipment: equippedItems,
             playerName: player.name,
             opponentName: opponent1.name,
@@ -64,10 +72,10 @@ final class MockMatchService: MatchService {
             suprGap: suprGap,
             playerConsumables: playerConsumables,
             playerReputation: playerReputation,
-            partnerStats: partner.stats,
+            partnerStats: partnerBoostedStats,
             partnerEquipment: [],
             partnerName: partner.name,
-            opponent2Stats: opponent2.stats,
+            opponent2Stats: opp2Stats,
             opponent2Equipment: [],
             opponent2Name: opponent2.name,
             teamSynergy: teamSynergy,
@@ -96,13 +104,11 @@ final class MockMatchService: MatchService {
             player.wallet.add(result.coinsEarned + bonus)
         }
 
-        // Calculate DUPR change
-        let lastGame = result.gameScores.last ?? result.finalScore
+        // Calculate DUPR change (all games count, not just the last)
         let potentialChange = DUPRCalculator.calculateRatingChange(
             playerRating: player.duprRating,
             opponentRating: opponent.duprRating,
-            playerPoints: lastGame.playerPoints,
-            opponentPoints: lastGame.opponentPoints,
+            gameScores: result.gameScores,
             pointsToWin: config.pointsToWin,
             kFactor: player.duprProfile.kFactor
         )
@@ -178,6 +184,17 @@ final class MockMatchService: MatchService {
             energyDrain: energyDrain,
             brokenEquipment: brokenEquipment
         )
+    }
+
+    /// Apply NPC virtual equipment bonus — flat per-stat boost based on DUPR.
+    private func boostedNPCStats(base: PlayerStats, dupr: Double) -> PlayerStats {
+        let bonus = StatProfileLoader.shared.npcEquipmentBonus(dupr: dupr)
+        guard bonus > 0 else { return base }
+        var stats = base
+        for statType in StatType.allCases {
+            stats.setStat(statType, value: stats.stat(statType) + bonus)
+        }
+        return stats
     }
 }
 

@@ -86,11 +86,9 @@ struct PlayerStats: Equatable, Sendable {
         }
     }
 
-    static let starter = PlayerStats(
-        power: 15, accuracy: 15, spin: 10, speed: 15,
-        defense: 15, reflexes: 15, positioning: 15,
-        clutch: 10, focus: 15, stamina: 20, consistency: 20
-    )
+    static var starter: PlayerStats {
+        StatProfileLoader.trainedStarterStats
+    }
 }
 
 // MARK: - Codable (backward compatible)

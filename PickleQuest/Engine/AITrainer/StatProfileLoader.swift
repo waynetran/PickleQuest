@@ -10,4 +10,10 @@ enum StatProfileLoader {
         }
         return params.clamped()
     }()
+
+    /// Trained starter stats for new players. Uses trained values from the profile,
+    /// falling back to defaults if not available.
+    static var trainedStarterStats: PlayerStats {
+        shared.toPlayerStarterStats()
+    }
 }

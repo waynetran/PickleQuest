@@ -8,9 +8,15 @@ struct SimulationParameters: Sendable, Codable {
     var slopes: [Double]   // 11 values
     /// Base stat value at DUPR 2.0 (per stat)
     var offsets: [Double]  // 11 values
+    /// NPC virtual equipment: bonus increase from DUPR 2.0 to DUPR 8.0
+    var npcEquipSlope: Double
+    /// NPC virtual equipment: minimum bonus at DUPR 2.0
+    var npcEquipOffset: Double
+    /// Trained starting stats for a new player (11 values in statNames order)
+    var playerStarterStats: [Double]  // 11 values
 
     static let statCount = 11
-    static let parameterCount = 22 // 11 slopes + 11 offsets
+    static let parameterCount = 35 // 11 slopes + 11 offsets + 2 npcEquip + 11 starter
 
     static let statNames: [String] = [
         "power", "accuracy", "spin", "speed",
@@ -18,32 +24,60 @@ struct SimulationParameters: Sendable, Codable {
         "clutch", "focus", "stamina", "consistency"
     ]
 
-    /// Initialize from current linear mapping (matches NPC.practiceOpponent behavior).
     /// Default: all stats use slope=98, offset=1 (stat goes from 1 at DUPR 2.0 to 99 at DUPR 8.0).
+    /// NPC equip starts at slope=5, offset=2. Starter stats default to current PlayerStats.starter values.
     static let defaults: SimulationParameters = {
         let slope = 98.0
         let offset = 1.0
         return SimulationParameters(
             slopes: [Double](repeating: slope, count: statCount),
-            offsets: [Double](repeating: offset, count: statCount)
+            offsets: [Double](repeating: offset, count: statCount),
+            npcEquipSlope: 5.0,
+            npcEquipOffset: 2.0,
+            playerStarterStats: [15, 15, 10, 15, 15, 15, 15, 10, 15, 20, 20]
         )
     }()
 
-    init(slopes: [Double], offsets: [Double]) {
+    init(slopes: [Double], offsets: [Double],
+         npcEquipSlope: Double = 5.0, npcEquipOffset: Double = 2.0,
+         playerStarterStats: [Double] = [15, 15, 10, 15, 15, 15, 15, 10, 15, 20, 20]) {
         self.slopes = slopes
         self.offsets = offsets
+        self.npcEquipSlope = npcEquipSlope
+        self.npcEquipOffset = npcEquipOffset
+        self.playerStarterStats = playerStarterStats
     }
 
     init(fromArray a: [Double]) {
-        slopes = Array(a[0..<SimulationParameters.statCount])
-        offsets = Array(a[SimulationParameters.statCount..<SimulationParameters.parameterCount])
+        let sc = SimulationParameters.statCount
+        slopes = Array(a[0..<sc])
+        offsets = Array(a[sc..<(2 * sc)])
+        npcEquipSlope = a[2 * sc]
+        npcEquipOffset = a[2 * sc + 1]
+        playerStarterStats = Array(a[(2 * sc + 2)..<(2 * sc + 2 + sc)])
+    }
+
+    // MARK: - Codable (backward compatible)
+
+    enum CodingKeys: String, CodingKey {
+        case slopes, offsets, npcEquipSlope, npcEquipOffset, playerStarterStats
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        slopes = try c.decode([Double].self, forKey: .slopes)
+        offsets = try c.decode([Double].self, forKey: .offsets)
+        npcEquipSlope = try c.decodeIfPresent(Double.self, forKey: .npcEquipSlope) ?? 5.0
+        npcEquipOffset = try c.decodeIfPresent(Double.self, forKey: .npcEquipOffset) ?? 2.0
+        playerStarterStats = try c.decodeIfPresent([Double].self, forKey: .playerStarterStats)
+            ?? [15, 15, 10, 15, 15, 15, 15, 10, 15, 20, 20]
     }
 
     func toArray() -> [Double] {
-        slopes + offsets
+        slopes + offsets + [npcEquipSlope, npcEquipOffset] + playerStarterStats
     }
 
-    /// Clamp slopes and offsets to ensure stats stay in 1-99 range across DUPR 2.0-8.0.
+    /// Clamp all parameters to valid ranges.
     func clamped() -> SimulationParameters {
         var s = slopes
         var o = offsets
@@ -55,10 +89,20 @@ struct SimulationParameters: Sendable, Codable {
                 s[i] = 99 - o[i]
             }
         }
-        return SimulationParameters(slopes: s, offsets: o)
+        let eqSlope = max(0, min(30, npcEquipSlope))
+        let eqOffset = max(0, min(15, npcEquipOffset))
+        var starter = playerStarterStats
+        for i in 0..<SimulationParameters.statCount {
+            starter[i] = max(1, min(40, starter[i]))
+        }
+        return SimulationParameters(
+            slopes: s, offsets: o,
+            npcEquipSlope: eqSlope, npcEquipOffset: eqOffset,
+            playerStarterStats: starter
+        )
     }
 
-    /// Generate a PlayerStats block for a given DUPR level.
+    /// Generate a PlayerStats block for a given DUPR level (bare NPC stats, no equipment).
     func toPlayerStats(dupr: Double) -> PlayerStats {
         let n = (dupr - 2.0) / 6.0
         func stat(_ index: Int) -> Int {
@@ -68,6 +112,40 @@ struct SimulationParameters: Sendable, Codable {
             power: stat(0), accuracy: stat(1), spin: stat(2), speed: stat(3),
             defense: stat(4), reflexes: stat(5), positioning: stat(6),
             clutch: stat(7), focus: stat(8), stamina: stat(9), consistency: stat(10)
+        )
+    }
+
+    /// Flat per-stat equipment bonus for an NPC at a given DUPR.
+    func npcEquipmentBonus(dupr: Double) -> Int {
+        let n = (dupr - 2.0) / 6.0
+        return max(0, Int((npcEquipSlope * n + npcEquipOffset).rounded()))
+    }
+
+    /// Generate NPC stats with virtual equipment bonus applied.
+    func toNPCStats(dupr: Double) -> PlayerStats {
+        var stats = toPlayerStats(dupr: dupr)
+        let bonus = npcEquipmentBonus(dupr: dupr)
+        stats.power = min(99, stats.power + bonus)
+        stats.accuracy = min(99, stats.accuracy + bonus)
+        stats.spin = min(99, stats.spin + bonus)
+        stats.speed = min(99, stats.speed + bonus)
+        stats.defense = min(99, stats.defense + bonus)
+        stats.reflexes = min(99, stats.reflexes + bonus)
+        stats.positioning = min(99, stats.positioning + bonus)
+        stats.clutch = min(99, stats.clutch + bonus)
+        stats.focus = min(99, stats.focus + bonus)
+        stats.stamina = min(99, stats.stamina + bonus)
+        stats.consistency = min(99, stats.consistency + bonus)
+        return stats
+    }
+
+    /// Convert trained starter array to PlayerStats.
+    func toPlayerStarterStats() -> PlayerStats {
+        func s(_ i: Int) -> Int { max(1, min(99, Int(playerStarterStats[i].rounded()))) }
+        return PlayerStats(
+            power: s(0), accuracy: s(1), spin: s(2), speed: s(3),
+            defense: s(4), reflexes: s(5), positioning: s(6),
+            clutch: s(7), focus: s(8), stamina: s(9), consistency: s(10)
         )
     }
 }
