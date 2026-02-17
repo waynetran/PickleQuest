@@ -51,6 +51,7 @@
 		3710C172450F26BBD4565EA8 /* NPCPersonality+Display.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CA19548572F4F8FCC62AD3C /* NPCPersonality+Display.swift */; };
 		3A3878E9CF1C3B1BD53F30AD /* MatchResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E37015A94BA1E07BCD8C05A5 /* MatchResultView.swift */; };
 		3B050E3BBEEFF0A145385100 /* PlayerProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02FF717F7DEC1E46AC1C7912 /* PlayerProfileView.swift */; };
+		3C270A588B8137A9C5C3B1CD /* MatchCalibrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1EFB540E81DAA2A2410A3 /* MatchCalibrationTests.swift */; };
 		3D4CF8CAE0599935F14CE975 /* CharacterCreationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B2BA348020705A5CD7C5532 /* CharacterCreationViewModel.swift */; };
 		3D5B786B01118C18E62D963A /* LootDecision.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01046C8E45E0B33084754852 /* LootDecision.swift */; };
 		3ECD6088E7E286B2695E46E4 /* DrillBallSimulation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EB751DF95009E0BDBAFE4F3 /* DrillBallSimulation.swift */; };
@@ -237,6 +238,7 @@
 		0F008F637AAC2F4A4BA60D19 /* WagerDecision.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WagerDecision.swift; sourceTree = "<group>"; };
 		113D32D22345163D83B3B9D9 /* MatchPoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPoint.swift; sourceTree = "<group>"; };
 		1189DB1F3E1BDB85799DBDD7 /* SpriteSheetAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteSheetAnimator.swift; sourceTree = "<group>"; };
+		11A1EFB540E81DAA2A2410A3 /* MatchCalibrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchCalibrationTests.swift; sourceTree = "<group>"; };
 		1355B4067EABBC2A8021BD1E /* TournamentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentViewModel.swift; sourceTree = "<group>"; };
 		13D27DD38A3C07AF3DC1F5AF /* EquipmentAbility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentAbility.swift; sourceTree = "<group>"; };
 		144F008DAAEF10FB97289E80 /* DevModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevModeView.swift; sourceTree = "<group>"; };
@@ -510,6 +512,7 @@
 				C387426EAD3B2B5843A81C8B /* HustlerNPCGeneratorTests.swift */,
 				3FE0743BF162137BA3E922FE /* LootGeneratorTests.swift */,
 				C9322F41B5638789C5F80C80 /* MatchActionTests.swift */,
+				11A1EFB540E81DAA2A2410A3 /* MatchCalibrationTests.swift */,
 				CB744DF042767593746C101B /* MatchEngineTests.swift */,
 				1B134E5A041B5743FC9C0BBC /* MomentumTrackerTests.swift */,
 				B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */,
@@ -1162,6 +1165,7 @@
 				882045477F61203EA7AF6698 /* HustlerNPCGeneratorTests.swift in Sources */,
 				0D9B2D6B41077877A74F860C /* LootGeneratorTests.swift in Sources */,
 				952F90E2AC4730346AE0E1F1 /* MatchActionTests.swift in Sources */,
+				3C270A588B8137A9C5C3B1CD /* MatchCalibrationTests.swift in Sources */,
 				21A8FEC6BE691264FAE691E7 /* MatchEngineTests.swift in Sources */,
 				72218CB4A65BD13B1CE5DDD9 /* MomentumTrackerTests.swift in Sources */,
 				DBE5F18AC6CBE4C42E7A712E /* StatCalculatorTests.swift in Sources */,

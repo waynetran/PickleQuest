@@ -6,6 +6,7 @@ final class InteractiveMatchScene: SKScene {
     private typealias AC = MatchAnimationConstants
     private typealias P = GameConstants.DrillPhysics
     private typealias IM = GameConstants.InteractiveMatch
+    private typealias PB = GameConstants.PlayerBalance
 
     // MARK: - Sprites
 
@@ -55,10 +56,30 @@ final class InteractiveMatchScene: SKScene {
     private var playerServeStallTimer: CGFloat = 0
     private var serveStallTauntIndex: Int = 0
     private var npcIsWalkingOff: Bool = false
-    /// 3-step sequence: snarky → warning → final warning, then walkoff
-    private static let serveStallSequence: [String] = [
+    private var nextSnarkyTime: CGFloat = 0 // countdown to next idle comment
+    private var nextPaceTime: CGFloat = 20  // countdown to next frustration pace
+    private var npcIsPacing: Bool = false
+    /// Snarky idle comments shown every 5-10 seconds while player stalls
+    private static let snarkyComments: [String] = [
         "You gonna serve or what? 😏",
-        "Seriously, serve or I'm\nout of here ⚠️",
+        "Any day now...",
+        "I got places to be 🙄",
+        "Hello? Anybody home?",
+        "*taps paddle impatiently*",
+        "My grandma serves\nfaster than this",
+        "I'm literally falling\nasleep over here",
+        "Is this your first time\nholding a paddle?",
+        "*checks watch*",
+        "You practicing your\nserve face? 😂",
+        "I didn't sign up for\na staring contest",
+        "*yawns dramatically*",
+        "Take your time,\nI cleared my schedule... 😒",
+        "The suspense is\nkilling me 💀",
+    ]
+    /// 3-step walkoff warnings at escalating severity
+    private static let walkoffWarnings: [String] = [
+        "Okay for real,\nserve or I'm leaving ⚠️",
+        "Last chance.\nI'm not kidding. ⚠️",
         "That's it. I'm done.",
     ]
     /// Muffled angry text shown during walkoff animation
@@ -111,6 +132,9 @@ final class InteractiveMatchScene: SKScene {
     private var playerMoveSpeed: CGFloat = 0.6
     private var lastUpdateTime: TimeInterval = 0
     private var previousBallNY: CGFloat = 0.5
+
+    // Rally pressure (cumulative difficulty during a rally)
+    private var rallyPressure: CGFloat = 0
 
     // Match scoring (side-out singles)
     private var playerScore: Int = 0
@@ -655,6 +679,7 @@ final class InteractiveMatchScene: SKScene {
 
     private func startNextPoint() {
         rallyLength = 0
+        rallyPressure = 0
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
@@ -664,6 +689,10 @@ final class InteractiveMatchScene: SKScene {
         hideNPCSpeech()
         playerServeStallTimer = 0
         serveStallTauntIndex = 0
+        nextSnarkyTime = CGFloat.random(in: 5...10)
+        nextPaceTime = 20
+        npcIsPacing = false
+        npcNode?.removeAction(forKey: "frustrationPace")
 
         // Recover stamina between points
         stamina = min(P.maxStamina, stamina + 10)
@@ -758,13 +787,32 @@ final class InteractiveMatchScene: SKScene {
     }
 
     private func npcServe() {
-        let shot = npcAI.generateServe(npcScore: npcScore)
+        // Ensure NPC is at correct serve position (right/left side behind baseline)
+        npcAI.positionForServe(npcScore: npcScore)
+        syncNPCPosition()
 
-        // NPC double fault chance — lower consistency/accuracy = more faults
+        let shot = npcAI.generateServe(npcScore: npcScore)
+        let S = GameConstants.NPCStrategy.self
+
+        // NPC double fault chance — base rate from stats + mode penalties for power/spin
         let consistencyStat = CGFloat(min(99, npc.stats.stat(.consistency) + P.npcStatBoost))
         let accuracyStat = CGFloat(min(99, npc.stats.stat(.accuracy) + P.npcStatBoost))
         let serveStat = (consistencyStat + accuracyStat) / 2.0
-        let faultRate = P.npcBaseServeFaultRate * (1.0 - serveStat / 99.0)
+        let baseFaultRate = P.npcBaseServeFaultRate * (1.0 - serveStat / 99.0)
+
+        // Power/spin modes increase fault risk — skilled NPCs manage it better
+        let modes = npcAI.lastServeModes
+        var rawPenalty: CGFloat = 0
+        if modes.contains(.power) { rawPenalty += S.npcServePowerFaultPenalty }
+        if modes.contains(.topspin) || modes.contains(.slice) { rawPenalty += S.npcServeSpinFaultPenalty }
+        // aggressionControl reduces penalty: pow(1 - aC, 0.7)
+        // 4.5 (aC 0.6) → 0.4^0.7 ≈ 0.49 → ~50% of raw penalty retained
+        // 5.0 (aC 0.7) → 0.3^0.7 ≈ 0.39 → ~39% retained
+        // 7.0 (aC 0.9) → 0.1^0.7 ≈ 0.20 → ~20% retained
+        let controlFactor = pow(1.0 - npcAI.strategy.aggressionControl, S.npcServeControlExponent)
+        let modePenalty = rawPenalty * controlFactor
+
+        let faultRate = baseFaultRate + modePenalty
         let isDoubleFault = CGFloat.random(in: 0...1) < faultRate
 
         // Target must clear the kitchen line (0.318) — land in service area
@@ -1219,22 +1267,37 @@ final class InteractiveMatchScene: SKScene {
                     npcServe()
                 }
             }
-            // NPC taunts when player stalls on serve → walkoff after 3
+            // NPC taunts when player stalls on serve → walkoff after ~5 min
             if servingSide == .player && !npcIsWalkingOff {
                 playerServeStallTimer += dt
-                let thresholds: [CGFloat] = [5.0, 12.0, 19.0] // seconds for each taunt
-                if serveStallTauntIndex < thresholds.count {
-                    if playerServeStallTimer >= thresholds[serveStallTauntIndex] {
-                        let taunt = Self.serveStallSequence[serveStallTauntIndex]
-                        showNPCSpeech(taunt)
-                        serveStallTauntIndex += 1
-                        // After final warning, trigger walkoff
-                        if serveStallTauntIndex >= thresholds.count {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-                                self?.triggerNPCWalkoff()
-                            }
+                nextSnarkyTime -= dt
+                nextPaceTime -= dt
+
+                // Frustration pacing every ~20 seconds
+                if nextPaceTime <= 0 && !npcIsPacing {
+                    npcFrustrationPace()
+                    nextPaceTime = 20
+                }
+
+                // Walkoff warnings at escalating thresholds
+                let thresholds: [CGFloat] = [120.0, 210.0, 280.0] // ~2min, ~3.5min, ~4.7min → walkoff at ~5min
+                if serveStallTauntIndex < thresholds.count,
+                   playerServeStallTimer >= thresholds[serveStallTauntIndex] {
+                    let warning = Self.walkoffWarnings[serveStallTauntIndex]
+                    showNPCSpeech(warning)
+                    serveStallTauntIndex += 1
+                    nextSnarkyTime = CGFloat.random(in: 5...10) // reset snarky timer after warning
+                    // After final warning, trigger walkoff
+                    if serveStallTauntIndex >= thresholds.count {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                            self?.triggerNPCWalkoff()
                         }
                     }
+                } else if nextSnarkyTime <= 0 {
+                    // Idle snarky comment every 5-10 seconds
+                    let comment = Self.snarkyComments.randomElement() ?? "..."
+                    showNPCSpeech(comment)
+                    nextSnarkyTime = CGFloat.random(in: 5...10)
                 }
             }
 
@@ -1331,6 +1394,42 @@ final class InteractiveMatchScene: SKScene {
         let dist = sqrt(dx * dx + dy * dy)
         guard dist <= hitboxRadius else { return }
 
+        // --- Forced error: player whiff on hard incoming shots ---
+        let ballSpeed = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
+        let maxSpeed = P.baseShotSpeed + 2.0 * (P.maxShotSpeed - P.baseShotSpeed)
+        let speedFrac = max(0, min(1, (ballSpeed - P.baseShotSpeed) / (maxSpeed - P.baseShotSpeed)))
+        let spinPressure = min(abs(ballSim.spinCurve) / P.spinCurveFactor, 1.0)
+        let stretchFrac = min(dist / hitboxRadius, 1.0)
+        let shotDifficulty = speedFrac * PB.forcedErrorSpeedWeight
+            + spinPressure * PB.forcedErrorSpinWeight
+            + stretchFrac * PB.forcedErrorStretchWeight
+
+        let reflexesStat = CGFloat(playerStats.stat(.reflexes))
+        let consistencyStat_fe = CGFloat(playerStats.stat(.consistency))
+        let defenseStat = CGFloat(playerStats.stat(.defense))
+        let avgDefense = (reflexesStat + consistencyStat_fe + defenseStat) / 3.0 / 99.0
+        var forcedErrorRate = shotDifficulty * PB.forcedErrorScale * pow(1.0 - avgDefense, PB.forcedErrorExponent)
+
+        // Rally pressure: accumulate difficulty, break down weaker player over sustained rallies
+        let NPCS = GameConstants.NPCStrategy.self
+        rallyPressure = max(0, rallyPressure - NPCS.pressureDecayPerShot)
+        rallyPressure += shotDifficulty
+        let pressureThreshold = NPCS.pressureBaseThreshold + avgDefense * NPCS.pressureStatScale
+        let pressureOverflow = max(0, rallyPressure - pressureThreshold)
+        let pressureBonus = pressureOverflow * NPCS.pressureErrorScale
+
+        // DUPR gap forced error amplifier: stronger NPCs force more player whiffs
+        let duprGapForPlayer = max(0, npc.duprRating - player.duprRating)
+        let gapAmplifier = 1.0 + CGFloat(duprGapForPlayer) * NPCS.duprForcedErrorAmplifier
+        forcedErrorRate = (forcedErrorRate + pressureBonus) * gapAmplifier
+
+        if CGFloat.random(in: 0...1) < forcedErrorRate {
+            // Ball passes through — player whiffs
+            playerErrors += 1
+            showIndicator("Whiff!", color: .systemRed)
+            return // ball continues past player, will double-bounce or go out
+        }
+
         // Two-bounce rule: return of serve AND server's 3rd shot must be off the bounce
         if rallyLength < 2 && ballSim.bounceCount == 0 {
             playerErrors += 1
@@ -1361,7 +1460,7 @@ final class InteractiveMatchScene: SKScene {
         let pStretch = min(pDist / hitboxRadius, 1.0)
         npcAI.lastPlayerHitDifficulty = pSpeedFrac * 0.5 + pStretch * 0.5
 
-        let shot = DrillShotCalculator.calculatePlayerShot(
+        var shot = DrillShotCalculator.calculatePlayerShot(
             stats: playerStats,
             ballApproachFromLeft: ballFromLeft,
             drillType: .baselineRally,
@@ -1370,6 +1469,17 @@ final class InteractiveMatchScene: SKScene {
             modes: activeShotModes,
             staminaFraction: staminaPct
         )
+
+        // --- Net fault: low-stat players hit into the net ---
+        let accuracyStat_nf = CGFloat(playerStats.stat(.accuracy))
+        let consistencyStat_nf = CGFloat(playerStats.stat(.consistency))
+        let focusStat_nf = CGFloat(playerStats.stat(.focus))
+        let avgControl_nf = (accuracyStat_nf + consistencyStat_nf + focusStat_nf) / 3.0
+        let netFaultRate = PB.netFaultBaseRate * pow(1.0 - avgControl_nf / 99.0, 1.5)
+        if CGFloat.random(in: 0...1) < netFaultRate {
+            ballSim.skipNetCorrection = true
+            shot.arc *= 0.15
+        }
 
         let animState: CharacterAnimationState = shot.shotType == .forehand ? .forehand : .backhand
         playerAnimator.play(animState)
@@ -1785,6 +1895,38 @@ final class InteractiveMatchScene: SKScene {
         npcSpeechBubble?.removeAllActions()
         npcSpeechBubble?.removeFromParent()
         npcSpeechBubble = nil
+    }
+
+    // MARK: - NPC Frustration Pacing
+
+    private func npcFrustrationPace() {
+        guard !npcIsPacing, !npcIsWalkingOff else { return }
+        npcIsPacing = true
+
+        let baseNX = npcAI.currentNX
+        let paceDistance: CGFloat = 0.12
+        let leftNX = max(0.05, baseNX - paceDistance)
+        let rightNX = min(0.95, baseNX + paceDistance)
+        let stepDuration: TimeInterval = 0.5
+
+        let leftPos = CourtRenderer.courtPoint(nx: leftNX, ny: npcAI.currentNY)
+        let rightPos = CourtRenderer.courtPoint(nx: rightNX, ny: npcAI.currentNY)
+        let centerPos = CourtRenderer.courtPoint(nx: baseNX, ny: npcAI.currentNY)
+
+        let pace = SKAction.sequence([
+            .run { [weak self] in self?.npcAnimator.play(.walkLeft) },
+            .move(to: leftPos, duration: stepDuration),
+            .run { [weak self] in self?.npcAnimator.play(.walkRight) },
+            .move(to: rightPos, duration: stepDuration * 2),
+            .run { [weak self] in self?.npcAnimator.play(.walkLeft) },
+            .move(to: centerPos, duration: stepDuration),
+            .run { [weak self] in
+                self?.npcAnimator.play(.ready)
+                self?.npcIsPacing = false
+            }
+        ])
+
+        npcNode.run(pace, withKey: "frustrationPace")
     }
 
     // MARK: - NPC Walkoff

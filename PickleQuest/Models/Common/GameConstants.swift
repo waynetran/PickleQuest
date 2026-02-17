@@ -52,17 +52,21 @@ enum GameConstants {
         static let recencyDecayDays: Int = 90   // days for minimum recency
         static let recencyMinimum: Double = 0.3 // floor for recency component
 
-        // Margin-of-victory scaling (for actualScore)
-        static let marginExponent: Double = 1.5  // controls curve steepness
-        static let pointsToWin: Double = 11.0    // reference for normalization
+        // Margin-based scoring (real DUPR: 0.1 gap ≈ 1.2 points in 11-point game)
+        static let pointsPerDUPRGap: Double = 12.0 // expected point margin per 1.0 DUPR gap
+        static let performanceCurve: Double = 1.0   // tanh scaling for performance normalization
+        static let ratingChangeDivisor: Double = 200.0
 
-        // Elo parameters
-        static let eloScaleFactor: Double = 400.0
-        static let duprToEloScale: Double = 100.0 // 1.0 DUPR gap = 100 Elo-equivalent
-        static let ratingChangeDivisor: Double = 200.0 // scales raw Elo to DUPR range
+        // Lopsidedness discount (real DUPR: 0.625+ gap = less informative)
+        static let lopsidedGapThreshold: Double = 0.625 // graduated discount starts here
+        static let lopsidedDiscountFloor: Double = 0.3   // K multiplier at maxRatedGap
+
+        // High-level convergence (real DUPR: ratings converge more at 4.0+)
+        static let highLevelThreshold: Double = 4.0
+        static let highLevelDamping: Double = 0.7 // K multiplier above threshold
 
         // Auto-unrate threshold
-        static let maxRatedGap: Double = 1.0
+        static let maxRatedGap: Double = 1.5
     }
 
     // MARK: - Match
@@ -106,6 +110,11 @@ enum GameConstants {
 
     // MARK: - Rally
     enum Rally {
+        /// Master knob scaling how much stat differences affect per-shot probabilities.
+        /// At 1.0 (old default), 0.1 DUPR gap produces ~5.5 point margin.
+        /// At 0.16, side-out scoring amplification brings it to ~1.2 points.
+        static let statSensitivity: Double = 0.16
+
         static let baseAceChance: Double = 0.05
         static let powerAceScaling: Double = 0.002 // per power point
         static let reflexDefenseScale: Double = 0.0015
@@ -305,6 +314,22 @@ enum GameConstants {
         static let interactiveXPMultiplier = 1.5  // 50% more XP than simulated
     }
 
+    // MARK: - Player Balance (Interactive Match)
+    enum PlayerBalance {
+        // Forced error: player whiff on hard incoming shots
+        static let forcedErrorScale: CGFloat = 0.90
+        static let forcedErrorExponent: CGFloat = 2.0
+        static let forcedErrorSpeedWeight: CGFloat = 0.55
+        static let forcedErrorSpinWeight: CGFloat = 0.15
+        static let forcedErrorStretchWeight: CGFloat = 0.30
+
+        // Net fault: chance of hitting net on low-stat shots
+        static let netFaultBaseRate: CGFloat = 0.18
+
+        // Shot scatter base (max scatter at stat 1, was hardcoded 0.12)
+        static let baseScatter: CGFloat = 0.20
+    }
+
     // MARK: - Drill Physics (Interactive Mini-Games)
     enum DrillPhysics {
         static let gravity: CGFloat = 1.2           // logical units/sec² (low for floaty, arcade feel)
@@ -319,8 +344,8 @@ enum GameConstants {
         static let dinkShotSpeed: CGFloat = 0.20
 
         // Player hitbox (court-space units)
-        static let baseHitboxRadius: CGFloat = 0.144     // reach (paddle + arm extension)
-        static let positioningHitboxBonus: CGFloat = 0.048 // bonus from positioning stat
+        static let baseHitboxRadius: CGFloat = 0.10      // reach (player must earn through stats)
+        static let positioningHitboxBonus: CGFloat = 0.092 // bonus from positioning stat (stat 99 = 0.192)
 
         // NPC hitbox — larger base so even low-stat NPCs make basic returns
         static let npcBaseHitboxRadius: CGFloat = 0.18
@@ -405,12 +430,30 @@ enum GameConstants {
         // Difficulty threshold for "hard shot" reset trigger
         static let hardShotDifficultyThreshold: CGFloat = 0.6
 
+        // Serve fault mode penalties — power/spin serves are harder to land
+        // Raw penalty is reduced by aggressionControl (skilled NPCs manage the risk)
+        static let npcServePowerFaultPenalty: CGFloat = 0.40   // raw fault increase for power serves
+        static let npcServeSpinFaultPenalty: CGFloat = 0.25    // raw fault increase for spin serves
+        static let npcServeControlExponent: CGFloat = 0.7      // how fast skill reduces mode fault risk
+
         // Shot quality modifiers (interactive match)
         static let goodShotErrorBonus: CGFloat = 0.25     // max NPC error rate increase from good player shot
         static let badShotErrorPenalty: CGFloat = -0.20    // max NPC error rate decrease from bad player shot
-        static let duprGapErrorScale: CGFloat = 0.15       // error rate scale per 1.0 DUPR gap
-        static let maxDuprErrorReduction: CGFloat = 0.3    // min multiplier (NPC can't go below 30% of base error rate)
-        static let maxDuprErrorBoost: CGFloat = 2.0        // max multiplier for weaker NPCs
+
+        // Exponential DUPR error scaling (replaces linear duprGapErrorScale)
+        static let duprErrorDecayRate: CGFloat = 3.0      // exp(-gap * rate); 0.1 gap → 0.74x errors
+        static let duprErrorGrowthRate: CGFloat = 1.5     // weaker NPC error growth
+        static let duprErrorFloor: CGFloat = 0.05         // NPC min error fraction (even at huge gaps)
+        static let duprErrorCeiling: CGFloat = 3.0        // NPC max error multiplier when weaker
+
+        // Rally pressure system
+        static let pressureBaseThreshold: CGFloat = 2.0   // base pressure tolerance
+        static let pressureStatScale: CGFloat = 3.0       // bonus threshold per avgDefense/99
+        static let pressureErrorScale: CGFloat = 0.15     // forced error increase per pressure overflow
+        static let pressureDecayPerShot: CGFloat = 0.3    // per-shot recovery
+
+        // DUPR gap forced error amplifier (player side)
+        static let duprForcedErrorAmplifier: CGFloat = 2.0 // 0.1 gap → 1.2x whiffs, 1.0 gap → 3x
     }
 
     // MARK: - Coaching

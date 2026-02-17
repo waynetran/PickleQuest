@@ -101,10 +101,12 @@ struct RallySimulator: Sendable {
     // MARK: - Probability Calculations
 
     private func calculateAceChance(server: PlayerStats, receiver: PlayerStats) -> Double {
+        let S = GameConstants.Rally.statSensitivity
         let base = GameConstants.Rally.baseAceChance
         let powerBonus = Double(server.power) * GameConstants.Rally.powerAceScaling
         let reflexPenalty = Double(receiver.reflexes) * GameConstants.Rally.reflexDefenseScale
-        return max(0.01, min(0.25, base + powerBonus - reflexPenalty))
+        let differential = (powerBonus - reflexPenalty) * S
+        return max(0.01, min(0.25, base + differential))
     }
 
     private func calculateMaxRallyLength(player: PlayerStats, opponent: PlayerStats) -> Int {
@@ -114,11 +116,13 @@ struct RallySimulator: Sendable {
     }
 
     private func calculateWinnerChance(attacker: PlayerStats, defender: PlayerStats, shotNumber: Int) -> Double {
+        let S = GameConstants.Rally.statSensitivity
         let base = GameConstants.Rally.baseWinnerChance
         let attackFactor = (Double(attacker.power) + Double(attacker.accuracy) + Double(attacker.spin)) / 300.0
         let defenseFactor = (Double(defender.defense) + Double(defender.positioning) + Double(defender.reflexes)) / 300.0
+        let differential = (attackFactor - defenseFactor) * S
         let shotBonus = Double(shotNumber) * 0.005 // longer rallies slightly increase winner chance
-        return max(0.02, min(0.35, base + attackFactor - defenseFactor + shotBonus))
+        return max(0.02, min(0.35, base + differential + shotBonus))
     }
 
     private func calculateErrorChance(attacker: PlayerStats, shotNumber: Int) -> Double {
@@ -130,9 +134,11 @@ struct RallySimulator: Sendable {
     }
 
     private func calculateForcedErrorChance(attacker: PlayerStats, defender: PlayerStats) -> Double {
+        let S = GameConstants.Rally.statSensitivity
         let attackPressure = (Double(attacker.power) + Double(attacker.spin)) / 200.0
         let defenseResist = (Double(defender.defense) + Double(defender.reflexes)) / 200.0
-        return max(0.01, min(0.20, 0.08 + attackPressure - defenseResist))
+        let differential = (attackPressure - defenseResist) * S
+        return max(0.01, min(0.20, 0.08 + differential))
     }
 
     // MARK: - Doubles Dink Phase
@@ -146,9 +152,11 @@ struct RallySimulator: Sendable {
     }
 
     private func calculateDinkWinnerChance(attacker: PlayerStats, defender: PlayerStats) -> Double {
+        let S = GameConstants.Rally.statSensitivity
         let attackFactor = (Double(attacker.accuracy) + Double(attacker.spin) + Double(attacker.focus)) / 300.0
         let defenseFactor = (Double(defender.consistency) + Double(defender.focus) + Double(defender.positioning)) / 300.0
-        return max(0.01, min(0.15, GameConstants.Rally.dinkWinnerChance + attackFactor - defenseFactor))
+        let differential = (attackFactor - defenseFactor) * S
+        return max(0.01, min(0.15, GameConstants.Rally.dinkWinnerChance + differential))
     }
 
     private func calculateDinkErrorChance(attacker: PlayerStats) -> Double {
@@ -158,10 +166,11 @@ struct RallySimulator: Sendable {
     }
 
     private func overallAdvantage(player: PlayerStats, opponent: PlayerStats) -> Double {
+        let S = GameConstants.Rally.statSensitivity
         let pTotal = player.average
         let oTotal = opponent.average
         let diff = pTotal - oTotal
-        return 0.5 + (diff / 200.0) // slight advantage based on stat difference
+        return 0.5 + (diff / 200.0) * S
     }
 }
 

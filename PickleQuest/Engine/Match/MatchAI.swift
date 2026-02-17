@@ -135,6 +135,7 @@ final class MatchAI {
 
     // Serve tracking
     var isServing: Bool = false
+    private(set) var lastServeModes: DrillShotCalculator.ShotMode = []
     private var shotCountThisPoint: Int = 0
     private let startNY: CGFloat = 0.92
 
@@ -336,14 +337,16 @@ final class MatchAI {
         let shotQuality = assessPlayerShotQuality(ball: ball)
         errorRate *= (1.0 + shotQuality)
 
-        // DUPR gap scaling: stronger NPCs make fewer baseline errors
+        // DUPR gap scaling: exponential error adjustment
         let duprGap = npcDUPR - playerDUPR
         if duprGap > 0 {
-            // NPC is stronger — reduce error rate
-            errorRate *= max(CGFloat(S.maxDuprErrorReduction), 1.0 - CGFloat(duprGap) * S.duprGapErrorScale)
+            // NPC is stronger — exponential error reduction
+            let multiplier = max(S.duprErrorFloor, CGFloat(exp(-Double(duprGap) * Double(S.duprErrorDecayRate))))
+            errorRate *= multiplier
         } else if duprGap < 0 {
-            // NPC is weaker — increase error rate
-            errorRate *= min(S.maxDuprErrorBoost, 1.0 + CGFloat(abs(duprGap)) * S.duprGapErrorScale * 0.67)
+            // NPC is weaker — exponential error increase
+            let multiplier = min(S.duprErrorCeiling, CGFloat(exp(Double(abs(duprGap)) * Double(S.duprErrorGrowthRate))))
+            errorRate *= multiplier
         }
 
         return CGFloat.random(in: 0...1) < errorRate
@@ -431,17 +434,32 @@ final class MatchAI {
     }
 
     /// Generate a serve shot.
+    /// 4.5+ NPCs use power and spin on serves but with controlled power to reduce faults.
+    /// Beginners serve flat with occasional wild power attempts.
     func generateServe(npcScore: Int) -> DrillShotCalculator.ShotResult {
-        let powerStat = CGFloat(effectiveStats.stat(.power))
         var modes: SM = []
 
-        // High power NPCs use power serves
-        if powerStat >= 50 && Bool.random() {
+        // Strategy-based serve mode selection:
+        // driveOnHighBall gates willingness to add power to serves
+        // aggressionControl gates whether they use controlled vs wild power
+        if roll(Double(strategy.driveOnHighBall)) {
             modes.insert(.power)
             stamina = max(0, stamina - 5)
         }
 
-        return DrillShotCalculator.calculatePlayerShot(
+        // Spin on serves: smart NPCs add spin for movement
+        if roll(Double(strategy.placementAwareness * 0.8)) {
+            modes.insert(Bool.random() ? .topspin : .slice)
+        }
+
+        // Smart NPCs add placement to target corners
+        if roll(Double(strategy.placementAwareness * 0.5)) {
+            modes.insert(.angled)
+        }
+
+        lastServeModes = modes
+
+        var result = DrillShotCalculator.calculatePlayerShot(
             stats: effectiveStats,
             ballApproachFromLeft: false,
             drillType: .baselineRally,
@@ -450,6 +468,15 @@ final class MatchAI {
             modes: modes,
             staminaFraction: stamina / P.maxStamina
         )
+
+        // 4.5+ NPCs reduce serve power for control — they place serves, not blast them.
+        // aggressionControl scales how much power is dialed back.
+        // High aggressionControl (0.6-0.9) → multiply power by 0.55-0.7 (controlled)
+        // Low aggressionControl (0.1-0.3) → multiply power by 0.85-0.95 (still wild)
+        let powerReduction = 1.0 - strategy.aggressionControl * 0.45
+        result.power *= powerReduction
+
+        return result
     }
 
     /// NPC stats boosted to compensate for human joystick advantage.
@@ -515,6 +542,29 @@ final class MatchAI {
 
         // Don't use stamina-draining modes when low
         guard staminaPct > 0.10 else { return modes }
+
+        // Serve return: first shot when receiving — smart NPCs play a deep, controlled return
+        // No power/spin scatter, just a clean medium shot deep to the baseline.
+        // In real pickleball, the return is almost always controlled and deep at 4.0+.
+        // Higher-level NPCs target the backhand (left side for right-handed opponents).
+        let isServeReturn = shotCountThisPoint == 0 && !isServing
+        if isServeReturn {
+            // Smart NPCs play clean returns; dumb NPCs fall through to normal selection
+            // and often overhit → errors via error model
+            if roll(Double(strategy.aggressionControl)) {
+                // Focus for tighter placement on manageable returns
+                if roll(Double(strategy.aggressionControl * 0.6)) {
+                    modes.insert(.focus)
+                }
+                // Higher-level NPCs angle the return to the backhand side
+                if roll(Double(strategy.placementAwareness)) {
+                    modes.insert(.angled)
+                }
+                // No power, no reset (dink), no spin — just a clean deep return
+                return modes
+            }
+            // Failed the roll → beginner behavior, fall through to normal selection
+        }
 
         let difficulty = assessShotDifficulty(ball: ball)
 
