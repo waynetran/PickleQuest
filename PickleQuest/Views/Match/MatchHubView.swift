@@ -127,23 +127,49 @@ struct MatchHubView: View {
 
             case .finished:
                 if let result = matchVM.matchResult {
-                    MatchResultView(
-                        result: result,
-                        opponent: matchVM.selectedNPC,
-                        matchVM: matchVM,
-                        levelUpRewards: matchVM.levelUpRewards,
-                        duprChange: matchVM.duprChange,
-                        potentialDuprChange: matchVM.potentialDuprChange,
-                        repChange: matchVM.repChange,
-                        brokenEquipment: matchVM.brokenEquipment,
-                        energyDrain: matchVM.energyDrain
-                    ) {
-                        Task {
-                            await processResult(matchVM: matchVM)
-                            matchVM.reset()
+                    if matchVM.bonusLootReady {
+                        MatchResultView(
+                            result: result,
+                            opponent: matchVM.selectedNPC,
+                            matchVM: matchVM,
+                            levelUpRewards: matchVM.levelUpRewards,
+                            duprChange: matchVM.duprChange,
+                            potentialDuprChange: matchVM.potentialDuprChange,
+                            repChange: matchVM.repChange,
+                            brokenEquipment: matchVM.brokenEquipment,
+                            energyDrain: matchVM.energyDrain
+                        ) {
+                            Task {
+                                await processResult(matchVM: matchVM)
+                                matchVM.reset()
+                            }
                         }
+                    } else {
+                        ProgressView()
+                            .task {
+                                await computeBonusLoot(matchVM: matchVM, mapVM: mapVM, result: result)
+                                matchVM.bonusLootReady = true
+                            }
                     }
                 }
+            }
+        }
+    }
+
+    private func computeBonusLoot(matchVM: MatchViewModel, mapVM: MapViewModel, result: MatchResult) async {
+        guard let npc = matchVM.selectedNPC, result.didPlayerWin, !result.wasResigned else { return }
+
+        // Hustler defeat: generate premium loot
+        if npc.isHustler {
+            let hustlerLoot = HustlerLootGenerator.generateHustlerLoot()
+            matchVM.lootDrops.append(contentsOf: hustlerLoot)
+        }
+
+        // Advance court ladder + alpha loot
+        if let court = mapVM.selectedCourt {
+            await mapVM.recordMatchResult(courtID: court.id, npcID: npc.id, didWin: true)
+            if case .alphaDefeated(let alphaLoot) = mapVM.ladderAdvanceResult {
+                matchVM.lootDrops.append(contentsOf: alphaLoot)
             }
         }
     }
@@ -258,22 +284,8 @@ struct MatchHubView: View {
             player.npcLossRecord[npc.id] = 0
         }
 
-        // Hustler defeat: generate premium loot
-        if result.didPlayerWin && !result.wasResigned && npc.isHustler {
-            let hustlerLoot = HustlerLootGenerator.generateHustlerLoot()
-            matchVM.lootDrops.append(contentsOf: hustlerLoot)
-        }
-
-        // Advance court ladder on win
+        // Court cache unlock (ladder was already advanced in computeBonusLoot)
         if let mapVM, let court = mapVM.selectedCourt, result.didPlayerWin, !result.wasResigned {
-            await mapVM.recordMatchResult(courtID: court.id, npcID: npc.id, didWin: true)
-
-            // Handle alpha loot drops
-            if case .alphaDefeated(let alphaLoot) = mapVM.ladderAdvanceResult {
-                matchVM.lootDrops.append(contentsOf: alphaLoot)
-            }
-
-            // Unlock court cache after win
             if let unlockedDrop = await mapVM.unlockCourtCacheIfNeeded(courtID: court.id) {
                 await mapVM.collectGearDrop(unlockedDrop, playerLevel: player.progression.level)
             }

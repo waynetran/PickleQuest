@@ -69,6 +69,7 @@ final class MatchViewModel {
     var repChange: Int?
     var brokenEquipment: [Equipment] = []
     var energyDrain: Double = 0
+    var bonusLootReady = false
     var matchConfig: MatchConfig = .quickMatch
     var currentServingSide: MatchSide = .player
     var courtName: String = ""
@@ -238,6 +239,7 @@ final class MatchViewModel {
         repChange = nil
         brokenEquipment = []
         energyDrain = 0
+        bonusLootReady = false
         isSkipping = false
         timeoutsAvailable = matchConfig.maxTimeouts
         consumablesUsedCount = 0
@@ -424,6 +426,7 @@ final class MatchViewModel {
         repChange = nil
         brokenEquipment = []
         energyDrain = 0
+        bonusLootReady = false
         courtName = ""
         currentServingSide = .player
         isSkipping = false
