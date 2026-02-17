@@ -691,10 +691,11 @@ final class InteractiveMatchScene: SKScene {
         let scatterX = CGFloat.random(in: -scatter...scatter)
         let scatterY = CGFloat.random(in: -scatter...scatter)
 
-        // Target must clear the kitchen line (0.682) — minimum 0.73 with margin
-        let baseTargetNY: CGFloat = 0.73 + rawPowerFactor * 0.25
+        // Service box is 0.682 (kitchen) to 1.0 (baseline), midpoint ~0.84
+        // Light swipe → mid-box, strong swipe → deep near baseline
+        let baseTargetNY: CGFloat = 0.78 + rawPowerFactor * 0.15
         let targetNX = max(0.15, min(0.85, 0.5 + angleDeviation + scatterX))
-        let targetNY = max(0.73, min(1.05, baseTargetNY + scatterY))
+        let targetNY = max(0.73, min(0.97, baseTargetNY + scatterY))
 
         // Power mode boosts serve speed
         let powerMultiplier: CGFloat = activeShotModes.contains(.power) ? 1.2 : 1.0
@@ -1166,11 +1167,11 @@ final class InteractiveMatchScene: SKScene {
             let prevBounces = ballSim.bounceCount
             previousBallNY = ballSim.courtY
             ballSim.update(dt: dt)
-            // Record first bounce position for kitchen check / debug
-            if ballSim.bounceCount >= 1 && prevBounces == 0 {
-                firstBounceCourtX = ballSim.courtX
-                firstBounceCourtY = ballSim.courtY
-                showLandingSpot(courtX: ballSim.courtX, courtY: ballSim.courtY)
+            // Record first bounce position using sub-frame interpolation
+            if ballSim.didBounceThisFrame && prevBounces == 0 {
+                firstBounceCourtX = ballSim.lastBounceCourtX
+                firstBounceCourtY = ballSim.lastBounceCourtY
+                showLandingSpot(courtX: firstBounceCourtX, courtY: firstBounceCourtY)
             }
             npcAI.update(dt: dt, ball: ballSim)
             checkPlayerHit()
@@ -1413,41 +1414,54 @@ final class InteractiveMatchScene: SKScene {
             return
         }
 
-        // Serve kitchen fault (checked once on first bounce)
-        if ballSim.bounceCount >= 1 && !checkedFirstBounce {
+        // Bounce-time line call: check on first bounce using interpolated position
+        if ballSim.didBounceThisFrame && !checkedFirstBounce {
             checkedFirstBounce = true
+
+            // Out of bounds — ball landed outside the court lines (exact 0-1 boundaries)
+            if ballSim.isLandingOut {
+                let lastHitter: PointResult = ballSim.lastHitByPlayer ? .npcWon : .playerWon
+                if ballSim.lastHitByPlayer {
+                    playerErrors += 1
+                } else {
+                    npcErrors += 1
+                }
+                let bx = String(format: "%.3f", firstBounceCourtX)
+                let by = String(format: "%.3f", firstBounceCourtY)
+                showIndicator("Out!", color: .systemOrange)
+                resolvePoint(lastHitter, reason: "Out of bounds (bounce x=\(bx), y=\(by))")
+                return
+            }
+
+            // Serve kitchen fault — serve must land past kitchen line on receiver's side
             if rallyLength == 0 {
-                // It's a serve — must land past kitchen line on receiver's side
-                let kitchenNear: CGFloat = 0.318  // near kitchen line
-                let kitchenFar: CGFloat = 0.682   // far kitchen line
+                let kitchenNear: CGFloat = 0.318
+                let kitchenFar: CGFloat = 0.682
                 if ballSim.lastHitByPlayer && firstBounceCourtY >= 0.5 && firstBounceCourtY < kitchenFar {
-                    // Player serve landed in NPC's kitchen
                     playerErrors += 1
                     showIndicator("Kitchen Fault!", color: .systemRed)
-                    resolvePoint(.npcWon, reason: "Serve in kitchen (y=\(String(format: "%.2f", firstBounceCourtY)))")
+                    resolvePoint(.npcWon, reason: "Serve in kitchen (y=\(String(format: "%.3f", firstBounceCourtY)))")
                     return
                 }
                 if !ballSim.lastHitByPlayer && firstBounceCourtY <= 0.5 && firstBounceCourtY > kitchenNear {
-                    // NPC serve landed in player's kitchen
                     npcErrors += 1
                     showIndicator("Kitchen Fault!", color: .systemRed)
-                    resolvePoint(.playerWon, reason: "NPC serve in kitchen (y=\(String(format: "%.2f", firstBounceCourtY)))")
+                    resolvePoint(.playerWon, reason: "NPC serve in kitchen (y=\(String(format: "%.3f", firstBounceCourtY)))")
                     return
                 }
             }
         }
 
-        // Double bounce
+        // Double bounce — ball bounced twice, point is over
         if ballSim.isDoubleBounce {
-            let side = ballSim.courtY < 0.5 ? "player" : "NPC"
-            if ballSim.courtY < 0.5 {
+            let bounceY = ballSim.lastBounceCourtY
+            let side = bounceY < 0.5 ? "player" : "NPC"
+            if bounceY < 0.5 {
                 // Ball double-bounced on player's side
                 if ballSim.lastHitByPlayer {
-                    // Player hit it but it landed on their own side — error
                     playerErrors += 1
                     showIndicator("Out!", color: .systemOrange)
                 } else {
-                    // NPC's shot landed and player didn't reach it — miss
                     if rallyLength <= 1 { npcAces += 1 } else { npcWinners += 1 }
                     showIndicator("Miss!", color: .systemYellow)
                 }
@@ -1455,11 +1469,9 @@ final class InteractiveMatchScene: SKScene {
             } else {
                 // Ball double-bounced on NPC's side
                 if ballSim.lastHitByPlayer {
-                    // Player's shot landed and NPC didn't reach it — winner
                     if rallyLength <= 1 { playerAces += 1 } else { playerWinners += 1 }
                     showIndicator("Winner!", color: .systemGreen)
                 } else {
-                    // NPC hit it but it landed on their own side — error
                     npcErrors += 1
                     showIndicator("Out!", color: .systemOrange)
                 }
@@ -1468,7 +1480,7 @@ final class InteractiveMatchScene: SKScene {
             return
         }
 
-        // Out of bounds
+        // Safety: ball escaped the playing area entirely (way past court)
         if ballSim.isOutOfBounds {
             let lastHitter: PointResult = ballSim.lastHitByPlayer ? .npcWon : .playerWon
             if ballSim.lastHitByPlayer {
@@ -1477,7 +1489,7 @@ final class InteractiveMatchScene: SKScene {
                 npcErrors += 1
             }
             showIndicator("Out!", color: .systemOrange)
-            resolvePoint(lastHitter, reason: "Out of bounds (x=\(String(format: "%.2f", ballSim.courtX)), y=\(String(format: "%.2f", ballSim.courtY)))")
+            resolvePoint(lastHitter, reason: "Escaped area (x=\(String(format: "%.2f", ballSim.courtX)), y=\(String(format: "%.2f", ballSim.courtY)))")
             return
         }
 

@@ -25,10 +25,21 @@ final class DrillBallSimulation {
     var lastHitByPlayer: Bool = false
     var activeTime: CGFloat = 0
 
+    // Sub-frame interpolated bounce position (exact landing spot)
+    private(set) var lastBounceCourtX: CGFloat = 0.5
+    private(set) var lastBounceCourtY: CGFloat = 0.5
+    private(set) var didBounceThisFrame: Bool = false
+
     func update(dt: CGFloat) {
         guard isActive else { return }
 
         activeTime += dt
+        didBounceThisFrame = false
+
+        // Save pre-frame positions for sub-frame interpolation
+        let prevCourtX = courtX
+        let prevCourtY = courtY
+        let prevHeight = height
 
         // Advance position
         courtX += vx * dt
@@ -52,6 +63,19 @@ final class DrillBallSimulation {
 
         // Bounce off court surface
         if height <= 0 && vz < 0 {
+            // Sub-frame interpolation: find exact fraction of frame where height crossed zero
+            // prevHeight was positive, height is now negative — linear interpolate
+            let heightDelta = prevHeight - height  // total drop (positive)
+            if heightDelta > 0.0001 {
+                let f = prevHeight / heightDelta  // fraction in [0, 1]
+                lastBounceCourtX = prevCourtX + (courtX - prevCourtX) * f
+                lastBounceCourtY = prevCourtY + (courtY - prevCourtY) * f
+            } else {
+                lastBounceCourtX = courtX
+                lastBounceCourtY = courtY
+            }
+            didBounceThisFrame = true
+
             bounceCount += 1
             height = 0
             vz *= -P.bounceDamping
@@ -151,6 +175,9 @@ final class DrillBallSimulation {
         isActive = false
         lastHitByPlayer = false
         activeTime = 0
+        lastBounceCourtX = 0.5
+        lastBounceCourtY = 0.5
+        didBounceThisFrame = false
     }
 
     /// Convert logical position to screen position via CourtRenderer.
@@ -167,9 +194,17 @@ final class DrillBallSimulation {
         CourtRenderer.courtPoint(nx: courtX, ny: courtY)
     }
 
-    /// Whether the ball is out of bounds (past sidelines or baselines).
+    /// Whether the ball has escaped the playing area entirely (safety check during flight).
+    /// Uses generous margins — actual in/out calls should use `isLandingOut` at bounce time.
     var isOutOfBounds: Bool {
-        courtX < -0.1 || courtX > 1.1 || courtY < -0.15 || courtY > 1.15
+        courtX < -0.5 || courtX > 1.5 || courtY < -0.5 || courtY > 1.5
+    }
+
+    /// Whether the ball's interpolated landing position is outside the court lines.
+    /// Only meaningful when `didBounceThisFrame` is true.
+    var isLandingOut: Bool {
+        lastBounceCourtX < 0.0 || lastBounceCourtX > 1.0 ||
+        lastBounceCourtY < 0.0 || lastBounceCourtY > 1.0
     }
 
     /// Whether the ball has double-bounced (point over).

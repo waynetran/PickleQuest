@@ -1146,39 +1146,47 @@ final class InteractiveDrillScene: SKScene {
 
         // Check cone hits when ball bounces on coach's side (accuracy/return of serve)
         if (drill.type == .accuracyDrill || drill.type == .returnOfServe)
-            && ballSim.bounceCount == 1 && ballSim.lastHitByPlayer {
+            && ballSim.didBounceThisFrame && ballSim.bounceCount == 1 && ballSim.lastHitByPlayer {
             checkConeHits()
         }
 
+        // Bounce-time out call using interpolated landing position
+        if ballSim.didBounceThisFrame && ballSim.bounceCount == 1 && ballSim.isLandingOut {
+            if drill.type == .servePractice {
+                onBallDead(outcome: .serveFault)
+            } else {
+                onBallDead(outcome: .out)
+            }
+            return
+        }
+
         if ballSim.isDoubleBounce {
+            let bounceY = ballSim.lastBounceCourtY
             if drill.type == .servePractice {
                 // Serve: must land past kitchen line (0.682) to be in
-                if ballSim.lastHitByPlayer && ballSim.courtY > 0.682 {
+                if ballSim.lastHitByPlayer && bounceY > 0.682 {
                     scorekeeper.onSuccessfulReturn()
                     onBallDead(outcome: .serveIn)
-                } else if ballSim.lastHitByPlayer && ballSim.courtY > 0.5 {
-                    // Landed in kitchen — fault
+                } else if ballSim.lastHitByPlayer && bounceY > 0.5 {
                     onBallDead(outcome: .serveFault)
                 } else {
                     onBallDead(outcome: .serveFault)
                 }
             } else if drill.type == .returnOfServe {
-                // Return of serve: ball landed on coach's side = successful return
-                if ballSim.lastHitByPlayer && ballSim.courtY > 0.5 {
+                if ballSim.lastHitByPlayer && bounceY > 0.5 {
                     scorekeeper.onSuccessfulReturn()
                     onBallDead(outcome: .winner)
                 } else {
                     onBallDead(outcome: .miss)
                 }
             } else {
-                // Player hit it over and it bounced twice on coach side = winner
-                // Coach hit it and it bounced twice on player side = miss
                 let outcome: PointOutcome = ballSim.lastHitByPlayer ? .winner : .miss
                 onBallDead(outcome: outcome)
             }
             return
         }
 
+        // Safety: ball escaped the playing area entirely
         if ballSim.isOutOfBounds {
             if drill.type == .servePractice {
                 onBallDead(outcome: .serveFault)
