@@ -49,17 +49,19 @@ struct NPC: Identifiable, Codable, Equatable, Hashable, Sendable {
     }
     /// Create a practice match opponent at a target DUPR rating.
     static func practiceOpponent(dupr: Double) -> NPC {
-        // Reverse DUPR mapping: avgStat = (DUPR - 2.0) / 6.0 * 98.0 + 1.0
-        let avgStat = max(1, min(99, Int((dupr - 2.0) / 6.0 * 98.0 + 1.0)))
-        // Add some variance per stat (±20% of avg, clamped to 1-99)
-        let variance = max(3, avgStat / 5)
-        func randStat() -> Int {
-            max(1, min(99, avgStat + Int.random(in: -variance...variance)))
+        let baseStats = StatProfileLoader.shared.toPlayerStats(dupr: dupr)
+        // Add ±20% variance per stat for natural variety
+        func vary(_ base: Int) -> Int {
+            let variance = max(3, base / 5)
+            return max(1, min(99, base + Int.random(in: -variance...variance)))
         }
         let stats = PlayerStats(
-            power: randStat(), accuracy: randStat(), spin: randStat(), speed: randStat(),
-            defense: randStat(), reflexes: randStat(), positioning: randStat(),
-            clutch: randStat(), focus: randStat(), stamina: randStat(), consistency: randStat()
+            power: vary(baseStats.power), accuracy: vary(baseStats.accuracy),
+            spin: vary(baseStats.spin), speed: vary(baseStats.speed),
+            defense: vary(baseStats.defense), reflexes: vary(baseStats.reflexes),
+            positioning: vary(baseStats.positioning), clutch: vary(baseStats.clutch),
+            focus: vary(baseStats.focus), stamina: vary(baseStats.stamina),
+            consistency: vary(baseStats.consistency)
         )
         let difficulty: NPCDifficulty
         switch dupr {

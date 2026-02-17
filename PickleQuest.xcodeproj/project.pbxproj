@@ -28,6 +28,7 @@
 		115E766AA6D6C5A4C0986C4A /* MapPlayerAnnotation.swift in Sources */ = {isa = PBXBuildFile; fileRef = EACFC1726A4D0C790A37B600 /* MapPlayerAnnotation.swift */; };
 		11F155236C50D3D64CE57AB1 /* DrillShotCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4526E661CCA8B3541BD3B370 /* DrillShotCalculator.swift */; };
 		1420F1984DD6F098EB6FE80D /* TrainingDrill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B76EE940F5B3616BE523BA2 /* TrainingDrill.swift */; };
+		14A445FB8F6AF19CB1424C52 /* StatProfileLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4627F1423DAB260D4360F5B2 /* StatProfileLoader.swift */; };
 		16EC3C8E33849102AC8DA88A /* WagerDecisionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355E3510763BE8B045F5312B /* WagerDecisionTests.swift */; };
 		1BF9A8BD192E4934152BF672 /* TrainingReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38000396F34067370B0A5A19 /* TrainingReport.swift */; };
 		1C5BCB7D4CC87D0E42E704F7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 82570377146F7C1A2620EFAD /* Assets.xcassets */; };
@@ -160,6 +161,7 @@
 		C59FDDAFB1C1E9CE54336D15 /* MatchCourtScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DF9A9414A06C483D6964FE9 /* MatchCourtScene.swift */; };
 		C76ACBC7B43C63E29217BFED /* CoachPersonality.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A68971196890067FA5B3BC2 /* CoachPersonality.swift */; };
 		C7E0584C2C5148BE0F63989B /* LevelUpBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75BF66C5ABC414685644FB7 /* LevelUpBanner.swift */; };
+		C9B4ED67374495F871940DDB /* StatProfileTrainingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C89EF5C41383D21C62E95C /* StatProfileTrainingTests.swift */; };
 		CCB9EACA521B10B4AE71EA6D /* InteractiveMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E914C9C273D3930B80A55E0 /* InteractiveMatchView.swift */; };
 		CD7F3AAC4180F9ECBFCA635D /* EquipmentCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B619B590B70982D275E99B1B /* EquipmentCardView.swift */; };
 		CDB28D325BE68FCE621848C4 /* InteractiveDrillScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA7C2EE5B4B3BC2816E9E92A /* InteractiveDrillScene.swift */; };
@@ -181,6 +183,7 @@
 		D94A60FDE166721728A7C6FD /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584959296BFD092ED3EE3FD8 /* PlayerService.swift */; };
 		DB1E24C03C5CA4CDFAA83ABD /* MatchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 784E4E44166C3416091BA7E0 /* MatchResult.swift */; };
 		DBE5F18AC6CBE4C42E7A712E /* StatCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */; };
+		DCCB7C2F0979528084E67B4F /* stat_profiles.json in Resources */ = {isa = PBXBuildFile; fileRef = 637619EDD3755D264C071799 /* stat_profiles.json */; };
 		DDF106C6BA80AD50CC113924 /* GearDropSpawnEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52C66553606405FE4BBBEE3C /* GearDropSpawnEngine.swift */; };
 		DE394D3B7574357C89473158 /* TrainingDrillSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634683B0BE31F01A4E5C08DF /* TrainingDrillSimulator.swift */; };
 		E14F4B323AD9C0761829F96F /* MockCourtProgressionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C77694636A45688609F6B51 /* MockCourtProgressionService.swift */; };
@@ -284,6 +287,7 @@
 		3FE0743BF162137BA3E922FE /* LootGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LootGeneratorTests.swift; sourceTree = "<group>"; };
 		40CF56E088227F546C60B738 /* NPCPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NPCPickerView.swift; sourceTree = "<group>"; };
 		4526E661CCA8B3541BD3B370 /* DrillShotCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillShotCalculator.swift; sourceTree = "<group>"; };
+		4627F1423DAB260D4360F5B2 /* StatProfileLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatProfileLoader.swift; sourceTree = "<group>"; };
 		46473886B6F00CB5E23F17C8 /* DoublesScoreTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoublesScoreTracker.swift; sourceTree = "<group>"; };
 		46B06729836D2E4D76ECC28B /* MatchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchService.swift; sourceTree = "<group>"; };
 		483A1384C44EE8F2B3BC8DA0 /* GearDropRevealSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearDropRevealSheet.swift; sourceTree = "<group>"; };
@@ -309,6 +313,7 @@
 		611817D17D1B689D5C59AF58 /* LightweightMatchSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightweightMatchSimulator.swift; sourceTree = "<group>"; };
 		626A44F16E3DD96990C0879B /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		634683B0BE31F01A4E5C08DF /* TrainingDrillSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingDrillSimulator.swift; sourceTree = "<group>"; };
+		637619EDD3755D264C071799 /* stat_profiles.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = stat_profiles.json; sourceTree = "<group>"; };
 		644505D3B40777DD8A62A693 /* CoachView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachView.swift; sourceTree = "<group>"; };
 		64FE8C463FC243A364CDD109 /* MomentumTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentumTracker.swift; sourceTree = "<group>"; };
 		665DD2E2381E8DAD0E1A31C3 /* DUPRProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DUPRProfileTests.swift; sourceTree = "<group>"; };
@@ -362,6 +367,7 @@
 		AEFAD8E2F8A415500DC0220A /* StoreViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreViewModel.swift; sourceTree = "<group>"; };
 		AF0E26D687250C76182C3D4C /* InventoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryService.swift; sourceTree = "<group>"; };
 		B010507960518CAC6470B57B /* DevTrainingLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevTrainingLauncher.swift; sourceTree = "<group>"; };
+		B4C89EF5C41383D21C62E95C /* StatProfileTrainingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatProfileTrainingTests.swift; sourceTree = "<group>"; };
 		B58F360D5BA99BD39D34BABF /* DrillCoachAI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillCoachAI.swift; sourceTree = "<group>"; };
 		B58F409C0413C7C983E62A1A /* StoreItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreItem.swift; sourceTree = "<group>"; };
 		B619B590B70982D275E99B1B /* EquipmentCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentCardView.swift; sourceTree = "<group>"; };
@@ -507,6 +513,7 @@
 				CB744DF042767593746C101B /* MatchEngineTests.swift */,
 				1B134E5A041B5743FC9C0BBC /* MomentumTrackerTests.swift */,
 				B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */,
+				B4C89EF5C41383D21C62E95C /* StatProfileTrainingTests.swift */,
 				355E3510763BE8B045F5312B /* WagerDecisionTests.swift */,
 			);
 			path = Engine;
@@ -855,6 +862,7 @@
 			children = (
 				82570377146F7C1A2620EFAD /* Assets.xcassets */,
 				392EA26F10E273F38B0D3BA7 /* character2-Sheet.png */,
+				637619EDD3755D264C071799 /* stat_profiles.json */,
 				629F8845B7EE41F1934A1746 /* MockData */,
 				EEB40D2250A9785A88611B87 /* SpriteSheets */,
 			);
@@ -991,6 +999,7 @@
 			children = (
 				611817D17D1B689D5C59AF58 /* LightweightMatchSimulator.swift */,
 				E3BE452DAA636B1E27B98218 /* SimulationParameters.swift */,
+				4627F1423DAB260D4360F5B2 /* StatProfileLoader.swift */,
 				38000396F34067370B0A5A19 /* TrainingReport.swift */,
 				3264852247713BA4284979ED /* TrainingSession.swift */,
 			);
@@ -1127,6 +1136,7 @@
 				BDC86FDAA4439CFE42A0F107 /* ball.png in Resources */,
 				C31CD5CA9BE818B447085B10 /* character1-Sheet.png in Resources */,
 				571951E2E4725FBDC54CDA84 /* character2-Sheet.png in Resources */,
+				DCCB7C2F0979528084E67B4F /* stat_profiles.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1155,6 +1165,7 @@
 				21A8FEC6BE691264FAE691E7 /* MatchEngineTests.swift in Sources */,
 				72218CB4A65BD13B1CE5DDD9 /* MomentumTrackerTests.swift in Sources */,
 				DBE5F18AC6CBE4C42E7A712E /* StatCalculatorTests.swift in Sources */,
+				C9B4ED67374495F871940DDB /* StatProfileTrainingTests.swift in Sources */,
 				16EC3C8E33849102AC8DA88A /* WagerDecisionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1310,6 +1321,7 @@
 				412DC22F0B76ED5957269316 /* StatAllocationView.swift in Sources */,
 				A626669F5ACFF89A909F5072 /* StatBar.swift in Sources */,
 				B04EDE991297618814A545E4 /* StatCalculator.swift in Sources */,
+				14A445FB8F6AF19CB1424C52 /* StatProfileLoader.swift in Sources */,
 				F0E6CC3AE8F78A6B3B951572 /* StoreItem.swift in Sources */,
 				D0DB3E7B604374E484843D56 /* StoreItemCard.swift in Sources */,
 				F389FCF6873F6777A0D4B3C5 /* StoreService.swift in Sources */,

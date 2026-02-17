@@ -1,129 +1,73 @@
 import Foundation
 
-/// Mutable set of tunable rally constants used by `LightweightMatchSimulator`.
-/// Mirrors the values from `GameConstants.Rally` but allows the ES trainer to perturb them.
-struct SimulationParameters: Sendable {
-    // Serve phase
-    var baseAceChance: Double
-    var powerAceScaling: Double
-    var reflexDefenseScale: Double
+/// Per-stat linear mapping coefficients optimized by the ES trainer.
+/// For each of 11 stats: `stat(dupr) = slope * normalizedDupr + offset`
+/// where `normalizedDupr = (dupr - 2.0) / 6.0` (0.0 at DUPR 2.0, 1.0 at DUPR 8.0).
+struct SimulationParameters: Sendable, Codable {
+    /// Stat increase from DUPR 2.0 to DUPR 8.0 (per stat)
+    var slopes: [Double]   // 11 values
+    /// Base stat value at DUPR 2.0 (per stat)
+    var offsets: [Double]  // 11 values
 
-    // Rally phase — winners and errors
-    var baseWinnerChance: Double
-    var baseErrorChance: Double
+    static let statCount = 11
+    static let parameterCount = 22 // 11 slopes + 11 offsets
 
-    // Forced errors
-    var forcedErrorBase: Double
-    var attackPressureScale: Double
-    var defenseResistScale: Double
+    static let statNames: [String] = [
+        "power", "accuracy", "spin", "speed",
+        "defense", "reflexes", "positioning",
+        "clutch", "focus", "stamina", "consistency"
+    ]
 
-    // Winner shot bonus (per-shot increase in winner chance as rally extends)
-    var winnerShotBonus: Double
+    /// Initialize from current linear mapping (matches NPC.practiceOpponent behavior).
+    /// Default: all stats use slope=98, offset=1 (stat goes from 1 at DUPR 2.0 to 99 at DUPR 8.0).
+    static let defaults: SimulationParameters = {
+        let slope = 98.0
+        let offset = 1.0
+        return SimulationParameters(
+            slopes: [Double](repeating: slope, count: statCount),
+            offsets: [Double](repeating: offset, count: statCount)
+        )
+    }()
 
-    // Error scaling from stats
-    var errorConsistencyScale: Double
-    var errorAccuracyScale: Double
-    var errorFatigueScale: Double
-
-    // Overall advantage weight (max-rally stat comparison)
-    var overallAdvantageScale: Double
-
-    /// Initialize from current `GameConstants.Rally` values.
-    static let defaults = SimulationParameters(
-        baseAceChance: GameConstants.Rally.baseAceChance,
-        powerAceScaling: GameConstants.Rally.powerAceScaling,
-        reflexDefenseScale: GameConstants.Rally.reflexDefenseScale,
-        baseWinnerChance: GameConstants.Rally.baseWinnerChance,
-        baseErrorChance: GameConstants.Rally.baseErrorChance,
-        forcedErrorBase: 0.08,
-        attackPressureScale: 1.0 / 200.0,
-        defenseResistScale: 1.0 / 200.0,
-        winnerShotBonus: 0.005,
-        errorConsistencyScale: 1.0 / 200.0,
-        errorAccuracyScale: 1.0 / 200.0,
-        errorFatigueScale: 0.003,
-        overallAdvantageScale: 1.0 / 200.0
-    )
-
-    // MARK: - Vector Operations
-
-    static let parameterCount = 13
-
-    func toArray() -> [Double] {
-        [
-            baseAceChance, powerAceScaling, reflexDefenseScale,
-            baseWinnerChance, baseErrorChance,
-            forcedErrorBase, attackPressureScale, defenseResistScale,
-            winnerShotBonus,
-            errorConsistencyScale, errorAccuracyScale, errorFatigueScale,
-            overallAdvantageScale
-        ]
+    init(slopes: [Double], offsets: [Double]) {
+        self.slopes = slopes
+        self.offsets = offsets
     }
 
     init(fromArray a: [Double]) {
-        baseAceChance = a[0]
-        powerAceScaling = a[1]
-        reflexDefenseScale = a[2]
-        baseWinnerChance = a[3]
-        baseErrorChance = a[4]
-        forcedErrorBase = a[5]
-        attackPressureScale = a[6]
-        defenseResistScale = a[7]
-        winnerShotBonus = a[8]
-        errorConsistencyScale = a[9]
-        errorAccuracyScale = a[10]
-        errorFatigueScale = a[11]
-        overallAdvantageScale = a[12]
+        slopes = Array(a[0..<SimulationParameters.statCount])
+        offsets = Array(a[SimulationParameters.statCount..<SimulationParameters.parameterCount])
     }
 
-    init(
-        baseAceChance: Double, powerAceScaling: Double, reflexDefenseScale: Double,
-        baseWinnerChance: Double, baseErrorChance: Double,
-        forcedErrorBase: Double, attackPressureScale: Double, defenseResistScale: Double,
-        winnerShotBonus: Double,
-        errorConsistencyScale: Double, errorAccuracyScale: Double, errorFatigueScale: Double,
-        overallAdvantageScale: Double
-    ) {
-        self.baseAceChance = baseAceChance
-        self.powerAceScaling = powerAceScaling
-        self.reflexDefenseScale = reflexDefenseScale
-        self.baseWinnerChance = baseWinnerChance
-        self.baseErrorChance = baseErrorChance
-        self.forcedErrorBase = forcedErrorBase
-        self.attackPressureScale = attackPressureScale
-        self.defenseResistScale = defenseResistScale
-        self.winnerShotBonus = winnerShotBonus
-        self.errorConsistencyScale = errorConsistencyScale
-        self.errorAccuracyScale = errorAccuracyScale
-        self.errorFatigueScale = errorFatigueScale
-        self.overallAdvantageScale = overallAdvantageScale
+    func toArray() -> [Double] {
+        slopes + offsets
     }
 
-    /// Clamp all values to sensible ranges (no negative probabilities, reasonable caps).
+    /// Clamp slopes and offsets to ensure stats stay in 1-99 range across DUPR 2.0-8.0.
     func clamped() -> SimulationParameters {
-        SimulationParameters(
-            baseAceChance: max(0.001, min(0.25, baseAceChance)),
-            powerAceScaling: max(0.0001, min(0.01, powerAceScaling)),
-            reflexDefenseScale: max(0.0001, min(0.01, reflexDefenseScale)),
-            baseWinnerChance: max(0.02, min(0.40, baseWinnerChance)),
-            baseErrorChance: max(0.02, min(0.40, baseErrorChance)),
-            forcedErrorBase: max(0.01, min(0.25, forcedErrorBase)),
-            attackPressureScale: max(0.001, min(0.02, attackPressureScale)),
-            defenseResistScale: max(0.001, min(0.02, defenseResistScale)),
-            winnerShotBonus: max(0.0, min(0.02, winnerShotBonus)),
-            errorConsistencyScale: max(0.001, min(0.02, errorConsistencyScale)),
-            errorAccuracyScale: max(0.001, min(0.02, errorAccuracyScale)),
-            errorFatigueScale: max(0.0, min(0.01, errorFatigueScale)),
-            overallAdvantageScale: max(0.001, min(0.02, overallAdvantageScale))
+        var s = slopes
+        var o = offsets
+        for i in 0..<SimulationParameters.statCount {
+            s[i] = max(0, min(120, s[i]))
+            o[i] = max(1, min(50, o[i]))
+            // Ensure stat at DUPR 8.0 (n=1.0) doesn't exceed 99
+            if s[i] + o[i] > 99 {
+                s[i] = 99 - o[i]
+            }
+        }
+        return SimulationParameters(slopes: s, offsets: o)
+    }
+
+    /// Generate a PlayerStats block for a given DUPR level.
+    func toPlayerStats(dupr: Double) -> PlayerStats {
+        let n = (dupr - 2.0) / 6.0
+        func stat(_ index: Int) -> Int {
+            max(1, min(99, Int((slopes[index] * n + offsets[index]).rounded())))
+        }
+        return PlayerStats(
+            power: stat(0), accuracy: stat(1), spin: stat(2), speed: stat(3),
+            defense: stat(4), reflexes: stat(5), positioning: stat(6),
+            clutch: stat(7), focus: stat(8), stamina: stat(9), consistency: stat(10)
         )
     }
-
-    static let parameterNames: [String] = [
-        "baseAceChance", "powerAceScaling", "reflexDefenseScale",
-        "baseWinnerChance", "baseErrorChance",
-        "forcedErrorBase", "attackPressureScale", "defenseResistScale",
-        "winnerShotBonus",
-        "errorConsistencyScale", "errorAccuracyScale", "errorFatigueScale",
-        "overallAdvantageScale"
-    ]
 }
