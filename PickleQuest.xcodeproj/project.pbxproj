@@ -126,10 +126,12 @@
 		A5120AA31F0A8AEBBBFC9900 /* EquipmentSetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D8901DF47B273A28A842991 /* EquipmentSetTests.swift */; };
 		A59A00DD59A508DD8118D1B7 /* MockStoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7AEE335773012DD0EA1E5EF /* MockStoreService.swift */; };
 		A626669F5ACFF89A909F5072 /* StatBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A76446B9A2021FE2A0668EC0 /* StatBar.swift */; };
+		A78FF0B74DD4EE344C392383 /* MatchAI.swift in Sources */ = {isa = PBXBuildFile; fileRef = FED0E8BEF06AD0DD9066B5E9 /* MatchAI.swift */; };
 		AA8CE763EB065822FA23CCA0 /* CharacterAnimationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5DFB7311C2DB71DFA7ADED7 /* CharacterAnimationState.swift */; };
 		AB43DA3A0F066CE64330C1CA /* SavedPlayerSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1570143F6B049443848F6689 /* SavedPlayerSummary.swift */; };
 		AFADB2EE7CFC9A8B6114BF26 /* RallySimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F35FD040AF4661A856F9D6FA /* RallySimulator.swift */; };
 		B04EDE991297618814A545E4 /* StatCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 840065301D6F3845B7E589EA /* StatCalculator.swift */; };
+		B151C93E899230AF229A2434 /* InteractiveMatchScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 391E2B3DC6D4E56C766EFF8B /* InteractiveMatchScene.swift */; };
 		B247D23E5D96D867ECF81123 /* GearDropAnnotationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D20D52E8F8F7EEA4ADFB4AE /* GearDropAnnotationView.swift */; };
 		B26771FE90898DD826D9B56D /* EquipmentSlot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0D6A9C6DD259AB87FE0D21 /* EquipmentSlot.swift */; };
 		B375F79A5388BBAE55B61D80 /* DevTrainingLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = B010507960518CAC6470B57B /* DevTrainingLauncher.swift */; };
@@ -153,6 +155,7 @@
 		C59FDDAFB1C1E9CE54336D15 /* MatchCourtScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DF9A9414A06C483D6964FE9 /* MatchCourtScene.swift */; };
 		C76ACBC7B43C63E29217BFED /* CoachPersonality.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A68971196890067FA5B3BC2 /* CoachPersonality.swift */; };
 		C7E0584C2C5148BE0F63989B /* LevelUpBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75BF66C5ABC414685644FB7 /* LevelUpBanner.swift */; };
+		CCB9EACA521B10B4AE71EA6D /* InteractiveMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E914C9C273D3930B80A55E0 /* InteractiveMatchView.swift */; };
 		CD7F3AAC4180F9ECBFCA635D /* EquipmentCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B619B590B70982D275E99B1B /* EquipmentCardView.swift */; };
 		CDB28D325BE68FCE621848C4 /* InteractiveDrillScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA7C2EE5B4B3BC2816E9E92A /* InteractiveDrillScene.swift */; };
 		CDB582B28BCB65C90D6A3E06 /* RepProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87E6BC2CEDE4611F9F591DD0 /* RepProfile.swift */; };
@@ -221,6 +224,7 @@
 		0D14EE825541CA06E8391E4B /* TournamentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentService.swift; sourceTree = "<group>"; };
 		0D5CBD9FA214FC088FFEC5EA /* DrillScorekeeper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillScorekeeper.swift; sourceTree = "<group>"; };
 		0E3B9DA82455DDC9859651BB /* character1-Sheet.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "character1-Sheet.png"; sourceTree = "<group>"; };
+		0E914C9C273D3930B80A55E0 /* InteractiveMatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveMatchView.swift; sourceTree = "<group>"; };
 		0F008F637AAC2F4A4BA60D19 /* WagerDecision.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WagerDecision.swift; sourceTree = "<group>"; };
 		113D32D22345163D83B3B9D9 /* MatchPoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPoint.swift; sourceTree = "<group>"; };
 		1189DB1F3E1BDB85799DBDD7 /* SpriteSheetAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteSheetAnimator.swift; sourceTree = "<group>"; };
@@ -258,6 +262,7 @@
 		3303CC062F93F337B9A93396 /* MockTournamentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockTournamentService.swift; sourceTree = "<group>"; };
 		34188BBE97EE7E2D002892CE /* GameConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameConstants.swift; sourceTree = "<group>"; };
 		355E3510763BE8B045F5312B /* WagerDecisionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WagerDecisionTests.swift; sourceTree = "<group>"; };
+		391E2B3DC6D4E56C766EFF8B /* InteractiveMatchScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveMatchScene.swift; sourceTree = "<group>"; };
 		392EA26F10E273F38B0D3BA7 /* character2-Sheet.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "character2-Sheet.png"; sourceTree = "<group>"; };
 		3AEAB8CBD3D6D5C1EBBECABA /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		3AF4D0D6692B46B7BEB6CFA7 /* DrillConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillConfig.swift; sourceTree = "<group>"; };
@@ -404,6 +409,7 @@
 		FD07BCE35CB5A979F86D4A2F /* AlphaNPCGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphaNPCGenerator.swift; sourceTree = "<group>"; };
 		FD8FB5462329B4FD893BADEB /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		FEB6871F2BC9AB0D6E1EBD19 /* PerformanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceView.swift; sourceTree = "<group>"; };
+		FED0E8BEF06AD0DD9066B5E9 /* MatchAI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchAI.swift; sourceTree = "<group>"; };
 		FF93932170EAA8760BA56E83 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -498,6 +504,7 @@
 			children = (
 				4A99F62EE4D7EA479D8DDF4E /* GearDrop */,
 				7536A6EDDE8E4DF812518979 /* LootGeneration */,
+				3AADBFB6C8FDB76C21361200 /* Match */,
 				1D3AEE556832EE839A9F7973 /* MatchSimulation */,
 				C1C0C4A7DA0D556EF4E1D5EB /* Rating */,
 				DB32B50DFC1164C0CAD2B7E2 /* Tournament */,
@@ -515,6 +522,14 @@
 				B85291B7FDEBBCCCD587FAC6 /* UIColor+Hex.swift */,
 			);
 			path = Extensions;
+			sourceTree = "<group>";
+		};
+		3AADBFB6C8FDB76C21361200 /* Match */ = {
+			isa = PBXGroup;
+			children = (
+				FED0E8BEF06AD0DD9066B5E9 /* MatchAI.swift */,
+			);
+			path = Match;
 			sourceTree = "<group>";
 		};
 		42FFBE64E25E459052E94834 /* Training */ = {
@@ -751,6 +766,8 @@
 		A413DB1056B131CC0D86793D /* Match */ = {
 			isa = PBXGroup;
 			children = (
+				391E2B3DC6D4E56C766EFF8B /* InteractiveMatchScene.swift */,
+				0E914C9C273D3930B80A55E0 /* InteractiveMatchView.swift */,
 				F5C109738393E6303B611E62 /* MatchActionButtons.swift */,
 				9D397036B916DEC1B19A645F /* MatchHubView.swift */,
 				E37015A94BA1E07BCD8C05A5 /* MatchResultView.swift */,
@@ -1185,6 +1202,8 @@
 				6CDAFCBBAF79042C51A02D5E /* InteractiveDrillResult.swift in Sources */,
 				CDB28D325BE68FCE621848C4 /* InteractiveDrillScene.swift in Sources */,
 				7C006A7645E9AA7EAB0D9F2D /* InteractiveDrillView.swift in Sources */,
+				B151C93E899230AF229A2434 /* InteractiveMatchScene.swift in Sources */,
+				CCB9EACA521B10B4AE71EA6D /* InteractiveMatchView.swift in Sources */,
 				4DAD72FBC09DA09E916FEB5B /* InventoryService.swift in Sources */,
 				F45115D8662B6784B8EABDB1 /* InventoryView.swift in Sources */,
 				1D4054E15A14E383E1E5DA81 /* InventoryViewModel.swift in Sources */,
@@ -1197,6 +1216,7 @@
 				28AB4CC6F088EE0D1F7A279D /* MapItem.swift in Sources */,
 				115E766AA6D6C5A4C0986C4A /* MapPlayerAnnotation.swift in Sources */,
 				A096F6D670873DBA106FA1AC /* MapViewModel.swift in Sources */,
+				A78FF0B74DD4EE344C392383 /* MatchAI.swift in Sources */,
 				5A43B7300C9756C5C0783F92 /* MatchAction.swift in Sources */,
 				6EC9B25135C35C3965C18609 /* MatchActionButtons.swift in Sources */,
 				023992AA330250878468D1C3 /* MatchAnimationConstants.swift in Sources */,

@@ -30,6 +30,7 @@ struct MapContentView: View {
     @State private var hasCenteredOnPlayer = false
     @State private var undiscoveredCourt: Court?
     @State private var isDoublesMode = false
+    @State private var matchPlayMode: MatchPlayMode = .simulated
     @State private var visibleRegion: MKCoordinateRegion?
     @State private var showTrainingView = false
     @State private var playerAnimationState: CharacterAnimationState = .idleBack
@@ -229,6 +230,7 @@ struct MapContentView: View {
                     player: appState.player,
                     isRated: Bindable(matchVM).isRated,
                     isDoublesMode: $isDoublesMode,
+                    matchPlayMode: $matchPlayMode,
                     onChallenge: { npc in
                         // Hustlers and wager-eligible NPCs go through the wager sheet
                         matchVM.pendingWagerNPC = npc
@@ -259,13 +261,22 @@ struct MapContentView: View {
                     npcPurse: mapVM.npcPursesAtSelectedCourt[npc.id] ?? 0,
                     onAccept: { wagerAmount in
                         let courtNameForMatch = mapVM.selectedCourt?.name ?? ""
-                        Task {
-                            await matchVM.startMatch(
+                        if matchPlayMode == .interactive {
+                            matchVM.startInteractiveMatch(
                                 player: appState.player,
                                 opponent: npc,
                                 courtName: courtNameForMatch,
                                 wagerAmount: wagerAmount
                             )
+                        } else {
+                            Task {
+                                await matchVM.startMatch(
+                                    player: appState.player,
+                                    opponent: npc,
+                                    courtName: courtNameForMatch,
+                                    wagerAmount: wagerAmount
+                                )
+                            }
                         }
                         matchVM.pendingWagerNPC = nil
                     },

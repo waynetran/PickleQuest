@@ -61,3 +61,8 @@ enum MatchType: String, Codable, Sendable {
     case singles
     case doubles
 }
+
+enum MatchPlayMode: String, Sendable {
+    case simulated
+    case interactive
+}

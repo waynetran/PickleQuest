@@ -87,6 +87,7 @@ final class MatchViewModel {
         case selectingOpponent
         case selectingPartner
         case simulating
+        case interactiveMatch
         case finished
     }
 
@@ -144,6 +145,34 @@ final class MatchViewModel {
         )
         self.engine = newEngine
         await runEngineStream(engine: newEngine, player: player, opponent: opponent)
+    }
+
+    func startInteractiveMatch(player: Player, opponent: NPC, courtName: String = "", wagerAmount: Int = 0) {
+        selectedNPC = opponent
+        self.courtName = courtName
+        self.playerName = player.name
+        self.wagerAmount = wagerAmount
+        self.isHustlerMatch = opponent.isHustler
+        isDoublesMode = false
+
+        playerAppearance = player.appearance
+        opponentAppearance = AppearanceGenerator.appearance(for: opponent)
+
+        let effectiveRated = effectiveIsRated(
+            playerRating: player.duprRating,
+            opponentRating: opponent.duprRating
+        )
+        matchConfig = MatchConfig(
+            matchType: .singles,
+            pointsToWin: GameConstants.InteractiveMatch.pointsToWin,
+            gamesToWin: 1,
+            winByTwo: true,
+            isRated: effectiveRated,
+            wagerAmount: wagerAmount
+        )
+
+        resetMatchState()
+        matchState = .interactiveMatch
     }
 
     func startDoublesMatch(
@@ -348,6 +377,10 @@ final class MatchViewModel {
             let gapDrain = suprGap > 0 ? suprGap * GameConstants.PersistentEnergy.suprGapDrainBonus : 0
             energyDrain = min(GameConstants.PersistentEnergy.maxDrainPerMatch, baseDrain + gapDrain)
         }
+    }
+
+    func computeRewardsPreviewForInteractive(player: Player, opponent: NPC, result: MatchResult) {
+        computeRewardsPreview(player: player, opponent: opponent, result: result)
     }
 
     func processResult(player: inout Player) -> MatchRewards {

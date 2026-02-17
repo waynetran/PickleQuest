@@ -23,6 +23,7 @@
 | 8 | Match Simulation Realism + Focus Stat | **Complete** |
 | 9 | Gear Drop System (Loot on the Map) | **Complete** |
 | 9.1 | Drill System Redesign + UI Polish | **Complete** |
+| 10 | Interactive Match Mode | **Complete** |
 | 7c | Persistence Polish, Cloud Prep, Multiplayer Prep | Planned |
 
 ---
@@ -878,6 +879,54 @@ MapContentView — ForEach annotations, reveal sheet, contested sheet, trail ban
 - `TrainingDrillScene.swift` — Updated animation switch cases
 - `DevTrainingLauncher.swift` — Consistent button sizing, default to baselineRally
 - `MatchSpriteView.swift` — Pre-match instruction overlay with action explanations
+
+---
+
+## Milestone 10: Interactive Match Mode
+
+### What was built
+- **Real-time match gameplay**: play full pickleball matches using drill-scene controls (joystick, 6 shot mode buttons, stamina system) against NPC opponents instead of watching simulated matches
+- **MatchAI**: strategic NPC opponent that uses `calculatePlayerShot()` with stat-gated shot mode selection — power ≥50/70, accuracy ≥60, spin ≥40/70, positioning ≥50, focus ≥60 unlock different modes; own stamina system with sprint decisions based on ball distance
+- **Side-out singles scoring**: only the server scores; non-server winning a rally causes side-out (serve switches); first to 11, win by 2
+- **Serve mechanics**: player serves via swipe (same as drill scene), NPC auto-serves after 1.5s pause; server positions at correct side (even score = right, odd = left), receiver mirrors cross-court
+- **NPC boss bar**: name + DUPR label + stamina bar above opponent sprite, updates in real-time
+- **Match score HUD**: top-center scoreboard with serving indicator (pickle icon), player stamina bar, stamina warnings
+- **Match type picker**: Simulated/Interactive segmented control on CourtDetailSheet (singles only), feeds through wager flow
+- **Full result integration**: interactive matches produce `MatchResult` that feeds into existing pipeline — DUPR, XP, coins, loot, durability, match history, daily challenges, wagers all work identically
+- **Instruction overlay**: NPC info, difficulty badge, control reminders before match starts
+- **Result overlay**: Win/Loss banner, final score, match stats (aces, winners, errors, best rally), DUPR change, XP earned
+- **Resign support**: exit button produces loss result with current score, `wasResigned = true`
+
+### Architecture
+```
+CourtDetailSheet (Simulated/Interactive picker)
+    ↓ interactive selected
+MapContentView → WagerSelectionSheet → matchVM.startInteractiveMatch()
+    ↓
+MatchHubView routes .interactiveMatch → InteractiveMatchView (SwiftUI wrapper)
+    ↓
+InteractiveMatchScene (SpriteKit) — reuses drill subsystems:
+  - CourtRenderer, DrillBallSimulation, DrillShotCalculator
+  - Joystick, shot mode buttons, stamina system
+  - SpriteSheetAnimator for character animations
+    ↓
+MatchAI — strategic opponent using NPC stats + shot modes
+    ↓
+Match end → MatchResult → existing processResult() pipeline
+```
+
+### New files (3)
+- `Engine/Match/MatchAI.swift` — strategic AI with stat-gated shot modes, stamina, positioning, serve/receive logic
+- `Views/Match/InteractiveMatchScene.swift` — SpriteKit match scene with scoring, serve rotation, phases, HUD
+- `Views/Match/InteractiveMatchView.swift` — SwiftUI wrapper with instruction/result overlays
+
+### Modified files (6)
+- `GameConstants.swift` — `InteractiveMatch` section (pointsToWin, winByMargin, maxScore, pause durations, XP values)
+- `MatchConfig.swift` — `MatchPlayMode` enum (simulated/interactive)
+- `MatchViewModel.swift` — `.interactiveMatch` state, `startInteractiveMatch()`, `computeRewardsPreviewForInteractive()`
+- `MatchHubView.swift` — `.interactiveMatch` routing to `InteractiveMatchView`, updated navigationTitle
+- `CourtDetailSheet.swift` — `matchPlayMode` binding, Simulated/Interactive segmented picker
+- `MapContentView.swift` — `matchPlayMode` state, passed to CourtDetailSheet, branching in wager onAccept
 
 ---
 

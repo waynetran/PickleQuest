@@ -41,7 +41,7 @@ struct MatchHubView: View {
 
     private var navigationTitle: String {
         switch matchVM?.matchState {
-        case .simulating: return ""
+        case .simulating, .interactiveMatch: return ""
         case .finished: return "Results"
         case .selectingPartner: return "Pick Your Partner"
         default: return "Map"
@@ -61,6 +61,7 @@ struct MatchHubView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .opacity(matchVM.matchState == .idle || matchVM.matchState == .selectingOpponent ? 1 : 0)
                 .allowsHitTesting(matchVM.matchState == .idle || matchVM.matchState == .selectingOpponent)
+                .disabled(matchVM.matchState == .interactiveMatch)
 
             switch matchVM.matchState {
             case .idle, .selectingOpponent:
@@ -98,6 +99,28 @@ struct MatchHubView: View {
                         .toolbar(.hidden, for: .tabBar)
                 } else {
                     MatchSimulationView(viewModel: matchVM)
+                }
+
+            case .interactiveMatch:
+                if let npc = matchVM.selectedNPC {
+                    InteractiveMatchView(
+                        player: appState.player,
+                        npc: npc,
+                        npcAppearance: matchVM.opponentAppearance,
+                        isRated: matchVM.matchConfig.isRated,
+                        wagerAmount: matchVM.wagerAmount
+                    ) { result in
+                        matchVM.matchResult = result
+                        matchVM.lootDrops = result.loot
+                        matchVM.computeRewardsPreviewForInteractive(
+                            player: appState.player,
+                            opponent: npc,
+                            result: result
+                        )
+                        matchVM.matchState = .finished
+                    }
+                    .toolbar(.hidden, for: .navigationBar)
+                    .toolbar(.hidden, for: .tabBar)
                 }
 
             case .finished:

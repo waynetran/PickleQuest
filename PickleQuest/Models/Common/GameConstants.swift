@@ -293,6 +293,18 @@ enum GameConstants {
         static let drillAnimationDuration: Double = 4.0
     }
 
+    // MARK: - Interactive Match
+    enum InteractiveMatch {
+        static let pointsToWin = 11
+        static let winByMargin = 2
+        static let maxScore = 15              // sudden death at 15-15
+        static let servePauseDuration: CGFloat = 1.5  // seconds before AI serves
+        static let pointOverPauseDuration: CGFloat = 2.0  // show point result
+        static let baseXP = 50
+        static let winXPBonus = 100
+        static let interactiveXPMultiplier = 1.5  // 50% more XP than simulated
+    }
+
     // MARK: - Drill Physics (Interactive Mini-Games)
     enum DrillPhysics {
         static let gravity: CGFloat = 1.2           // logical units/sec² (low for floaty, arcade feel)
