@@ -106,6 +106,7 @@ final class MatchAI {
     let npcStats: PlayerStats
     let npcName: String
     let npcDUPR: Double
+    let playerDUPR: Double
 
     // Position in court space (NPC is on the far side: ny ~0.85–1.0)
     var currentNX: CGFloat
@@ -127,14 +128,21 @@ final class MatchAI {
     // Strategy profile (built from DUPR + personality)
     let strategy: NPCStrategyProfile
 
+    // Shot quality context (set by InteractiveMatchScene before NPC hits)
+    var lastPlayerShotModes: DrillShotCalculator.ShotMode = []
+    var lastPlayerHitBallHeight: CGFloat = 0
+    var lastPlayerHitDifficulty: CGFloat = 0
+
     // Serve tracking
     var isServing: Bool = false
+    private var shotCountThisPoint: Int = 0
     private let startNY: CGFloat = 0.92
 
-    init(npc: NPC) {
+    init(npc: NPC, playerDUPR: Double = 3.0) {
         self.npcStats = npc.stats
         self.npcName = npc.name
         self.npcDUPR = npc.duprRating
+        self.playerDUPR = playerDUPR
         self.strategy = NPCStrategyProfile.build(dupr: npc.duprRating, personality: npc.personality)
 
         // Use boosted stats for movement and hitbox (compensate for human joystick advantage)
@@ -282,17 +290,8 @@ final class MatchAI {
     // MARK: - Unforced Errors
 
     /// Whether the NPC makes an unforced error on this shot (whiff, frame, mis-hit).
-    /// Error rate factors in incoming ball speed + spin (shot difficulty) and NPC stats.
-    /// Harder shots cause dramatically more errors for lower-skilled NPCs.
-    ///
-    /// Approximate error rates on full power shots:
-    /// DUPR 2-3 (~boosted stat 40): ~48%
-    /// DUPR 3-4 (~boosted stat 55): ~36%
-    /// DUPR 4-5 (~boosted stat 75): ~19%
-    /// DUPR 5-6 (~boosted stat 90): ~7%
-    /// DUPR 7-8 (~boosted stat 99): ~2-5%
-    ///
-    /// Soft/neutral shots produce much lower error rates (~2-10%).
+    /// Error rate factors in incoming ball speed + spin (shot difficulty), NPC stats,
+    /// player shot quality, and DUPR gap.
     func shouldMakeError(ball: DrillBallSimulation) -> Bool {
         let boost = P.npcStatBoost
         let consistencyStat = CGFloat(min(99, npcStats.stat(.consistency) + boost))
@@ -333,7 +332,74 @@ final class MatchAI {
             errorRate *= 1.0 + (stretchFraction - 0.6) * 1.5 // up to 60% more errors at max reach
         }
 
+        // Shot quality modifier: good player shots → more NPC errors, bad → fewer
+        let shotQuality = assessPlayerShotQuality(ball: ball)
+        errorRate *= (1.0 + shotQuality)
+
+        // DUPR gap scaling: stronger NPCs make fewer baseline errors
+        let duprGap = npcDUPR - playerDUPR
+        if duprGap > 0 {
+            // NPC is stronger — reduce error rate
+            errorRate *= max(CGFloat(S.maxDuprErrorReduction), 1.0 - CGFloat(duprGap) * S.duprGapErrorScale)
+        } else if duprGap < 0 {
+            // NPC is weaker — increase error rate
+            errorRate *= min(S.maxDuprErrorBoost, 1.0 + CGFloat(abs(duprGap)) * S.duprGapErrorScale * 0.67)
+        }
+
         return CGFloat.random(in: 0...1) < errorRate
+    }
+
+    // MARK: - Shot Quality Assessment
+
+    /// Assess how well the player chose their shot based on the ball situation.
+    /// Returns -0.5 (bad shot) to +0.5 (great shot).
+    private func assessPlayerShotQuality(ball: DrillBallSimulation) -> CGFloat {
+        let modes = lastPlayerShotModes
+        let ballHeight = lastPlayerHitBallHeight
+
+        var quality: CGFloat = 0
+
+        let isHighBall = ballHeight > S.highBallThreshold
+        let isLowBall = ballHeight < S.lowBallThreshold
+        let ballSpeed = sqrt(ball.vx * ball.vx + ball.vy * ball.vy)
+        let isFastIncoming = ballSpeed > (P.baseShotSpeed + P.maxShotSpeed) * 0.5
+
+        // Good: Power on a high ball (overhead opportunity)
+        if modes.contains(.power) && isHighBall {
+            quality += S.goodShotErrorBonus
+        }
+
+        // Good: Topspin/angled cross-court pressure
+        if (modes.contains(.topspin) || modes.contains(.angled)) && !isLowBall {
+            quality += S.goodShotErrorBonus * 0.6
+        }
+
+        // Good: Reset/slice when under pressure (fast incoming or stretched)
+        if modes.contains(.reset) && (isFastIncoming || lastPlayerHitDifficulty > 0.5) {
+            quality += S.goodShotErrorBonus * 0.5
+        }
+
+        // Good: Focus on a manageable ball — tighter shot
+        if modes.contains(.focus) && lastPlayerHitDifficulty < 0.4 {
+            quality += S.goodShotErrorBonus * 0.4
+        }
+
+        // Bad: Power on a low, fast incoming ball — over-hitting
+        if modes.contains(.power) && isLowBall && isFastIncoming {
+            quality += S.badShotErrorPenalty
+        }
+
+        // Bad: Reset on a sitter — gives NPC free attack
+        if modes.contains(.reset) && isHighBall && lastPlayerHitDifficulty < 0.3 {
+            quality += S.badShotErrorPenalty * 0.8
+        }
+
+        // Bad: No modes at all on a high ball — missed opportunity
+        if modes.isEmpty && isHighBall {
+            quality += S.badShotErrorPenalty * 0.5
+        }
+
+        return max(-0.5, min(0.5, quality))
     }
 
     // MARK: - Shot Generation
@@ -342,6 +408,7 @@ final class MatchAI {
     /// The NPC gets boosted stats to compensate for perfect human joystick positioning.
     func generateShot(ball: DrillBallSimulation) -> DrillShotCalculator.ShotResult {
         let modes = selectShotModes(ball: ball)
+        shotCountThisPoint += 1
         let staminaFraction = stamina / P.maxStamina
 
         // Drain stamina for power/focus shots
@@ -534,6 +601,7 @@ final class MatchAI {
 
     func reset(npcScore: Int, isServing: Bool) {
         self.isServing = isServing
+        self.shotCountThisPoint = 0
         if isServing {
             positionForServe(npcScore: npcScore)
         }

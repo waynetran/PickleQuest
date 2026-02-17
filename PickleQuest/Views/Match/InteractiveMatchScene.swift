@@ -50,6 +50,26 @@ final class InteractiveMatchScene: SKScene {
     private var swipeTouchStart: CGPoint?
     private var swipeHintNode: SKSpriteNode?
 
+    // NPC serve-stall taunts → walkoff
+    private var npcSpeechBubble: SKNode?
+    private var playerServeStallTimer: CGFloat = 0
+    private var serveStallTauntIndex: Int = 0
+    private var npcIsWalkingOff: Bool = false
+    /// 3-step sequence: snarky → warning → final warning, then walkoff
+    private static let serveStallSequence: [String] = [
+        "You gonna serve or what? 😏",
+        "Seriously, serve or I'm\nout of here ⚠️",
+        "That's it. I'm done.",
+    ]
+    /// Muffled angry text shown during walkoff animation
+    private static let walkoffMumbles: [String] = [
+        "@#$%&!!",
+        "*grumble grumble*",
+        "...unbelievable...",
+        "waste of my @$#& time",
+        "*angry paddle waving*",
+    ]
+
     // Shot mode buttons
     private var activeShotModes: DrillShotCalculator.ShotMode = []
     private var shotModeButtons: [SKNode] = []
@@ -291,7 +311,7 @@ final class InteractiveMatchScene: SKScene {
         buildFeedbackLabels()
 
         // Initialize AI
-        npcAI = MatchAI(npc: npc)
+        npcAI = MatchAI(npc: npc, playerDUPR: player.duprRating)
 
         // Set positions
         playerNX = 0.5
@@ -641,6 +661,9 @@ final class InteractiveMatchScene: SKScene {
         checkedFirstBounce = false
         clearShotMarkers()
         hideDebugPanel()
+        hideNPCSpeech()
+        playerServeStallTimer = 0
+        serveStallTauntIndex = 0
 
         // Recover stamina between points
         stamina = min(P.maxStamina, stamina + 10)
@@ -677,6 +700,9 @@ final class InteractiveMatchScene: SKScene {
         guard dy > 0, distance >= P.serveSwipeMinDistance else { return }
 
         hideSwipeHint()
+        hideNPCSpeech()
+        playerServeStallTimer = 0
+        serveStallTauntIndex = 0
 
         let swipeAngle = atan2(dx, dy)
         let angleDeviation = max(-P.serveSwipeAngleRange, min(P.serveSwipeAngleRange, swipeAngle))
@@ -1193,6 +1219,24 @@ final class InteractiveMatchScene: SKScene {
                     npcServe()
                 }
             }
+            // NPC taunts when player stalls on serve → walkoff after 3
+            if servingSide == .player && !npcIsWalkingOff {
+                playerServeStallTimer += dt
+                let thresholds: [CGFloat] = [5.0, 12.0, 19.0] // seconds for each taunt
+                if serveStallTauntIndex < thresholds.count {
+                    if playerServeStallTimer >= thresholds[serveStallTauntIndex] {
+                        let taunt = Self.serveStallSequence[serveStallTauntIndex]
+                        showNPCSpeech(taunt)
+                        serveStallTauntIndex += 1
+                        // After final warning, trigger walkoff
+                        if serveStallTauntIndex >= thresholds.count {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                                self?.triggerNPCWalkoff()
+                            }
+                        }
+                    }
+                }
+            }
 
         case .pointOver:
             pointOverTimer -= dt
@@ -1304,6 +1348,19 @@ final class InteractiveMatchScene: SKScene {
 
         let ballFromLeft = ballSim.courtX < playerNX
         let staminaPct = stamina / P.maxStamina
+
+        // Save shot context for NPC shot quality assessment
+        npcAI.lastPlayerShotModes = activeShotModes
+        npcAI.lastPlayerHitBallHeight = ballSim.height
+        // Compute player-side difficulty using ball speed / distance
+        let pBallSpeed = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
+        let pMaxSpeed = P.baseShotSpeed + 2.0 * (P.maxShotSpeed - P.baseShotSpeed)
+        let pSpeedFrac = max(0, min(1, (pBallSpeed - P.baseShotSpeed) / (pMaxSpeed - P.baseShotSpeed)))
+        let pDist = sqrt((ballSim.courtX - playerNX) * (ballSim.courtX - playerNX)
+                       + (ballSim.courtY - playerNY) * (ballSim.courtY - playerNY))
+        let pStretch = min(pDist / hitboxRadius, 1.0)
+        npcAI.lastPlayerHitDifficulty = pSpeedFrac * 0.5 + pStretch * 0.5
+
         let shot = DrillShotCalculator.calculatePlayerShot(
             stats: playerStats,
             ballApproachFromLeft: ballFromLeft,
@@ -1668,5 +1725,192 @@ final class InteractiveMatchScene: SKScene {
             .wait(forDuration: duration),
             .fadeOut(withDuration: 0.3)
         ]))
+    }
+
+    // MARK: - NPC Speech Bubble
+
+    private func showNPCSpeech(_ text: String) {
+        hideNPCSpeech()
+
+        let bubble = SKNode()
+        bubble.zPosition = AC.ZPositions.text + 5
+
+        let label = SKLabelNode(text: text)
+        label.fontName = "AvenirNext-DemiBold"
+        label.fontSize = 10
+        label.fontColor = .white
+        label.numberOfLines = 0
+        label.preferredMaxLayoutWidth = 140
+        label.verticalAlignmentMode = .center
+        label.horizontalAlignmentMode = .center
+
+        // Background pill
+        let textSize = label.frame
+        let padX: CGFloat = 10
+        let padY: CGFloat = 6
+        let bgRect = CGRect(
+            x: textSize.minX - padX,
+            y: textSize.minY - padY,
+            width: textSize.width + padX * 2,
+            height: textSize.height + padY * 2
+        )
+        let bg = SKShapeNode(rect: bgRect, cornerRadius: 8)
+        bg.fillColor = UIColor(white: 0.15, alpha: 0.85)
+        bg.strokeColor = UIColor(white: 0.5, alpha: 0.4)
+        bg.lineWidth = 1
+
+        bubble.addChild(bg)
+        bubble.addChild(label)
+
+        // Position above NPC
+        let npcScreenPos = CourtRenderer.courtPoint(nx: npcAI.currentNX, ny: npcAI.currentNY)
+        let pScale = CourtRenderer.perspectiveScale(ny: npcAI.currentNY)
+        bubble.position = CGPoint(x: npcScreenPos.x, y: npcScreenPos.y + 35 * pScale)
+        bubble.setScale(pScale * 1.5)
+
+        bubble.alpha = 0
+        addChild(bubble)
+
+        bubble.run(.sequence([
+            .fadeIn(withDuration: 0.2),
+            .wait(forDuration: 2.5),
+            .fadeOut(withDuration: 0.4),
+            .removeFromParent()
+        ]))
+
+        npcSpeechBubble = bubble
+    }
+
+    private func hideNPCSpeech() {
+        npcSpeechBubble?.removeAllActions()
+        npcSpeechBubble?.removeFromParent()
+        npcSpeechBubble = nil
+    }
+
+    // MARK: - NPC Walkoff
+
+    private func triggerNPCWalkoff() {
+        guard !npcIsWalkingOff, phase != .matchOver else { return }
+        npcIsWalkingOff = true
+        phase = .matchOver // prevent further play
+        resetJoystick()
+        ballSim.reset()
+        ballNode.alpha = 0
+        ballShadow.alpha = 0
+        hideSwipeHint()
+        hideNPCSpeech()
+
+        // Animate NPC walking off to the right with muffled angry mumbles
+        npcAnimator.play(.walkRight)
+
+        let walkDuration: TimeInterval = 3.0
+        let startX = npcNode.position.x
+        let exitX = (scene?.size.width ?? 400) + 40 // off screen right
+        let walkAction = SKAction.moveTo(x: exitX, duration: walkDuration)
+        walkAction.timingMode = .easeIn
+
+        // Spawn muffled text bubbles during the walk
+        let mumbleCount = Self.walkoffMumbles.count
+        let mumbleInterval = walkDuration / Double(mumbleCount)
+        let mumbleSequence = SKAction.repeat(
+            .sequence([
+                .run { [weak self] in self?.spawnWalkoffMumble() },
+                .wait(forDuration: mumbleInterval)
+            ]),
+            count: mumbleCount
+        )
+
+        npcNode.run(.group([walkAction, mumbleSequence])) { [weak self] in
+            guard let self else { return }
+            // Brief pause, then show "draw" and end
+            self.showIndicator("\(self.npc.name) left the court!", color: .systemOrange, duration: 2.0)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                self?.endMatchAsWalkoff()
+            }
+        }
+
+        // Hide boss bar during walkoff
+        npcBossBar.run(.fadeOut(withDuration: 0.5))
+    }
+
+    private var walkoffMumbleIndex: Int = 0
+
+    private func spawnWalkoffMumble() {
+        let mumbles = Self.walkoffMumbles
+        let text = mumbles[walkoffMumbleIndex % mumbles.count]
+        walkoffMumbleIndex += 1
+
+        let label = SKLabelNode(text: text)
+        label.fontName = "AvenirNext-Bold"
+        label.fontSize = 9
+        label.fontColor = UIColor.red.withAlphaComponent(0.9)
+        label.position = CGPoint(x: npcNode.position.x, y: npcNode.position.y + 25)
+        label.zPosition = AC.ZPositions.text + 10
+        label.alpha = 0
+
+        // Slight random horizontal offset for variety
+        label.position.x += CGFloat.random(in: -10...10)
+
+        addChild(label)
+
+        label.run(.sequence([
+            .group([
+                .fadeIn(withDuration: 0.15),
+                .moveBy(x: 0, y: 20, duration: 1.2),
+            ]),
+            .fadeOut(withDuration: 0.3),
+            .removeFromParent()
+        ]))
+    }
+
+    private func endMatchAsWalkoff() {
+        let duration = matchStartTime.map { Date().timeIntervalSince($0) } ?? 0
+        let averageRally = totalPointsPlayed > 0 ? Double(totalRallyShots) / Double(totalPointsPlayed) : 0
+
+        let finalScore = MatchScore(
+            playerPoints: playerScore,
+            opponentPoints: npcScore,
+            playerGames: 0,
+            opponentGames: 0
+        )
+
+        // Partial XP: base amount scaled by points played (min 10 XP)
+        let pointsFraction = min(Double(totalPointsPlayed) / Double(IM.pointsToWin), 1.0)
+        let partialXP = max(10, Int(Double(IM.baseXP) * pointsFraction * IM.interactiveXPMultiplier))
+
+        let result = MatchResult(
+            didPlayerWin: false,
+            finalScore: finalScore,
+            gameScores: [finalScore],
+            totalPoints: totalPointsPlayed,
+            playerStats: MatchPlayerStats(
+                aces: playerAces,
+                winners: playerWinners,
+                unforcedErrors: playerErrors,
+                forcedErrors: 0,
+                longestRally: longestRally,
+                averageRallyLength: averageRally,
+                longestStreak: playerLongestStreak,
+                finalEnergy: Double(stamina)
+            ),
+            opponentStats: MatchPlayerStats(
+                aces: npcAces,
+                winners: npcWinners,
+                unforcedErrors: npcErrors,
+                forcedErrors: 0,
+                longestRally: longestRally,
+                averageRallyLength: averageRally,
+                longestStreak: 0,
+                finalEnergy: 0
+            ),
+            xpEarned: partialXP,
+            coinsEarned: 0, // draw — no wager
+            loot: [],       // no loot
+            duration: duration,
+            wasResigned: true,  // skip DUPR, durability, etc.
+            duprChange: nil
+        )
+
+        onComplete(result)
     }
 }

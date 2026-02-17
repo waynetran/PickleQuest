@@ -404,6 +404,13 @@ enum GameConstants {
 
         // Difficulty threshold for "hard shot" reset trigger
         static let hardShotDifficultyThreshold: CGFloat = 0.6
+
+        // Shot quality modifiers (interactive match)
+        static let goodShotErrorBonus: CGFloat = 0.25     // max NPC error rate increase from good player shot
+        static let badShotErrorPenalty: CGFloat = -0.20    // max NPC error rate decrease from bad player shot
+        static let duprGapErrorScale: CGFloat = 0.15       // error rate scale per 1.0 DUPR gap
+        static let maxDuprErrorReduction: CGFloat = 0.3    // min multiplier (NPC can't go below 30% of base error rate)
+        static let maxDuprErrorBoost: CGFloat = 2.0        // max multiplier for weaker NPCs
     }
 
     // MARK: - Coaching

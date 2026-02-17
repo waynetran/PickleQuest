@@ -13,6 +13,7 @@ struct DevModeView: View {
             List {
                 devModeToggleSection
                 if appState.isDevMode {
+                    aiToolsSection
                     fogOfWarSection
                     statsSection
                     ratingSection
@@ -57,6 +58,12 @@ struct DevModeView: View {
             ))
         } footer: {
             Text("Override player stats, rating, and location for testing. A snapshot is saved when enabled so you can reset later.")
+        }
+    }
+
+    private var aiToolsSection: some View {
+        Section("AI Tools") {
+            NavigationLink("AI Trainer", destination: AITrainerView())
         }
     }
 
