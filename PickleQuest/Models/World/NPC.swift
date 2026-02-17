@@ -1,6 +1,9 @@
 import Foundation
 
-struct NPC: Identifiable, Codable, Equatable, Sendable {
+struct NPC: Identifiable, Codable, Equatable, Hashable, Sendable {
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+    static func == (lhs: NPC, rhs: NPC) -> Bool { lhs.id == rhs.id }
+
     let id: UUID
     let name: String
     let title: String // e.g., "Weekend Warrior", "Court Legend"
@@ -43,6 +46,52 @@ struct NPC: Identifiable, Codable, Equatable, Sendable {
         self.isHustler = isHustler
         self.hiddenStats = hiddenStats
         self.baseWagerAmount = baseWagerAmount
+    }
+    /// Create a practice match opponent at a target DUPR rating.
+    static func practiceOpponent(dupr: Double) -> NPC {
+        // Reverse DUPR mapping: avgStat = (DUPR - 2.0) / 6.0 * 98.0 + 1.0
+        let avgStat = max(1, min(99, Int((dupr - 2.0) / 6.0 * 98.0 + 1.0)))
+        // Add some variance per stat (±20% of avg, clamped to 1-99)
+        let variance = max(3, avgStat / 5)
+        func randStat() -> Int {
+            max(1, min(99, avgStat + Int.random(in: -variance...variance)))
+        }
+        let stats = PlayerStats(
+            power: randStat(), accuracy: randStat(), spin: randStat(), speed: randStat(),
+            defense: randStat(), reflexes: randStat(), positioning: randStat(),
+            clutch: randStat(), focus: randStat(), stamina: randStat(), consistency: randStat()
+        )
+        let difficulty: NPCDifficulty
+        switch dupr {
+        case ..<3.0: difficulty = .beginner
+        case ..<4.0: difficulty = .intermediate
+        case ..<5.0: difficulty = .advanced
+        case ..<6.5: difficulty = .expert
+        default: difficulty = .master
+        }
+        let names = [
+            "Coach Bot", "Sparring Partner", "Practice Pro",
+            "Rally Robot", "Training Buddy", "Court Helper"
+        ]
+        let name = names.randomElement()!
+        let duprStr = String(format: "%.1f", dupr)
+        return NPC(
+            id: UUID(),
+            name: name,
+            title: "DUPR \(duprStr) Practice",
+            difficulty: difficulty,
+            stats: stats,
+            personality: .allRounder,
+            dialogue: NPCDialogue(
+                greeting: "Let's get some practice in!",
+                onWin: "Good game! Keep practicing!",
+                onLose: "Nice work out there!",
+                taunt: "Ready for another round?"
+            ),
+            portraitName: "npc_practice",
+            rewardMultiplier: 0, // no rewards from practice
+            duprRating: dupr
+        )
     }
 }
 

@@ -1101,7 +1101,7 @@ final class InteractiveDrillScene: SKScene {
     private enum PointOutcome {
         case net
         case out
-        case doubleBounce
+        case miss       // player didn't reach the ball
         case winner
         case serveIn
         case serveFault
@@ -1110,7 +1110,7 @@ final class InteractiveDrillScene: SKScene {
             switch self {
             case .net: return "Net!"
             case .out: return "Out!"
-            case .doubleBounce: return "Double Bounce"
+            case .miss: return "Miss!"
             case .winner: return "Winner!"
             case .serveIn: return "In!"
             case .serveFault: return "Fault!"
@@ -1121,7 +1121,7 @@ final class InteractiveDrillScene: SKScene {
             switch self {
             case .net: return .systemRed
             case .out: return .systemOrange
-            case .doubleBounce: return .systemYellow
+            case .miss: return .systemYellow
             case .winner: return .systemGreen
             case .serveIn: return .systemGreen
             case .serveFault: return .systemRed
@@ -1165,10 +1165,12 @@ final class InteractiveDrillScene: SKScene {
                     scorekeeper.onSuccessfulReturn()
                     onBallDead(outcome: .winner)
                 } else {
-                    onBallDead(outcome: .doubleBounce)
+                    onBallDead(outcome: .miss)
                 }
             } else {
-                let outcome: PointOutcome = ballSim.lastHitByPlayer ? .winner : .doubleBounce
+                // Player hit it over and it bounced twice on coach side = winner
+                // Coach hit it and it bounced twice on player side = miss
+                let outcome: PointOutcome = ballSim.lastHitByPlayer ? .winner : .miss
                 onBallDead(outcome: outcome)
             }
             return
@@ -1204,7 +1206,7 @@ final class InteractiveDrillScene: SKScene {
         let playerWon: Bool
         switch outcome {
         case .winner, .serveIn: playerWon = true
-        case .doubleBounce, .serveFault: playerWon = false
+        case .miss, .serveFault: playerWon = false
         case .net, .out: playerWon = !lastHitByPlayer
         }
 
@@ -1235,7 +1237,7 @@ final class InteractiveDrillScene: SKScene {
             return coachPersonality.goodShotLine()
         case .serveIn:
             return coachPersonality.serveInLine()
-        case .net, .out, .doubleBounce:
+        case .net, .out, .miss:
             return coachPersonality.missLine()
         case .serveFault:
             return coachPersonality.serveFaultLine()

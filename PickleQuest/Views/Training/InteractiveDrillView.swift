@@ -19,6 +19,8 @@ struct InteractiveDrillView: View {
     @State private var drillResult: InteractiveDrillResult?
     @State private var showInstructions = true
     @State private var scene: InteractiveDrillScene?
+    @State private var showLevelPicker = false
+    @State private var practiceMatchNPC: NPC?
 
     var body: some View {
         ZStack {
@@ -76,6 +78,22 @@ struct InteractiveDrillView: View {
         .navigationBarBackButtonHidden(true)
         .task {
             scene = makeScene()
+        }
+        .sheet(isPresented: $showLevelPicker) {
+            practiceMatchLevelPicker
+        }
+        .navigationDestination(item: $practiceMatchNPC) { npc in
+            InteractiveMatchView(
+                player: appState.player,
+                npc: npc,
+                npcAppearance: .defaultOpponent,
+                isRated: false,
+                wagerAmount: 0
+            ) { _ in
+                // Practice match — no rewards to process
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            .toolbar(.hidden, for: .tabBar)
         }
     }
 
@@ -223,22 +241,95 @@ struct InteractiveDrillView: View {
                 .foregroundStyle(.secondary)
                 .italic()
 
-            Button {
-                onComplete(result)
-                dismiss()
-            } label: {
-                Text("Done")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(.blue)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            HStack(spacing: 12) {
+                Button {
+                    onComplete(result)
+                    dismiss()
+                } label: {
+                    Text("Done")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(.blue)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+                Button {
+                    showLevelPicker = true
+                } label: {
+                    Text("Practice Match")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(.green)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
             }
         }
         .padding()
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .padding()
+    }
+
+    // MARK: - Practice Match Level Picker
+
+    private static let practiceMatchLevels: [(dupr: Double, label: String)] = [
+        (2.0, "2.0"), (2.5, "2.5"), (3.0, "3.0"), (3.5, "3.5"),
+        (4.0, "4.0"), (4.5, "4.5"), (5.0, "5.0"),
+        (6.0, "6.0"), (7.0, "7.0"), (8.0, "Impossible")
+    ]
+
+    private var practiceMatchLevelPicker: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(Self.practiceMatchLevels, id: \.dupr) { level in
+                        Button {
+                            showLevelPicker = false
+                            // Complete the drill first, then navigate to practice match
+                            if let result = drillResult {
+                                onComplete(result)
+                            }
+                            practiceMatchNPC = NPC.practiceOpponent(dupr: level.dupr)
+                        } label: {
+                            HStack {
+                                Text("DUPR \(level.label)")
+                                    .font(.body.bold())
+                                Spacer()
+                                Text(difficultyLabel(for: level.dupr))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Choose Opponent Level")
+                }
+            }
+            .navigationTitle("Practice Match")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        showLevelPicker = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private func difficultyLabel(for dupr: Double) -> String {
+        switch dupr {
+        case ..<3.0: return "Beginner"
+        case ..<4.0: return "Intermediate"
+        case ..<5.0: return "Advanced"
+        case ..<6.5: return "Expert"
+        case ..<8.0: return "Master"
+        default: return "Impossible"
+        }
     }
 }

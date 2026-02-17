@@ -1216,6 +1216,14 @@ final class InteractiveMatchScene: SKScene {
         let dist = sqrt(dx * dx + dy * dy)
         guard dist <= hitboxRadius else { return }
 
+        // Two-bounce rule: return of serve AND server's 3rd shot must be off the bounce
+        if rallyLength < 2 && ballSim.bounceCount == 0 {
+            playerErrors += 1
+            showIndicator("Volley Fault!", color: .systemRed)
+            resolvePoint(.npcWon, reason: "Volley fault (two-bounce rule, rally=\(rallyLength))")
+            return
+        }
+
         rallyLength += 1
 
         // Power mode stamina drain
@@ -1254,6 +1262,9 @@ final class InteractiveMatchScene: SKScene {
         guard ballSim.isActive && ballSim.lastHitByPlayer else { return }
         guard ballSim.bounceCount < 2 else { return }
         guard ballSim.height < 0.20 else { return }
+
+        // Two-bounce rule: NPC must let the ball bounce on return and 3rd shot
+        if rallyLength < 2 && ballSim.bounceCount == 0 { return }
 
         if npcAI.shouldSwing(ball: ballSim) {
             // Check for unforced error before generating the return
@@ -1356,19 +1367,25 @@ final class InteractiveMatchScene: SKScene {
         if ballSim.isDoubleBounce {
             let side = ballSim.courtY < 0.5 ? "player" : "NPC"
             if ballSim.courtY < 0.5 {
+                // Ball double-bounced on player's side
                 if ballSim.lastHitByPlayer {
+                    // Player hit it but it landed on their own side — error
                     playerErrors += 1
                     showIndicator("Out!", color: .systemOrange)
                 } else {
+                    // NPC's shot landed and player didn't reach it — miss
                     if rallyLength <= 1 { npcAces += 1 } else { npcWinners += 1 }
-                    showIndicator("Double Bounce", color: .systemYellow)
+                    showIndicator("Miss!", color: .systemYellow)
                 }
                 resolvePoint(.npcWon, reason: "Double bounce on \(side) side")
             } else {
+                // Ball double-bounced on NPC's side
                 if ballSim.lastHitByPlayer {
+                    // Player's shot landed and NPC didn't reach it — winner
                     if rallyLength <= 1 { playerAces += 1 } else { playerWinners += 1 }
                     showIndicator("Winner!", color: .systemGreen)
                 } else {
+                    // NPC hit it but it landed on their own side — error
                     npcErrors += 1
                     showIndicator("Out!", color: .systemOrange)
                 }
