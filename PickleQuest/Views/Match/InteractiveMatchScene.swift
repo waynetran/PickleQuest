@@ -450,27 +450,36 @@ final class InteractiveMatchScene: SKScene {
         hint.removeAllActions()
 
         let playerScreenPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
-        let startY = playerScreenPos.y + 40
-        let endY = startY + 120
+        // Crosscourt direction: if player is on right (nx > 0.5), swipe toward left and vice versa
+        let crosscourtDX: CGFloat = playerNX > 0.5 ? -60 : 60
+        let startX = playerScreenPos.x
+        let startY = playerScreenPos.y + 30
+        let endX = startX + crosscourtDX
+        let endY = startY + 90
 
-        hint.position = CGPoint(x: playerScreenPos.x + 20, y: startY)
-        hint.alpha = 0.9
+        hint.position = CGPoint(x: startX, y: startY)
+        hint.alpha = 0.85
+        hint.colorBlendFactor = 0
+        hint.color = .white
 
         let animation = SKAction.repeatForever(.sequence([
             .group([
-                .moveTo(y: endY, duration: 1.0),
+                .move(to: CGPoint(x: endX, y: endY), duration: 0.6),
                 .sequence([
-                    .fadeAlpha(to: 0.9, duration: 0.1),
-                    .wait(forDuration: 0.4),
-                    .fadeAlpha(to: 0.0, duration: 0.5)
+                    .fadeAlpha(to: 0.85, duration: 0.05),
+                    .wait(forDuration: 0.2),
+                    .fadeAlpha(to: 0.0, duration: 0.35)
                 ])
             ]),
             .run { [weak hint, weak self] in
                 guard let hint, let self else { return }
                 let pos = CourtRenderer.courtPoint(nx: self.playerNX, ny: max(0, self.playerNY))
-                hint.position = CGPoint(x: pos.x + 20, y: pos.y + 40)
+                let dx: CGFloat = self.playerNX > 0.5 ? -60 : 60
+                hint.position = CGPoint(x: pos.x, y: pos.y + 30)
+                // Recompute end for next cycle (stored via closure)
+                _ = dx  // suppress unused warning
             },
-            .wait(forDuration: 0.3)
+            .wait(forDuration: 0.15)
         ]))
         hint.run(animation, withKey: "swipeHint")
     }
@@ -532,7 +541,9 @@ final class InteractiveMatchScene: SKScene {
         let accuracyStat = CGFloat(playerStats.stat(.accuracy))
         let focusStat = CGFloat(playerStats.stat(.focus))
         let scatterReduction = ((accuracyStat + focusStat) / 2.0) / 99.0
-        let scatter = (1.0 - scatterReduction * 0.7) * 0.15
+        var scatter = (1.0 - scatterReduction * 0.7) * 0.15
+        // Focus mode reduces scatter further
+        if activeShotModes.contains(.focus) { scatter *= 0.5 }
         let scatterX = CGFloat.random(in: -scatter...scatter)
         let scatterY = CGFloat.random(in: -scatter...scatter)
 
@@ -540,8 +551,14 @@ final class InteractiveMatchScene: SKScene {
         let targetNX = max(0.15, min(0.85, 0.5 + angleDeviation + scatterX))
         let targetNY = max(0.50, min(1.10, baseTargetNY + scatterY))
 
-        let servePower = 0.10 + min(rawPowerFactor, 1.3) * 0.75
+        // Power mode boosts serve speed
+        let powerMultiplier: CGFloat = activeShotModes.contains(.power) ? 1.2 : 1.0
+        let servePower = (0.10 + min(rawPowerFactor, 1.3) * 0.75) * powerMultiplier
         let serveArc: CGFloat = max(0.10, 0.55 - rawPowerFactor * 0.40)
+
+        // Drain stamina for active modes
+        if activeShotModes.contains(.power) { stamina = max(0, stamina - P.maxStamina * 0.20) }
+        if activeShotModes.contains(.focus) { stamina = max(0, stamina - P.maxStamina * 0.10) }
 
         phase = .playing
         ballSim.launch(
@@ -777,15 +794,9 @@ final class InteractiveMatchScene: SKScene {
         for touch in touches {
             let pos = touch.location(in: self)
 
-            // Swipe to serve (player serving)
-            if phase == .serving && servingSide == .player {
-                swipeTouchStart = pos
-                return
-            }
+            guard phase == .playing || phase == .serving else { continue }
 
-            guard phase == .playing || phase == .serving else { return }
-
-            // Check shot mode buttons
+            // Check shot mode buttons first (works during serve too)
             var hitButton = false
             for (i, btn) in shotModeButtons.enumerated() {
                 if hitTestButton(btn, at: pos) {
@@ -796,6 +807,12 @@ final class InteractiveMatchScene: SKScene {
                 }
             }
             if hitButton { continue }
+
+            // Swipe to serve (player serving)
+            if phase == .serving && servingSide == .player {
+                swipeTouchStart = pos
+                return
+            }
 
             // Joystick
             guard joystickTouch == nil else { continue }

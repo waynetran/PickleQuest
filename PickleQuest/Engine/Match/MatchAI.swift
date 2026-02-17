@@ -42,8 +42,12 @@ final class MatchAI {
         self.moveSpeed = P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus
         self.sprintSpeed = moveSpeed * (1.0 + P.maxSprintSpeedBoost)
 
+        // Hitbox uses the better of reflexes and positioning
         let reflexesStat = CGFloat(npc.stats.stat(.reflexes))
-        self.hitboxRadius = P.baseHitboxRadius + (reflexesStat / 99.0) * P.positioningHitboxBonus
+        let positioningStat = CGFloat(npc.stats.stat(.positioning))
+        let reachStat = max(reflexesStat, positioningStat)
+        // Larger base so even low-stat NPCs can make basic returns
+        self.hitboxRadius = P.npcBaseHitboxRadius + (reachStat / 99.0) * P.npcHitboxBonus
 
         // Start at center far baseline
         self.currentNX = 0.5
@@ -97,9 +101,9 @@ final class MatchAI {
             return
         }
 
-        // Decide whether to sprint
+        // Decide whether to sprint — lower threshold so AI chases more aggressively
         let staminaPct = stamina / P.maxStamina
-        let shouldSprint = dist > 0.2 && staminaPct > 0.30
+        let shouldSprint = dist > 0.10 && staminaPct > 0.20
         let effectiveSpeed: CGFloat
 
         if shouldSprint {
@@ -136,7 +140,12 @@ final class MatchAI {
 
     /// Predict where the ball will land and set as movement target.
     private func predictLanding(ball: DrillBallSimulation) {
-        let lookAhead: CGFloat = 0.5
+        // Scale lookahead with positioning stat — better players read the ball earlier
+        let positioningStat = CGFloat(npcStats.stat(.positioning))
+        let baseLookAhead: CGFloat = 0.6
+        let statBonus: CGFloat = (positioningStat / 99.0) * 0.4
+        let lookAhead = baseLookAhead + statBonus  // 0.6 to 1.0 seconds
+
         let predictedX = ball.courtX + ball.vx * lookAhead
         let predictedY = ball.courtY + ball.vy * lookAhead
 

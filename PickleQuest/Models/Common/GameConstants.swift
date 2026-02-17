@@ -322,6 +322,10 @@ enum GameConstants {
         static let baseHitboxRadius: CGFloat = 0.144     // reach (paddle + arm extension)
         static let positioningHitboxBonus: CGFloat = 0.048 // bonus from positioning stat
 
+        // NPC hitbox — larger base so even low-stat NPCs make basic returns
+        static let npcBaseHitboxRadius: CGFloat = 0.18
+        static let npcHitboxBonus: CGFloat = 0.06        // bonus from max(reflexes, positioning)
+
         // Player movement (court units per second)
         static let baseMoveSpeed: CGFloat = 0.4
         static let maxMoveSpeedBonus: CGFloat = 0.8

@@ -496,27 +496,31 @@ final class InteractiveDrillScene: SKScene {
         hint.removeAllActions()
 
         let playerScreenPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
-        let startY = playerScreenPos.y + 40
-        let endY = startY + 120
+        // Crosscourt direction: if player is on right (nx > 0.5), swipe toward left
+        let crosscourtDX: CGFloat = playerNX > 0.5 ? -60 : 60
+        let startX = playerScreenPos.x
+        let startY = playerScreenPos.y + 30
+        let endX = startX + crosscourtDX
+        let endY = startY + 90
 
-        hint.position = CGPoint(x: playerScreenPos.x + 20, y: startY)
-        hint.alpha = 0.9
+        hint.position = CGPoint(x: startX, y: startY)
+        hint.alpha = 0.85
 
         let animation = SKAction.repeatForever(.sequence([
             .group([
-                .moveTo(y: endY, duration: 1.0),
+                .move(to: CGPoint(x: endX, y: endY), duration: 0.6),
                 .sequence([
-                    .fadeAlpha(to: 0.9, duration: 0.1),
-                    .wait(forDuration: 0.4),
-                    .fadeAlpha(to: 0.0, duration: 0.5)
+                    .fadeAlpha(to: 0.85, duration: 0.05),
+                    .wait(forDuration: 0.2),
+                    .fadeAlpha(to: 0.0, duration: 0.35)
                 ])
             ]),
             .run { [weak hint, weak self] in
                 guard let hint, let self else { return }
                 let pos = CourtRenderer.courtPoint(nx: self.playerNX, ny: max(0, self.playerNY))
-                hint.position = CGPoint(x: pos.x + 20, y: pos.y + 40)
+                hint.position = CGPoint(x: pos.x, y: pos.y + 30)
             },
-            .wait(forDuration: 0.3)
+            .wait(forDuration: 0.15)
         ]))
         hint.run(animation, withKey: "swipeHint")
     }
