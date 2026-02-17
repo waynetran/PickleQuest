@@ -930,6 +930,37 @@ Match end → MatchResult → existing processResult() pipeline
 
 ---
 
+## Post-Milestone 10: AI Training System + Shot Quality Rewards
+
+**Commit**: `a3577b6`
+
+### What was built
+- **AI Training System**: Evolution Strategy optimizer that runs NPC-vs-NPC simulations across DUPR pairings (2.0-8.0) to tune rally probability constants. Uses Natural Evolution Strategy with population 20, sigma 0.05, evaluating 200 matches per test pair per candidate. Accessible via Dev Mode > AI Tools > AI Trainer.
+- **SimulationParameters**: mutable struct mirroring `GameConstants.Rally` values with array conversion for ES vector operations and clamping for valid ranges.
+- **LightweightMatchSimulator**: synchronous match simulator (no actors/async) that mirrors `RallySimulator` logic but uses mutable parameters instead of `GameConstants`. Runs full matches to 11 with side-out scoring.
+- **TrainingSession**: `@Observable @MainActor` class managing the ES optimization loop with live progress tracking (generation, fitness, win rate table).
+- **TrainingReport**: captures results with formatted plaintext report + `ShareLink` for sharing via AirDrop/Messages.
+- **Shot Quality System**: player shot selection now affects NPC error rates in interactive matches:
+  - Good shots (power on high balls, topspin/angle cross-court, reset under pressure, focus on easy balls) increase NPC error rate by up to +25%
+  - Bad shots (power on low fast balls, reset on sitters, no modes on high balls) decrease NPC error rate by up to -20%
+- **DUPR Gap Scaling**: NPC error rates scale with the DUPR gap between player and NPC — stronger NPCs make fewer baseline errors (down to 30% of base), weaker NPCs make more (up to 2x).
+
+### New files (6)
+- `Engine/AITrainer/SimulationParameters.swift` — tunable rally constants with ES vector operations
+- `Engine/AITrainer/LightweightMatchSimulator.swift` — synchronous match simulator
+- `Engine/AITrainer/TrainingSession.swift` — ES optimization loop with live UI updates
+- `Engine/AITrainer/TrainingReport.swift` — training results + formatted report
+- `ViewModels/AITrainerViewModel.swift` — view model for training UI
+- `Views/Player/AITrainerView.swift` — training controls, live progress, win rate table, share report
+
+### Modified files (4)
+- `Engine/Match/MatchAI.swift` — added `playerDUPR`, `lastPlayerShotModes/Height/Difficulty`, `assessPlayerShotQuality()`, DUPR gap scaling in `shouldMakeError()`
+- `Views/Match/InteractiveMatchScene.swift` — tracks player shot context before each hit, passes `playerDUPR` to MatchAI
+- `Models/Common/GameConstants.swift` — shot quality constants in NPCStrategy (goodShotErrorBonus, badShotErrorPenalty, duprGapErrorScale, maxDuprErrorReduction, maxDuprErrorBoost)
+- `Views/Player/DevModeView.swift` — "AI Tools" section with NavigationLink to AITrainerView
+
+---
+
 ## Milestone 7c: Persistence Polish, Cloud Prep, Multiplayer Prep (Planned)
 
 ### Goals
