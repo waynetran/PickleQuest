@@ -262,11 +262,11 @@ final class InteractiveDrillScene: SKScene {
         speechBubbleNode.zPosition = AC.ZPositions.text + 2
         speechBubbleNode.alpha = 0
 
-        // Label (multiline)
+        // Label (multiline, comic style)
         speechBubbleLabel = SKLabelNode(text: "")
-        speechBubbleLabel.fontName = AC.Text.fontName
+        speechBubbleLabel.fontName = "ChalkboardSE-Bold"
         speechBubbleLabel.fontSize = 11
-        speechBubbleLabel.fontColor = .white
+        speechBubbleLabel.fontColor = .black
         speechBubbleLabel.numberOfLines = 0
         speechBubbleLabel.preferredMaxLayoutWidth = 160
         speechBubbleLabel.verticalAlignmentMode = .center
@@ -274,9 +274,9 @@ final class InteractiveDrillScene: SKScene {
 
         // Background bubble (sized dynamically in showCoachSpeech)
         speechBubbleBackground = SKShapeNode()
-        speechBubbleBackground.fillColor = UIColor(white: 0.1, alpha: 0.85)
-        speechBubbleBackground.strokeColor = UIColor(white: 0.7, alpha: 0.5)
-        speechBubbleBackground.lineWidth = 1
+        speechBubbleBackground.fillColor = .white
+        speechBubbleBackground.strokeColor = UIColor(white: 0.2, alpha: 0.8)
+        speechBubbleBackground.lineWidth = 1.5
 
         // Tail triangle pointing down toward coach
         speechBubbleTail = SKShapeNode()
@@ -286,7 +286,7 @@ final class InteractiveDrillScene: SKScene {
         tailPath.addLine(to: CGPoint(x: 0, y: -8))
         tailPath.closeSubpath()
         speechBubbleTail.path = tailPath
-        speechBubbleTail.fillColor = UIColor(white: 0.1, alpha: 0.85)
+        speechBubbleTail.fillColor = .white
         speechBubbleTail.strokeColor = .clear
 
         speechBubbleNode.addChild(speechBubbleBackground)
@@ -295,7 +295,7 @@ final class InteractiveDrillScene: SKScene {
         addChild(speechBubbleNode)
     }
 
-    private func showCoachSpeech(_ text: String, duration: TimeInterval = 2.0) {
+    private func showCoachSpeech(_ text: String, duration: TimeInterval = 3.0) {
         speechBubbleLabel.text = text
         speechBubbleNode.removeAllActions()
 
@@ -634,7 +634,7 @@ final class InteractiveDrillScene: SKScene {
            scorekeeper.currentConsecutiveReturns >= drillConfig.rallyShotsRequired {
             scorekeeper.onRallyCompleted()
             let msg = coachPersonality.rallyCompleteLine(requiredShots: drillConfig.rallyShotsRequired)
-            showCoachSpeech(msg, duration: 1.5)
+            showCoachSpeech(msg, duration: 2.5)
         }
 
         let ballFromLeft = ballSim.courtX < playerNX
@@ -702,7 +702,7 @@ final class InteractiveDrillScene: SKScene {
 
             if dist <= P.coneHitRadius {
                 scorekeeper.onConeHit()
-                showCoachSpeech(coachPersonality.coneHitLine(), duration: 1.2)
+                showCoachSpeech(coachPersonality.coneHitLine(), duration: 2.5)
                 // Flash cone green
                 if index < coneNodes.count {
                     let cone = coneNodes[index]
@@ -828,12 +828,12 @@ final class InteractiveDrillScene: SKScene {
         if let line = coachLine {
             run(.sequence([
                 .wait(forDuration: 0.5),
-                .run { [weak self] in self?.showCoachSpeech(line, duration: 1.8) }
+                .run { [weak self] in self?.showCoachSpeech(line, duration: 2.5) }
             ]))
         }
 
         phase = .feedPause
-        feedPauseTimer = coachLine != nil ? P.feedDelay + 1.8 : P.feedDelay + 0.4
+        feedPauseTimer = coachLine != nil ? P.feedDelay + 2.5 : P.feedDelay + 0.4
     }
 
     private func coachCommentary(for outcome: PointOutcome) -> String? {
