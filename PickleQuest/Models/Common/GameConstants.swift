@@ -326,6 +326,11 @@ enum GameConstants {
         static let npcBaseHitboxRadius: CGFloat = 0.18
         static let npcHitboxBonus: CGFloat = 0.06        // bonus from max(reflexes, positioning)
 
+        /// Flat stat boost for NPCs in interactive matches.
+        /// Compensates for human joystick advantage (perfect positioning intelligence).
+        /// A 3.5 DUPR NPC (~stat 32) becomes effective stat ~52, playing like a ~4.2.
+        static let npcStatBoost: Int = 20
+
         // Player movement (court units per second)
         static let baseMoveSpeed: CGFloat = 0.4
         static let maxMoveSpeedBonus: CGFloat = 0.8

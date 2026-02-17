@@ -174,7 +174,10 @@ final class InteractiveMatchScene: SKScene {
         }
         matchStartTime = Date()
         hudContainer.alpha = 1
+        npcBossBar.alpha = 1
         startNextPoint()
+        // Belt-and-suspenders: ensure HUD stays visible after first frame
+        hudContainer.run(.sequence([.wait(forDuration: 0.1), .fadeAlpha(to: 1.0, duration: 0)]))
     }
 
     func resignMatch() {
@@ -1282,9 +1285,9 @@ final class InteractiveMatchScene: SKScene {
         hudBackground = SKShapeNode(rect: CGRect(
             x: 0, y: 0, width: containerWidth, height: containerHeight
         ), cornerRadius: 10)
-        hudBackground.fillColor = UIColor(white: 0, alpha: 0.55)
-        hudBackground.strokeColor = UIColor(white: 1, alpha: 0.12)
-        hudBackground.lineWidth = 1
+        hudBackground.fillColor = UIColor(white: 0, alpha: 0.75)
+        hudBackground.strokeColor = UIColor(white: 1, alpha: 0.25)
+        hudBackground.lineWidth = 1.5
         hudContainer.addChild(hudBackground)
 
         let row1Y = containerHeight - padding - rowHeight * 0.5
@@ -1293,7 +1296,7 @@ final class InteractiveMatchScene: SKScene {
         // Row 1: Score
         scoreLabel = SKLabelNode(text: "You  0 — 0  \(npc.name)")
         scoreLabel.fontName = "AvenirNext-Heavy"
-        scoreLabel.fontSize = 14
+        scoreLabel.fontSize = 16
         scoreLabel.fontColor = .white
         scoreLabel.horizontalAlignmentMode = .center
         scoreLabel.verticalAlignmentMode = .center

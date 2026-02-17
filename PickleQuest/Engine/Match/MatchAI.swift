@@ -38,15 +38,16 @@ final class MatchAI {
         self.npcName = npc.name
         self.npcDUPR = npc.duprRating
 
-        let speedStat = CGFloat(npc.stats.stat(.speed))
+        // Use boosted stats for movement and hitbox (compensate for human joystick advantage)
+        let boost = P.npcStatBoost
+        let speedStat = CGFloat(min(99, npc.stats.stat(.speed) + boost))
         self.moveSpeed = P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus
         self.sprintSpeed = moveSpeed * (1.0 + P.maxSprintSpeedBoost)
 
-        // Hitbox uses the better of reflexes and positioning
-        let reflexesStat = CGFloat(npc.stats.stat(.reflexes))
-        let positioningStat = CGFloat(npc.stats.stat(.positioning))
+        // Hitbox uses the better of reflexes and positioning (boosted)
+        let reflexesStat = CGFloat(min(99, npc.stats.stat(.reflexes) + boost))
+        let positioningStat = CGFloat(min(99, npc.stats.stat(.positioning) + boost))
         let reachStat = max(reflexesStat, positioningStat)
-        // Larger base so even low-stat NPCs can make basic returns
         self.hitboxRadius = P.npcBaseHitboxRadius + (reachStat / 99.0) * P.npcHitboxBonus
 
         // Start at center far baseline
@@ -140,11 +141,11 @@ final class MatchAI {
 
     /// Predict where the ball will land and set as movement target.
     private func predictLanding(ball: DrillBallSimulation) {
-        // Scale lookahead with positioning stat — better players read the ball earlier
-        let positioningStat = CGFloat(npcStats.stat(.positioning))
+        // Scale lookahead with positioning stat (boosted) — better players read the ball earlier
+        let positioningStat = CGFloat(min(99, npcStats.stat(.positioning) + P.npcStatBoost))
         let baseLookAhead: CGFloat = 0.6
-        let statBonus: CGFloat = (positioningStat / 99.0) * 0.4
-        let lookAhead = baseLookAhead + statBonus  // 0.6 to 1.0 seconds
+        let statBonus: CGFloat = (positioningStat / 99.0) * 0.5
+        let lookAhead = baseLookAhead + statBonus  // 0.6 to 1.1 seconds
 
         let predictedX = ball.courtX + ball.vx * lookAhead
         let predictedY = ball.courtY + ball.vy * lookAhead
@@ -170,6 +171,7 @@ final class MatchAI {
     // MARK: - Shot Generation
 
     /// Generate a shot using the player shot calculator with stat-gated modes.
+    /// The NPC gets boosted stats to compensate for perfect human joystick positioning.
     func generateShot(ball: DrillBallSimulation) -> DrillShotCalculator.ShotResult {
         let modes = selectShotModes(ball: ball)
         let staminaFraction = stamina / P.maxStamina
@@ -183,7 +185,7 @@ final class MatchAI {
         }
 
         return DrillShotCalculator.calculatePlayerShot(
-            stats: npcStats,
+            stats: effectiveStats,
             ballApproachFromLeft: ball.courtX < currentNX,
             drillType: .baselineRally,
             ballHeight: ball.height,
@@ -195,19 +197,17 @@ final class MatchAI {
 
     /// Generate a serve shot.
     func generateServe(npcScore: Int) -> DrillShotCalculator.ShotResult {
-        let powerStat = CGFloat(npcStats.stat(.power))
+        let powerStat = CGFloat(effectiveStats.stat(.power))
         var modes: SM = []
 
         // High power NPCs use power serves
-        if powerStat >= 60 && Bool.random() {
+        if powerStat >= 50 && Bool.random() {
             modes.insert(.power)
             stamina = max(0, stamina - 5)
         }
 
-        // Target: cross-court to receiver's side, near baseline
-        // The calculatePlayerShot will target opponent's side automatically
         return DrillShotCalculator.calculatePlayerShot(
-            stats: npcStats,
+            stats: effectiveStats,
             ballApproachFromLeft: false,
             drillType: .baselineRally,
             ballHeight: 0.05,
@@ -217,7 +217,29 @@ final class MatchAI {
         )
     }
 
-    /// Select shot modes based on NPC stats and game state.
+    /// NPC stats boosted to compensate for human joystick advantage.
+    /// A human with a joystick has "perfect positioning intelligence" — they always
+    /// know exactly where to go. The NPC needs inflated stats to make its shots
+    /// challenging enough that the human's low stats (small hitbox, slow speed,
+    /// weak shots) actually matter.
+    private var effectiveStats: PlayerStats {
+        let boost = P.npcStatBoost
+        return PlayerStats(
+            power: min(99, npcStats.power + boost),
+            accuracy: min(99, npcStats.accuracy + boost),
+            spin: min(99, npcStats.spin + boost),
+            speed: min(99, npcStats.speed + boost),
+            defense: min(99, npcStats.defense + boost),
+            reflexes: min(99, npcStats.reflexes + boost),
+            positioning: min(99, npcStats.positioning + boost),
+            clutch: min(99, npcStats.clutch + boost),
+            focus: min(99, npcStats.focus + boost),
+            stamina: min(99, npcStats.stamina + boost),
+            consistency: min(99, npcStats.consistency + boost)
+        )
+    }
+
+    /// Select shot modes based on NPC stats (boosted) and game state.
     private func selectShotModes(ball: DrillBallSimulation) -> SM {
         var modes: SM = []
         let staminaPct = stamina / P.maxStamina
@@ -225,11 +247,12 @@ final class MatchAI {
         // Don't use stamina-draining modes when low
         guard staminaPct > 0.10 else { return modes }
 
-        let powerStat = CGFloat(npcStats.stat(.power))
-        let accuracyStat = CGFloat(npcStats.stat(.accuracy))
-        let spinStat = CGFloat(npcStats.stat(.spin))
-        let positioningStat = CGFloat(npcStats.stat(.positioning))
-        let focusStat = CGFloat(npcStats.stat(.focus))
+        let boost = P.npcStatBoost
+        let powerStat = CGFloat(min(99, npcStats.stat(.power) + boost))
+        let accuracyStat = CGFloat(min(99, npcStats.stat(.accuracy) + boost))
+        let spinStat = CGFloat(min(99, npcStats.stat(.spin) + boost))
+        let positioningStat = CGFloat(min(99, npcStats.stat(.positioning) + boost))
+        let focusStat = CGFloat(min(99, npcStats.stat(.focus) + boost))
 
         // Power: stat-gated usage
         if powerStat >= 70 && ball.height > 0.08 && roll(0.50) {
