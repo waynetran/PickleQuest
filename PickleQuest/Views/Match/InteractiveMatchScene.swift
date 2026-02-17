@@ -74,6 +74,11 @@ final class InteractiveMatchScene: SKScene {
     private var checkedFirstBounce: Bool = false
     private var sceneReady = false
 
+    // Shot landing markers (target, error margin, actual landing)
+    private var shotMarkersNode: SKNode!
+    private var lastShotTargetNX: CGFloat = 0.5
+    private var lastShotTargetNY: CGFloat = 0.5
+
     // MARK: - Game State
 
     private let ballSim = DrillBallSimulation()
@@ -202,6 +207,11 @@ final class InteractiveMatchScene: SKScene {
         // Court
         let court = CourtRenderer.buildCourt()
         addChild(court)
+
+        // Shot landing markers container (above court lines, below characters)
+        shotMarkersNode = SKNode()
+        shotMarkersNode.zPosition = AC.ZPositions.courtLines + 0.5
+        addChild(shotMarkersNode)
 
         // Player sprite (near side)
         let (pNode, pTextures) = SpriteFactory.makeCharacterNode(appearance: player.appearance, isNearPlayer: true)
@@ -571,6 +581,56 @@ final class InteractiveMatchScene: SKScene {
         swipeHintNode?.run(.fadeOut(withDuration: 0.2))
     }
 
+    // MARK: - Shot Markers
+
+    private func showShotMarkers(targetNX: CGFloat, targetNY: CGFloat, accuracy: CGFloat) {
+        clearShotMarkers()
+        lastShotTargetNX = targetNX
+        lastShotTargetNY = targetNY
+
+        let pos = CourtRenderer.courtPoint(nx: targetNX, ny: targetNY)
+        let scale = CourtRenderer.perspectiveScale(ny: targetNY)
+
+        // Error margin (orange, larger ellipse) — less accurate = bigger circle
+        let errorRadius = max(6, (1.0 - accuracy) * 50) * scale
+        let errorMarker = SKShapeNode(ellipseOf: CGSize(width: errorRadius * 2, height: errorRadius * 0.6))
+        errorMarker.fillColor = UIColor.orange.withAlphaComponent(0.25)
+        errorMarker.strokeColor = UIColor.orange.withAlphaComponent(0.6)
+        errorMarker.lineWidth = 1.5
+        errorMarker.position = pos
+        errorMarker.name = "errorMargin"
+        shotMarkersNode.addChild(errorMarker)
+
+        // Target (yellow, small ellipse)
+        let targetRadius: CGFloat = 5 * scale
+        let targetMarker = SKShapeNode(ellipseOf: CGSize(width: targetRadius * 2, height: targetRadius * 0.6))
+        targetMarker.fillColor = UIColor.yellow.withAlphaComponent(0.5)
+        targetMarker.strokeColor = UIColor.yellow.withAlphaComponent(0.8)
+        targetMarker.lineWidth = 1.5
+        targetMarker.position = pos
+        targetMarker.name = "targetMarker"
+        shotMarkersNode.addChild(targetMarker)
+    }
+
+    private func showLandingSpot(courtX: CGFloat, courtY: CGFloat) {
+        let pos = CourtRenderer.courtPoint(nx: courtX, ny: courtY)
+        let scale = CourtRenderer.perspectiveScale(ny: courtY)
+
+        // Actual landing spot (white dot)
+        let radius: CGFloat = 4 * scale
+        let landingMarker = SKShapeNode(ellipseOf: CGSize(width: radius * 2, height: radius * 0.6))
+        landingMarker.fillColor = UIColor.white.withAlphaComponent(0.9)
+        landingMarker.strokeColor = UIColor.white
+        landingMarker.lineWidth = 1
+        landingMarker.position = pos
+        landingMarker.name = "landingSpot"
+        shotMarkersNode.addChild(landingMarker)
+    }
+
+    private func clearShotMarkers() {
+        shotMarkersNode?.removeAllChildren()
+    }
+
     // MARK: - Match Flow
 
     private func startNextPoint() {
@@ -579,6 +639,7 @@ final class InteractiveMatchScene: SKScene {
         ballNode.alpha = 0
         ballShadow.alpha = 0
         checkedFirstBounce = false
+        clearShotMarkers()
         hideDebugPanel()
 
         // Recover stamina between points
@@ -664,6 +725,9 @@ final class InteractiveMatchScene: SKScene {
         ballNode.alpha = 1
         ballShadow.alpha = 1
         playerAnimator.play(.serveSwing)
+
+        let serveAccuracy = 1.0 - scatter * 3
+        showShotMarkers(targetNX: targetNX, targetNY: targetNY, accuracy: max(0, serveAccuracy))
     }
 
     private func npcServe() {
@@ -709,6 +773,8 @@ final class InteractiveMatchScene: SKScene {
         ballNode.alpha = 1
         ballShadow.alpha = 1
         npcAnimator.play(.serveSwing)
+
+        showShotMarkers(targetNX: targetNX, targetNY: targetNY, accuracy: isDoubleFault ? 0.0 : 0.8)
     }
 
     // MARK: - Point Resolution
@@ -1104,6 +1170,7 @@ final class InteractiveMatchScene: SKScene {
             if ballSim.bounceCount >= 1 && prevBounces == 0 {
                 firstBounceCourtX = ballSim.courtX
                 firstBounceCourtY = ballSim.courtY
+                showLandingSpot(courtX: ballSim.courtX, courtY: ballSim.courtY)
             }
             npcAI.update(dt: dt, ball: ballSim)
             checkPlayerHit()
@@ -1259,6 +1326,8 @@ final class InteractiveMatchScene: SKScene {
         )
         ballSim.lastHitByPlayer = true
         previousBallNY = ballSim.courtY
+
+        showShotMarkers(targetNX: shot.targetNX, targetNY: shot.targetNY, accuracy: shot.accuracy)
     }
 
     private func checkNPCHit() {
@@ -1320,6 +1389,8 @@ final class InteractiveMatchScene: SKScene {
             )
             ballSim.lastHitByPlayer = false
             previousBallNY = ballSim.courtY
+
+            showShotMarkers(targetNX: shot.targetNX, targetNY: shot.targetNY, accuracy: shot.accuracy)
         }
     }
 
