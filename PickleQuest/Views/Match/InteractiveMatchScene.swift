@@ -47,6 +47,7 @@ final class InteractiveMatchScene: SKScene {
 
     // Swipe-to-serve state
     private var swipeTouchStart: CGPoint?
+    private var swipeHintNode: SKSpriteNode?
 
     // Shot mode buttons
     private var activeShotModes: DrillShotCalculator.ShotMode = []
@@ -259,6 +260,9 @@ final class InteractiveMatchScene: SKScene {
         // Debug panel
         buildDebugPanel()
 
+        // Swipe hint
+        buildSwipeHint()
+
         // Initialize AI
         npcAI = MatchAI(npc: npc)
 
@@ -427,6 +431,55 @@ final class InteractiveMatchScene: SKScene {
         debugPanel.alpha = 0
     }
 
+    // MARK: - Swipe Hint
+
+    private func buildSwipeHint() {
+        let config = UIImage.SymbolConfiguration(pointSize: 44, weight: .regular)
+        guard let uiImage = UIImage(systemName: "hand.point.up.left.fill", withConfiguration: config)?
+            .withTintColor(.white, renderingMode: .alwaysOriginal) else { return }
+        let texture = SKTexture(image: uiImage)
+        let node = SKSpriteNode(texture: texture)
+        node.alpha = 0
+        node.zPosition = AC.ZPositions.text + 3
+        addChild(node)
+        swipeHintNode = node
+    }
+
+    private func showSwipeHint() {
+        guard let hint = swipeHintNode else { return }
+        hint.removeAllActions()
+
+        let playerScreenPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
+        let startY = playerScreenPos.y + 40
+        let endY = startY + 120
+
+        hint.position = CGPoint(x: playerScreenPos.x + 20, y: startY)
+        hint.alpha = 0.9
+
+        let animation = SKAction.repeatForever(.sequence([
+            .group([
+                .moveTo(y: endY, duration: 1.0),
+                .sequence([
+                    .fadeAlpha(to: 0.9, duration: 0.1),
+                    .wait(forDuration: 0.4),
+                    .fadeAlpha(to: 0.0, duration: 0.5)
+                ])
+            ]),
+            .run { [weak hint, weak self] in
+                guard let hint, let self else { return }
+                let pos = CourtRenderer.courtPoint(nx: self.playerNX, ny: max(0, self.playerNY))
+                hint.position = CGPoint(x: pos.x + 20, y: pos.y + 40)
+            },
+            .wait(forDuration: 0.3)
+        ]))
+        hint.run(animation, withKey: "swipeHint")
+    }
+
+    private func hideSwipeHint() {
+        swipeHintNode?.removeAction(forKey: "swipeHint")
+        swipeHintNode?.run(.fadeOut(withDuration: 0.2))
+    }
+
     // MARK: - Match Flow
 
     private func startNextPoint() {
@@ -447,6 +500,7 @@ final class InteractiveMatchScene: SKScene {
             playerNY = 0.08
             npcAI.positionForReceive(playerScore: playerScore)
             phase = .serving
+            showSwipeHint()
         } else {
             let evenScore = npcScore % 2 == 0
             npcAI.positionForServe(npcScore: npcScore)
@@ -468,6 +522,8 @@ final class InteractiveMatchScene: SKScene {
         let distance = sqrt(dx * dx + dy * dy)
 
         guard dy > 0, distance >= P.serveSwipeMinDistance else { return }
+
+        hideSwipeHint()
 
         let swipeAngle = atan2(dx, dy)
         let angleDeviation = max(-P.serveSwipeAngleRange, min(P.serveSwipeAngleRange, swipeAngle))

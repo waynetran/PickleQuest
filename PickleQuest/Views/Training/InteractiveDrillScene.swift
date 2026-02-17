@@ -63,6 +63,9 @@ final class InteractiveDrillScene: SKScene {
     private var stamina: CGFloat = GameConstants.DrillPhysics.maxStamina
     private var timeSinceLastSprint: CGFloat = 10 // start recovered
 
+    // Swipe hint (serve mode)
+    private var swipeHintNode: SKSpriteNode?
+
     // Speech bubble
     private var speechBubbleNode: SKNode!
     private var speechBubbleBackground: SKShapeNode!
@@ -196,6 +199,11 @@ final class InteractiveDrillScene: SKScene {
 
         // Speech bubble (follows coach)
         buildSpeechBubble()
+
+        // Swipe hint (serve mode)
+        if drillConfig.inputMode == .swipeToServe {
+            buildSwipeHint()
+        }
 
         // Ball
         ballTextures = SpriteFactory.makeBallTextures()
@@ -469,6 +477,55 @@ final class InteractiveDrillScene: SKScene {
         ]))
     }
 
+    // MARK: - Swipe Hint
+
+    private func buildSwipeHint() {
+        let config = UIImage.SymbolConfiguration(pointSize: 44, weight: .regular)
+        guard let uiImage = UIImage(systemName: "hand.point.up.left.fill", withConfiguration: config)?
+            .withTintColor(.white, renderingMode: .alwaysOriginal) else { return }
+        let texture = SKTexture(image: uiImage)
+        let node = SKSpriteNode(texture: texture)
+        node.alpha = 0
+        node.zPosition = AC.ZPositions.text + 3
+        addChild(node)
+        swipeHintNode = node
+    }
+
+    private func showSwipeHint() {
+        guard let hint = swipeHintNode else { return }
+        hint.removeAllActions()
+
+        let playerScreenPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
+        let startY = playerScreenPos.y + 40
+        let endY = startY + 120
+
+        hint.position = CGPoint(x: playerScreenPos.x + 20, y: startY)
+        hint.alpha = 0.9
+
+        let animation = SKAction.repeatForever(.sequence([
+            .group([
+                .moveTo(y: endY, duration: 1.0),
+                .sequence([
+                    .fadeAlpha(to: 0.9, duration: 0.1),
+                    .wait(forDuration: 0.4),
+                    .fadeAlpha(to: 0.0, duration: 0.5)
+                ])
+            ]),
+            .run { [weak hint, weak self] in
+                guard let hint, let self else { return }
+                let pos = CourtRenderer.courtPoint(nx: self.playerNX, ny: max(0, self.playerNY))
+                hint.position = CGPoint(x: pos.x + 20, y: pos.y + 40)
+            },
+            .wait(forDuration: 0.3)
+        ]))
+        hint.run(animation, withKey: "swipeHint")
+    }
+
+    private func hideSwipeHint() {
+        swipeHintNode?.removeAction(forKey: "swipeHint")
+        swipeHintNode?.run(.fadeOut(withDuration: 0.2))
+    }
+
     private func setupHUD() {
         let fontName = AC.Text.fontName
         let margin: CGFloat = 8
@@ -595,6 +652,7 @@ final class InteractiveDrillScene: SKScene {
         case .swipeToServe:
             phase = .waitingForServe
             updateHUD()
+            showSwipeHint()
         }
     }
 
@@ -720,6 +778,7 @@ final class InteractiveDrillScene: SKScene {
         // Must swipe upward and exceed minimum distance
         guard dy > 0, distance >= P.serveSwipeMinDistance else { return }
 
+        hideSwipeHint()
         serveCount += 1
 
         // Check if we need to switch sides after serve 5
@@ -1181,6 +1240,7 @@ final class InteractiveDrillScene: SKScene {
             feedNewBall()
         case .servePractice:
             phase = .waitingForServe
+            showSwipeHint()
             // Show coaching tip before each serve
             let tip = coachPersonality.feedTip(drillType: drill.type)
             showCoachSpeech(tip, duration: 2.5)
