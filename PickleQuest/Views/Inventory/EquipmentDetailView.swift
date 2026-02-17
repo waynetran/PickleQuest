@@ -163,6 +163,39 @@ struct EquipmentDetailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
 
+                    // Traits
+                    if !equipment.traits.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Traits")
+                                .font(.headline)
+
+                            ForEach(equipment.traits, id: \.type) { trait in
+                                HStack(spacing: 8) {
+                                    Text(trait.tier.displayName)
+                                        .font(.caption2.bold())
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(traitTierColor(trait.tier).opacity(0.2))
+                                        .foregroundStyle(traitTierColor(trait.tier))
+                                        .clipShape(Capsule())
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(trait.type.displayName)
+                                            .font(.subheadline.bold())
+                                            .foregroundStyle(traitTierColor(trait.tier))
+
+                                        Text(trait.type.description)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(.teal.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
                     // Ability (if any)
                     if let ability = equipment.ability {
                         VStack(alignment: .leading, spacing: 8) {
@@ -371,6 +404,14 @@ struct EquipmentDetailView: View {
                     Button("Close") { dismiss() }
                 }
             }
+        }
+    }
+
+    private func traitTierColor(_ tier: TraitTier) -> Color {
+        switch tier {
+        case .minor: return .teal
+        case .major: return .purple
+        case .unique: return .orange
         }
     }
 

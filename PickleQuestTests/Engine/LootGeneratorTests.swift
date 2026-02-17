@@ -132,27 +132,33 @@ struct LootGeneratorTests {
         }
     }
 
-    // MARK: - Abilities
+    // MARK: - Traits
 
-    @Test("Epic and legendary items have abilities")
-    func epicHasAbility() {
-        for seed in UInt64(0)..<UInt64(50) {
-            let generator = LootGenerator(rng: SeededRandomSource(seed: seed))
-            let epic = generator.generateEquipment(rarity: .epic)
-            #expect(epic.ability != nil)
-            let legendary = generator.generateEquipment(rarity: .legendary)
-            #expect(legendary.ability != nil)
-        }
-    }
-
-    @Test("Common and uncommon items do not have abilities")
-    func commonNoAbility() {
+    @Test("Rare items get 1 trait, epic 2, legendary 3")
+    func traitCountMatchesRarity() {
         for seed in UInt64(0)..<UInt64(50) {
             let generator = LootGenerator(rng: SeededRandomSource(seed: seed))
             let common = generator.generateEquipment(rarity: .common)
-            #expect(common.ability == nil)
+            #expect(common.traits.isEmpty)
             let uncommon = generator.generateEquipment(rarity: .uncommon)
-            #expect(uncommon.ability == nil)
+            #expect(uncommon.traits.isEmpty)
+            let rare = generator.generateEquipment(rarity: .rare)
+            #expect(rare.traits.count == 1)
+            let epic = generator.generateEquipment(rarity: .epic)
+            #expect(epic.traits.count == 2)
+            let legendary = generator.generateEquipment(rarity: .legendary)
+            #expect(legendary.traits.count == 3)
+        }
+    }
+
+    @Test("New items do not generate abilities (deprecated)")
+    func newItemsNoAbilities() {
+        for seed in UInt64(0)..<UInt64(50) {
+            let generator = LootGenerator(rng: SeededRandomSource(seed: seed))
+            let epic = generator.generateEquipment(rarity: .epic)
+            #expect(epic.ability == nil)
+            let legendary = generator.generateEquipment(rarity: .legendary)
+            #expect(legendary.ability == nil)
         }
     }
 
@@ -233,11 +239,11 @@ struct LootGeneratorTests {
         #expect(item.levelMultiplier == 1.0)
 
         item.level = 5
-        // 1.0 + 0.05 * 4 = 1.20
-        #expect(abs(item.levelMultiplier - 1.20) < 0.001)
+        // 1.0 + 0.01 * 4 = 1.04
+        #expect(abs(item.levelMultiplier - 1.04) < 0.001)
 
         item.level = 15
-        // 1.0 + 0.05 * 14 = 1.70
-        #expect(abs(item.levelMultiplier - 1.70) < 0.001)
+        // 1.0 + 0.01 * 14 = 1.14
+        #expect(abs(item.levelMultiplier - 1.14) < 0.001)
     }
 }

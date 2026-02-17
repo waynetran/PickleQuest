@@ -136,6 +136,7 @@ enum GameConstants {
     enum Equipment {
         static let maxSlots: Int = 6
         static let maxBonusPerStat: Int = 25 // legendary max single-stat bonus
+        static let maxEquipmentBonusPerStat: Int = 15 // cap any single stat's total equipment contribution
         static let setChanceRare = 0.15
         static let setChanceEpic = 0.30
         static let setChanceLegendary = 0.50
@@ -143,7 +144,7 @@ enum GameConstants {
 
     // MARK: - Equipment Level
     enum EquipmentLevel {
-        static let statPercentPerLevel: Double = 0.05  // +5% flat per level
+        static let statPercentPerLevel: Double = 0.01  // +1% flat per level (max 1.24x at level 25)
         static let baseUpgradeCost: Int = 25
         static let upgradeCostExponent: Double = 1.4
         static let rarityUpgradeMultiplier: [EquipmentRarity: Double] = [

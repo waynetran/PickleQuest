@@ -24,6 +24,7 @@
 | 9 | Gear Drop System (Loot on the Map) | **Complete** |
 | 9.1 | Drill System Redesign + UI Polish | **Complete** |
 | 10 | Interactive Match Mode | **Complete** |
+| 10c | Equipment Power Budget & Trait System | **Complete** |
 | 7c | Persistence Polish, Cloud Prep, Multiplayer Prep | Planned |
 
 ---
@@ -958,6 +959,58 @@ Match end → MatchResult → existing processResult() pipeline
 - `Views/Match/InteractiveMatchScene.swift` — tracks player shot context before each hit, passes `playerDUPR` to MatchAI
 - `Models/Common/GameConstants.swift` — shot quality constants in NPCStrategy (goodShotErrorBonus, badShotErrorPenalty, duprGapErrorScale, maxDuprErrorReduction, maxDuprErrorBoost)
 - `Views/Player/DevModeView.swift` — "AI Tools" section with NavigationLink to AITrainerView
+
+---
+
+## Post-Milestone 10b: DUPR Gap Calibration
+
+**Commit**: `7037b04`
+
+### What was built
+- **Stat sensitivity knob** (`Rally.statSensitivity = 0.16`): master multiplier on all stat-differential terms in `RallySimulator`. At 1.0 (old default), a 0.1 DUPR gap produced ~5.5 point margin due to side-out scoring amplification. At 0.16, it produces ~1.2 points — matching real DUPR calibration.
+- **Exponential DUPR error scaling** in `MatchAI.shouldMakeError()`: replaced linear scaling with `exp(-gap * 3.0)` for stronger NPCs and `exp(gap * 1.5)` for weaker. A +0.1 gap NPC now makes 26% fewer errors (was 1.5%); a +1.0 gap NPC makes 95% fewer (was 15%).
+- **Rally pressure system** in `InteractiveMatchScene`: cumulative shot difficulty during a rally. When pressure exceeds a threshold (scaled by player's defensive stats), forced error rate increases. Models how sustained quality play breaks down the weaker player.
+- **DUPR forced error amplifier**: player whiff rate scales with NPC DUPR advantage — 0.1 gap = 1.2x, 0.5 gap = 2x, 1.0 gap = 3x.
+- **Monte Carlo calibration tests** (5 tests): verify equal stats → near-zero margin, 0.1 gap → 0.3-2.5 margin, 1.0 gap → decisive win (>4.0 margin, >85% win rate), monotonic increase, high-level consistency.
+
+### Modified files (4)
+- `GameConstants.swift` — `Rally.statSensitivity`, `NPCStrategy` exponential DUPR constants + pressure system + forced error amplifier
+- `RallySimulator.swift` — apply `statSensitivity` to 5 differential functions (ace, winner, forced error, dink winner, overall advantage)
+- `MatchAI.swift` — exponential DUPR error scaling in `shouldMakeError()`
+- `InteractiveMatchScene.swift` — `rallyPressure` property, pressure accumulation + DUPR forced error amplifier in `checkPlayerHit()`
+
+### New files (1)
+- `PickleQuestTests/Engine/MatchCalibrationTests.swift` — Monte Carlo verification of DUPR gap calibration
+
+---
+
+## Post-Milestone 10c: Equipment Power Budget & Trait System
+
+### What was built
+- **Stat budget rebalance**: reduced base stat values (common 3→2, legendary 16→9) and bonus stat budgets (common 0→0, legendary 16→8) so a full 6x legendary loadout gives ~0.5-0.7 DUPR advantage instead of the old ~3.0+ DUPR
+- **Level multiplier nerf**: reduced from +5% per level (max 2.2x at level 25) to +1% per level (max 1.24x at level 25)
+- **Per-stat equipment cap**: any single stat's total equipment contribution capped at 15 points, preventing extreme stacking
+- **Trait system**: passive stat-modifying traits replace the unused `EquipmentAbility` system as the primary rarity differentiator:
+  - **5 minor traits** (rare+): small trade-offs (e.g., Lightfoot: +2 speed, -1 power)
+  - **5 major traits** (epic+): multi-stat boosts (e.g., Rally Grinder: +3 consistency, +2 stamina)
+  - **3 unique traits** (legendary only): strong effects (e.g., All-Rounder: +2 to all 11 stats)
+- **Trait slot system**: rare gets 1 minor, epic gets 1 minor + 1 major, legendary gets 1 minor + 1 major + 1 unique
+- **Trait stat integration**: traits resolve to stat modifiers applied in `StatCalculator` alongside equipment and set bonuses, all under the per-stat cap
+- **View updates**: trait badges with tier-based colors (teal/purple/orange) on equipment cards and detail views
+- **Backward compatibility**: `traits` field uses `decodeIfPresent` with empty array default; existing saved equipment decodes cleanly
+- **Ability deprecation**: new items no longer generate abilities; old items retain them for display
+- **Balance tests**: 9 new tests verifying power budget, per-stat cap, trait application, level multiplier, backward compat, and trait generation
+
+### Files modified (7) + 2 new
+- `EquipmentRarity.swift` — rebalanced baseStatValue, bonusStatBudget, bonusStatCount; added traitSlots and hasTrait
+- `Equipment.swift` — added `traits: [EquipmentTrait]` with backward-compatible Codable
+- `GameConstants.swift` — `statPercentPerLevel` 0.05→0.01, added `maxEquipmentBonusPerStat: 15`
+- `StatCalculator.swift` — per-stat cap enforcement, `aggregateTraitBonuses()` method
+- `LootGenerator.swift` — `generateTraits()` method, abilities deprecated for new items
+- `EquipmentDetailView.swift` — traits section with tier badges
+- `EquipmentCardView.swift` — trait names with tier colors
+- NEW: `EquipmentTrait.swift` — TraitType, TraitTier, EquipmentTrait with statModifiers
+- NEW: `EquipmentBalanceTests.swift` — 9 balance verification tests
 
 ---
 

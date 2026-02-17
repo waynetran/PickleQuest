@@ -9,6 +9,7 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
     let flavorText: String
     let setID: String?
     let setName: String?
+    let traits: [EquipmentTrait]
     let ability: EquipmentAbility?
     let sellPrice: Int
     let visualColor: String?
@@ -99,6 +100,7 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
         flavorText: String = "",
         setID: String? = nil,
         setName: String? = nil,
+        traits: [EquipmentTrait] = [],
         ability: EquipmentAbility?,
         sellPrice: Int,
         visualColor: String? = nil,
@@ -116,6 +118,7 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
         self.flavorText = flavorText
         self.setID = setID
         self.setName = setName
+        self.traits = traits
         self.ability = ability
         self.sellPrice = sellPrice
         self.visualColor = visualColor
@@ -138,6 +141,7 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
         flavorText = try container.decodeIfPresent(String.self, forKey: .flavorText) ?? ""
         setID = try container.decodeIfPresent(String.self, forKey: .setID)
         setName = try container.decodeIfPresent(String.self, forKey: .setName)
+        traits = try container.decodeIfPresent([EquipmentTrait].self, forKey: .traits) ?? []
         ability = try container.decodeIfPresent(EquipmentAbility.self, forKey: .ability)
         sellPrice = try container.decode(Int.self, forKey: .sellPrice)
         visualColor = try container.decodeIfPresent(String.self, forKey: .visualColor)

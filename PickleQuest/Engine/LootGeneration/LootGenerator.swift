@@ -71,7 +71,8 @@ struct LootGenerator: Sendable {
         // Bonus stats (excluding the base stat)
         let bonuses = generateBonuses(rarity: finalRarity, excludingStat: model.baseStat)
 
-        let ability = finalRarity.hasAbility ? generateAbility() : nil
+        let traits = generateTraits(rarity: finalRarity)
+        let ability: EquipmentAbility? = nil // deprecated — traits replace abilities
         let allBonuses = baseStat.value > 0 ? [baseStat] + bonuses : bonuses
         let flavorText = nameGenerator.generateFlavorText(slot: slot, rarity: finalRarity, statBonuses: allBonuses)
 
@@ -95,6 +96,7 @@ struct LootGenerator: Sendable {
             flavorText: flavorText,
             setID: setID,
             setName: setName,
+            traits: traits,
             ability: ability,
             sellPrice: sellPrice,
             brandID: model.brandID,
@@ -102,6 +104,30 @@ struct LootGenerator: Sendable {
             level: 1,
             baseStat: baseStat
         )
+    }
+
+    private func generateTraits(rarity: EquipmentRarity) -> [EquipmentTrait] {
+        let slots = rarity.traitSlots
+        var traits: [EquipmentTrait] = []
+
+        let minorPool = TraitType.allCases.filter { $0.tier == .minor }
+        let majorPool = TraitType.allCases.filter { $0.tier == .major }
+        let uniquePool = TraitType.allCases.filter { $0.tier == .unique }
+
+        if slots.minor > 0, !minorPool.isEmpty {
+            let type = minorPool[rng.nextInt(in: 0...minorPool.count - 1)]
+            traits.append(EquipmentTrait(type: type, tier: .minor))
+        }
+        if slots.major > 0, !majorPool.isEmpty {
+            let type = majorPool[rng.nextInt(in: 0...majorPool.count - 1)]
+            traits.append(EquipmentTrait(type: type, tier: .major))
+        }
+        if slots.unique > 0, !uniquePool.isEmpty {
+            let type = uniquePool[rng.nextInt(in: 0...uniquePool.count - 1)]
+            traits.append(EquipmentTrait(type: type, tier: .unique))
+        }
+
+        return traits
     }
 
     private func rollSetPiece(rarity: EquipmentRarity, slot: EquipmentSlot) -> (String?, String?) {

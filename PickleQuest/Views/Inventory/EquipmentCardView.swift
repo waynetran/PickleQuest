@@ -63,7 +63,16 @@ struct EquipmentCardView: View {
                 }
             }
 
-            if let ability = equipment.ability {
+            if !equipment.traits.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(equipment.traits, id: \.type) { trait in
+                        Text(trait.type.displayName)
+                            .font(.caption2.bold())
+                            .foregroundStyle(traitTierColor(trait.tier))
+                            .lineLimit(1)
+                    }
+                }
+            } else if let ability = equipment.ability {
                 Text(ability.name)
                     .font(.caption2.bold())
                     .foregroundStyle(.orange)
@@ -94,6 +103,14 @@ struct EquipmentCardView: View {
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(isEquipped ? Color.green.opacity(0.5) : Color.clear, lineWidth: 2)
         )
+    }
+
+    private func traitTierColor(_ tier: TraitTier) -> Color {
+        switch tier {
+        case .minor: return .teal
+        case .major: return .purple
+        case .unique: return .orange
+        }
     }
 
     private var conditionColor: Color {

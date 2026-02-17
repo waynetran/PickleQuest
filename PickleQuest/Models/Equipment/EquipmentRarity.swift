@@ -24,11 +24,11 @@ enum EquipmentRarity: String, Codable, CaseIterable, Comparable, Sendable {
 
     var maxStatBonus: Int {
         switch self {
-        case .common: return 5
-        case .uncommon: return 10
-        case .rare: return 15
-        case .epic: return 20
-        case .legendary: return 25
+        case .common: return 3
+        case .uncommon: return 5
+        case .rare: return 7
+        case .epic: return 10
+        case .legendary: return 12
         }
     }
 
@@ -44,11 +44,11 @@ enum EquipmentRarity: String, Codable, CaseIterable, Comparable, Sendable {
 
     var baseStatValue: Int {
         switch self {
-        case .common: return 3
-        case .uncommon: return 5
-        case .rare: return 8
-        case .epic: return 12
-        case .legendary: return 16
+        case .common: return 2
+        case .uncommon: return 3
+        case .rare: return 5
+        case .epic: return 7
+        case .legendary: return 9
         }
     }
 
@@ -57,24 +57,36 @@ enum EquipmentRarity: String, Codable, CaseIterable, Comparable, Sendable {
         case .common: return 0
         case .uncommon: return 1
         case .rare: return 2
-        case .epic: return 3
-        case .legendary: return 4
+        case .epic: return 2
+        case .legendary: return 3
         }
     }
 
     var bonusStatBudget: Int {
         switch self {
         case .common: return 0
-        case .uncommon: return 5
-        case .rare: return 10
-        case .epic: return 12
-        case .legendary: return 16
+        case .uncommon: return 2
+        case .rare: return 4
+        case .epic: return 6
+        case .legendary: return 8
         }
     }
 
     var hasAbility: Bool {
         self >= .epic
     }
+
+    var traitSlots: (minor: Int, major: Int, unique: Int) {
+        switch self {
+        case .common: return (0, 0, 0)
+        case .uncommon: return (0, 0, 0)
+        case .rare: return (1, 0, 0)
+        case .epic: return (1, 1, 0)
+        case .legendary: return (1, 1, 1)
+        }
+    }
+
+    var hasTrait: Bool { self >= .rare }
 
     var dropWeight: Double {
         switch self {

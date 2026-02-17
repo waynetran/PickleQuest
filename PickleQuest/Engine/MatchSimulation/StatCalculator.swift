@@ -8,11 +8,13 @@ struct StatCalculator: Sendable {
         var result = base
         let equipBonuses = aggregateBonuses(from: equipment, playerLevel: playerLevel)
         let setBonuses = aggregateSetBonuses(from: equipment, playerLevel: playerLevel)
+        let traitBonuses = aggregateTraitBonuses(from: equipment, playerLevel: playerLevel)
 
         for type in StatType.allCases {
             let baseValue = base.stat(type)
-            let bonus = (equipBonuses[type] ?? 0) + (setBonuses[type] ?? 0)
-            let effective = applyDiminishingReturns(base: baseValue, bonus: bonus)
+            let rawBonus = (equipBonuses[type] ?? 0) + (setBonuses[type] ?? 0) + (traitBonuses[type] ?? 0)
+            let cappedBonus = min(rawBonus, GameConstants.Equipment.maxEquipmentBonusPerStat)
+            let effective = applyDiminishingReturns(base: baseValue, bonus: cappedBonus)
             result.setStat(type, value: effective)
         }
 
@@ -88,6 +90,19 @@ struct StatCalculator: Sendable {
             for bonus in item.statBonuses {
                 let scaled = Int((Double(bonus.value) * multiplier).rounded(.down))
                 bonuses[bonus.stat, default: 0] += scaled
+            }
+        }
+        return bonuses
+    }
+
+    private func aggregateTraitBonuses(from equipment: [Equipment], playerLevel: Int) -> [StatType: Int] {
+        var bonuses: [StatType: Int] = [:]
+        for item in equipment {
+            guard item.level <= playerLevel else { continue }
+            for trait in item.traits {
+                for (stat, value) in trait.type.statModifiers {
+                    bonuses[stat, default: 0] += value
+                }
             }
         }
         return bonuses

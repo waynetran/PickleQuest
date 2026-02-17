@@ -74,6 +74,7 @@
 		592E5D586371E0A087CBDF0E /* TutorialTip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CBE94C04C84B14084BB229C /* TutorialTip.swift */; };
 		5A43B7300C9756C5C0783F92 /* MatchAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 202A83825C89EF08D54F91B4 /* MatchAction.swift */; };
 		5CC05AE0BF17214046CCAFD1 /* StoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0752261B8ED02D534503C85 /* StoreView.swift */; };
+		5CD95C25F9B37133D9BEC253 /* EquipmentBalanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34858760044E3B980120479C /* EquipmentBalanceTests.swift */; };
 		5D19481282B531AF7520F538 /* GearDropRevealSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 483A1384C44EE8F2B3BC8DA0 /* GearDropRevealSheet.swift */; };
 		5DA5E82C7D1127AA17D91857 /* GearDropService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B5148EA70986C77AEA43A0E /* GearDropService.swift */; };
 		5F0BAB40AD8F1693B19EA076 /* SKNode+Async.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D4DA40EDD426D2F7E3FE0E5 /* SKNode+Async.swift */; };
@@ -123,6 +124,7 @@
 		952F90E2AC4730346AE0E1F1 /* MatchActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9322F41B5638789C5F80C80 /* MatchActionTests.swift */; };
 		95681C2A013819E0A47237C1 /* DevModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 144F008DAAEF10FB97289E80 /* DevModeView.swift */; };
 		9789F4D02A64E20E7FEAF063 /* CoachView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 644505D3B40777DD8A62A693 /* CoachView.swift */; };
+		987D5AFDFA66255E7B2DE7F0 /* EquipmentTrait.swift in Sources */ = {isa = PBXBuildFile; fileRef = E66096405C5A05F7CBD9FD42 /* EquipmentTrait.swift */; };
 		99531B9106CA276696B50A1E /* DailyChallengeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38829B94E77B7351550D92E /* DailyChallengeService.swift */; };
 		9D439B12DA3E48072B924068 /* MatchSpriteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6918B86594312D1407B045AB /* MatchSpriteView.swift */; };
 		9FB2BB4C5D6FC281A18D5C52 /* MockCoachService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4CAFBA9DE612294DF5DEB00 /* MockCoachService.swift */; };
@@ -273,6 +275,7 @@
 		3291808BD35CFCF1FFF3F312 /* FogOfWarOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FogOfWarOverlay.swift; sourceTree = "<group>"; };
 		3303CC062F93F337B9A93396 /* MockTournamentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockTournamentService.swift; sourceTree = "<group>"; };
 		34188BBE97EE7E2D002892CE /* GameConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameConstants.swift; sourceTree = "<group>"; };
+		34858760044E3B980120479C /* EquipmentBalanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentBalanceTests.swift; sourceTree = "<group>"; };
 		355E3510763BE8B045F5312B /* WagerDecisionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WagerDecisionTests.swift; sourceTree = "<group>"; };
 		38000396F34067370B0A5A19 /* TrainingReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingReport.swift; sourceTree = "<group>"; };
 		391E2B3DC6D4E56C766EFF8B /* InteractiveMatchScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveMatchScene.swift; sourceTree = "<group>"; };
@@ -410,6 +413,7 @@
 		E4670681121ECFF68169B37B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		E5CEC35A0CEB4D245BCFE7C6 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
 		E614EED00CBCD8CB272FDE66 /* SavedPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPlayer.swift; sourceTree = "<group>"; };
+		E66096405C5A05F7CBD9FD42 /* EquipmentTrait.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentTrait.swift; sourceTree = "<group>"; };
 		EACFC1726A4D0C790A37B600 /* MapPlayerAnnotation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapPlayerAnnotation.swift; sourceTree = "<group>"; };
 		EBB3E4E68CAE3058FA644C8C /* TutorialMatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialMatchView.swift; sourceTree = "<group>"; };
 		ECEA1686848E23241264008F /* MatchConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchConfig.swift; sourceTree = "<group>"; };
@@ -508,6 +512,7 @@
 			children = (
 				D93674CFBCAE7C8A5EB63610 /* DUPRCalculatorTests.swift */,
 				665DD2E2381E8DAD0E1A31C3 /* DUPRProfileTests.swift */,
+				34858760044E3B980120479C /* EquipmentBalanceTests.swift */,
 				549DF67C3EB0E36D696AE3EA /* FatigueModelTests.swift */,
 				C387426EAD3B2B5843A81C8B /* HustlerNPCGeneratorTests.swift */,
 				3FE0743BF162137BA3E922FE /* LootGeneratorTests.swift */,
@@ -706,6 +711,7 @@
 				6DE2F3174E21AC04B25ECDDA /* EquipmentRarity.swift */,
 				5F96F8D08C8F4FC655940785 /* EquipmentSet.swift */,
 				4C0D6A9C6DD259AB87FE0D21 /* EquipmentSlot.swift */,
+				E66096405C5A05F7CBD9FD42 /* EquipmentTrait.swift */,
 			);
 			path = Equipment;
 			sourceTree = "<group>";
@@ -1160,6 +1166,7 @@
 			files = (
 				C043BA9B8317B6BC00C438D6 /* DUPRCalculatorTests.swift in Sources */,
 				1F3D155A28F61DE864369D26 /* DUPRProfileTests.swift in Sources */,
+				5CD95C25F9B37133D9BEC253 /* EquipmentBalanceTests.swift in Sources */,
 				A5120AA31F0A8AEBBBFC9900 /* EquipmentSetTests.swift in Sources */,
 				49657DCD34805C399017F8FA /* FatigueModelTests.swift in Sources */,
 				882045477F61203EA7AF6698 /* HustlerNPCGeneratorTests.swift in Sources */,
@@ -1230,6 +1237,7 @@
 				25BCE5BEB1E98890F051A673 /* EquipmentSet.swift in Sources */,
 				B26771FE90898DD826D9B56D /* EquipmentSlot.swift in Sources */,
 				1F1A8B0C4EAA874288A018B5 /* EquipmentSlotsView.swift in Sources */,
+				987D5AFDFA66255E7B2DE7F0 /* EquipmentTrait.swift in Sources */,
 				EFE1996F96F40167DAFB4032 /* FatigueModel.swift in Sources */,
 				817A9EF3A2B3ED0AB941555F /* FogOfWar.swift in Sources */,
 				B75E6B40E6D7F0B8B1B302F9 /* FogOfWarOverlay.swift in Sources */,

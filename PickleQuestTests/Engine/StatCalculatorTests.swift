@@ -144,15 +144,15 @@ struct StatCalculatorTests {
             ability: nil, sellPrice: 100, level: 1,
             baseStat: StatBonus(stat: .power, value: 8)
         )
-        var level5Item = level1Item
-        level5Item.level = 5
+        var level15Item = level1Item
+        level15Item.level = 15
 
         let effectLv1 = calculator.effectiveStats(base: base, equipment: [level1Item])
-        let effectLv5 = calculator.effectiveStats(base: base, equipment: [level5Item])
+        let effectLv15 = calculator.effectiveStats(base: base, equipment: [level15Item])
 
-        // Level 5 should give more power than level 1
-        #expect(effectLv5.power > effectLv1.power)
-        #expect(effectLv5.accuracy > effectLv1.accuracy)
+        // Level 15 should give more power than level 1
+        #expect(effectLv15.power > effectLv1.power)
+        #expect(effectLv15.accuracy > effectLv1.accuracy)
     }
 
     @Test("Level gate zeroes contribution when equipment level exceeds player level")
