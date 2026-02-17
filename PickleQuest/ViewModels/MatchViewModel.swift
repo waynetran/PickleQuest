@@ -43,6 +43,10 @@ final class MatchViewModel {
     var pendingWagerNPC: NPC?
     var showWagerSheet: Bool = false
 
+    // Contested drop loot override
+    var contestedDropRarity: EquipmentRarity?
+    var contestedDropItemCount: Int = 0
+
     // Doubles state
     var selectedPartner: NPC?
     var opponentPartner: NPC?
@@ -260,7 +264,15 @@ final class MatchViewModel {
             }
             if case .matchEnd(let result) = event {
                 matchResult = result
-                lootDrops = result.loot
+                // Override loot for contested drop matches
+                if result.didPlayerWin, let dropRarity = contestedDropRarity, contestedDropItemCount > 0 {
+                    let lootGen = LootGenerator()
+                    lootDrops = (0..<contestedDropItemCount).map { _ in
+                        lootGen.generateEquipment(rarity: dropRarity)
+                    }
+                } else {
+                    lootDrops = result.loot
+                }
                 computeRewardsPreview(player: player, opponent: opponent, result: result)
             }
 
@@ -424,6 +436,8 @@ final class MatchViewModel {
         isHustlerMatch = false
         pendingWagerNPC = nil
         showWagerSheet = false
+        contestedDropRarity = nil
+        contestedDropItemCount = 0
         selectedPartner = nil
         opponentPartner = nil
         teamSynergy = nil

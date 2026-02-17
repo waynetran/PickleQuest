@@ -108,7 +108,9 @@ struct MatchHubView: View {
                         npc: npc,
                         npcAppearance: matchVM.opponentAppearance,
                         isRated: matchVM.matchConfig.isRated,
-                        wagerAmount: matchVM.wagerAmount
+                        wagerAmount: matchVM.wagerAmount,
+                        contestedDropRarity: mapVM.pendingContestedDrop?.rarity,
+                        contestedDropItemCount: mapVM.pendingContestedDrop != nil ? 3 : 0
                     ) { result in
                         matchVM.matchResult = result
                         matchVM.lootDrops = result.loot
@@ -277,9 +279,11 @@ struct MatchHubView: View {
             }
         }
 
-        // Contested drop: collect on win
+        // Contested drop: mark as collected (loot already included in match result)
         if let mapVM, let drop = mapVM.pendingContestedDrop, result.didPlayerWin, !result.wasResigned {
-            await mapVM.collectGearDrop(drop, playerLevel: player.progression.level)
+            _ = await container.gearDropService.collectDrop(drop, playerLevel: player.progression.level)
+            mapVM.activeGearDrops.removeAll { $0.id == drop.id }
+            mapVM.pendingContestedDrop = nil
         }
 
         // Record match history

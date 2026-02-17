@@ -118,6 +118,8 @@ final class InteractiveMatchScene: SKScene {
     private let npcAppearance: CharacterAppearance
     private let isRated: Bool
     private let wagerAmount: Int
+    private let contestedDropRarity: EquipmentRarity?
+    private let contestedDropItemCount: Int
     private let onComplete: (MatchResult) -> Void
 
     // MARK: - Init
@@ -128,6 +130,8 @@ final class InteractiveMatchScene: SKScene {
         npcAppearance: CharacterAppearance,
         isRated: Bool,
         wagerAmount: Int,
+        contestedDropRarity: EquipmentRarity? = nil,
+        contestedDropItemCount: Int = 0,
         onComplete: @escaping (MatchResult) -> Void
     ) {
         self.player = player
@@ -135,6 +139,8 @@ final class InteractiveMatchScene: SKScene {
         self.npcAppearance = npcAppearance
         self.isRated = isRated
         self.wagerAmount = wagerAmount
+        self.contestedDropRarity = contestedDropRarity
+        self.contestedDropItemCount = contestedDropItemCount
         self.onComplete = onComplete
         self.playerStats = player.stats
 
@@ -718,15 +724,22 @@ final class InteractiveMatchScene: SKScene {
             opponentGames: didPlayerWin ? 0 : 1
         )
 
-        // Generate loot
+        // Generate loot — contested drops use drop rarity for guaranteed items
+        let loot: [Equipment]
         let lootGen = LootGenerator()
-        let suprGap = npc.duprRating - player.duprRating
-        let loot = lootGen.generateMatchLoot(
-            didWin: didPlayerWin,
-            opponentDifficulty: npc.difficulty,
-            playerLevel: player.progression.level,
-            suprGap: suprGap
-        )
+        if didPlayerWin, let dropRarity = contestedDropRarity, contestedDropItemCount > 0 {
+            loot = (0..<contestedDropItemCount).map { _ in
+                lootGen.generateEquipment(rarity: dropRarity)
+            }
+        } else {
+            let suprGap = npc.duprRating - player.duprRating
+            loot = lootGen.generateMatchLoot(
+                didWin: didPlayerWin,
+                opponentDifficulty: npc.difficulty,
+                playerLevel: player.progression.level,
+                suprGap: suprGap
+            )
+        }
 
         // Calculate XP
         var xp = IM.baseXP

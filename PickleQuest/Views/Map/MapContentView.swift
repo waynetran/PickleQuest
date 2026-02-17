@@ -342,6 +342,8 @@ struct MapContentView: View {
                     onChallenge: {
                         mapVM.showContestedSheet = false
                         mapVM.pendingContestedDrop = drop
+                        matchVM.contestedDropRarity = drop.rarity
+                        matchVM.contestedDropItemCount = 3
                         Task {
                             let difficulty = drop.guardianDifficulty ?? .advanced
                             let npcs = await container.npcService.getNPCs(forDifficulty: difficulty)
