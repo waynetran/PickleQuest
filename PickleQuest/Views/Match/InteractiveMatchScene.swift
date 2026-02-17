@@ -22,6 +22,19 @@ final class InteractiveMatchScene: SKScene {
     private var npcStaminaBarBg: SKShapeNode!
     private var npcStaminaBarFill: SKShapeNode!
 
+    // Player floating stamina bar
+    private var playerStaminaBar: SKNode!
+    private var playerStaminaBarBg: SKShapeNode!
+    private var playerStaminaBarFill: SKShapeNode!
+
+    // Shot mode dots (floating near player)
+    private var shotModeDots: SKNode!
+    private var shotModeDotNodes: [SKShapeNode] = []
+
+    // Debug panel for point-over info
+    private var debugPanel: SKNode!
+    private var debugTextLabel: SKLabelNode!
+
     // Joystick
     private var joystickBase: SKShapeNode!
     private var joystickKnob: SKShapeNode!
@@ -45,15 +58,12 @@ final class InteractiveMatchScene: SKScene {
     private var stamina: CGFloat = P.maxStamina
     private var timeSinceLastSprint: CGFloat = 10
 
-    // HUD
+    // HUD (scoreboard only)
     private var hudContainer: SKNode!
     private var hudBackground: SKShapeNode!
     private var scoreLabel: SKLabelNode!
     private var servingIndicator: SKLabelNode!
-    private var hudStaminaBarBg: SKShapeNode!
-    private var hudStaminaBarFill: SKShapeNode!
-    private var hudStaminaValue: SKLabelNode!
-    private var hudStaminaWarning: SKLabelNode!
+    private var staminaWarningLabel: SKLabelNode!
     private var outcomeLabel: SKLabelNode!
 
     // MARK: - Game State
@@ -140,16 +150,27 @@ final class InteractiveMatchScene: SKScene {
         fatalError("init(coder:) not supported")
     }
 
+    private var pendingStart = false
+
     override func didMove(to view: SKView) {
         view.isMultipleTouchEnabled = true
         buildScene()
         setupHUD()
+        if pendingStart {
+            pendingStart = false
+            beginMatch()
+        }
     }
 
     // MARK: - Public API
 
     func beginMatch() {
         guard phase == .waitingToStart else { return }
+        // If scene hasn't been mounted yet, defer until didMove
+        guard hudContainer != nil else {
+            pendingStart = true
+            return
+        }
         matchStartTime = Date()
         hudContainer.alpha = 1
         startNextPoint()
@@ -228,6 +249,15 @@ final class InteractiveMatchScene: SKScene {
 
         // NPC boss bar
         buildNPCBossBar()
+
+        // Player floating stamina bar
+        buildPlayerStaminaBar()
+
+        // Shot mode dots
+        buildShotModeDots()
+
+        // Debug panel
+        buildDebugPanel()
 
         // Initialize AI
         npcAI = MatchAI(npc: npc)
@@ -320,6 +350,83 @@ final class InteractiveMatchScene: SKScene {
         addChild(npcBossBar)
     }
 
+    private func buildPlayerStaminaBar() {
+        playerStaminaBar = SKNode()
+        playerStaminaBar.zPosition = AC.ZPositions.text + 1
+
+        let barWidth: CGFloat = 50
+        let barHeight: CGFloat = 5
+        playerStaminaBarBg = SKShapeNode(rect: CGRect(x: -barWidth / 2, y: 0, width: barWidth, height: barHeight), cornerRadius: 2.5)
+        playerStaminaBarBg.fillColor = UIColor(white: 0.2, alpha: 0.8)
+        playerStaminaBarBg.strokeColor = UIColor.black
+        playerStaminaBarBg.lineWidth = 1
+        playerStaminaBar.addChild(playerStaminaBarBg)
+
+        playerStaminaBarFill = SKShapeNode(rect: CGRect(x: -barWidth / 2, y: 0, width: barWidth, height: barHeight), cornerRadius: 2.5)
+        playerStaminaBarFill.fillColor = .systemGreen
+        playerStaminaBarFill.strokeColor = .clear
+        playerStaminaBarFill.zPosition = 1
+        playerStaminaBar.addChild(playerStaminaBarFill)
+
+        addChild(playerStaminaBar)
+    }
+
+    private func buildShotModeDots() {
+        shotModeDots = SKNode()
+        shotModeDots.zPosition = AC.ZPositions.text
+
+        let colors: [UIColor] = [.systemRed, .systemTeal, .systemPurple, .systemGreen, .systemOrange, .systemYellow]
+        let dotRadius: CGFloat = 3.5
+        let spacing: CGFloat = 11
+        let totalWidth = CGFloat(colors.count - 1) * spacing
+
+        for (i, color) in colors.enumerated() {
+            let dot = SKShapeNode(circleOfRadius: dotRadius)
+            dot.fillColor = color.withAlphaComponent(0.15)
+            dot.strokeColor = color.withAlphaComponent(0.3)
+            dot.lineWidth = 1
+            dot.position = CGPoint(x: CGFloat(i) * spacing - totalWidth / 2, y: 0)
+            shotModeDots.addChild(dot)
+            shotModeDotNodes.append(dot)
+        }
+
+        addChild(shotModeDots)
+    }
+
+    private func buildDebugPanel() {
+        debugPanel = SKNode()
+        debugPanel.zPosition = AC.ZPositions.text + 10
+        debugPanel.alpha = 0
+        debugPanel.position = CGPoint(x: AC.sceneWidth / 2, y: AC.sceneHeight * 0.35)
+
+        let bg = SKShapeNode(rect: CGRect(x: -150, y: -70, width: 300, height: 140), cornerRadius: 10)
+        bg.fillColor = UIColor(white: 0, alpha: 0.88)
+        bg.strokeColor = UIColor(white: 1, alpha: 0.25)
+        bg.lineWidth = 1
+        debugPanel.addChild(bg)
+
+        debugTextLabel = SKLabelNode(text: "")
+        debugTextLabel.fontName = "Menlo"
+        debugTextLabel.fontSize = 10
+        debugTextLabel.fontColor = .white
+        debugTextLabel.numberOfLines = 0
+        debugTextLabel.preferredMaxLayoutWidth = 280
+        debugTextLabel.verticalAlignmentMode = .center
+        debugTextLabel.horizontalAlignmentMode = .center
+        debugPanel.addChild(debugTextLabel)
+
+        addChild(debugPanel)
+    }
+
+    private func showDebugPanel(_ text: String) {
+        debugTextLabel.text = text
+        debugPanel.alpha = 1
+    }
+
+    private func hideDebugPanel() {
+        debugPanel.alpha = 0
+    }
+
     // MARK: - Match Flow
 
     private func startNextPoint() {
@@ -327,6 +434,7 @@ final class InteractiveMatchScene: SKScene {
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
+        hideDebugPanel()
 
         // Recover stamina between points
         stamina = min(P.maxStamina, stamina + 10)
@@ -424,7 +532,16 @@ final class InteractiveMatchScene: SKScene {
         case npcWon
     }
 
-    private func resolvePoint(_ result: PointResult) {
+    private func resolvePoint(_ result: PointResult, reason: String) {
+        // Capture ball state before reset for debug
+        let ballX = String(format: "%.2f", ballSim.courtX)
+        let ballY = String(format: "%.2f", ballSim.courtY)
+        let ballH = String(format: "%.3f", ballSim.height)
+        let ballVY = String(format: "%.2f", ballSim.vy)
+        let bounces = ballSim.bounceCount
+        let hitByPlayer = ballSim.lastHitByPlayer
+        let activeT = String(format: "%.1f", ballSim.activeTime)
+
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
@@ -434,12 +551,13 @@ final class InteractiveMatchScene: SKScene {
         if rallyLength > longestRally { longestRally = rallyLength }
         totalRallyShots += rallyLength
 
+        let prevServer = servingSide
+
         switch result {
         case .playerWon:
             if servingSide == .player {
                 playerScore += 1
             } else {
-                // Side-out: player gains serve
                 servingSide = .player
             }
             playerCurrentStreak += 1
@@ -450,13 +568,28 @@ final class InteractiveMatchScene: SKScene {
             if servingSide == .opponent {
                 npcScore += 1
             } else {
-                // Side-out: NPC gains serve
                 servingSide = .opponent
             }
             playerCurrentStreak = 0
         }
 
         updateScoreHUD()
+
+        // Show debug panel
+        let whoWon = result == .playerWon ? "YOU WON" : "NPC WON"
+        let serverStr = prevServer == .player ? "You" : npc.name
+        let sideOut = prevServer != servingSide ? " → SIDE OUT" : ""
+        let debugText = """
+        Pt #\(totalPointsPlayed): \(whoWon)
+        Reason: \(reason)
+        Rally: \(rallyLength) shots
+        Ball: (\(ballX), \(ballY)) h=\(ballH) vy=\(ballVY)
+        Bounces: \(bounces) LastHit: \(hitByPlayer ? "Player" : "NPC")
+        ActiveTime: \(activeT)s
+        Server: \(serverStr)\(sideOut)
+        Score: You \(playerScore) — \(npcScore) \(npc.name)
+        """
+        showDebugPanel(debugText)
 
         // Check for match end
         if isMatchOver() {
@@ -465,7 +598,7 @@ final class InteractiveMatchScene: SKScene {
         }
 
         phase = .pointOver
-        pointOverTimer = IM.pointOverPauseDuration
+        pointOverTimer = 3.5 // longer pause for debug visibility
     }
 
     private func isMatchOver() -> Bool {
@@ -701,6 +834,21 @@ final class InteractiveMatchScene: SKScene {
             activeShotModes.insert(mode)
         }
         updateShotButtonVisuals()
+        updateShotModeDots()
+    }
+
+    private func updateShotModeDots() {
+        typealias SM = DrillShotCalculator.ShotMode
+        let modes: [SM] = [.power, .reset, .slice, .topspin, .angled, .focus]
+        let colors: [UIColor] = [.systemRed, .systemTeal, .systemPurple, .systemGreen, .systemOrange, .systemYellow]
+
+        for (i, dot) in shotModeDotNodes.enumerated() {
+            guard i < modes.count else { break }
+            let isActive = activeShotModes.contains(modes[i])
+            dot.fillColor = colors[i].withAlphaComponent(isActive ? 0.9 : 0.15)
+            dot.strokeColor = colors[i].withAlphaComponent(isActive ? 1.0 : 0.3)
+            dot.lineWidth = isActive ? 2.0 : 1.0
+        }
     }
 
     private func updateShotButtonVisuals() {
@@ -747,12 +895,13 @@ final class InteractiveMatchScene: SKScene {
             checkNPCHit()
             checkBallState()
             syncAllPositions()
-            updateStaminaBar()
+            updatePlayerStaminaBar()
             updateNPCBossBar()
 
         case .serving:
             movePlayer(dt: dt)
             syncAllPositions()
+            updatePlayerStaminaBar()
             updateNPCBossBar()
             // NPC auto-serve after pause
             if servingSide == .opponent {
@@ -924,27 +1073,25 @@ final class InteractiveMatchScene: SKScene {
             } else {
                 npcErrors += 1
             }
+            let h = String(format: "%.3f", ballSim.height)
             showIndicator("Net!", color: .systemRed)
-            resolvePoint(lastHitter)
+            resolvePoint(lastHitter, reason: "Net collision (h=\(h), prevY=\(String(format: "%.2f", previousBallNY)))")
             return
         }
 
         // Double bounce
         if ballSim.isDoubleBounce {
+            let side = ballSim.courtY < 0.5 ? "player" : "NPC"
             if ballSim.courtY < 0.5 {
-                // Ball double-bounced on player's side
                 if ballSim.lastHitByPlayer {
-                    // Player hit it but it came back and double bounced on their side (shouldn't normally happen)
                     playerErrors += 1
                     showIndicator("Out!", color: .systemOrange)
                 } else {
-                    // NPC's shot landed on player's side — NPC wins point
                     if rallyLength <= 1 { npcAces += 1 } else { npcWinners += 1 }
                     showIndicator("Double Bounce", color: .systemYellow)
                 }
-                resolvePoint(.npcWon)
+                resolvePoint(.npcWon, reason: "Double bounce on \(side) side")
             } else {
-                // Ball double-bounced on NPC's side
                 if ballSim.lastHitByPlayer {
                     if rallyLength <= 1 { playerAces += 1 } else { playerWinners += 1 }
                     showIndicator("Winner!", color: .systemGreen)
@@ -952,7 +1099,7 @@ final class InteractiveMatchScene: SKScene {
                     npcErrors += 1
                     showIndicator("Out!", color: .systemOrange)
                 }
-                resolvePoint(.playerWon)
+                resolvePoint(.playerWon, reason: "Double bounce on \(side) side")
             }
             return
         }
@@ -966,7 +1113,7 @@ final class InteractiveMatchScene: SKScene {
                 npcErrors += 1
             }
             showIndicator("Out!", color: .systemOrange)
-            resolvePoint(lastHitter)
+            resolvePoint(lastHitter, reason: "Out of bounds (x=\(String(format: "%.2f", ballSim.courtX)), y=\(String(format: "%.2f", ballSim.courtY)))")
             return
         }
 
@@ -978,7 +1125,8 @@ final class InteractiveMatchScene: SKScene {
             } else {
                 npcErrors += 1
             }
-            resolvePoint(lastHitter)
+            let speed = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
+            resolvePoint(lastHitter, reason: "Stalled (t=\(String(format: "%.1f", ballSim.activeTime))s spd=\(String(format: "%.3f", speed)))")
             return
         }
     }
@@ -1042,21 +1190,14 @@ final class InteractiveMatchScene: SKScene {
 
     // MARK: - HUD
 
-    private var hudBarWidthCurrent: CGFloat = 100
-    private let hudBarHeight: CGFloat = 10
-
     private func setupHUD() {
         let fontName = AC.Text.fontName
         let margin: CGFloat = 8
         let containerWidth: CGFloat = AC.sceneWidth - margin * 2
         let rowHeight: CGFloat = 20
         let padding: CGFloat = 8
-        let rowCount: CGFloat = 3 // score, serving indicator, stamina
+        let rowCount: CGFloat = 2 // score + serving indicator only
         let containerHeight = rowCount * rowHeight + padding * 2
-        let barX: CGFloat = 62
-        let barWidth = containerWidth - barX - 10
-
-        hudBarWidthCurrent = barWidth
 
         let topPadding: CGFloat = 24
         hudContainer = SKNode()
@@ -1075,7 +1216,6 @@ final class InteractiveMatchScene: SKScene {
 
         let row1Y = containerHeight - padding - rowHeight * 0.5
         let row2Y = row1Y - rowHeight
-        let row3Y = row2Y - rowHeight
 
         // Row 1: Score
         scoreLabel = SKLabelNode(text: "You  0 — 0  \(npc.name)")
@@ -1099,52 +1239,17 @@ final class InteractiveMatchScene: SKScene {
         servingIndicator.zPosition = 1
         hudContainer.addChild(servingIndicator)
 
-        // Row 3: Stamina bar
-        let staminaLabel = SKLabelNode(text: "Stamina")
-        staminaLabel.fontName = fontName
-        staminaLabel.fontSize = 11
-        staminaLabel.fontColor = UIColor(white: 0.85, alpha: 1)
-        staminaLabel.horizontalAlignmentMode = .left
-        staminaLabel.verticalAlignmentMode = .center
-        staminaLabel.position = CGPoint(x: 10, y: row3Y)
-        staminaLabel.zPosition = 1
-        hudContainer.addChild(staminaLabel)
-
-        hudStaminaBarBg = SKShapeNode(rect: CGRect(x: 0, y: -hudBarHeight / 2, width: barWidth, height: hudBarHeight), cornerRadius: 4)
-        hudStaminaBarBg.fillColor = UIColor(white: 0.2, alpha: 0.8)
-        hudStaminaBarBg.strokeColor = .clear
-        hudStaminaBarBg.position = CGPoint(x: barX, y: row3Y)
-        hudStaminaBarBg.zPosition = 1
-        hudContainer.addChild(hudStaminaBarBg)
-
-        hudStaminaBarFill = SKShapeNode(rect: CGRect(x: 0, y: -hudBarHeight / 2, width: barWidth, height: hudBarHeight), cornerRadius: 4)
-        hudStaminaBarFill.fillColor = .systemGreen
-        hudStaminaBarFill.strokeColor = .clear
-        hudStaminaBarFill.position = CGPoint(x: barX, y: row3Y)
-        hudStaminaBarFill.zPosition = 2
-        hudContainer.addChild(hudStaminaBarFill)
-
-        hudStaminaValue = SKLabelNode(text: "100%")
-        hudStaminaValue.fontName = fontName
-        hudStaminaValue.fontSize = 9
-        hudStaminaValue.fontColor = .white
-        hudStaminaValue.horizontalAlignmentMode = .right
-        hudStaminaValue.verticalAlignmentMode = .center
-        hudStaminaValue.position = CGPoint(x: barX + barWidth - 4, y: row3Y)
-        hudStaminaValue.zPosition = 3
-        hudContainer.addChild(hudStaminaValue)
-
         // Stamina warning (below HUD)
-        hudStaminaWarning = SKLabelNode(text: "")
-        hudStaminaWarning.fontName = fontName
-        hudStaminaWarning.fontSize = 9
-        hudStaminaWarning.fontColor = .systemYellow
-        hudStaminaWarning.horizontalAlignmentMode = .left
-        hudStaminaWarning.verticalAlignmentMode = .top
-        hudStaminaWarning.position = CGPoint(x: margin + 10, y: hudContainer.position.y - 4)
-        hudStaminaWarning.zPosition = AC.ZPositions.text
-        hudStaminaWarning.alpha = 0
-        addChild(hudStaminaWarning)
+        staminaWarningLabel = SKLabelNode(text: "")
+        staminaWarningLabel.fontName = fontName
+        staminaWarningLabel.fontSize = 9
+        staminaWarningLabel.fontColor = .systemYellow
+        staminaWarningLabel.horizontalAlignmentMode = .left
+        staminaWarningLabel.verticalAlignmentMode = .top
+        staminaWarningLabel.position = CGPoint(x: margin + 10, y: hudContainer.position.y - 4)
+        staminaWarningLabel.zPosition = AC.ZPositions.text
+        staminaWarningLabel.alpha = 0
+        addChild(staminaWarningLabel)
 
         // Outcome label (center of court)
         outcomeLabel = SKLabelNode(text: "")
@@ -1166,57 +1271,69 @@ final class InteractiveMatchScene: SKScene {
         servingIndicator.text = "Serving: \(serverName)"
     }
 
-    private func updateStaminaBar() {
+    private func updatePlayerStaminaBar() {
+        // Position above player sprite
+        let screenPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
+        let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, playerNY)))
+        playerStaminaBar.position = CGPoint(x: screenPos.x, y: screenPos.y + 30 * pScale + 15)
+
+        // Update fill
         let pct = stamina / P.maxStamina
-        hudStaminaValue.text = "\(Int(stamina))%"
-        let w = max(1, hudBarWidthCurrent * pct)
-        hudStaminaBarFill.path = UIBezierPath(
-            roundedRect: CGRect(x: 0, y: -hudBarHeight / 2, width: w, height: hudBarHeight),
-            cornerRadius: 4
+        let barWidth: CGFloat = 50
+        let barHeight: CGFloat = 5
+        let w = max(1, barWidth * pct)
+        playerStaminaBarFill.path = UIBezierPath(
+            roundedRect: CGRect(x: -barWidth / 2, y: 0, width: w, height: barHeight),
+            cornerRadius: 2.5
         ).cgPath
 
         if pct > 0.5 {
-            hudStaminaBarFill.fillColor = .systemGreen
+            playerStaminaBarFill.fillColor = .systemGreen
         } else if pct > 0.10 {
-            hudStaminaBarFill.fillColor = .systemYellow
+            playerStaminaBarFill.fillColor = .systemYellow
         } else {
-            hudStaminaBarFill.fillColor = .systemRed
+            playerStaminaBarFill.fillColor = .systemRed
         }
 
         let time = CACurrentMediaTime()
         if pct <= 0.10 {
             let flash = 0.4 + 0.6 * abs(sin(time * 8))
-            hudStaminaBarFill.alpha = CGFloat(flash)
-            hudStaminaBarBg.alpha = CGFloat(flash)
+            playerStaminaBarFill.alpha = CGFloat(flash)
+            playerStaminaBarBg.alpha = CGFloat(flash)
         } else if pct <= 0.50 {
             let flash = 0.6 + 0.4 * abs(sin(time * 3))
-            hudStaminaBarFill.alpha = CGFloat(flash)
-            hudStaminaBarBg.alpha = 1.0
+            playerStaminaBarFill.alpha = CGFloat(flash)
+            playerStaminaBarBg.alpha = 1.0
         } else {
-            hudStaminaBarFill.alpha = 1.0
-            hudStaminaBarBg.alpha = 1.0
+            playerStaminaBarFill.alpha = 1.0
+            playerStaminaBarBg.alpha = 1.0
         }
 
+        // Stamina warning text
         if pct <= 0.10 {
-            hudStaminaWarning.text = "LOW STAMINA — Power/Focus OFF • Sprint locked"
-            hudStaminaWarning.fontColor = .systemRed
-            hudStaminaWarning.alpha = CGFloat(0.5 + 0.5 * abs(sin(time * 8)))
+            staminaWarningLabel.text = "LOW STAMINA — Power/Focus OFF • Sprint locked"
+            staminaWarningLabel.fontColor = .systemRed
+            staminaWarningLabel.alpha = CGFloat(0.5 + 0.5 * abs(sin(time * 8)))
             if activeShotModes.contains(.power) || activeShotModes.contains(.focus) {
                 activeShotModes.remove(.power)
                 activeShotModes.remove(.focus)
                 updateShotButtonVisuals()
+                updateShotModeDots()
             }
         } else if pct <= 0.50 {
             var warnings: [String] = []
             if activeShotModes.contains(.power) { warnings.append("Power reduced") }
             if activeShotModes.contains(.focus) { warnings.append("Focus reduced") }
             warnings.append("Sprint halved")
-            hudStaminaWarning.text = warnings.joined(separator: " • ")
-            hudStaminaWarning.fontColor = .systemYellow
-            hudStaminaWarning.alpha = 1.0
+            staminaWarningLabel.text = warnings.joined(separator: " • ")
+            staminaWarningLabel.fontColor = .systemYellow
+            staminaWarningLabel.alpha = 1.0
         } else {
-            hudStaminaWarning.alpha = 0
+            staminaWarningLabel.alpha = 0
         }
+
+        // Shot mode dots follow player
+        shotModeDots.position = CGPoint(x: screenPos.x, y: screenPos.y + 30 * pScale + 5)
     }
 
     private func updateNPCBossBar() {
