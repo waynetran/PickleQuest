@@ -161,7 +161,8 @@ enum DrillShotCalculator {
         drillType: DrillType,
         ballHeight: CGFloat = 0.0,
         courtNY: CGFloat = 0.1,
-        modes: ShotMode = []
+        modes: ShotMode = [],
+        staminaFraction: CGFloat = 1.0
     ) -> ShotResult {
         let P = GameConstants.DrillPhysics.self
 
@@ -233,9 +234,12 @@ enum DrillShotCalculator {
 
         // --- Apply mode modifiers ---
 
-        // Power mode: full power, aims 1-2ft inside baseline (ny ≈ 0.90–0.95)
+        // Power mode: full power scaled by stamina — low stamina = closer to regular shot
         if modes.contains(.power) {
-            power = 0.85 + (powerStat / 99.0) * 0.15 // 0.85–1.0
+            let fullPower: CGFloat = 0.85 + (powerStat / 99.0) * 0.15 // 0.85–1.0
+            let regularPower = power  // whatever the base shot computed
+            // Lerp: at full stamina → full power, at 0 stamina → regular power
+            power = regularPower + (fullPower - regularPower) * staminaFraction
             let scatterMultiplier = 1.2 + (1.0 - accuracyStat / 99.0) * 0.3
             let controlFactor = 1.0 - ((accuracyStat + consistencyStat) / 198.0) * 0.7
             scatter = 0.08 * controlFactor * scatterMultiplier

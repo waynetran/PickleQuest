@@ -843,12 +843,9 @@ final class InteractiveDrillScene: SKScene {
             }
         }
 
-        // Power and Focus modes drain stamina even when not sprinting
-        if activeShotModes.contains(.power) {
-            stamina = max(0, stamina - P.sprintDrainRate * 0.5 * dt)
-        }
+        // Focus mode drains stamina passively (slow drain)
         if activeShotModes.contains(.focus) {
-            stamina = max(0, stamina - P.sprintDrainRate * 0.4 * dt)
+            stamina = max(0, stamina - P.sprintDrainRate * 0.2 * dt)
         }
 
         // Joystick visual: turn red when sprinting
@@ -918,14 +915,21 @@ final class InteractiveDrillScene: SKScene {
             return
         }
 
+        // Power mode: drain 20% of current stamina per shot
+        if activeShotModes.contains(.power) {
+            stamina = max(0, stamina - stamina * 0.20)
+        }
+
         let ballFromLeft = ballSim.courtX < playerNX
+        let staminaPct = stamina / P.maxStamina
         let shot = DrillShotCalculator.calculatePlayerShot(
             stats: playerStats,
             ballApproachFromLeft: ballFromLeft,
             drillType: drill.type,
             ballHeight: ballSim.height,
             courtNY: playerNY,
-            modes: activeShotModes
+            modes: activeShotModes,
+            staminaFraction: staminaPct
         )
 
         let animState: CharacterAnimationState = shot.shotType == .forehand ? .forehand : .backhand
