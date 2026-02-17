@@ -40,30 +40,25 @@ struct InteractiveDrillView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
-            // Skip button (bottom right, during active drill only)
+            // Exit button (top right, below HUD, during active drill only)
             if !showInstructions && drillResult == nil {
                 VStack {
-                    Spacer()
                     HStack {
                         Spacer()
                         Button {
                             scene?.skipDrill()
                         } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "forward.fill")
-                                    .font(.system(size: 16))
-                                Text("Skip")
-                                    .font(.system(size: 16, weight: .bold))
-                            }
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 28)
-                            .padding(.vertical, 12)
-                            .background(.black.opacity(0.6))
-                            .clipShape(Capsule())
+                            Image(systemName: "xmark")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 32, height: 32)
+                                .background(.black.opacity(0.5))
+                                .clipShape(Circle())
                         }
-                        .padding(.trailing, 16)
-                        .padding(.bottom, 8)
+                        .padding(.trailing, 12)
+                        .padding(.top, 110)
                     }
+                    Spacer()
                 }
             }
 

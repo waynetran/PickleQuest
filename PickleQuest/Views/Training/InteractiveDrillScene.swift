@@ -484,9 +484,10 @@ final class InteractiveDrillScene: SKScene {
         // Store bar width for updateHUD
         hudBarWidthCurrent = barWidth
 
-        // Container — full width
+        // Container — full width, with top padding for safe area
+        let topPadding: CGFloat = 24
         hudContainer = SKNode()
-        hudContainer.position = CGPoint(x: margin, y: AC.sceneHeight - 8 - containerHeight)
+        hudContainer.position = CGPoint(x: margin, y: AC.sceneHeight - topPadding - containerHeight)
         hudContainer.zPosition = AC.ZPositions.text - 0.2
         hudContainer.alpha = 0
         addChild(hudContainer)
