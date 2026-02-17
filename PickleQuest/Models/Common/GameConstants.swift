@@ -329,8 +329,8 @@ enum GameConstants {
         // Stamina (sprint system in drills — separate from persistent energy)
         static let maxStamina: CGFloat = 100
         static let sprintDrainRate: CGFloat = 25        // per second while sprinting
-        static let staminaRecoveryRate: CGFloat = 15    // per second while walking/standing
-        static let staminaRecoveryDelay: CGFloat = 0.8  // seconds after sprint ends before recovery
+        static let staminaRecoveryRate: CGFloat = 5     // per second while walking/standing
+        static let staminaRecoveryDelay: CGFloat = 1.5  // seconds after sprint ends before recovery
         static let maxSprintSpeedBoost: CGFloat = 1.0   // 100% max speed boost
         static let playerPositioningOffset: CGFloat = 0.04 // half-sprite court units for kitchen clamp
 

@@ -828,10 +828,16 @@ final class InteractiveDrillScene: SKScene {
         var speed = playerMoveSpeed * normalMag
 
         // Sprint zone: magnitude > 1.0
-        let isSprinting = joystickMagnitude > 1.0 && stamina > 0
+        // Below 10% stamina: no sprinting. Below 50%: half sprint speed.
+        let staminaPct = stamina / P.maxStamina
+        let canSprint = joystickMagnitude > 1.0 && staminaPct > 0.10
+        let isSprinting = canSprint
         if isSprinting {
             let sprintFraction = min((joystickMagnitude - 1.0) / 0.5, 1.0)
-            let sprintBonus = sprintFraction * P.maxSprintSpeedBoost * playerMoveSpeed
+            var sprintBonus = sprintFraction * P.maxSprintSpeedBoost * playerMoveSpeed
+            if staminaPct < 0.50 {
+                sprintBonus *= 0.5  // half sprint speed when below 50% stamina
+            }
             speed += sprintBonus
             stamina = max(0, stamina - P.sprintDrainRate * dt)
             timeSinceLastSprint = 0
@@ -843,9 +849,9 @@ final class InteractiveDrillScene: SKScene {
             }
         }
 
-        // Focus mode drains stamina passively (slow drain)
+        // Focus mode drains stamina passively (~2.5/sec = lasts 3-5 points)
         if activeShotModes.contains(.focus) {
-            stamina = max(0, stamina - P.sprintDrainRate * 0.2 * dt)
+            stamina = max(0, stamina - P.sprintDrainRate * 0.1 * dt)
         }
 
         // Joystick visual: turn red when sprinting
@@ -915,9 +921,9 @@ final class InteractiveDrillScene: SKScene {
             return
         }
 
-        // Power mode: drain 20% of current stamina per shot
+        // Power mode: drain 20% of max stamina per shot (5 shots to empty)
         if activeShotModes.contains(.power) {
-            stamina = max(0, stamina - stamina * 0.20)
+            stamina = max(0, stamina - P.maxStamina * 0.20)
         }
 
         let ballFromLeft = ballSim.courtX < playerNX
