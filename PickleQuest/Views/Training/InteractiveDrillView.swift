@@ -48,10 +48,10 @@ struct InteractiveDrillView: View {
                         Button {
                             scene?.skipDrill()
                         } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 14, weight: .bold))
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                                .font(.system(size: 18, weight: .semibold))
                                 .foregroundStyle(.white)
-                                .frame(width: 32, height: 32)
+                                .frame(width: 40, height: 40)
                                 .background(.black.opacity(0.5))
                                 .clipShape(Circle())
                         }
