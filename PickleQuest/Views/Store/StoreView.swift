@@ -5,6 +5,7 @@ struct StoreView: View {
     @EnvironmentObject private var container: DependencyContainer
     @State private var viewModel: StoreViewModel?
     @State private var showPurchaseAlert = false
+    @State private var selectedTab = 0
 
     private let columns = [
         GridItem(.flexible()),
@@ -30,11 +31,15 @@ struct StoreView: View {
                     )
                     viewModel = vm
                     await vm.loadStore()
+                    await vm.loadPlayerInventory()
                 }
             }
             .onAppear {
                 guard let vm = viewModel else { return }
-                Task { await vm.loadStore() }
+                Task {
+                    await vm.loadStore()
+                    await vm.loadPlayerInventory()
+                }
             }
         }
     }
@@ -72,41 +77,22 @@ struct StoreView: View {
                 }
                 .padding(.horizontal)
 
-                // Store Grid
-                if vm.storeItems.isEmpty {
-                    VStack(spacing: 8) {
-                        Image(systemName: "cart")
-                            .font(.system(size: 40))
-                            .foregroundStyle(.secondary)
-                        Text("Store is empty")
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.top, 40)
+                // Buy / Sell tab picker
+                Picker("", selection: $selectedTab) {
+                    Text("Buy").tag(0)
+                    Text("Sell").tag(1)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+
+                if selectedTab == 0 {
+                    buyTabContent(vm: vm)
                 } else {
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(vm.storeItems) { item in
-                            StoreItemCard(
-                                item: item,
-                                canAfford: appState.player.wallet.coins >= item.price
-                            )
-                            .onTapGesture {
-                                guard !item.isSoldOut else { return }
-                                Task {
-                                    var player = appState.player
-                                    let success = await vm.buyItem(item, player: &player)
-                                    if success {
-                                        appState.player = player
-                                    }
-                                    showPurchaseAlert = true
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
+                    sellTabContent(vm: vm)
                 }
 
-                // Consumables Section
-                if !vm.consumableItems.isEmpty {
+                // Consumables Section (Buy tab only)
+                if selectedTab == 0, !vm.consumableItems.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Consumables")
                             .font(.headline)
@@ -120,12 +106,173 @@ struct StoreView: View {
             }
             .padding(.vertical)
         }
+        .sheet(isPresented: Binding(
+            get: { vm.showingDetail },
+            set: { vm.showingDetail = $0 }
+        )) {
+            if let equipment = vm.selectedEquipment {
+                if vm.isStoreItem {
+                    storeItemDetail(vm: vm, equipment: equipment)
+                } else {
+                    ownedItemDetail(vm: vm, equipment: equipment)
+                }
+            }
+        }
         .alert("Store", isPresented: $showPurchaseAlert) {
             Button("OK") { showPurchaseAlert = false }
         } message: {
             Text(vm.purchaseMessage ?? "")
         }
     }
+
+    // MARK: - Buy Tab
+
+    @ViewBuilder
+    private func buyTabContent(vm: StoreViewModel) -> some View {
+        if vm.storeItems.isEmpty {
+            VStack(spacing: 8) {
+                Image(systemName: "cart")
+                    .font(.system(size: 40))
+                    .foregroundStyle(.secondary)
+                Text("Store is empty")
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.top, 40)
+        } else {
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(vm.storeItems) { item in
+                    StoreItemCard(
+                        item: item,
+                        canAfford: appState.player.wallet.coins >= item.price
+                    )
+                    .onTapGesture {
+                        guard !item.isSoldOut else { return }
+                        vm.selectStoreItem(item, player: appState.player)
+                    }
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+
+    // MARK: - Sell Tab
+
+    @ViewBuilder
+    private func sellTabContent(vm: StoreViewModel) -> some View {
+        let sellable = vm.sellableInventory(player: appState.player)
+        if sellable.isEmpty {
+            VStack(spacing: 8) {
+                Image(systemName: "tray")
+                    .font(.system(size: 40))
+                    .foregroundStyle(.secondary)
+                Text("No items to sell")
+                    .foregroundStyle(.secondary)
+                Text("Equipped items cannot be sold here")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.top, 40)
+        } else {
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(sellable) { item in
+                    sellItemCard(item: item)
+                        .onTapGesture {
+                            vm.selectOwnedItem(item, player: appState.player)
+                        }
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+
+    private func sellItemCard(item: Equipment) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            EquipmentCardView(equipment: item, isEquipped: false)
+
+            HStack {
+                Image(systemName: "dollarsign.circle.fill")
+                    .foregroundStyle(.yellow)
+                Text("Sell: \(item.effectiveSellPrice)")
+                    .font(.caption.bold())
+                    .foregroundStyle(.green)
+            }
+            .padding(.horizontal, 10)
+            .padding(.bottom, 10)
+        }
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    // MARK: - Detail Sheets
+
+    private func storeItemDetail(vm: StoreViewModel, equipment: Equipment) -> some View {
+        let storeItem = vm.storeItems.first { $0.equipment.id == equipment.id }
+        let price = storeItem?.price ?? 0
+
+        return EquipmentDetailView(
+            equipment: equipment,
+            isEquipped: false,
+            currentStats: vm.effectiveStats(for: appState.player),
+            previewStats: vm.previewStats,
+            playerCoins: appState.player.wallet.coins,
+            playerLevel: appState.player.progression.level,
+            onEquip: {},
+            onUnequip: {},
+            onBuy: {
+                guard let storeItem else { return }
+                Task {
+                    var player = appState.player
+                    let success = await vm.buyItem(storeItem, player: &player)
+                    if success {
+                        appState.player = player
+                    }
+                    vm.showingDetail = false
+                    showPurchaseAlert = true
+                }
+            },
+            buyPrice: price
+        )
+        .presentationDetents([.large])
+    }
+
+    private func ownedItemDetail(vm: StoreViewModel, equipment: Equipment) -> some View {
+        let isEquipped = appState.player.equippedItems.values.contains(equipment.id)
+
+        return EquipmentDetailView(
+            equipment: equipment,
+            isEquipped: isEquipped,
+            currentStats: vm.effectiveStats(for: appState.player),
+            previewStats: vm.previewStats,
+            playerCoins: appState.player.wallet.coins,
+            playerLevel: appState.player.progression.level,
+            onEquip: {
+                Task {
+                    var player = appState.player
+                    await vm.equipItem(equipment, player: &player)
+                    appState.player = player
+                    vm.showingDetail = false
+                }
+            },
+            onUnequip: {
+                Task {
+                    var player = appState.player
+                    await vm.unequipSlot(equipment.slot, player: &player)
+                    appState.player = player
+                    vm.showingDetail = false
+                }
+            },
+            onSell: {
+                Task {
+                    var player = appState.player
+                    await vm.sellItem(equipment, player: &player)
+                    appState.player = player
+                }
+            }
+        )
+        .presentationDetents([.large])
+    }
+
+    // MARK: - Consumables
 
     private func consumableRow(item: StoreConsumableItem, vm: StoreViewModel) -> some View {
         let canAfford = appState.player.wallet.coins >= item.consumable.price

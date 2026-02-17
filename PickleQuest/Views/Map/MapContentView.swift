@@ -448,8 +448,8 @@ struct MapContentView: View {
                 }
             }
 
-            // Gear drop annotations
-            ForEach(mapVM.activeGearDrops) { drop in
+            // Gear drop annotations — only show within visibility radius for performance
+            ForEach(nearbyGearDrops) { drop in
                 let playerLoc = mapVM.effectiveLocation(devOverride: appState.locationOverride)
                 let inRange = playerLoc.map { mapVM.isDropInRange(drop, playerLocation: $0) } ?? false
                 Annotation("", coordinate: drop.coordinate) {
@@ -471,6 +471,19 @@ struct MapContentView: View {
                 center: context.camera.centerCoordinate,
                 appState: appState
             )
+        }
+    }
+
+    // MARK: - Nearby Gear Drops
+
+    private var nearbyGearDrops: [GearDrop] {
+        guard let playerLoc = mapVM.effectiveLocation(devOverride: appState.locationOverride) else {
+            return []
+        }
+        let visibilityRadius = GameConstants.GearDrop.annotationVisibilityRadius
+        return mapVM.activeGearDrops.filter { drop in
+            let dropLoc = CLLocation(latitude: drop.latitude, longitude: drop.longitude)
+            return playerLoc.distance(from: dropLoc) <= visibilityRadius
         }
     }
 
