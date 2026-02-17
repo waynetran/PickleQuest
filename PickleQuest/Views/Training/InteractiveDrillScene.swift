@@ -481,9 +481,19 @@ final class InteractiveDrillScene: SKScene {
 
     private func buildSwipeHint() {
         let config = UIImage.SymbolConfiguration(pointSize: 44, weight: .regular)
-        guard let uiImage = UIImage(systemName: "hand.point.up.left.fill", withConfiguration: config)?
-            .withTintColor(.white, renderingMode: .alwaysOriginal) else { return }
-        let texture = SKTexture(image: uiImage)
+        guard let baseImage = UIImage(systemName: "hand.point.up.left.fill", withConfiguration: config) else { return }
+        // Bake white color into pixels (withTintColor alone doesn't work for SpriteKit textures)
+        let format = UIGraphicsImageRendererFormat()
+        format.opaque = false
+        let renderer = UIGraphicsImageRenderer(size: baseImage.size, format: format)
+        let whiteImage = renderer.image { ctx in
+            let rect = CGRect(origin: .zero, size: baseImage.size)
+            baseImage.draw(in: rect)
+            ctx.cgContext.setBlendMode(.sourceIn)
+            ctx.cgContext.setFillColor(UIColor.white.cgColor)
+            ctx.cgContext.fill(rect)
+        }
+        let texture = SKTexture(image: whiteImage)
         let node = SKSpriteNode(texture: texture)
         node.alpha = 0
         node.zPosition = AC.ZPositions.text + 3

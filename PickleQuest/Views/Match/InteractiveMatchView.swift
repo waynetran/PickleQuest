@@ -3,6 +3,7 @@ import SpriteKit
 
 struct InteractiveMatchView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
 
     let player: Player
     let npc: NPC
@@ -15,9 +16,12 @@ struct InteractiveMatchView: View {
 
     @State private var matchResult: MatchResult?
     @State private var scene: InteractiveMatchScene?
+    @State private var playerScore: Int = 0
+    @State private var npcScore: Int = 0
+    @State private var servingSide: MatchSide = .player
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             // SpriteKit scene
             if let scene {
                 SpriteView(scene: scene)
@@ -27,11 +31,21 @@ struct InteractiveMatchView: View {
                     .ignoresSafeArea()
             }
 
-            // Exit button (top right, during active match only)
+            // Scoreboard + exit button (during active match)
             if matchResult == nil {
-                VStack {
-                    HStack {
-                        Spacer()
+                VStack(spacing: 0) {
+                    HStack(alignment: .top, spacing: 8) {
+                        BroadcastScoreOverlay(
+                            playerName: player.name,
+                            opponentName: npc.name,
+                            playerScore: playerScore,
+                            opponentScore: npcScore,
+                            playerGames: 0,
+                            opponentGames: 0,
+                            servingSide: servingSide,
+                            courtName: ""
+                        )
+
                         Button {
                             scene?.resignMatch()
                         } label: {
@@ -42,9 +56,10 @@ struct InteractiveMatchView: View {
                                 .background(.black.opacity(0.5))
                                 .clipShape(Circle())
                         }
-                        .padding(.trailing, 12)
-                        .padding(.top, 110)
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+
                     Spacer()
                 }
             }
@@ -70,7 +85,7 @@ struct InteractiveMatchView: View {
     }
 
     private func makeScene() -> InteractiveMatchScene {
-        InteractiveMatchScene(
+        let scene = InteractiveMatchScene(
             player: player,
             npc: npc,
             npcAppearance: npcAppearance,
@@ -82,6 +97,13 @@ struct InteractiveMatchView: View {
                 matchResult = result
             }
         )
+        scene.isDevMode = appState.isDevMode
+        scene.onScoreUpdate = { pScore, oScore, server in
+            playerScore = pScore
+            npcScore = oScore
+            servingSide = server
+        }
+        return scene
     }
 
     // MARK: - Result Overlay

@@ -34,6 +34,7 @@ final class InteractiveMatchScene: SKScene {
     // Debug panel for point-over info
     private var debugPanel: SKNode!
     private var debugTextLabel: SKLabelNode!
+    private var debugDoneButton: SKLabelNode!
 
     // Joystick
     private var joystickBase: SKShapeNode!
@@ -59,13 +60,19 @@ final class InteractiveMatchScene: SKScene {
     private var stamina: CGFloat = P.maxStamina
     private var timeSinceLastSprint: CGFloat = 10
 
-    // HUD (scoreboard only)
-    private var hudContainer: SKNode!
-    private var hudBackground: SKShapeNode!
-    private var scoreLabel: SKLabelNode!
-    private var servingIndicator: SKLabelNode!
+    // Score callback (SwiftUI scoreboard replaces SpriteKit HUD)
+    var onScoreUpdate: ((Int, Int, MatchSide) -> Void)?
+    var isDevMode: Bool = true
+
+    // In-game feedback labels (not part of HUD)
     private var staminaWarningLabel: SKLabelNode!
     private var outcomeLabel: SKLabelNode!
+
+    // First-bounce tracking for kitchen fault / debug
+    private var firstBounceCourtX: CGFloat = 0.5
+    private var firstBounceCourtY: CGFloat = 0.5
+    private var checkedFirstBounce: Bool = false
+    private var sceneReady = false
 
     // MARK: - Game State
 
@@ -162,7 +169,7 @@ final class InteractiveMatchScene: SKScene {
     override func didMove(to view: SKView) {
         view.isMultipleTouchEnabled = true
         buildScene()
-        setupHUD()
+        sceneReady = true
         if pendingStart {
             pendingStart = false
             beginMatch()
@@ -174,16 +181,14 @@ final class InteractiveMatchScene: SKScene {
     func beginMatch() {
         guard phase == .waitingToStart else { return }
         // If scene hasn't been mounted yet, defer until didMove
-        guard hudContainer != nil else {
+        guard sceneReady else {
             pendingStart = true
             return
         }
         matchStartTime = Date()
-        hudContainer.alpha = 1
         npcBossBar.alpha = 1
+        onScoreUpdate?(playerScore, npcScore, servingSide)
         startNextPoint()
-        // Belt-and-suspenders: ensure HUD stays visible after first frame
-        hudContainer.run(.sequence([.wait(forDuration: 0.1), .fadeAlpha(to: 1.0, duration: 0)]))
     }
 
     func resignMatch() {
@@ -271,6 +276,9 @@ final class InteractiveMatchScene: SKScene {
 
         // Swipe hint
         buildSwipeHint()
+
+        // In-game feedback labels
+        buildFeedbackLabels()
 
         // Initialize AI
         npcAI = MatchAI(npc: npc)
@@ -412,7 +420,7 @@ final class InteractiveMatchScene: SKScene {
         debugPanel.alpha = 0
         debugPanel.position = CGPoint(x: AC.sceneWidth / 2, y: AC.sceneHeight * 0.35)
 
-        let bg = SKShapeNode(rect: CGRect(x: -150, y: -70, width: 300, height: 140), cornerRadius: 10)
+        let bg = SKShapeNode(rect: CGRect(x: -150, y: -90, width: 300, height: 180), cornerRadius: 10)
         bg.fillColor = UIColor(white: 0, alpha: 0.88)
         bg.strokeColor = UIColor(white: 1, alpha: 0.25)
         bg.lineWidth = 1
@@ -426,7 +434,18 @@ final class InteractiveMatchScene: SKScene {
         debugTextLabel.preferredMaxLayoutWidth = 280
         debugTextLabel.verticalAlignmentMode = .center
         debugTextLabel.horizontalAlignmentMode = .center
+        debugTextLabel.position = CGPoint(x: 0, y: 12)
         debugPanel.addChild(debugTextLabel)
+
+        // Done button
+        debugDoneButton = SKLabelNode(text: "[ Done ]")
+        debugDoneButton.fontName = "AvenirNext-Bold"
+        debugDoneButton.fontSize = 16
+        debugDoneButton.fontColor = .systemBlue
+        debugDoneButton.verticalAlignmentMode = .center
+        debugDoneButton.horizontalAlignmentMode = .center
+        debugDoneButton.position = CGPoint(x: 0, y: -72)
+        debugPanel.addChild(debugDoneButton)
 
         addChild(debugPanel)
     }
@@ -440,13 +459,67 @@ final class InteractiveMatchScene: SKScene {
         debugPanel.alpha = 0
     }
 
+    /// Returns a human-readable zone label for where the first bounce landed.
+    private func firstBounceZoneLabel() -> String {
+        let ny = firstBounceCourtY
+        let nearKitchenMin: CGFloat = 0.318
+        let farKitchenMax: CGFloat = 0.682
+        if ny < -0.10 || ny > 1.10 || firstBounceCourtX < -0.05 || firstBounceCourtX > 1.05 {
+            return "Out"
+        } else if ny >= nearKitchenMin && ny < 0.5 {
+            return "Kitchen (Near)"
+        } else if ny >= 0.5 && ny <= farKitchenMax {
+            return "Kitchen (Far)"
+        } else {
+            return "In"
+        }
+    }
+
+    // MARK: - Feedback Labels
+
+    private func buildFeedbackLabels() {
+        let fontName = AC.Text.fontName
+
+        // Stamina warning (top area, below SwiftUI scoreboard)
+        staminaWarningLabel = SKLabelNode(text: "")
+        staminaWarningLabel.fontName = fontName
+        staminaWarningLabel.fontSize = 9
+        staminaWarningLabel.fontColor = .systemYellow
+        staminaWarningLabel.horizontalAlignmentMode = .left
+        staminaWarningLabel.verticalAlignmentMode = .top
+        staminaWarningLabel.position = CGPoint(x: 18, y: AC.sceneHeight - 120)
+        staminaWarningLabel.zPosition = AC.ZPositions.text
+        staminaWarningLabel.alpha = 0
+        addChild(staminaWarningLabel)
+
+        // Outcome label (center of court — "Winner!", "Out!", "Net!")
+        outcomeLabel = SKLabelNode(text: "")
+        outcomeLabel.fontName = fontName
+        outcomeLabel.fontSize = 36
+        outcomeLabel.fontColor = .white
+        outcomeLabel.position = CGPoint(x: AC.sceneWidth / 2, y: AC.sceneHeight * 0.45)
+        outcomeLabel.zPosition = AC.ZPositions.text + 1
+        outcomeLabel.alpha = 0
+        addChild(outcomeLabel)
+    }
+
     // MARK: - Swipe Hint
 
     private func buildSwipeHint() {
         let config = UIImage.SymbolConfiguration(pointSize: 44, weight: .regular)
-        guard let uiImage = UIImage(systemName: "hand.point.up.left.fill", withConfiguration: config)?
-            .withTintColor(.white, renderingMode: .alwaysOriginal) else { return }
-        let texture = SKTexture(image: uiImage)
+        guard let baseImage = UIImage(systemName: "hand.point.up.left.fill", withConfiguration: config) else { return }
+        // Bake white color into pixels (withTintColor alone doesn't work for SpriteKit textures)
+        let format = UIGraphicsImageRendererFormat()
+        format.opaque = false
+        let renderer = UIGraphicsImageRenderer(size: baseImage.size, format: format)
+        let whiteImage = renderer.image { ctx in
+            let rect = CGRect(origin: .zero, size: baseImage.size)
+            baseImage.draw(in: rect)
+            ctx.cgContext.setBlendMode(.sourceIn)
+            ctx.cgContext.setFillColor(UIColor.white.cgColor)
+            ctx.cgContext.fill(rect)
+        }
+        let texture = SKTexture(image: whiteImage)
         let node = SKSpriteNode(texture: texture)
         node.alpha = 0
         node.zPosition = AC.ZPositions.text + 3
@@ -505,6 +578,7 @@ final class InteractiveMatchScene: SKScene {
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
+        checkedFirstBounce = false
         hideDebugPanel()
 
         // Recover stamina between points
@@ -531,7 +605,7 @@ final class InteractiveMatchScene: SKScene {
         }
 
         syncAllPositions()
-        updateScoreHUD()
+        onScoreUpdate?(playerScore, npcScore, servingSide)
     }
 
     private func playerServe(from startPos: CGPoint, to endPos: CGPoint) {
@@ -655,23 +729,27 @@ final class InteractiveMatchScene: SKScene {
             playerCurrentStreak = 0
         }
 
-        updateScoreHUD()
+        onScoreUpdate?(playerScore, npcScore, servingSide)
 
-        // Show debug panel
-        let whoWon = result == .playerWon ? "YOU WON" : "NPC WON"
-        let serverStr = prevServer == .player ? "You" : npc.name
-        let sideOut = prevServer != servingSide ? " → SIDE OUT" : ""
-        let debugText = """
-        Pt #\(totalPointsPlayed): \(whoWon)
-        Reason: \(reason)
-        Rally: \(rallyLength) shots
-        Ball: (\(ballX), \(ballY)) h=\(ballH) vy=\(ballVY)
-        Bounces: \(bounces) LastHit: \(hitByPlayer ? "Player" : "NPC")
-        ActiveTime: \(activeT)s
-        Server: \(serverStr)\(sideOut)
-        Score: You \(playerScore) — \(npcScore) \(npc.name)
-        """
-        showDebugPanel(debugText)
+        // Show debug panel (dev mode only)
+        if isDevMode {
+            let whoWon = result == .playerWon ? "YOU WON" : "NPC WON"
+            let serverStr = prevServer == .player ? "You" : npc.name
+            let sideOut = prevServer != servingSide ? " → SIDE OUT" : ""
+            let bounceZone = firstBounceZoneLabel()
+            let debugText = """
+            Pt #\(totalPointsPlayed): \(whoWon)
+            Reason: \(reason)
+            Rally: \(rallyLength) shots
+            Ball: (\(ballX), \(ballY)) h=\(ballH) vy=\(ballVY)
+            Bounces: \(bounces) LastHit: \(hitByPlayer ? "Player" : "NPC")
+            1st Bounce: \(bounceZone)
+            ActiveTime: \(activeT)s
+            Server: \(serverStr)\(sideOut)
+            Score: You \(playerScore) — \(npcScore) \(npc.name)
+            """
+            showDebugPanel(debugText)
+        }
 
         // Check for match end
         if isMatchOver() {
@@ -680,7 +758,7 @@ final class InteractiveMatchScene: SKScene {
         }
 
         phase = .pointOver
-        pointOverTimer = 3.5 // longer pause for debug visibility
+        pointOverTimer = isDevMode ? 30.0 : 1.5 // dev mode waits for Done button
     }
 
     private func isMatchOver() -> Bool {
@@ -809,6 +887,18 @@ final class InteractiveMatchScene: SKScene {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
             let pos = touch.location(in: self)
+
+            // Debug panel Done button (during pointOver)
+            if phase == .pointOver && isDevMode, let doneBtn = debugDoneButton {
+                let local = convert(pos, to: doneBtn.parent ?? debugPanel)
+                let hitRect = CGRect(x: doneBtn.position.x - 50, y: doneBtn.position.y - 15,
+                                     width: 100, height: 30)
+                if hitRect.contains(local) {
+                    hideDebugPanel()
+                    pointOverTimer = 0 // advance immediately
+                    continue
+                }
+            }
 
             guard phase == .playing || phase == .serving else { continue }
 
@@ -977,8 +1067,14 @@ final class InteractiveMatchScene: SKScene {
         switch phase {
         case .playing:
             movePlayer(dt: dt)
+            let prevBounces = ballSim.bounceCount
             previousBallNY = ballSim.courtY
             ballSim.update(dt: dt)
+            // Record first bounce position for kitchen check / debug
+            if ballSim.bounceCount >= 1 && prevBounces == 0 {
+                firstBounceCourtX = ballSim.courtX
+                firstBounceCourtY = ballSim.courtY
+            }
             npcAI.update(dt: dt, ball: ballSim)
             checkPlayerHit()
             checkNPCHit()
@@ -1168,6 +1264,30 @@ final class InteractiveMatchScene: SKScene {
             return
         }
 
+        // Serve kitchen fault (checked once on first bounce)
+        if ballSim.bounceCount >= 1 && !checkedFirstBounce {
+            checkedFirstBounce = true
+            if rallyLength == 0 {
+                // It's a serve — must land past kitchen line on receiver's side
+                let kitchenNear: CGFloat = 0.318  // near kitchen line
+                let kitchenFar: CGFloat = 0.682   // far kitchen line
+                if ballSim.lastHitByPlayer && firstBounceCourtY >= 0.5 && firstBounceCourtY < kitchenFar {
+                    // Player serve landed in NPC's kitchen
+                    playerErrors += 1
+                    showIndicator("Kitchen Fault!", color: .systemRed)
+                    resolvePoint(.npcWon, reason: "Serve in kitchen (y=\(String(format: "%.2f", firstBounceCourtY)))")
+                    return
+                }
+                if !ballSim.lastHitByPlayer && firstBounceCourtY <= 0.5 && firstBounceCourtY > kitchenNear {
+                    // NPC serve landed in player's kitchen
+                    npcErrors += 1
+                    showIndicator("Kitchen Fault!", color: .systemRed)
+                    resolvePoint(.playerWon, reason: "NPC serve in kitchen (y=\(String(format: "%.2f", firstBounceCourtY)))")
+                    return
+                }
+            }
+        }
+
         // Double bounce
         if ballSim.isDoubleBounce {
             let side = ballSim.courtY < 0.5 ? "player" : "NPC"
@@ -1275,89 +1395,6 @@ final class InteractiveMatchScene: SKScene {
         syncPlayerPosition()
         syncNPCPosition()
         syncBallPosition()
-    }
-
-    // MARK: - HUD
-
-    private func setupHUD() {
-        let fontName = AC.Text.fontName
-        let margin: CGFloat = 8
-        let containerWidth: CGFloat = AC.sceneWidth - margin * 2
-        let rowHeight: CGFloat = 20
-        let padding: CGFloat = 8
-        let rowCount: CGFloat = 2 // score + serving indicator only
-        let containerHeight = rowCount * rowHeight + padding * 2
-
-        let topPadding: CGFloat = 24
-        hudContainer = SKNode()
-        hudContainer.position = CGPoint(x: margin, y: AC.sceneHeight - topPadding - containerHeight)
-        hudContainer.zPosition = AC.ZPositions.text - 0.2
-        hudContainer.alpha = 0
-        addChild(hudContainer)
-
-        hudBackground = SKShapeNode(rect: CGRect(
-            x: 0, y: 0, width: containerWidth, height: containerHeight
-        ), cornerRadius: 10)
-        hudBackground.fillColor = UIColor(white: 0, alpha: 0.75)
-        hudBackground.strokeColor = UIColor(white: 1, alpha: 0.25)
-        hudBackground.lineWidth = 1.5
-        hudContainer.addChild(hudBackground)
-
-        let row1Y = containerHeight - padding - rowHeight * 0.5
-        let row2Y = row1Y - rowHeight
-
-        // Row 1: Score
-        scoreLabel = SKLabelNode(text: "You  0 — 0  \(npc.name)")
-        scoreLabel.fontName = "AvenirNext-Heavy"
-        scoreLabel.fontSize = 16
-        scoreLabel.fontColor = .white
-        scoreLabel.horizontalAlignmentMode = .center
-        scoreLabel.verticalAlignmentMode = .center
-        scoreLabel.position = CGPoint(x: containerWidth / 2, y: row1Y)
-        scoreLabel.zPosition = 1
-        hudContainer.addChild(scoreLabel)
-
-        // Row 2: Serving indicator
-        servingIndicator = SKLabelNode(text: "")
-        servingIndicator.fontName = fontName
-        servingIndicator.fontSize = 10
-        servingIndicator.fontColor = UIColor.systemYellow
-        servingIndicator.horizontalAlignmentMode = .center
-        servingIndicator.verticalAlignmentMode = .center
-        servingIndicator.position = CGPoint(x: containerWidth / 2, y: row2Y)
-        servingIndicator.zPosition = 1
-        hudContainer.addChild(servingIndicator)
-
-        // Stamina warning (below HUD)
-        staminaWarningLabel = SKLabelNode(text: "")
-        staminaWarningLabel.fontName = fontName
-        staminaWarningLabel.fontSize = 9
-        staminaWarningLabel.fontColor = .systemYellow
-        staminaWarningLabel.horizontalAlignmentMode = .left
-        staminaWarningLabel.verticalAlignmentMode = .top
-        staminaWarningLabel.position = CGPoint(x: margin + 10, y: hudContainer.position.y - 4)
-        staminaWarningLabel.zPosition = AC.ZPositions.text
-        staminaWarningLabel.alpha = 0
-        addChild(staminaWarningLabel)
-
-        // Outcome label (center of court)
-        outcomeLabel = SKLabelNode(text: "")
-        outcomeLabel.fontName = fontName
-        outcomeLabel.fontSize = 36
-        outcomeLabel.fontColor = .white
-        outcomeLabel.position = CGPoint(x: AC.sceneWidth / 2, y: AC.sceneHeight * 0.45)
-        outcomeLabel.zPosition = AC.ZPositions.text + 1
-        outcomeLabel.alpha = 0
-        addChild(outcomeLabel)
-
-        updateScoreHUD()
-    }
-
-    private func updateScoreHUD() {
-        scoreLabel.text = "You  \(playerScore) — \(npcScore)  \(npc.name)"
-
-        let serverName = servingSide == .player ? "You" : npc.name
-        servingIndicator.text = "Serving: \(serverName)"
     }
 
     private func updatePlayerStaminaBar() {

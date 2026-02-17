@@ -114,7 +114,7 @@ struct BroadcastScoreOverlay: View {
             .background(Color.gray.opacity(0.6))
         }
         .clipShape(RoundedRectangle(cornerRadius: 4))
-        .frame(width: 280)
+        .frame(maxWidth: .infinity)
     }
 
     private func playerRow(name: String, score: Int, games: Int, isServing: Bool) -> some View {
