@@ -307,8 +307,8 @@ enum GameConstants {
         static let dinkShotSpeed: CGFloat = 0.20
 
         // Player hitbox (court-space units)
-        static let baseHitboxRadius: CGFloat = 0.12      // reach (paddle + arm extension)
-        static let positioningHitboxBonus: CGFloat = 0.04 // bonus from positioning stat
+        static let baseHitboxRadius: CGFloat = 0.144     // reach (paddle + arm extension)
+        static let positioningHitboxBonus: CGFloat = 0.048 // bonus from positioning stat
 
         // Player movement (court units per second)
         static let baseMoveSpeed: CGFloat = 0.4
@@ -387,6 +387,7 @@ enum GameConstants {
         static let maxActiveFieldDrops: Int = 3
         static let spawnRadius: Double = 300                   // meters
         static let pickupRadius: Double = 50                   // meters
+        static let annotationVisibilityRadius: Double = 500    // meters — only show on map when nearby
 
         // Court caches
         static let courtCacheCooldown: TimeInterval = 14400    // 4 hours

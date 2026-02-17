@@ -38,6 +38,15 @@ final class InteractiveDrillScene: SKScene {
     // Cone targets (return of serve)
     private var coneNodes: [SKShapeNode] = []
 
+    // Shot intensity buttons
+    private var softButton: SKNode!
+    private var hardButton: SKNode!
+    private var softButtonBg: SKShapeNode!
+    private var hardButtonBg: SKShapeNode!
+    private var activeShotIntensity: DrillShotCalculator.ShotIntensity = .medium
+    private var softTouch: UITouch?
+    private var hardTouch: UITouch?
+
     // Speech bubble
     private var speechBubbleNode: SKNode!
     private var speechBubbleBackground: SKShapeNode!
@@ -126,6 +135,7 @@ final class InteractiveDrillScene: SKScene {
     }
 
     override func didMove(to view: SKView) {
+        view.isMultipleTouchEnabled = true
         buildScene()
         setupHUD()
     }
@@ -210,6 +220,11 @@ final class InteractiveDrillScene: SKScene {
         joystickKnob.alpha = 0
         addChild(joystickKnob)
 
+        // Shot intensity buttons (right side, only for joystick drills)
+        if drillConfig.inputMode == .joystick {
+            buildShotButtons()
+        }
+
         // Cone targets (return of serve only)
         if drillConfig.showConeTargets {
             buildConeTargets()
@@ -255,6 +270,82 @@ final class InteractiveDrillScene: SKScene {
             addChild(cone)
             coneNodes.append(cone)
         }
+    }
+
+    private func buildShotButtons() {
+        let buttonWidth: CGFloat = 70
+        let buttonHeight: CGFloat = 36
+        let cornerRadius: CGFloat = 10
+        let rightEdge = AC.sceneWidth - 16
+        let bottomY: CGFloat = 80
+
+        // Soft button (bottom-right, lower)
+        softButton = SKNode()
+        softButton.position = CGPoint(x: rightEdge - buttonWidth / 2, y: bottomY)
+        softButton.zPosition = 20
+        softButton.name = "softButton"
+
+        softButtonBg = SKShapeNode(rect: CGRect(
+            x: -buttonWidth / 2, y: -buttonHeight / 2,
+            width: buttonWidth, height: buttonHeight
+        ), cornerRadius: cornerRadius)
+        softButtonBg.fillColor = UIColor.systemTeal.withAlphaComponent(0.5)
+        softButtonBg.strokeColor = UIColor.systemTeal.withAlphaComponent(0.8)
+        softButtonBg.lineWidth = 1.5
+        softButton.addChild(softButtonBg)
+
+        let softLabel = SKLabelNode(text: "Soft")
+        softLabel.fontName = "AvenirNext-Bold"
+        softLabel.fontSize = 15
+        softLabel.fontColor = .white
+        softLabel.verticalAlignmentMode = .center
+        softLabel.horizontalAlignmentMode = .center
+        softButton.addChild(softLabel)
+        addChild(softButton)
+
+        // Hard button (above soft)
+        hardButton = SKNode()
+        hardButton.position = CGPoint(x: rightEdge - buttonWidth / 2, y: bottomY + buttonHeight + 12)
+        hardButton.zPosition = 20
+        hardButton.name = "hardButton"
+
+        hardButtonBg = SKShapeNode(rect: CGRect(
+            x: -buttonWidth / 2, y: -buttonHeight / 2,
+            width: buttonWidth, height: buttonHeight
+        ), cornerRadius: cornerRadius)
+        hardButtonBg.fillColor = UIColor.systemRed.withAlphaComponent(0.5)
+        hardButtonBg.strokeColor = UIColor.systemRed.withAlphaComponent(0.8)
+        hardButtonBg.lineWidth = 1.5
+        hardButton.addChild(hardButtonBg)
+
+        let hardLabel = SKLabelNode(text: "Hard")
+        hardLabel.fontName = "AvenirNext-Bold"
+        hardLabel.fontSize = 15
+        hardLabel.fontColor = .white
+        hardLabel.verticalAlignmentMode = .center
+        hardLabel.horizontalAlignmentMode = .center
+        hardButton.addChild(hardLabel)
+        addChild(hardButton)
+    }
+
+    private func updateShotButtonVisuals() {
+        let softActive = activeShotIntensity == .soft
+        let hardActive = activeShotIntensity == .hard
+        softButtonBg?.fillColor = softActive
+            ? UIColor.systemTeal.withAlphaComponent(0.9)
+            : UIColor.systemTeal.withAlphaComponent(0.5)
+        softButtonBg?.lineWidth = softActive ? 3.0 : 1.5
+        hardButtonBg?.fillColor = hardActive
+            ? UIColor.systemRed.withAlphaComponent(0.9)
+            : UIColor.systemRed.withAlphaComponent(0.5)
+        hardButtonBg?.lineWidth = hardActive ? 3.0 : 1.5
+    }
+
+    private func hitTestButton(_ node: SKNode?, at pos: CGPoint, size: CGSize = CGSize(width: 70, height: 36)) -> Bool {
+        guard let node else { return false }
+        let local = convert(pos, to: node)
+        let rect = CGRect(x: -size.width / 2, y: -size.height / 2, width: size.width, height: size.height)
+        return rect.contains(local)
     }
 
     private func buildSpeechBubble() {
@@ -398,25 +489,44 @@ final class InteractiveDrillScene: SKScene {
     // MARK: - Touch Handling
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first else { return }
-        let pos = touch.location(in: self)
+        for touch in touches {
+            let pos = touch.location(in: self)
 
-        if drillConfig.inputMode == .swipeToServe && phase == .waitingForServe {
-            swipeTouchStart = pos
-            swipeTouchStartTime = touch.timestamp
-            return
+            if drillConfig.inputMode == .swipeToServe && phase == .waitingForServe {
+                swipeTouchStart = pos
+                swipeTouchStartTime = touch.timestamp
+                return
+            }
+
+            guard phase == .playing || phase == .feedPause else { return }
+
+            // Check shot buttons first
+            if drillConfig.inputMode == .joystick {
+                if hitTestButton(softButton, at: pos) {
+                    softTouch = touch
+                    activeShotIntensity = activeShotIntensity == .soft ? .medium : .soft
+                    updateShotButtonVisuals()
+                    continue
+                }
+                if hitTestButton(hardButton, at: pos) {
+                    hardTouch = touch
+                    activeShotIntensity = activeShotIntensity == .hard ? .medium : .hard
+                    updateShotButtonVisuals()
+                    continue
+                }
+            }
+
+            // Otherwise start joystick
+            guard joystickTouch == nil else { continue }
+
+            joystickTouch = touch
+            joystickOrigin = pos
+
+            joystickBase.position = pos
+            joystickKnob.position = pos
+            joystickBase.alpha = 1
+            joystickKnob.alpha = 1
         }
-
-        guard phase == .playing || phase == .feedPause else { return }
-        guard joystickTouch == nil else { return }
-
-        joystickTouch = touch
-        joystickOrigin = pos
-
-        joystickBase.position = pos
-        joystickKnob.position = pos
-        joystickBase.alpha = 1
-        joystickKnob.alpha = 1
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -444,24 +554,39 @@ final class InteractiveDrillScene: SKScene {
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if let touch = touches.first, drillConfig.inputMode == .swipeToServe,
-           phase == .waitingForServe, let startPos = swipeTouchStart {
-            let endPos = touch.location(in: self)
-            handleServeSwipe(from: startPos, to: endPos)
-            swipeTouchStart = nil
-            swipeTouchStartTime = nil
-            return
-        }
+        for touch in touches {
+            if drillConfig.inputMode == .swipeToServe,
+               phase == .waitingForServe, let startPos = swipeTouchStart {
+                let endPos = touch.location(in: self)
+                handleServeSwipe(from: startPos, to: endPos)
+                swipeTouchStart = nil
+                swipeTouchStartTime = nil
+                return
+            }
 
-        guard let activeTouch = joystickTouch, touches.contains(activeTouch) else { return }
-        resetJoystick()
+            if touch === softTouch {
+                softTouch = nil
+                continue
+            }
+            if touch === hardTouch {
+                hardTouch = nil
+                continue
+            }
+            if touch === joystickTouch {
+                resetJoystick()
+                continue
+            }
+        }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         swipeTouchStart = nil
         swipeTouchStartTime = nil
-        guard let activeTouch = joystickTouch, touches.contains(activeTouch) else { return }
-        resetJoystick()
+        for touch in touches {
+            if touch === softTouch { softTouch = nil }
+            if touch === hardTouch { hardTouch = nil }
+            if touch === joystickTouch { resetJoystick() }
+        }
     }
 
     private func resetJoystick() {
@@ -643,7 +768,8 @@ final class InteractiveDrillScene: SKScene {
             ballApproachFromLeft: ballFromLeft,
             drillType: drill.type,
             ballHeight: ballSim.height,
-            courtNY: playerNY
+            courtNY: playerNY,
+            intensity: activeShotIntensity
         )
 
         let animState: CharacterAnimationState = shot.shotType == .forehand ? .forehand : .backhand

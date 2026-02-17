@@ -16,6 +16,13 @@ enum DrillShotCalculator {
         case backhand
     }
 
+    /// Player-selected shot intensity from Soft/Hard buttons.
+    enum ShotIntensity: Sendable {
+        case soft   // dink/drop — targets opponent's kitchen, high arc, low power
+        case medium // default rally shot
+        case hard   // drive/speed-up — 20% more power, flatter, riskier (more scatter)
+    }
+
     /// Calculate shot parameters from player stats and context.
     static func calculateShot(
         stats: PlayerStats,
@@ -108,19 +115,22 @@ enum DrillShotCalculator {
 
     /// Generate a shot for the player.
     /// - ballHeight: ball height at time of contact (logical units)
-    /// Generate a shot for the player.
     /// - courtNY: player's current court position (0=near baseline, 0.5=net)
+    /// - intensity: soft (drop/dink), medium (default), hard (drive/speed-up)
     static func calculatePlayerShot(
         stats: PlayerStats,
         ballApproachFromLeft: Bool,
         drillType: DrillType,
         ballHeight: CGFloat = 0.0,
-        courtNY: CGFloat = 0.1
+        courtNY: CGFloat = 0.1,
+        intensity: ShotIntensity = .medium
     ) -> ShotResult {
         let P = GameConstants.DrillPhysics.self
 
         let powerStat = CGFloat(stats.stat(.power))
         let spinStat = CGFloat(stats.stat(.spin))
+        let accuracyStat = CGFloat(stats.stat(.accuracy))
+        let consistencyStat = CGFloat(stats.stat(.consistency))
 
         // Shot type from ball approach direction
         let shotType: ShotType = ballApproachFromLeft ? .backhand : .forehand
@@ -128,14 +138,17 @@ enum DrillShotCalculator {
         // Distance from net (0.5) — closer to net = shorter distance to cover
         let distFromNet = abs(0.5 - courtNY)  // 0.0 at net, ~0.5 at baseline
 
-        // Base power from stats, scaled by distance from net
+        // Base power from stats
         var power: CGFloat
-        if drillType == .dinkingDrill {
-            // Dink: soft touch only, no power scaling
+        if intensity == .soft || drillType == .dinkingDrill {
+            // Soft: dink/drop shot — low power, touch-based
             power = 0.15 + (powerStat / 99.0) * 0.20
-        } else if drillType == .baselineRally {
-            // Baseline rally: hit harder to reach opponent's baseline
+        } else if drillType == .baselineRally && intensity == .medium {
             power = 0.5 + (powerStat / 99.0) * 0.5
+        } else if intensity == .hard {
+            // Hard: 20% more power — drive/speed-up
+            let basePower = 0.5 + (powerStat / 99.0) * 0.5
+            power = basePower * 1.2
         } else {
             power = 0.3 + (powerStat / 99.0) * 0.7
 
@@ -146,42 +159,72 @@ enum DrillShotCalculator {
 
         power = max(0.15, min(1.0, power))
 
+        // Scatter: hard shots are riskier — more deviation inversely scaled by accuracy/consistency
+        var scatter: CGFloat = 0
+        if intensity == .hard {
+            let controlFactor = 1.0 - ((accuracyStat + consistencyStat) / 198.0) * 0.7
+            scatter = 0.08 * controlFactor  // max ±0.08 scatter, reduced by stats
+        }
+        let scatterX = scatter > 0 ? CGFloat.random(in: -scatter...scatter) : 0
+        let scatterY = scatter > 0 ? CGFloat.random(in: -scatter...scatter) : 0
+
         // Spin
         let spinDirection: CGFloat = Bool.random() ? 1.0 : -1.0
         let spinCurve = spinDirection * (spinStat / 99.0)
 
-        // Arc scales with distance from net: farther = higher arc, closer = flatter
+        // Arc scales with distance from net and intensity
         let distanceFactor = min(distFromNet / 0.5, 1.0)  // 0.0 at net, 1.0 at baseline
-        let arc: CGFloat
-        switch drillType {
-        case .dinkingDrill:
-            arc = CGFloat.random(in: 0.5...0.7)
-        case .baselineRally:
-            // Higher arc from baseline, flatter near kitchen line
-            let baseArc: CGFloat = 0.30 + distanceFactor * 0.30  // 0.30–0.60
-            arc = baseArc + CGFloat.random(in: -0.05...0.05)
-        default:
-            let baseArc: CGFloat = 0.20 + distanceFactor * 0.20  // 0.20–0.40
-            arc = baseArc + CGFloat.random(in: -0.05...0.05)
+        var arc: CGFloat
+        if intensity == .soft {
+            // Soft: high arc (lob/drop), always floaty
+            arc = CGFloat.random(in: 0.55...0.75)
+        } else if intensity == .hard {
+            // Hard: flat and fast
+            let baseArc: CGFloat = 0.10 + distanceFactor * 0.15  // 0.10–0.25
+            arc = baseArc + CGFloat.random(in: -0.03...0.03)
+        } else {
+            switch drillType {
+            case .dinkingDrill:
+                arc = CGFloat.random(in: 0.5...0.7)
+            case .baselineRally:
+                let baseArc: CGFloat = 0.30 + distanceFactor * 0.30
+                arc = baseArc + CGFloat.random(in: -0.05...0.05)
+            default:
+                let baseArc: CGFloat = 0.20 + distanceFactor * 0.20
+                arc = baseArc + CGFloat.random(in: -0.05...0.05)
+            }
         }
 
-        // Target on coach's side
-        let (baseTargetNX, baseTargetNY) = targetForDrill(drillType)
-        let targetNX = max(0.05, min(0.95, baseTargetNX))
-        let targetNY: CGFloat
-        if drillType == .dinkingDrill {
-            // Dink: keep in opponent's kitchen (0.52–0.68, before their kitchen line)
-            targetNY = max(0.52, min(0.68, baseTargetNY))
-        } else if drillType == .baselineRally {
-            // Baseline rally: aim deep near opponent's baseline
-            targetNY = max(0.75, min(0.95, baseTargetNY))
+        // Target: intensity overrides drill-type defaults
+        var targetNX: CGFloat
+        var targetNY: CGFloat
+        if intensity == .soft {
+            // Soft: aim for opponent's kitchen zone (0.52–0.66)
+            targetNX = CGFloat.random(in: 0.25...0.75)
+            targetNY = CGFloat.random(in: 0.52...0.66)
+        } else if intensity == .hard {
+            // Hard: aim deep + toward sidelines (passing shot)
+            let side = Bool.random()
+            targetNX = side ? CGFloat.random(in: 0.10...0.30) : CGFloat.random(in: 0.70...0.90)
+            targetNY = CGFloat.random(in: 0.75...0.98)
         } else {
-            targetNY = max(0.55, min(0.95, baseTargetNY))
+            let (baseNX, baseNY) = targetForDrill(drillType)
+            targetNX = baseNX
+            if drillType == .dinkingDrill {
+                targetNY = max(0.52, min(0.68, baseNY))
+            } else if drillType == .baselineRally {
+                targetNY = max(0.75, min(0.95, baseNY))
+            } else {
+                targetNY = max(0.55, min(0.95, baseNY))
+            }
         }
+
+        targetNX = max(0.05, min(0.95, targetNX + scatterX))
+        targetNY = max(0.52, min(0.98, targetNY + scatterY))
 
         return ShotResult(
             power: power,
-            accuracy: 1.0,
+            accuracy: scatter > 0 ? max(0, 1.0 - scatter * 5) : 1.0,
             spinCurve: spinCurve,
             arc: arc,
             targetNX: targetNX,
