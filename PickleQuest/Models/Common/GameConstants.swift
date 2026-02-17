@@ -372,8 +372,12 @@ enum GameConstants {
         static let coneHitRadius: CGFloat = 0.10
 
         // NPC error rates (interactive match)
-        /// Base unforced error rate at stat 1 (scales to ~0% at stat 99)
-        static let npcBaseErrorRate: CGFloat = 0.22
+        /// Base error rate on neutral/easy shots (scales with 1 - statFraction)
+        static let npcBaseErrorRate: CGFloat = 0.08
+        /// Error scaling from incoming shot difficulty (speed + spin pressure)
+        static let npcPowerErrorScale: CGFloat = 0.85
+        /// Minimum error rate floor per unit of shot difficulty (even stat 99 NPCs)
+        static let npcMinPowerErrorFloor: CGFloat = 0.02
         /// NPC serve fault rate at stat 1 (chance of double fault per serve)
         static let npcBaseServeFaultRate: CGFloat = 0.12
     }

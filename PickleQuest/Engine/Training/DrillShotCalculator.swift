@@ -206,10 +206,11 @@ enum DrillShotCalculator {
         // --- Base shot (default medium behavior) ---
         var power: CGFloat
         var arc: CGFloat
-        var scatter: CGFloat = 0
         var topspinFactor: CGFloat = 0
         var targetNX: CGFloat
         var targetNY: CGFloat
+
+        let focusStat = CGFloat(stats.stat(.focus))
 
         if drillType == .dinkingDrill && modes.isEmpty {
             power = 0.15 + (powerStat / 99.0) * 0.20
@@ -232,18 +233,27 @@ enum DrillShotCalculator {
             targetNY = max(0.55, min(0.95, baseNY))
         }
 
+        // --- Base scatter from stats (always present) ---
+        // Accuracy, consistency, and focus all contribute to shot control.
+        // stat 1 → scatter ~0.12 (frequent misses), stat 99 → scatter ~0 (laser accurate)
+        let avgControl = (accuracyStat + consistencyStat + focusStat) / 3.0
+        var scatter = 0.12 * (1.0 - avgControl / 99.0)
+
+        // Fatigue increases scatter: below 50% stamina, scatter grows up to 50% more
+        if staminaFraction < 0.5 {
+            scatter *= 1.0 + (1.0 - staminaFraction / 0.5) * 0.5
+        }
+
         // --- Apply mode modifiers ---
 
         // Power mode: 2x ball speed at full stamina, scales down to regular at 0 stamina
         if modes.contains(.power) {
             let regularPower = power
-            let fullPower = regularPower * 2.0  // 100% more ball speed
-            // Lerp: at full stamina → 2x speed, at 0 stamina → regular speed
+            let fullPower = regularPower * 2.0
             power = regularPower + (fullPower - regularPower) * staminaFraction
-            let scatterMultiplier = 1.2 + (1.0 - accuracyStat / 99.0) * 0.3
-            let controlFactor = 1.0 - ((accuracyStat + consistencyStat) / 198.0) * 0.7
-            scatter = 0.08 * controlFactor * scatterMultiplier
-            // Target 1-2ft inside baseline (≈ 0.90–0.95 ny)
+            // Power adds extra scatter on top of base
+            let powerScatter = 0.06 * (1.0 - accuracyStat / 99.0)
+            scatter += powerScatter
             targetNY = CGFloat.random(in: 0.90...0.95)
         }
 
@@ -268,53 +278,46 @@ enum DrillShotCalculator {
             }
         }
 
-        // Focus: boost accuracy scaled by stamina — full stamina = 70% less scatter, 0 = no effect
+        // Focus mode: reduces scatter, scaled by stamina
         if modes.contains(.focus) {
-            let focusReduction = 0.7 * staminaFraction  // 0.7 at full stamina, 0 at empty
+            let focusReduction = 0.7 * staminaFraction
             scatter *= (1.0 - focusReduction)
         }
 
         power = max(0.15, min(2.0, power))
 
         // --- Physics-based arc calculation ---
-        // Calculate the distance from player to target, then compute the exact arc
-        // needed so the ball lands at that distance (with net clearance margin).
         let distToTarget = abs(targetNY - courtNY)
 
         if drillType == .dinkingDrill && modes.isEmpty {
-            // Dinks use high loopy arc (not physics-targeted, they're touch shots)
             arc = CGFloat.random(in: 0.5...0.7)
         } else {
-            // Compute arc to land at target
-            var margin: CGFloat = 1.15  // 15% net clearance margin
+            var margin: CGFloat = 1.15
             if modes.contains(.topspin) {
-                // Topspin dips in flight (Magnus), so needs ~2x higher initial arc
-                // to clear the net, then dips down onto the court
                 margin = 1.8
             } else if modes.contains(.slice) {
-                // Slice floats slightly (backspin Magnus), can be flatter
                 margin = 0.95
             } else if modes.contains(.power) {
-                // Power: flat and fast, just enough to clear net
                 margin = 1.10
             }
             arc = arcToLandAt(distanceNY: distToTarget, power: power, arcMargin: margin)
         }
 
-        // Apply scatter
-        let scatterX = scatter > 0 ? CGFloat.random(in: -scatter...scatter) : 0
-        let scatterY = scatter > 0 ? CGFloat.random(in: -scatter...scatter) : 0
+        // Apply scatter — allow targets outside court for genuine misses
+        let scatterX = CGFloat.random(in: -scatter...scatter)
+        let scatterY = CGFloat.random(in: -scatter...scatter)
 
         // Spin
         let spinDirection: CGFloat = Bool.random() ? 1.0 : -1.0
         let spinCurve = spinDirection * (spinStat / 99.0)
 
-        targetNX = max(0.05, min(0.95, targetNX + scatterX))
-        targetNY = max(0.52, min(0.98, targetNY + scatterY))
+        // Soft clamp: allow targets slightly past court edges for out balls
+        targetNX = max(-0.05, min(1.05, targetNX + scatterX))
+        targetNY = max(0.48, min(1.05, targetNY + scatterY))
 
         return ShotResult(
             power: power,
-            accuracy: scatter > 0 ? max(0, 1.0 - scatter * 5) : 1.0,
+            accuracy: max(0, 1.0 - scatter * 5),
             spinCurve: spinCurve,
             arc: arc,
             targetNX: targetNX,
