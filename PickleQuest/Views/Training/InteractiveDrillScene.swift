@@ -978,6 +978,9 @@ final class InteractiveDrillScene: SKScene {
         let positioningStat = CGFloat(playerStats.stat(.positioning))
         let hitboxRadius = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
 
+        // Pre-bounce: don't reach forward — wait for ball to arrive at player's Y
+        if ballSim.bounceCount == 0 && ballSim.courtY > playerNY { return }
+
         let dx = ballSim.courtX - playerNX
         let dy = ballSim.courtY - playerNY
         let dist = sqrt(dx * dx + dy * dy)

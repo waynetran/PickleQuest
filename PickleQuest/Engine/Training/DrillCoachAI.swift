@@ -113,6 +113,9 @@ final class DrillCoachAI {
         // In serve practice and return of serve, coach doesn't return — just catches
         if drillType == .servePractice || drillType == .returnOfServe { return false }
 
+        // Pre-bounce: don't reach forward — wait for ball to arrive at coach's Y
+        if ball.bounceCount == 0 && ball.courtY < currentNY { return false }
+
         let dx = ball.courtX - currentNX
         let dy = ball.courtY - currentNY
         let dist = sqrt(dx * dx + dy * dy)

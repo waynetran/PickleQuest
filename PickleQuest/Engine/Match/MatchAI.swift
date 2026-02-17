@@ -162,6 +162,9 @@ final class MatchAI {
         guard ball.bounceCount < 2 else { return false }
         guard ball.height < 0.20 else { return false }
 
+        // Pre-bounce: don't reach forward — wait for ball to arrive at NPC's Y
+        if ball.bounceCount == 0 && ball.courtY < currentNY { return false }
+
         let dx = ball.courtX - currentNX
         let dy = ball.courtY - currentNY
         let dist = sqrt(dx * dx + dy * dy)
@@ -171,19 +174,40 @@ final class MatchAI {
     // MARK: - Unforced Errors
 
     /// Whether the NPC makes an unforced error on this shot (whiff, frame, mis-hit).
-    /// Error rate scales inversely with consistency + focus stats.
-    /// DUPR 2-3 (~stat 20): ~18% error rate
-    /// DUPR 3-4 (~stat 35): ~12% error rate
-    /// DUPR 4-5 (~stat 55): ~7% error rate
-    /// DUPR 5+  (~stat 75): ~3% error rate
+    /// Error rate factors in incoming ball speed + spin (shot difficulty) and NPC stats.
+    /// Harder shots cause dramatically more errors for lower-skilled NPCs.
+    ///
+    /// Approximate error rates on full power shots:
+    /// DUPR 2-3 (~boosted stat 40): ~48%
+    /// DUPR 3-4 (~boosted stat 55): ~36%
+    /// DUPR 4-5 (~boosted stat 75): ~19%
+    /// DUPR 5-6 (~boosted stat 90): ~7%
+    /// DUPR 7-8 (~boosted stat 99): ~2-5%
+    ///
+    /// Soft/neutral shots produce much lower error rates (~2-10%).
     func shouldMakeError(ball: DrillBallSimulation) -> Bool {
         let boost = P.npcStatBoost
         let consistencyStat = CGFloat(min(99, npcStats.stat(.consistency) + boost))
         let focusStat = CGFloat(min(99, npcStats.stat(.focus) + boost))
-        let avgStat = (consistencyStat + focusStat) / 2.0
+        let reflexesStat = CGFloat(min(99, npcStats.stat(.reflexes) + boost))
+        let avgStat = (consistencyStat + focusStat + reflexesStat) / 3.0
+        let statFraction = avgStat / 99.0
 
-        // Base error rate scales inversely with stats
-        var errorRate: CGFloat = P.npcBaseErrorRate * (1.0 - avgStat / 99.0)
+        // Base error rate on neutral/easy shots
+        let baseError: CGFloat = P.npcBaseErrorRate * (1.0 - statFraction)
+
+        // Shot difficulty from incoming ball speed and spin
+        let ballSpeed = sqrt(ball.vx * ball.vx + ball.vy * ball.vy)
+        let maxBallSpeed = P.baseShotSpeed + 2.0 * (P.maxShotSpeed - P.baseShotSpeed)
+        let speedFraction = max(0, min(1, (ballSpeed - P.baseShotSpeed) / (maxBallSpeed - P.baseShotSpeed)))
+        let spinPressure = min(abs(ball.spinCurve) + abs(ball.topspinFactor) * 0.5, 1.0)
+        let shotDifficulty = min(1.0, speedFraction * 0.8 + spinPressure * 0.3)
+
+        // Pressure error: harder shots cause more errors for lower-skilled NPCs
+        let pressureError: CGFloat = shotDifficulty * P.npcPowerErrorScale * (1.0 - statFraction)
+
+        // Floor: even top NPCs can miss truly powerful shots occasionally
+        var errorRate = max(shotDifficulty * P.npcMinPowerErrorFloor, baseError + pressureError)
 
         // Fatigue increases errors: below 30% stamina, error rate doubles at 0%
         let staminaPct = stamina / P.maxStamina
