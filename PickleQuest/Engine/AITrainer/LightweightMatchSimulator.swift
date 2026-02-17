@@ -1,10 +1,9 @@
 import Foundation
 
 /// Synchronous match simulator for AI training.
-/// Mirrors `RallySimulator` logic but uses mutable `SimulationParameters` instead of `GameConstants`.
+/// Replicates `RallySimulator` logic exactly using `GameConstants.Rally` constants.
 /// Runs entirely on one thread — no actors, no async.
 struct LightweightMatchSimulator: Sendable {
-    let params: SimulationParameters
     let rng: SeededRandomSource
 
     struct MatchResult: Sendable {
@@ -36,7 +35,6 @@ struct LightweightMatchSimulator: Sendable {
                 if servingSide == .player {
                     pScore += 1
                 } else {
-                    // Side-out: switch serve
                     servingSide = .player
                 }
             } else {
@@ -47,12 +45,9 @@ struct LightweightMatchSimulator: Sendable {
                 }
             }
 
-            // Check win condition
             if pScore >= 11 && pScore - oScore >= 2 { break }
             if oScore >= 11 && oScore - pScore >= 2 { break }
-            if pScore >= 15 || oScore >= 15 { break } // sudden death cap
-
-            // Safety valve
+            if pScore >= 15 || oScore >= 15 { break }
             if totalRallies > 500 { break }
         }
 
@@ -118,13 +113,15 @@ struct LightweightMatchSimulator: Sendable {
         return (winner, maxShots)
     }
 
-    // MARK: - Probability Calculations (using SimulationParameters)
+    // MARK: - Probability Calculations (mirrors RallySimulator exactly)
 
     private func calculateAceChance(server: PlayerStats, receiver: PlayerStats) -> Double {
-        let base = params.baseAceChance
-        let powerBonus = Double(server.power) * params.powerAceScaling
-        let reflexPenalty = Double(receiver.reflexes) * params.reflexDefenseScale
-        return max(0.01, min(0.25, base + powerBonus - reflexPenalty))
+        let S = GameConstants.Rally.statSensitivity
+        let base = GameConstants.Rally.baseAceChance
+        let powerBonus = Double(server.power) * GameConstants.Rally.powerAceScaling
+        let reflexPenalty = Double(receiver.reflexes) * GameConstants.Rally.reflexDefenseScale
+        let differential = (powerBonus - reflexPenalty) * S
+        return max(0.01, min(0.25, base + differential))
     }
 
     private func calculateMaxRallyLength(player: PlayerStats, opponent: PlayerStats) -> Int {
@@ -134,29 +131,34 @@ struct LightweightMatchSimulator: Sendable {
     }
 
     private func calculateWinnerChance(attacker: PlayerStats, defender: PlayerStats, shotNumber: Int) -> Double {
-        let base = params.baseWinnerChance
+        let S = GameConstants.Rally.statSensitivity
+        let base = GameConstants.Rally.baseWinnerChance
         let attackFactor = (Double(attacker.power) + Double(attacker.accuracy) + Double(attacker.spin)) / 300.0
         let defenseFactor = (Double(defender.defense) + Double(defender.positioning) + Double(defender.reflexes)) / 300.0
-        let shotBonus = Double(shotNumber) * params.winnerShotBonus
-        return max(0.02, min(0.35, base + attackFactor - defenseFactor + shotBonus))
+        let differential = (attackFactor - defenseFactor) * S
+        let shotBonus = Double(shotNumber) * 0.005
+        return max(0.02, min(0.35, base + differential + shotBonus))
     }
 
     private func calculateErrorChance(attacker: PlayerStats, shotNumber: Int) -> Double {
-        let base = params.baseErrorChance
-        let consistencyFactor = Double(attacker.consistency) * params.errorConsistencyScale
-        let accuracyFactor = Double(attacker.accuracy) * params.errorAccuracyScale
-        let fatigueFactor = Double(shotNumber) * params.errorFatigueScale
+        let base = GameConstants.Rally.baseErrorChance
+        let consistencyFactor = Double(attacker.consistency) / 200.0
+        let accuracyFactor = Double(attacker.accuracy) / 200.0
+        let fatigueFactor = Double(shotNumber) * 0.003
         return max(0.02, min(0.30, base - consistencyFactor - accuracyFactor + fatigueFactor))
     }
 
     private func calculateForcedErrorChance(attacker: PlayerStats, defender: PlayerStats) -> Double {
-        let attackPressure = (Double(attacker.power) + Double(attacker.spin)) * params.attackPressureScale
-        let defenseResist = (Double(defender.defense) + Double(defender.reflexes)) * params.defenseResistScale
-        return max(0.01, min(0.20, params.forcedErrorBase + attackPressure - defenseResist))
+        let S = GameConstants.Rally.statSensitivity
+        let attackPressure = (Double(attacker.power) + Double(attacker.spin)) / 200.0
+        let defenseResist = (Double(defender.defense) + Double(defender.reflexes)) / 200.0
+        let differential = (attackPressure - defenseResist) * S
+        return max(0.01, min(0.20, 0.08 + differential))
     }
 
     private func overallAdvantage(player: PlayerStats, opponent: PlayerStats) -> Double {
+        let S = GameConstants.Rally.statSensitivity
         let diff = player.average - opponent.average
-        return 0.5 + diff * params.overallAdvantageScale
+        return 0.5 + (diff / 200.0) * S
     }
 }

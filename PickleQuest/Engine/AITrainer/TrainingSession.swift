@@ -6,8 +6,8 @@ import Foundation
 /// Extracted from TrainingSession to avoid @MainActor isolation on constants.
 private enum TrainingConfig {
     static let populationSize = 30
-    static let sigma: Double = 0.05
-    static let learningRate: Double = 0.01
+    static let sigma: Double = 0.07
+    static let learningRate: Double = 0.015
     static let matchesPerPair = 200
     static let maxGenerations = 300
     static let convergenceThreshold: Double = 0.001
@@ -34,10 +34,11 @@ struct TrainingTestPair: Sendable {
     let targetPointDiff: Double
 }
 
-/// DUPR-based expected point differential: `gap * 12.0` points per game to 11.
+/// DUPR-based expected point differential: `gap * 12.0` points per game to 11,
+/// capped at 10.5 (max achievable avg diff in a game to 11, win-by-2, cap 15).
 private func makeTestPair(higher: Double, lower: Double) -> TrainingTestPair {
     let gap = higher - lower
-    let targetPointDiff = gap * 12.0
+    let targetPointDiff = min(gap * 12.0, 10.5)
     return TrainingTestPair(higherDUPR: higher, lowerDUPR: lower,
                             targetPointDiff: targetPointDiff)
 }

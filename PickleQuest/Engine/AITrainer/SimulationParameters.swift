@@ -24,23 +24,23 @@ struct SimulationParameters: Sendable, Codable {
         "clutch", "focus", "stamina", "consistency"
     ]
 
-    /// Default: all stats use slope=98, offset=1 (stat goes from 1 at DUPR 2.0 to 99 at DUPR 8.0).
-    /// NPC equip starts at slope=5, offset=2. Starter stats default to current PlayerStats.starter values.
+    /// Default: stats go from 10 at DUPR 2.0 to 99 at DUPR 8.0 (slope=89, offset=10).
+    /// NPC equip starts at slope=5, offset=2. Starter stats near DUPR 2.0 NPC level.
     static let defaults: SimulationParameters = {
-        let slope = 98.0
-        let offset = 1.0
+        let slope = 89.0
+        let offset = 10.0
         return SimulationParameters(
             slopes: [Double](repeating: slope, count: statCount),
             offsets: [Double](repeating: offset, count: statCount),
             npcEquipSlope: 5.0,
             npcEquipOffset: 2.0,
-            playerStarterStats: [15, 15, 10, 15, 15, 15, 15, 10, 15, 20, 20]
+            playerStarterStats: [10, 10, 7, 10, 10, 10, 10, 7, 10, 13, 13]
         )
     }()
 
     init(slopes: [Double], offsets: [Double],
          npcEquipSlope: Double = 5.0, npcEquipOffset: Double = 2.0,
-         playerStarterStats: [Double] = [15, 15, 10, 15, 15, 15, 15, 10, 15, 20, 20]) {
+         playerStarterStats: [Double] = [10, 10, 7, 10, 10, 10, 10, 7, 10, 13, 13]) {
         self.slopes = slopes
         self.offsets = offsets
         self.npcEquipSlope = npcEquipSlope
@@ -70,7 +70,7 @@ struct SimulationParameters: Sendable, Codable {
         npcEquipSlope = try c.decodeIfPresent(Double.self, forKey: .npcEquipSlope) ?? 5.0
         npcEquipOffset = try c.decodeIfPresent(Double.self, forKey: .npcEquipOffset) ?? 2.0
         playerStarterStats = try c.decodeIfPresent([Double].self, forKey: .playerStarterStats)
-            ?? [15, 15, 10, 15, 15, 15, 15, 10, 15, 20, 20]
+            ?? [10, 10, 7, 10, 10, 10, 10, 7, 10, 13, 13]
     }
 
     func toArray() -> [Double] {
