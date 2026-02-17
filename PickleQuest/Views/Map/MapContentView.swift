@@ -400,6 +400,11 @@ struct MapContentView: View {
         Map(position: $cameraPosition, interactionModes: [.pan, .zoom]) {
             // Player location (dev override, real GPS, or fallback)
             if let playerCoord = appState.locationOverride ?? mapVM.locationManager.currentLocation?.coordinate {
+                // Discovery/interaction radius circle
+                MapCircle(center: playerCoord, radius: MapViewModel.discoveryRadius)
+                    .foregroundStyle(.blue.opacity(0.08))
+                    .stroke(.blue.opacity(0.3), lineWidth: 1.5)
+
                 Annotation(appState.player.name, coordinate: playerCoord) {
                     MapPlayerAnnotation(
                         appearance: appState.player.appearance,
@@ -605,6 +610,34 @@ struct MapContentView: View {
                 discoveredCourts: discoveredCourts
             )
             appState.player.gearDropState = state
+
+            // Auto-pickup any drops within range
+            autoPickupNearbyDrops(playerLocation: loc)
+        }
+    }
+
+    private func autoPickupNearbyDrops(playerLocation: CLLocation) {
+        for drop in mapVM.activeGearDrops {
+            guard mapVM.isDropInRange(drop, playerLocation: playerLocation) else { continue }
+
+            // Skip contested drops — they require an NPC fight
+            if drop.type == .contested {
+                continue
+            }
+
+            // Skip locked court caches — need to win a match first
+            if drop.type == .courtCache && !drop.isUnlocked {
+                continue
+            }
+
+            // Skip if a reveal sheet is already showing
+            guard !mapVM.showGearDropReveal else { break }
+
+            Task {
+                await mapVM.collectGearDrop(drop, playerLevel: appState.player.progression.level)
+            }
+            // Only auto-open one at a time to avoid sheet stacking
+            break
         }
     }
 
