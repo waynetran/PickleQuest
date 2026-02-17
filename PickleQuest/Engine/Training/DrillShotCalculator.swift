@@ -234,11 +234,11 @@ enum DrillShotCalculator {
 
         // --- Apply mode modifiers ---
 
-        // Power mode: full power scaled by stamina — low stamina = closer to regular shot
+        // Power mode: 2x ball speed at full stamina, scales down to regular at 0 stamina
         if modes.contains(.power) {
-            let fullPower: CGFloat = 0.85 + (powerStat / 99.0) * 0.15 // 0.85–1.0
-            let regularPower = power  // whatever the base shot computed
-            // Lerp: at full stamina → full power, at 0 stamina → regular power
+            let regularPower = power
+            let fullPower = regularPower * 2.0  // 100% more ball speed
+            // Lerp: at full stamina → 2x speed, at 0 stamina → regular speed
             power = regularPower + (fullPower - regularPower) * staminaFraction
             let scatterMultiplier = 1.2 + (1.0 - accuracyStat / 99.0) * 0.3
             let controlFactor = 1.0 - ((accuracyStat + consistencyStat) / 198.0) * 0.7
@@ -273,7 +273,7 @@ enum DrillShotCalculator {
             scatter *= 0.3  // 70% less scatter
         }
 
-        power = max(0.15, min(1.0, power))
+        power = max(0.15, min(2.0, power))
 
         // --- Physics-based arc calculation ---
         // Calculate the distance from player to target, then compute the exact arc
