@@ -370,6 +370,12 @@ enum GameConstants {
         ]
 
         static let coneHitRadius: CGFloat = 0.10
+
+        // NPC error rates (interactive match)
+        /// Base unforced error rate at stat 1 (scales to ~0% at stat 99)
+        static let npcBaseErrorRate: CGFloat = 0.22
+        /// NPC serve fault rate at stat 1 (chance of double fault per serve)
+        static let npcBaseServeFaultRate: CGFloat = 0.12
     }
 
     // MARK: - Coaching

@@ -630,14 +630,22 @@ final class InteractiveMatchScene: SKScene {
         let scatterX = CGFloat.random(in: -scatter...scatter)
         let scatterY = CGFloat.random(in: -scatter...scatter)
 
-        let baseTargetNY: CGFloat = 0.55 + rawPowerFactor * 0.50
+        // Target must clear the kitchen line (0.682) — minimum 0.73 with margin
+        let baseTargetNY: CGFloat = 0.73 + rawPowerFactor * 0.25
         let targetNX = max(0.15, min(0.85, 0.5 + angleDeviation + scatterX))
-        let targetNY = max(0.50, min(1.10, baseTargetNY + scatterY))
+        let targetNY = max(0.73, min(1.05, baseTargetNY + scatterY))
 
         // Power mode boosts serve speed
         let powerMultiplier: CGFloat = activeShotModes.contains(.power) ? 1.2 : 1.0
         let servePower = (0.10 + min(rawPowerFactor, 1.3) * 0.75) * powerMultiplier
-        let serveArc: CGFloat = max(0.10, 0.55 - rawPowerFactor * 0.40)
+
+        // Physics-based arc: compute exact arc to land at target distance
+        let serveDistNY = abs(targetNY - max(0, playerNY))
+        let serveArc = DrillShotCalculator.arcToLandAt(
+            distanceNY: serveDistNY,
+            power: servePower,
+            arcMargin: 1.30 // extra margin for cross-court angle
+        )
 
         // Drain stamina for active modes
         if activeShotModes.contains(.power) { stamina = max(0, stamina - P.maxStamina * 0.20) }
@@ -661,17 +669,39 @@ final class InteractiveMatchScene: SKScene {
     private func npcServe() {
         let shot = npcAI.generateServe(npcScore: npcScore)
 
-        // Target cross-court to player's side
+        // NPC double fault chance — lower consistency/accuracy = more faults
+        let consistencyStat = CGFloat(min(99, npc.stats.stat(.consistency) + P.npcStatBoost))
+        let accuracyStat = CGFloat(min(99, npc.stats.stat(.accuracy) + P.npcStatBoost))
+        let serveStat = (consistencyStat + accuracyStat) / 2.0
+        let faultRate = P.npcBaseServeFaultRate * (1.0 - serveStat / 99.0)
+        let isDoubleFault = CGFloat.random(in: 0...1) < faultRate
+
+        // Target must clear the kitchen line (0.318) — land in service area
         let evenScore = npcScore % 2 == 0
         let targetNX: CGFloat = evenScore ? 0.25 : 0.75
-        let targetNY: CGFloat = CGFloat.random(in: 0.05...0.18)
+        let targetNY: CGFloat
+
+        if isDoubleFault {
+            // Fault: aim into kitchen or net
+            targetNY = CGFloat.random(in: 0.35...0.48)
+        } else {
+            targetNY = CGFloat.random(in: 0.05...0.28)
+        }
+
+        // Compute physics-based arc for the actual serve distance (NPC at ~0.92 → target ~0.15)
+        let serveDistNY = abs(npcAI.currentNY - targetNY)
+        let serveArc = DrillShotCalculator.arcToLandAt(
+            distanceNY: serveDistNY,
+            power: shot.power,
+            arcMargin: 1.30 // extra margin for cross-court angle
+        )
 
         phase = .playing
         ballSim.launch(
             from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
             toward: CGPoint(x: targetNX, y: targetNY),
             power: shot.power,
-            arc: shot.arc,
+            arc: serveArc,
             spin: shot.spinCurve
         )
         ballSim.lastHitByPlayer = false
@@ -1226,6 +1256,40 @@ final class InteractiveMatchScene: SKScene {
         guard ballSim.height < 0.20 else { return }
 
         if npcAI.shouldSwing(ball: ballSim) {
+            // Check for unforced error before generating the return
+            if npcAI.shouldMakeError(ball: ballSim) {
+                npcErrors += 1
+                rallyLength += 1
+                // Animate the whiff
+                let ballFromLeft = ballSim.courtX < npcAI.currentNX
+                npcAnimator.play(ballFromLeft ? .backhand : .forehand)
+
+                // Error type: 50% net, 50% out
+                if Bool.random() {
+                    // Hit into net — launch low and into the net
+                    ballSim.launch(
+                        from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
+                        toward: CGPoint(x: CGFloat.random(in: 0.2...0.8), y: 0.3),
+                        power: 0.25,
+                        arc: 0.02,
+                        spin: 0
+                    )
+                } else {
+                    // Hit long/wide — launch hard and out of bounds
+                    let wideTarget = Bool.random() ? CGFloat.random(in: -0.2...0.05) : CGFloat.random(in: 0.95...1.2)
+                    ballSim.launch(
+                        from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
+                        toward: CGPoint(x: wideTarget, y: CGFloat.random(in: 0.0...0.15)),
+                        power: 0.8,
+                        arc: 0.15,
+                        spin: 0
+                    )
+                }
+                ballSim.lastHitByPlayer = false
+                previousBallNY = ballSim.courtY
+                return
+            }
+
             rallyLength += 1
             let shot = npcAI.generateShot(ball: ballSim)
 

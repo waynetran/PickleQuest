@@ -129,7 +129,7 @@ enum DrillShotCalculator {
     /// Calculate the arc value needed so the ball lands at the target distance.
     /// Uses projectile physics: arc is the value passed to launch(), which sets vz = arc * speed * 2.0.
     /// Returns the arc such that h(travelTime) ≈ 0, with a margin for net clearance.
-    private static func arcToLandAt(
+    static func arcToLandAt(
         distanceNY: CGFloat,
         power: CGFloat,
         initialHeight: CGFloat = 0.05,

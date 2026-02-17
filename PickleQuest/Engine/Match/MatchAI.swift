@@ -168,6 +168,42 @@ final class MatchAI {
         return dist <= hitboxRadius
     }
 
+    // MARK: - Unforced Errors
+
+    /// Whether the NPC makes an unforced error on this shot (whiff, frame, mis-hit).
+    /// Error rate scales inversely with consistency + focus stats.
+    /// DUPR 2-3 (~stat 20): ~18% error rate
+    /// DUPR 3-4 (~stat 35): ~12% error rate
+    /// DUPR 4-5 (~stat 55): ~7% error rate
+    /// DUPR 5+  (~stat 75): ~3% error rate
+    func shouldMakeError(ball: DrillBallSimulation) -> Bool {
+        let boost = P.npcStatBoost
+        let consistencyStat = CGFloat(min(99, npcStats.stat(.consistency) + boost))
+        let focusStat = CGFloat(min(99, npcStats.stat(.focus) + boost))
+        let avgStat = (consistencyStat + focusStat) / 2.0
+
+        // Base error rate scales inversely with stats
+        var errorRate: CGFloat = P.npcBaseErrorRate * (1.0 - avgStat / 99.0)
+
+        // Fatigue increases errors: below 30% stamina, error rate doubles at 0%
+        let staminaPct = stamina / P.maxStamina
+        if staminaPct < 0.30 {
+            let fatiguePenalty = 1.0 + (1.0 - staminaPct / 0.30)
+            errorRate *= fatiguePenalty
+        }
+
+        // Stretch shots (ball far from NPC center) are harder to return cleanly
+        let dx = ball.courtX - currentNX
+        let dy = ball.courtY - currentNY
+        let dist = sqrt(dx * dx + dy * dy)
+        let stretchFraction = min(dist / hitboxRadius, 1.0)
+        if stretchFraction > 0.6 {
+            errorRate *= 1.0 + (stretchFraction - 0.6) * 1.5 // up to 60% more errors at max reach
+        }
+
+        return CGFloat.random(in: 0...1) < errorRate
+    }
+
     // MARK: - Shot Generation
 
     /// Generate a shot using the player shot calculator with stat-gated modes.
