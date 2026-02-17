@@ -382,6 +382,30 @@ enum GameConstants {
         static let npcBaseServeFaultRate: CGFloat = 0.12
     }
 
+    // MARK: - NPC Strategy
+    enum NPCStrategy {
+        // Shot difficulty factor weights (must sum to 1.0)
+        static let reachStretchWeight: CGFloat = 0.35
+        static let incomingSpeedWeight: CGFloat = 0.30
+        static let ballHeightWeight: CGFloat = 0.15
+        static let spinPressureWeight: CGFloat = 0.20
+
+        // Ball height thresholds for difficulty assessment
+        static let lowBallThreshold: CGFloat = 0.03   // below this = hard
+        static let highBallThreshold: CGFloat = 0.12   // above this = easy (sitter)
+
+        // Aggression control
+        static let baseAggressionFloor: CGFloat = 0.5  // min aggression scale from aggressionControl
+
+        // Serve return deep positioning
+        static let deepReturnNYMin: CGFloat = 0.95
+        static let deepReturnNYMax: CGFloat = 0.98
+        static let defaultReturnNY: CGFloat = 0.92
+
+        // Difficulty threshold for "hard shot" reset trigger
+        static let hardShotDifficultyThreshold: CGFloat = 0.6
+    }
+
     // MARK: - Coaching
     enum Coaching {
         static let coachCourtPercentage: Double = 0.5 // ~50% of courts get a coach

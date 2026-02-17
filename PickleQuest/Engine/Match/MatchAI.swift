@@ -1,11 +1,106 @@
 import CoreGraphics
 
+// MARK: - NPC Strategy Profile
+
+/// Represents how well an NPC knows/executes various strategies.
+/// Each field is 0.0–1.0. Built from DUPR via smooth interpolation, then personality multipliers.
+struct NPCStrategyProfile: Sendable {
+    var serveReturnDepth: CGFloat    // Stand behind baseline for returns
+    var kitchenApproach: CGFloat     // Move forward after soft return shots
+    var dinkWhenAppropriate: CGFloat // Knows when to reset/dink
+    var driveOnHighBall: CGFloat     // Attack high/sitter balls
+    var resetWhenStretched: CGFloat  // Reset instead of going for winner when stretched
+    var placementAwareness: CGFloat  // Target away from opponent
+    var aggressionControl: CGFloat   // Don't overhit on hard balls
+
+    /// Clamp all fields to 0–1.
+    func clamped() -> NPCStrategyProfile {
+        NPCStrategyProfile(
+            serveReturnDepth: max(0, min(1, serveReturnDepth)),
+            kitchenApproach: max(0, min(1, kitchenApproach)),
+            dinkWhenAppropriate: max(0, min(1, dinkWhenAppropriate)),
+            driveOnHighBall: max(0, min(1, driveOnHighBall)),
+            resetWhenStretched: max(0, min(1, resetWhenStretched)),
+            placementAwareness: max(0, min(1, placementAwareness)),
+            aggressionControl: max(0, min(1, aggressionControl))
+        )
+    }
+
+    /// Build a strategy profile from DUPR rating and personality.
+    /// Uses piecewise linear interpolation across DUPR tiers, then applies personality multipliers.
+    static func build(dupr: Double, personality: NPCPersonality) -> NPCStrategyProfile {
+        // Piecewise linear interpolation helper: maps dupr to value across breakpoints
+        func lerp(dupr: Double, breakpoints: [(dupr: Double, value: CGFloat)]) -> CGFloat {
+            guard let first = breakpoints.first, let last = breakpoints.last else { return 0 }
+            if dupr <= first.dupr { return first.value }
+            if dupr >= last.dupr { return last.value }
+            for i in 0..<(breakpoints.count - 1) {
+                let lo = breakpoints[i]
+                let hi = breakpoints[i + 1]
+                if dupr >= lo.dupr && dupr <= hi.dupr {
+                    let t = CGFloat((dupr - lo.dupr) / (hi.dupr - lo.dupr))
+                    return lo.value + t * (hi.value - lo.value)
+                }
+            }
+            return last.value
+        }
+
+        var profile = NPCStrategyProfile(
+            serveReturnDepth: lerp(dupr: dupr, breakpoints: [
+                (2.0, 0.0), (3.0, 0.4), (4.5, 0.9), (5.5, 1.0), (8.0, 1.0)
+            ]),
+            kitchenApproach: lerp(dupr: dupr, breakpoints: [
+                (2.0, 0.0), (3.0, 0.1), (4.5, 0.5), (5.5, 0.8), (8.0, 1.0)
+            ]),
+            dinkWhenAppropriate: lerp(dupr: dupr, breakpoints: [
+                (2.0, 0.0), (3.0, 0.2), (4.5, 0.6), (5.5, 0.9), (8.0, 0.95)
+            ]),
+            driveOnHighBall: lerp(dupr: dupr, breakpoints: [
+                (2.0, 0.1), (3.0, 0.3), (4.5, 0.7), (5.5, 0.9), (8.0, 0.95)
+            ]),
+            resetWhenStretched: lerp(dupr: dupr, breakpoints: [
+                (2.0, 0.0), (3.0, 0.1), (4.5, 0.5), (5.5, 0.8), (8.0, 0.9)
+            ]),
+            placementAwareness: lerp(dupr: dupr, breakpoints: [
+                (2.0, 0.0), (3.0, 0.1), (4.5, 0.4), (5.5, 0.8), (8.0, 0.85)
+            ]),
+            aggressionControl: lerp(dupr: dupr, breakpoints: [
+                (2.0, 0.1), (3.0, 0.3), (4.5, 0.6), (5.5, 0.8), (8.0, 0.9)
+            ])
+        )
+
+        // Apply personality multipliers
+        switch personality {
+        case .aggressive:
+            profile.driveOnHighBall *= 1.3
+            profile.dinkWhenAppropriate *= 0.7
+            profile.aggressionControl *= 0.8
+        case .defensive:
+            profile.resetWhenStretched *= 1.3
+            profile.dinkWhenAppropriate *= 1.3
+            profile.driveOnHighBall *= 0.7
+        case .strategist:
+            profile.placementAwareness *= 1.3
+            profile.aggressionControl *= 1.2
+        case .speedster:
+            profile.kitchenApproach *= 1.2
+        case .allRounder:
+            break
+        }
+
+        return profile.clamped()
+    }
+}
+
+// MARK: - Match AI
+
 /// Strategic AI opponent for interactive matches.
 /// Uses `DrillShotCalculator.calculatePlayerShot()` with stat-gated shot modes,
 /// its own stamina system, and positioning logic based on NPC stats.
 @MainActor
 final class MatchAI {
     private typealias P = GameConstants.DrillPhysics
+    private typealias S = GameConstants.NPCStrategy
     private typealias SM = DrillShotCalculator.ShotMode
 
     let npcStats: PlayerStats
@@ -29,6 +124,9 @@ final class MatchAI {
     // Hitbox
     let hitboxRadius: CGFloat
 
+    // Strategy profile (built from DUPR + personality)
+    let strategy: NPCStrategyProfile
+
     // Serve tracking
     var isServing: Bool = false
     private let startNY: CGFloat = 0.92
@@ -37,6 +135,7 @@ final class MatchAI {
         self.npcStats = npc.stats
         self.npcName = npc.name
         self.npcDUPR = npc.duprRating
+        self.strategy = NPCStrategyProfile.build(dupr: npc.duprRating, personality: npc.personality)
 
         // Use boosted stats for movement and hitbox (compensate for human joystick advantage)
         let boost = P.npcStatBoost
@@ -69,11 +168,19 @@ final class MatchAI {
     }
 
     /// Position for receiving: cross-court from server.
+    /// Smart NPCs stand deep behind baseline to handle fast serves.
     func positionForReceive(playerScore: Int) {
         let playerServingRight = playerScore % 2 == 0
         // Cross-court: if player serves from right (0.75), NPC goes left (0.25)
         currentNX = playerServingRight ? 0.25 : 0.75
-        currentNY = startNY
+
+        // Roll against serveReturnDepth — smart NPCs stand deep for returns
+        if CGFloat.random(in: 0...1) < strategy.serveReturnDepth {
+            currentNY = CGFloat.random(in: S.deepReturnNYMin...S.deepReturnNYMax)
+        } else {
+            currentNY = S.defaultReturnNY
+        }
+
         targetNX = currentNX
         targetNY = currentNY
     }
@@ -84,9 +191,10 @@ final class MatchAI {
             // Ball heading toward AI — intercept
             predictLanding(ball: ball)
         } else if ball.isActive && !ball.lastHitByPlayer {
-            // Ball heading toward player — recover toward center baseline
-            targetNX = 0.5
-            targetNY = startNY
+            // Ball heading toward player — smart NPCs recover toward center, beginners stay put
+            let recoveryStrength = strategy.aggressionControl
+            targetNX = currentNX + (0.5 - currentNX) * recoveryStrength
+            targetNY = currentNY + (startNY - currentNY) * recoveryStrength
         } else {
             // Ball inactive — hold position
         }
@@ -299,7 +407,41 @@ final class MatchAI {
         )
     }
 
-    /// Select shot modes based on NPC stats (boosted) and game state.
+    // MARK: - Situational Shot Assessment
+
+    /// Assess how difficult the incoming ball is to return.
+    /// Returns 0.0 (easy sitter) to 1.0 (desperate stretch).
+    private func assessShotDifficulty(ball: DrillBallSimulation) -> CGFloat {
+        // Reach stretch: how far is the ball from NPC center relative to hitbox
+        let dx = ball.courtX - currentNX
+        let dy = ball.courtY - currentNY
+        let dist = sqrt(dx * dx + dy * dy)
+        let reachStretch = min(dist / hitboxRadius, 1.0)
+
+        // Incoming speed as fraction of max shot speed
+        let ballSpeed = sqrt(ball.vx * ball.vx + ball.vy * ball.vy)
+        let speedFraction = max(0, min(1, (ballSpeed - P.baseShotSpeed) / (P.maxShotSpeed - P.baseShotSpeed)))
+
+        // Ball height (inverted): low balls are harder, high balls are easier sitters
+        let heightDifficulty: CGFloat
+        if ball.height < S.lowBallThreshold {
+            heightDifficulty = 1.0
+        } else if ball.height > S.highBallThreshold {
+            heightDifficulty = 0.0
+        } else {
+            heightDifficulty = 1.0 - (ball.height - S.lowBallThreshold) / (S.highBallThreshold - S.lowBallThreshold)
+        }
+
+        // Spin pressure
+        let spinPressure = min(abs(ball.spinCurve) + abs(ball.topspinFactor) * 0.5, 1.0)
+
+        return reachStretch * S.reachStretchWeight
+             + speedFraction * S.incomingSpeedWeight
+             + heightDifficulty * S.ballHeightWeight
+             + spinPressure * S.spinPressureWeight
+    }
+
+    /// Select shot modes based on situational difficulty and NPC strategy profile.
     private func selectShotModes(ball: DrillBallSimulation) -> SM {
         var modes: SM = []
         let staminaPct = stamina / P.maxStamina
@@ -307,45 +449,64 @@ final class MatchAI {
         // Don't use stamina-draining modes when low
         guard staminaPct > 0.10 else { return modes }
 
+        let difficulty = assessShotDifficulty(ball: ball)
+
+        // Aggression: easy balls + smart NPCs → high aggression; hard balls + smart NPCs → low
+        // Dumb NPCs (low aggressionControl) stay aggressive even on hard balls → more errors via error model
+        let aggression = (1.0 - difficulty) * (S.baseAggressionFloor + strategy.aggressionControl * S.baseAggressionFloor)
+
         let boost = P.npcStatBoost
-        let powerStat = CGFloat(min(99, npcStats.stat(.power) + boost))
-        let accuracyStat = CGFloat(min(99, npcStats.stat(.accuracy) + boost))
-        let spinStat = CGFloat(min(99, npcStats.stat(.spin) + boost))
-        let positioningStat = CGFloat(min(99, npcStats.stat(.positioning) + boost))
-        let focusStat = CGFloat(min(99, npcStats.stat(.focus) + boost))
+        let powerStat = CGFloat(min(99, npcStats.stat(.power) + boost)) / 99.0
+        let accuracyStat = CGFloat(min(99, npcStats.stat(.accuracy) + boost)) / 99.0
+        let spinStat = CGFloat(min(99, npcStats.stat(.spin) + boost)) / 99.0
+        let positioningStat = CGFloat(min(99, npcStats.stat(.positioning) + boost)) / 99.0
+        let focusStat = CGFloat(min(99, npcStats.stat(.focus) + boost)) / 99.0
 
-        // Power: stat-gated usage
-        if powerStat >= 70 && ball.height > 0.08 && roll(0.50) {
-            modes.insert(.power)
-        } else if powerStat >= 50 && ball.courtY < 0.3 && roll(0.30) {
-            // Opponent is deep — drive it
+        // Power: drive high balls when aggression allows
+        let powerChance = strategy.driveOnHighBall * powerStat * aggression
+        if ball.height > 0.06 && roll(Double(powerChance)) {
             modes.insert(.power)
         }
 
-        // Reset/dink: positioning-gated
-        if !modes.contains(.power) && positioningStat >= 50 && roll(0.25) {
-            modes.insert(.reset)
+        // Reset/dink (mutually exclusive with power)
+        if !modes.contains(.power) {
+            if difficulty > S.hardShotDifficultyThreshold {
+                // Hard incoming shot — smart NPCs reset to protect themselves
+                let resetChance = strategy.resetWhenStretched * positioningStat
+                if roll(Double(resetChance)) {
+                    modes.insert(.reset)
+                }
+            } else if aggression < 0.4 {
+                // Low aggression situation (near kitchen, defensive play) — dink
+                let dinkChance = strategy.dinkWhenAppropriate * 0.5
+                if roll(Double(dinkChance)) {
+                    modes.insert(.reset)
+                }
+            }
         }
 
-        // Spin: stat-gated
-        if spinStat >= 70 && roll(0.50) {
-            // Strategically choose: topspin for offense, slice for defense
-            if ball.height > 0.05 {
+        // Spin: topspin for offense (high ball + aggressive), slice for defense
+        if aggression > 0.5 && ball.height > 0.05 {
+            let topspinChance = strategy.driveOnHighBall * spinStat * aggression
+            if roll(Double(topspinChance)) {
                 modes.insert(.topspin)
-            } else {
+            }
+        } else {
+            let sliceChance = strategy.aggressionControl * spinStat * (1.0 - aggression)
+            if roll(Double(sliceChance * 0.5)) {
                 modes.insert(.slice)
             }
-        } else if spinStat >= 40 && roll(0.25) {
-            modes.insert(Bool.random() ? .slice : .topspin)
         }
 
-        // Angled: accuracy-gated
-        if accuracyStat >= 60 && roll(0.30) {
+        // Angled: smart aggressive NPCs target sidelines
+        let angledChance = strategy.placementAwareness * accuracyStat * aggression
+        if roll(Double(angledChance)) {
             modes.insert(.angled)
         }
 
-        // Focus: high focus stat on important moments
-        if focusStat >= 60 && staminaPct > 0.30 && roll(0.20) {
+        // Focus: smart NPCs boost accuracy on easier balls
+        let focusChance = strategy.aggressionControl * focusStat * (1.0 - difficulty)
+        if staminaPct > 0.30 && roll(Double(focusChance * 0.3)) {
             modes.insert(.focus)
         }
 
