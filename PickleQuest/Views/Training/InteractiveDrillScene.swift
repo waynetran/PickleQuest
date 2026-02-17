@@ -48,6 +48,7 @@ final class InteractiveDrillScene: SKScene {
     private var hudStaminaBarFill: SKShapeNode!
     private var hudStaminaValue: SKLabelNode!
     private var hudStarsLabel: SKLabelNode! // stars row (last)
+    private var hudStaminaWarning: SKLabelNode! // warning below HUD
 
     // Cone targets (return of serve)
     private var coneNodes: [SKShapeNode] = []
@@ -562,6 +563,18 @@ final class InteractiveDrillScene: SKScene {
         hudStarsLabel.position = CGPoint(x: labelX, y: row4Y)
         hudStarsLabel.zPosition = 1
         hudContainer.addChild(hudStarsLabel)
+
+        // Stamina warning label (below HUD container)
+        hudStaminaWarning = SKLabelNode(text: "")
+        hudStaminaWarning.fontName = fontName
+        hudStaminaWarning.fontSize = 9
+        hudStaminaWarning.fontColor = .systemYellow
+        hudStaminaWarning.horizontalAlignmentMode = .left
+        hudStaminaWarning.verticalAlignmentMode = .top
+        hudStaminaWarning.position = CGPoint(x: margin + 10, y: hudContainer.position.y - 4)
+        hudStaminaWarning.zPosition = AC.ZPositions.text
+        hudStaminaWarning.alpha = 0
+        addChild(hudStaminaWarning)
 
         // Outcome indicator (center of court)
         outcomeLabel = SKLabelNode(text: "")
@@ -1359,12 +1372,52 @@ final class InteractiveDrillScene: SKScene {
             cornerRadius: 4
         ).cgPath
 
+        // Bar color
         if pct > 0.5 {
             hudStaminaBarFill.fillColor = .systemGreen
-        } else if pct > 0.25 {
+        } else if pct > 0.10 {
             hudStaminaBarFill.fillColor = .systemYellow
         } else {
             hudStaminaBarFill.fillColor = .systemRed
+        }
+
+        // Flashing: steady at ≤50%, quick at ≤10%
+        let time = CACurrentMediaTime()
+        if pct <= 0.10 {
+            let flash = 0.4 + 0.6 * abs(sin(time * 8))  // quick flash ~2.5Hz
+            hudStaminaBarFill.alpha = CGFloat(flash)
+            hudStaminaBarBg.alpha = CGFloat(flash)
+        } else if pct <= 0.50 {
+            let flash = 0.6 + 0.4 * abs(sin(time * 3))  // steady flash ~1Hz
+            hudStaminaBarFill.alpha = CGFloat(flash)
+            hudStaminaBarBg.alpha = 1.0
+        } else {
+            hudStaminaBarFill.alpha = 1.0
+            hudStaminaBarBg.alpha = 1.0
+        }
+
+        // Warning text and auto-disable
+        if pct <= 0.10 {
+            hudStaminaWarning.text = "LOW STAMINA — Power/Focus OFF • Sprint locked"
+            hudStaminaWarning.fontColor = .systemRed
+            hudStaminaWarning.alpha = CGFloat(0.5 + 0.5 * abs(sin(time * 8)))
+
+            // Auto-disable stamina-draining modes
+            if activeShotModes.contains(.power) || activeShotModes.contains(.focus) {
+                activeShotModes.remove(.power)
+                activeShotModes.remove(.focus)
+                updateShotButtonVisuals()
+            }
+        } else if pct <= 0.50 {
+            var warnings: [String] = []
+            if activeShotModes.contains(.power) { warnings.append("Power reduced") }
+            if activeShotModes.contains(.focus) { warnings.append("Focus reduced") }
+            warnings.append("Sprint halved")
+            hudStaminaWarning.text = warnings.joined(separator: " • ")
+            hudStaminaWarning.fontColor = .systemYellow
+            hudStaminaWarning.alpha = 1.0
+        } else {
+            hudStaminaWarning.alpha = 0
         }
     }
 

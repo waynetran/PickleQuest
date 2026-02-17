@@ -268,9 +268,10 @@ enum DrillShotCalculator {
             }
         }
 
-        // Focus: boost accuracy — significantly reduce scatter
+        // Focus: boost accuracy scaled by stamina — full stamina = 70% less scatter, 0 = no effect
         if modes.contains(.focus) {
-            scatter *= 0.3  // 70% less scatter
+            let focusReduction = 0.7 * staminaFraction  // 0.7 at full stamina, 0 at empty
+            scatter *= (1.0 - focusReduction)
         }
 
         power = max(0.15, min(2.0, power))
