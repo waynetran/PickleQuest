@@ -26,7 +26,19 @@ final class SoundManager {
     private var uiPlayers: [SoundID: AVAudioPlayer] = [:]
 
     private init() {
+        configureAudioSession()
         preloadAll()
+    }
+
+    private func configureAudioSession() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            #if DEBUG
+            print("[SoundManager] Audio session setup failed: \(error)")
+            #endif
+        }
     }
 
     // SpriteKit: returns cached SKAction (zero-alloc after first call)
@@ -48,13 +60,25 @@ final class SoundManager {
             if let url = Bundle.main.url(forResource: id.rawValue, withExtension: "caf") {
                 skActions[id] = SKAction.playSoundFileNamed(url.lastPathComponent, waitForCompletion: false)
 
-                if let player = try? AVAudioPlayer(contentsOf: url) {
+                do {
+                    let player = try AVAudioPlayer(contentsOf: url)
                     player.prepareToPlay()
                     player.volume = volumeFor(id)
                     uiPlayers[id] = player
+                } catch {
+                    #if DEBUG
+                    print("[SoundManager] Failed to create player for \(id.rawValue): \(error)")
+                    #endif
                 }
+            } else {
+                #if DEBUG
+                print("[SoundManager] Missing sound file: \(id.rawValue).caf")
+                #endif
             }
         }
+        #if DEBUG
+        print("[SoundManager] Loaded \(uiPlayers.count)/\(SoundID.allCases.count) UI sounds, \(skActions.count)/\(SoundID.allCases.count) SK actions")
+        #endif
     }
 
     private func volumeFor(_ id: SoundID) -> Float {
