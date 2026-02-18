@@ -170,11 +170,12 @@ final class InteractiveMatchScene: SKScene {
     private let dinkPushDuration: CGFloat = 0.25
     private let dinkKitchenThreshold: CGFloat = 0.30
 
-    // Lateral lunge (fast sideways burst when joystick is horizontal and not sprinting)
+    // Lateral lunge (fixed-distance sideways dash)
     private var lungeTimer: CGFloat = 0
     private var lungeActive: Bool = false
-    private let lungeDuration: CGFloat = 0.20     // quick burst duration
-    private let lungeSpeedMultiplier: CGFloat = 3.5 // lateral speed boost during lunge
+    private var lungeDirection: CGFloat = 0       // +1 right, -1 left
+    private let lungeDuration: CGFloat = 0.15     // quick burst duration
+    private let lungeDistance: CGFloat = 0.125    // ~2.5 feet in NX (court = 20ft = 1.0 NX)
 
     // Movement guide arrows (court-painted directional hints)
     private var moveGuideBack: SKNode!
@@ -912,6 +913,7 @@ final class InteractiveMatchScene: SKScene {
         npcShotAnimTimer = 0
         lungeActive = false
         lungeTimer = 0
+        lungeDirection = 0
         pendingPlayerShot = nil
         pendingNPCShot = nil
         pendingServeShot = nil
@@ -1959,34 +1961,36 @@ final class InteractiveMatchScene: SKScene {
             joystickKnob.fillColor = UIColor(white: 0.8, alpha: 0.6)
         }
 
-        playerNX += joystickDirection.dx * speed * dt
-        playerNY += joystickDirection.dy * speed * dt
-
-        // Clamp: player can move anywhere on their side + up to kitchen line
-        playerNX = max(0.0, min(1.0, playerNX))
-        playerNY = max(-0.05, min(0.48 - P.playerPositioningOffset, playerNY))
-
         // Movement animation: direction-aware sprint vs shuffle
-        // Only change animation if no shot animation is playing
         let dx = joystickDirection.dx
         let dy = joystickDirection.dy
         let isMainlyHorizontal = abs(dx) > abs(dy)
 
-        // Lateral lunge: sideways non-sprint movement triggers a fast burst
+        // Lateral lunge: sideways non-sprint triggers fixed-distance dash
         if !isSprinting && isMainlyHorizontal && abs(dx) > 0.3 && !lungeActive && playerJumpPhase == .grounded {
             lungeActive = true
             lungeTimer = 0
+            lungeDirection = dx > 0 ? 1.0 : -1.0
         }
 
-        // Apply lunge speed boost
+        // Apply movement: lunge overrides horizontal, normal otherwise
         if lungeActive {
-            speed *= lungeSpeedMultiplier
+            let lungeSpeed = lungeDistance / lungeDuration
+            playerNX += lungeDirection * lungeSpeed * dt
+            playerNY += joystickDirection.dy * speed * dt
             lungeTimer += dt
             if lungeTimer >= lungeDuration {
                 lungeActive = false
                 lungeTimer = 0
             }
+        } else {
+            playerNX += joystickDirection.dx * speed * dt
+            playerNY += joystickDirection.dy * speed * dt
         }
+
+        // Clamp: player can move anywhere on their side + up to kitchen line
+        playerNX = max(0.0, min(1.0, playerNX))
+        playerNY = max(-0.05, min(0.48 - P.playerPositioningOffset, playerNY))
 
         if canChangeAnim {
             if isSprinting {
@@ -2243,7 +2247,7 @@ final class InteractiveMatchScene: SKScene {
         // - Normal: forehand/backhand swing
         let animState: CharacterAnimationState
         let isVolley = ballSim.bounceCount == 0 && playerJumpPhase == .grounded
-        if playerJumpPhase != .grounded || shot.smashFactor > 0 {
+        if (playerJumpPhase != .grounded || shot.smashFactor > 0) && !activeShotModes.contains(.touch) {
             animState = .smash(isNear: true)
         } else if isVolley && activeShotModes.contains(.touch) {
             // Touch volley: soft dink push (no swing animation)
@@ -2266,7 +2270,7 @@ final class InteractiveMatchScene: SKScene {
         playerSpriteFlipped = false
 
         // Sound + haptic
-        let isSmashShot = playerJumpPhase != .grounded || shot.smashFactor > 0
+        let isSmashShot = (playerJumpPhase != .grounded || shot.smashFactor > 0) && !activeShotModes.contains(.touch)
         if isSmashShot {
             run(SoundManager.shared.skAction(for: .paddleHitSmash))
             HapticManager.shared.smashHit()
@@ -2423,7 +2427,7 @@ final class InteractiveMatchScene: SKScene {
             // Pick animation based on shot context (mirrors player logic)
             let npcAnimState: CharacterAnimationState
             let npcIsVolley = ballSim.bounceCount == 0 && npcAI.jumpPhase == .grounded
-            if npcAI.jumpPhase != .grounded || shot.smashFactor > 0 {
+            if (npcAI.jumpPhase != .grounded || shot.smashFactor > 0) && !npcAI.lastShotModes.contains(.touch) {
                 npcAnimState = .smash(isNear: false)
             } else if npcIsVolley && npcAI.lastShotModes.contains(.touch) {
                 npcAnimState = .run(isNear: false)
