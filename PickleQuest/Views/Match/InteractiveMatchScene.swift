@@ -113,6 +113,11 @@ final class InteractiveMatchScene: SKScene {
     private var highBallChevron: SKLabelNode!
     private var highBallLabel: SKLabelNode!
 
+    // Lob landing indicator (orange circle on court showing where to go)
+    private var lobLandingIndicator: SKNode!
+    private var lobLandingCircle: SKShapeNode!
+    private var lobLandingArrows: [SKLabelNode] = []
+
     // Stamina
     private var stamina: CGFloat = P.maxStamina
     private var timeSinceLastSprint: CGFloat = 10
@@ -489,6 +494,39 @@ final class InteractiveMatchScene: SKScene {
         highBallWarning.addChild(highBallLabel)
 
         addChild(highBallWarning)
+
+        // Lob landing indicator — orange circle on the court showing where to move
+        lobLandingIndicator = SKNode()
+        lobLandingIndicator.zPosition = AC.ZPositions.courtLines + 1
+        lobLandingIndicator.alpha = 0
+
+        lobLandingCircle = SKShapeNode(circleOfRadius: 16)
+        lobLandingCircle.fillColor = UIColor.systemOrange.withAlphaComponent(0.25)
+        lobLandingCircle.strokeColor = UIColor.systemOrange.withAlphaComponent(0.8)
+        lobLandingCircle.lineWidth = 2.5
+        lobLandingIndicator.addChild(lobLandingCircle)
+
+        // Four arrow labels pointing inward (N, S, E, W)
+        let arrowChars = ["\u{25BC}", "\u{25B2}", "\u{25C0}", "\u{25B6}"]  // down, up, left, right
+        let arrowOffsets: [CGPoint] = [
+            CGPoint(x: 0, y: 24),   // top arrow points down
+            CGPoint(x: 0, y: -24),  // bottom arrow points up
+            CGPoint(x: 24, y: 0),   // right arrow points left
+            CGPoint(x: -24, y: 0),  // left arrow points right
+        ]
+        for (i, ch) in arrowChars.enumerated() {
+            let arrow = SKLabelNode(text: ch)
+            arrow.fontName = "AvenirNext-Bold"
+            arrow.fontSize = 14
+            arrow.fontColor = .systemOrange
+            arrow.verticalAlignmentMode = .center
+            arrow.horizontalAlignmentMode = .center
+            arrow.position = arrowOffsets[i]
+            lobLandingIndicator.addChild(arrow)
+            lobLandingArrows.append(arrow)
+        }
+
+        addChild(lobLandingIndicator)
     }
 
     private func buildNPCBossBar() {
@@ -796,6 +834,7 @@ final class InteractiveMatchScene: SKScene {
         playerJumpCooldownTimer = 0
         playerJumpHeightBonus = 0
         highBallWarning.alpha = 0
+        lobLandingIndicator.alpha = 0
 
         // Recover stamina between points (scaled by stamina stat)
         let staminaStat = CGFloat(playerStats.stat(.stamina))
@@ -1552,6 +1591,7 @@ final class InteractiveMatchScene: SKScene {
     private func updateHighBallIndicator() {
         guard ballSim.isActive && !ballSim.lastHitByPlayer else {
             highBallWarning.alpha = 0
+            lobLandingIndicator.alpha = 0
             return
         }
 
@@ -1561,10 +1601,12 @@ final class InteractiveMatchScene: SKScene {
         let dist = sqrt(dx * dx + dy * dy)
         guard dist < P.highBallIndicatorDistance else {
             highBallWarning.alpha = 0
+            lobLandingIndicator.alpha = 0
             return
         }
         guard ballSim.vy < 0 else {  // ball must be heading toward player
             highBallWarning.alpha = 0
+            lobLandingIndicator.alpha = 0
             return
         }
 
@@ -1572,6 +1614,7 @@ final class InteractiveMatchScene: SKScene {
         let ballSpeedY = abs(ballSim.vy)
         guard ballSpeedY > 0.01 else {
             highBallWarning.alpha = 0
+            lobLandingIndicator.alpha = 0
             return
         }
         let timeToPlayer = abs(ballSim.courtY - playerNY) / ballSpeedY
@@ -1589,6 +1632,7 @@ final class InteractiveMatchScene: SKScene {
 
         guard excessAboveStanding > P.highBallWarningThreshold else {
             highBallWarning.alpha = 0
+            lobLandingIndicator.alpha = 0
             return
         }
 
@@ -1602,20 +1646,62 @@ final class InteractiveMatchScene: SKScene {
             highBallChevron.fontColor = .systemOrange
             highBallLabel.fontColor = .systemOrange
             highBallLabel.text = "JUMP!"
+            lobLandingIndicator.alpha = 0
             if timeToPlayer < 0.4 {
                 initiatePlayerJump()
             }
         } else {
-            // Red: back up
+            // Lob going over head — predict landing spot and show indicator
             highBallChevron.fontColor = .systemRed
             highBallLabel.fontColor = .systemRed
             highBallLabel.text = "BACK UP!"
+            updateLobLandingIndicator()
         }
 
         // Pulsing alpha based on urgency (closer = more opaque)
         let urgency = 1.0 - min(dist / P.highBallIndicatorDistance, 1.0)
         let pulse = 0.5 + 0.5 * abs(sin(CGFloat(CACurrentMediaTime()) * 6))
         highBallWarning.alpha = (0.5 + urgency * 0.5) * pulse
+    }
+
+    private func updateLobLandingIndicator() {
+        // Predict where the ball will land (height = 0) using projectile equation:
+        // 0 = h + vz*t - 0.5*g*t²  →  t = (vz + sqrt(vz² + 2*g*h)) / g
+        let h = ballSim.height
+        let vzCur = ballSim.vz
+        let g = P.gravity
+
+        let discriminant = vzCur * vzCur + 2 * g * h
+        guard discriminant >= 0 else {
+            lobLandingIndicator.alpha = 0
+            return
+        }
+
+        let timeToLand = (vzCur + sqrt(discriminant)) / g
+        guard timeToLand > 0.05 else {
+            lobLandingIndicator.alpha = 0
+            return
+        }
+
+        // Predicted landing court position
+        let landNX = ballSim.courtX + ballSim.vx * timeToLand
+        let landNY = ballSim.courtY + ballSim.vy * timeToLand
+
+        // Only show if landing is on the player's half
+        guard landNY < 0.5, landNX > -0.1, landNX < 1.1 else {
+            lobLandingIndicator.alpha = 0
+            return
+        }
+
+        // Position on court
+        let landScreenPos = CourtRenderer.courtPoint(nx: landNX, ny: max(0, landNY))
+        let landScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, landNY)))
+        lobLandingIndicator.position = landScreenPos
+        lobLandingIndicator.setScale(landScale)
+
+        // Pulsing animation
+        let pulse = 0.6 + 0.4 * abs(sin(CGFloat(CACurrentMediaTime()) * 5))
+        lobLandingIndicator.alpha = pulse
     }
 
     private func updateJumpButtonVisual() {
