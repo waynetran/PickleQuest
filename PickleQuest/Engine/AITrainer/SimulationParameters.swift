@@ -32,15 +32,15 @@ struct SimulationParameters: Sendable, Codable {
         return SimulationParameters(
             slopes: [Double](repeating: slope, count: statCount),
             offsets: [Double](repeating: offset, count: statCount),
-            npcEquipSlope: 5.0,
-            npcEquipOffset: 2.0,
-            playerStarterStats: [10, 10, 7, 10, 10, 10, 10, 7, 10, 13, 13]
+            npcEquipSlope: 4.0,
+            npcEquipOffset: 3.0,
+            playerStarterStats: [10, 10, 10, 10, 10, 10, 10, 10, 10, 13, 13]
         )
     }()
 
     init(slopes: [Double], offsets: [Double],
-         npcEquipSlope: Double = 5.0, npcEquipOffset: Double = 2.0,
-         playerStarterStats: [Double] = [10, 10, 7, 10, 10, 10, 10, 7, 10, 13, 13]) {
+         npcEquipSlope: Double = 4.0, npcEquipOffset: Double = 3.0,
+         playerStarterStats: [Double] = [10, 10, 10, 10, 10, 10, 10, 10, 10, 13, 13]) {
         self.slopes = slopes
         self.offsets = offsets
         self.npcEquipSlope = npcEquipSlope
@@ -68,7 +68,7 @@ struct SimulationParameters: Sendable, Codable {
         slopes = try c.decode([Double].self, forKey: .slopes)
         offsets = try c.decode([Double].self, forKey: .offsets)
         npcEquipSlope = try c.decodeIfPresent(Double.self, forKey: .npcEquipSlope) ?? 5.0
-        npcEquipOffset = try c.decodeIfPresent(Double.self, forKey: .npcEquipOffset) ?? 2.0
+        npcEquipOffset = try c.decodeIfPresent(Double.self, forKey: .npcEquipOffset) ?? 3.0
         playerStarterStats = try c.decodeIfPresent([Double].self, forKey: .playerStarterStats)
             ?? [10, 10, 7, 10, 10, 10, 10, 7, 10, 13, 13]
     }

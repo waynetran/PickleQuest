@@ -112,7 +112,7 @@ enum GameConstants {
     enum Rally {
         /// Master knob scaling how much stat differences affect per-shot probabilities.
         /// Higher values create more DUPR separation in point differentials.
-        static let statSensitivity: Double = 0.25
+        static let statSensitivity: Double = 0.26
 
         static let baseAceChance: Double = 0.05
         static let powerAceScaling: Double = 0.002 // per power point

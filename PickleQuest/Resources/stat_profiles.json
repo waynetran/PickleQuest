@@ -1,6 +1,6 @@
 {
-  "npcEquipOffset" : 2,
-  "npcEquipSlope" : 5,
+  "npcEquipOffset" : 3,
+  "npcEquipSlope" : 4,
   "offsets" : [
     10,
     10,
@@ -17,12 +17,12 @@
   "playerStarterStats" : [
     10,
     10,
-    7,
     10,
     10,
     10,
     10,
-    7,
+    10,
+    10,
     10,
     13,
     13
