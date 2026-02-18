@@ -40,6 +40,10 @@ final class SimulatedPlayerAI {
     var isServing: Bool = false
     private let startNY: CGFloat = 0.08
 
+    /// Serve target hint — receiver tracks the serve landing zone instead of predicting.
+    /// Cleared after the ball bounces (receiver has locked onto landing zone).
+    var serveTargetHint: CGPoint?
+
     // Reaction delay tracking
     private var reactionTimer: CGFloat = 0
     private var hasReacted: Bool = false
@@ -59,7 +63,7 @@ final class SimulatedPlayerAI {
         // Skill parameters
         let fraction = CGFloat(max(0, min(1, (dupr - 2.0) / 6.0)))
         self.skillFraction = fraction
-        self.reactionDelay = 0.20 - fraction * 0.17   // 0.20s beginner → 0.03s expert
+        self.reactionDelay = 0.10 - fraction * 0.08   // 0.10s beginner → 0.02s expert
         self.positioningNoise = 0.08 - fraction * 0.07 // 0.08 beginner → 0.01 expert
         self.shotModeCompetence = fraction * fraction   // 0.0 beginner → 1.0 expert
 
@@ -102,28 +106,38 @@ final class SimulatedPlayerAI {
 
     func update(dt: CGFloat, ball: DrillBallSimulation) {
         if ball.isActive && !ball.lastHitByPlayer {
-            // Ball heading toward player — intercept with reaction delay
-            if !hasReacted {
-                reactionTimer += dt
-                if reactionTimer >= reactionDelay {
-                    hasReacted = true
-                    // Compute noise offset once when reaction triggers
-                    if !hasComputedNoise {
-                        noiseOffsetX = CGFloat.random(in: -positioningNoise...positioningNoise)
-                        noiseOffsetY = CGFloat.random(in: -positioningNoise...positioningNoise)
-                        hasComputedNoise = true
+            // Ball heading toward player — intercept
+            if let hint = serveTargetHint {
+                // Serve tracking: skip reaction delay — receiver reads the slow
+                // underhand serve and moves directly to the landing zone.
+                targetNX = max(0.05, min(0.95, hint.x))
+                targetNY = max(0.0, min(0.28, hint.y))
+                hasReacted = true
+            } else {
+                // Normal rally: apply reaction delay
+                if !hasReacted {
+                    reactionTimer += dt
+                    if reactionTimer >= reactionDelay {
+                        hasReacted = true
+                        if !hasComputedNoise {
+                            noiseOffsetX = CGFloat.random(in: -positioningNoise...positioningNoise)
+                            noiseOffsetY = CGFloat.random(in: -positioningNoise...positioningNoise)
+                            hasComputedNoise = true
+                        }
                     }
                 }
-            }
-            if hasReacted {
-                predictLanding(ball: ball)
+                if hasReacted {
+                    predictLanding(ball: ball)
+                }
             }
         } else if ball.isActive && ball.lastHitByPlayer {
             // Ball heading toward NPC — recover toward center and reset reaction for next approach
             hasReacted = false
             reactionTimer = 0
             hasComputedNoise = false
-            let recovery = skillFraction * 0.5
+            // In real pickleball, players immediately move to ready position after hitting.
+            // Beginners recover 50% toward center, experts go all the way.
+            let recovery = 0.5 + skillFraction * 0.5
             targetNX = currentNX + (0.5 - currentNX) * recovery
             targetNY = currentNY + (startNY - currentNY) * recovery
         }
@@ -393,6 +407,7 @@ final class SimulatedPlayerAI {
     // MARK: - Shot Generation
 
     func generateShot(ball: DrillBallSimulation) -> DrillShotCalculator.ShotResult {
+        serveTargetHint = nil  // Clear serve tracking after contact
         let modes = selectShotModes(ball: ball)
         shotCountThisPoint += 1
         let staminaFraction = stamina / P.maxStamina
@@ -458,6 +473,7 @@ final class SimulatedPlayerAI {
         self.hasReacted = false
         self.reactionTimer = 0
         self.hasComputedNoise = false
+        self.serveTargetHint = nil
         if isServing {
             positionForServe(playerScore: playerScore)
         } else {

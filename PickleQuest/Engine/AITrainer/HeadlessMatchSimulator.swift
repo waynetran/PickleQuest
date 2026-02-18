@@ -272,6 +272,25 @@ final class HeadlessMatchSimulator {
             if ballSim.didBounceThisFrame && prevBounces == 0 {
                 firstBounceCourtX = ballSim.lastBounceCourtX
                 firstBounceCourtY = ballSim.lastBounceCourtY
+
+                // Early rally bounce: teleport receiver to the ball's actual landing
+                // position. In real pickleball, the first few shots (serve and
+                // return) are expected and tracked visually. Receivers always
+                // reach the ball. The shouldMakeError check still applies
+                // (error on contact), so the return can still fail.
+                if rallyLength <= 1 {
+                    let bx = max(0.05, min(0.95, firstBounceCourtX))
+                    let by = firstBounceCourtY
+                    if ballSim.lastHitByPlayer {
+                        npcAI.currentNX = bx
+                        npcAI.currentNY = max(0.72, min(1.0, by))
+                        npcAI.serveTargetHint = CGPoint(x: bx, y: by)
+                    } else {
+                        playerAI.currentNX = bx
+                        playerAI.currentNY = max(0.0, min(0.28, by))
+                        playerAI.serveTargetHint = CGPoint(x: bx, y: by)
+                    }
+                }
             }
 
             playerAI.update(dt: dt, ball: ballSim)
@@ -340,25 +359,38 @@ final class HeadlessMatchSimulator {
             serveTargetNY = max(minNY, min(maxNY, targetBaseNY + scatterY))
         }
 
+        // Cap serve power — pickleball serves are underhand and much slower than rally drives
+        let servePower = min(P.servePowerCap, shot.power)
+
         let serveDistNX = abs(serveTargetNX - originX)
         let serveDistNY = abs(serveTargetNY - originNY)
         let serveArc = DrillShotCalculator.arcToLandAt(
             distanceNY: serveDistNY,
             distanceNX: serveDistNX,
-            power: shot.power,
-            arcMargin: 1.30
+            power: servePower,
+            arcMargin: 1.0  // ensureNetClearance() handles net safety
         )
 
         ballSim.launch(
             from: CGPoint(x: originX, y: originNY),
             toward: CGPoint(x: serveTargetNX, y: serveTargetNY),
-            power: shot.power,
+            power: servePower,
             arc: serveArc,
             spin: shot.spinCurve,
             topspin: shot.topspinFactor
         )
         ballSim.lastHitByPlayer = isPlayerServing
         previousBallNY = ballSim.courtY
+
+        // Set serve tracking hint so receiver skips reaction delay and
+        // tracks toward the landing zone. The bounce teleport (in the game
+        // loop) handles final positioning when the ball actually lands.
+        let hint = CGPoint(x: serveTargetNX, y: serveTargetNY)
+        if isPlayerServing {
+            npcAI.serveTargetHint = hint
+        } else {
+            playerAI.serveTargetHint = hint
+        }
     }
 
     private func executePlayerServe() {
@@ -454,6 +486,11 @@ final class HeadlessMatchSimulator {
             npcAI.playerShotHistory.removeFirst()
         }
 
+        // Early rally: give the NPC a tracking hint for the next shot.
+        if rallyLength <= 2 {
+            npcAI.serveTargetHint = CGPoint(x: shot.targetNX, y: shot.targetNY)
+        }
+
         return false
     }
 
@@ -500,6 +537,13 @@ final class HeadlessMatchSimulator {
         ballSim.lastHitByPlayer = false
         previousBallNY = ballSim.courtY
         checkedFirstBounce = false
+
+        // Early rally: give the server a tracking hint for the return shot.
+        // In real pickleball, the server watches the return and starts moving
+        // immediately — no reaction delay needed for expected shots.
+        if rallyLength <= 2 {
+            playerAI.serveTargetHint = CGPoint(x: shot.targetNX, y: shot.targetNY)
+        }
 
         return false
     }
@@ -571,6 +615,7 @@ final class HeadlessMatchSimulator {
         // Double bounce
         if ballSim.isDoubleBounce {
             let bounceY = ballSim.lastBounceCourtY
+            let bounceX = ballSim.lastBounceCourtX
             if bounceY < 0.5 {
                 // Double-bounced on player's side
                 if ballSim.lastHitByPlayer {

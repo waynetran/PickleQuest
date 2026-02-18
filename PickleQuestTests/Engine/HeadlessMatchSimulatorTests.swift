@@ -104,7 +104,6 @@ struct HeadlessMatchSimulatorTests {
             var totalNOutWide = 0
             var totalPKitchenFault = 0
             var totalNKitchenFault = 0
-
             for _ in 0..<matchCount {
                 let npc = NPC.headlessOpponent(dupr: nDUPR)
                 let playerStats = StatProfileLoader.shared.toPlayerStats(dupr: pDUPR)

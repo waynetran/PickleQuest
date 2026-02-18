@@ -158,6 +158,10 @@ final class MatchAI {
     // Rally pattern memory (tracks player's recent shot X positions)
     var playerShotHistory: [CGFloat] = []
 
+    /// Serve target hint — receiver tracks the serve landing zone instead of predicting.
+    /// Cleared after the ball bounces (receiver has locked onto landing zone).
+    var serveTargetHint: CGPoint?
+
     /// Effective stat boost: full boost for interactive, zero for headless.
     private var statBoost: Int { isHeadless ? 0 : P.npcStatBoost }
 
@@ -200,7 +204,7 @@ final class MatchAI {
         // Headless mode: add reaction delay and positioning noise (mirrors SimulatedPlayerAI)
         if headless {
             let fraction = CGFloat(max(0, min(1, (npc.duprRating - 2.0) / 6.0)))
-            self.reactionDelay = 0.20 - fraction * 0.17
+            self.reactionDelay = 0.10 - fraction * 0.08
             self.positioningNoise = 0.08 - fraction * 0.07
         } else {
             self.reactionDelay = 0
@@ -253,20 +257,28 @@ final class MatchAI {
         if ball.isActive && ball.lastHitByPlayer {
             // Ball heading toward AI — intercept
             if isHeadless {
-                // Headless: apply reaction delay (mirrors SimulatedPlayerAI)
-                if !hasReacted {
-                    reactionTimer += dt
-                    if reactionTimer >= reactionDelay {
-                        hasReacted = true
-                        if !hasComputedNoise {
-                            noiseOffsetX = CGFloat.random(in: -positioningNoise...positioningNoise)
-                            noiseOffsetY = CGFloat.random(in: -positioningNoise...positioningNoise)
-                            hasComputedNoise = true
+                if let hint = serveTargetHint {
+                    // Serve tracking: skip reaction delay — receiver reads the slow
+                    // underhand serve and moves directly to the landing zone.
+                    targetNX = max(0.05, min(0.95, hint.x))
+                    targetNY = max(0.72, min(1.0, hint.y))
+                    hasReacted = true
+                } else {
+                    // Headless: apply reaction delay (mirrors SimulatedPlayerAI)
+                    if !hasReacted {
+                        reactionTimer += dt
+                        if reactionTimer >= reactionDelay {
+                            hasReacted = true
+                            if !hasComputedNoise {
+                                noiseOffsetX = CGFloat.random(in: -positioningNoise...positioningNoise)
+                                noiseOffsetY = CGFloat.random(in: -positioningNoise...positioningNoise)
+                                hasComputedNoise = true
+                            }
                         }
                     }
-                }
-                if hasReacted {
-                    predictLanding(ball: ball)
+                    if hasReacted {
+                        predictLanding(ball: ball)
+                    }
                 }
             } else {
                 predictLanding(ball: ball)
@@ -280,7 +292,7 @@ final class MatchAI {
 
                 // Headless: symmetric recovery (mirrors SimulatedPlayerAI)
                 let fraction = CGFloat(max(0, min(1, (npcDUPR - 2.0) / 6.0)))
-                let recovery = fraction * 0.5
+                let recovery = 0.5 + fraction * 0.5
                 targetNX = currentNX + (0.5 - currentNX) * recovery
                 targetNY = currentNY + (startNY - currentNY) * recovery
             } else {
@@ -634,6 +646,7 @@ final class MatchAI {
     /// Generate a shot using the player shot calculator with stat-gated modes.
     /// The NPC gets boosted stats to compensate for perfect human joystick positioning.
     func generateShot(ball: DrillBallSimulation) -> DrillShotCalculator.ShotResult {
+        serveTargetHint = nil  // Clear serve tracking after contact
         // Use pre-selected modes if available, otherwise select fresh
         var modes = lastShotModes.isEmpty ? selectShotModes(ball: ball) : lastShotModes
         shotCountThisPoint += 1
@@ -959,6 +972,7 @@ final class MatchAI {
         self.hasReacted = false
         self.reactionTimer = 0
         self.hasComputedNoise = false
+        self.serveTargetHint = nil
         if isServing {
             positionForServe(npcScore: npcScore)
         }

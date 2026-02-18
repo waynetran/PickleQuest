@@ -111,9 +111,8 @@ enum GameConstants {
     // MARK: - Rally
     enum Rally {
         /// Master knob scaling how much stat differences affect per-shot probabilities.
-        /// At 1.0 (old default), 0.1 DUPR gap produces ~5.5 point margin.
-        /// At 0.16, side-out scoring amplification brings it to ~1.2 points.
-        static let statSensitivity: Double = 0.16
+        /// Higher values create more DUPR separation in point differentials.
+        static let statSensitivity: Double = 0.25
 
         static let baseAceChance: Double = 0.05
         static let powerAceScaling: Double = 0.002 // per power point
@@ -121,7 +120,7 @@ enum GameConstants {
         static let minRallyShots: Int = 1
         static let maxRallyShots: Int = 30
         static let baseWinnerChance: Double = 0.15
-        static let baseErrorChance: Double = 0.12
+        static let baseErrorChance: Double = 0.18
 
         // Doubles dink phase
         static let doublesDinkMinShots: Int = 3
@@ -405,13 +404,18 @@ enum GameConstants {
 
         // NPC error rates (interactive match)
         /// Base error rate on neutral/easy shots (scales with 1 - statFraction)
-        static let npcBaseErrorRate: CGFloat = 0.08
+        static let npcBaseErrorRate: CGFloat = 0.04
         /// Error scaling from incoming shot difficulty (speed + spin pressure)
-        static let npcPowerErrorScale: CGFloat = 0.85
+        static let npcPowerErrorScale: CGFloat = 0.50
         /// Minimum error rate floor per unit of shot difficulty (even stat 99 NPCs)
-        static let npcMinPowerErrorFloor: CGFloat = 0.02
+        static let npcMinPowerErrorFloor: CGFloat = 0.01
         /// NPC serve fault rate at stat 1 (chance of double fault per serve)
         static let npcBaseServeFaultRate: CGFloat = 0.12
+
+        /// Maximum serve power — pickleball serves are underhand, significantly
+        /// slower than rally drives. Controls ace rate: lower = fewer aces.
+        /// At 0.45, serve speed ≈ 0.60 (vs rally max ~0.90). Tunable training param.
+        static let servePowerCap: CGFloat = 0.45
     }
 
     // MARK: - NPC Strategy
@@ -448,8 +452,8 @@ enum GameConstants {
         static let badShotErrorPenalty: CGFloat = -0.20    // max NPC error rate decrease from bad player shot
 
         // Exponential DUPR error scaling (replaces linear duprGapErrorScale)
-        static let duprErrorDecayRate: CGFloat = 3.0      // exp(-gap * rate); 0.1 gap → 0.74x errors
-        static let duprErrorGrowthRate: CGFloat = 1.5     // weaker NPC error growth
+        static let duprErrorDecayRate: CGFloat = 4.0      // exp(-gap * rate); stronger NPC error reduction
+        static let duprErrorGrowthRate: CGFloat = 2.5     // weaker NPC error growth
         static let duprErrorFloor: CGFloat = 0.05         // NPC min error fraction (even at huge gaps)
         static let duprErrorCeiling: CGFloat = 3.0        // NPC max error multiplier when weaker
 

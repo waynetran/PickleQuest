@@ -135,7 +135,7 @@ enum DrillShotCalculator {
         distanceNX: CGFloat = 0,
         power: CGFloat,
         initialHeight: CGFloat = 0.05,
-        arcMargin: CGFloat = 1.15 // 15% extra arc for net clearance margin
+        arcMargin: CGFloat = 1.0 // ensureNetClearance() handles net safety
     ) -> CGFloat {
         let P = GameConstants.DrillPhysics.self
         let speed = P.baseShotSpeed + power * (P.maxShotSpeed - P.baseShotSpeed)
@@ -214,7 +214,7 @@ enum DrillShotCalculator {
             let resetDistNX = abs(targetNX - courtNX)
             let resetArc: CGFloat
             if shootingFromFarSide {
-                resetArc = arcToLandAt(distanceNY: resetDistNY, distanceNX: resetDistNX, power: resetPower, arcMargin: 1.30)
+                resetArc = arcToLandAt(distanceNY: resetDistNY, distanceNX: resetDistNX, power: resetPower, arcMargin: 1.05)
             } else {
                 resetArc = CGFloat.random(in: 0.55...0.75)
             }
@@ -339,13 +339,13 @@ enum DrillShotCalculator {
         if drillType == .dinkingDrill && modes.isEmpty {
             arc = CGFloat.random(in: 0.5...0.7)
         } else {
-            var margin: CGFloat = 1.15
+            // Arc margins reduced after fixing arcToLandAt travel time calculation.
+            // ensureNetClearance() in launch() handles net clearance as a safety net.
+            var margin: CGFloat = 1.0
             if modes.contains(.topspin) {
-                margin = 1.8
+                margin = 1.25  // topspin pulls ball down — needs extra arc
             } else if modes.contains(.slice) {
-                margin = 0.95
-            } else if modes.contains(.power) {
-                margin = 1.10
+                margin = 0.90  // slice floats — less arc needed
             }
             arc = arcToLandAt(distanceNY: distToTargetNY, distanceNX: distToTargetNX, power: power, arcMargin: margin)
         }
