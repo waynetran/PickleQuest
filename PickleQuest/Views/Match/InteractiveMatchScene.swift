@@ -123,15 +123,21 @@ final class InteractiveMatchScene: SKScene {
     private var playerJumpCooldownTimer: CGFloat = 0
     private var playerJumpHeightBonus: CGFloat = 0
 
-    // High ball indicator
-    private var highBallWarning: SKNode!
-    private var highBallChevron: SKLabelNode!
-    private var highBallLabel: SKLabelNode!
+    // Sprite flipping for directional animations
+    private var playerSpriteFlipped: Bool = false
+    private var npcSpriteFlipped: Bool = false
 
-    // Lob landing indicator (orange circle on court showing where to go)
-    private var lobLandingIndicator: SKNode!
-    private var lobLandingCircle: SKShapeNode!
-    private var lobLandingArrows: [SKLabelNode] = []
+    // Dink push animation
+    private var playerDinkPushTimer: CGFloat = 0
+    private var npcDinkPushTimer: CGFloat = 0
+    private let dinkPushDuration: CGFloat = 0.25
+    private let dinkKitchenThreshold: CGFloat = 0.30
+
+    // Movement guide arrows (court-painted directional hints)
+    private var moveGuideBack: SKNode!
+    private var moveGuideLeft: SKNode!
+    private var moveGuideRight: SKNode!
+    private var moveGuideForward: SKNode!
     private var wasLobbed: Bool = false  // tracks if current point had an unreachable lob
 
     // Stamina
@@ -489,60 +495,54 @@ final class InteractiveMatchScene: SKScene {
     }
 
     private func buildHighBallIndicator() {
-        highBallWarning = SKNode()
-        highBallWarning.zPosition = AC.ZPositions.text + 2
-        highBallWarning.alpha = 0
+        // Movement guide arrows — court-painted perspective arrows in 4 directions
+        moveGuideBack = buildMoveGuideArrow(text: "GO BACK!", rotation: 0)
+        moveGuideLeft = buildMoveGuideArrow(text: "GO LEFT!", rotation: .pi / 2)
+        moveGuideRight = buildMoveGuideArrow(text: "GO RIGHT!", rotation: -.pi / 2)
+        moveGuideForward = buildMoveGuideArrow(text: "MOVE UP!", rotation: .pi)
+        addChild(moveGuideBack)
+        addChild(moveGuideLeft)
+        addChild(moveGuideRight)
+        addChild(moveGuideForward)
+    }
 
-        highBallChevron = SKLabelNode(text: "\u{25B2}\u{25B2}")  // double chevron up
-        highBallChevron.fontName = "AvenirNext-Bold"
-        highBallChevron.fontSize = 18
-        highBallChevron.verticalAlignmentMode = .bottom
-        highBallChevron.horizontalAlignmentMode = .center
-        highBallChevron.position = CGPoint(x: 0, y: 8)
-        highBallWarning.addChild(highBallChevron)
+    /// Build a single court-painted movement guide arrow with text.
+    /// Rotation 0 = pointing down (toward player baseline), .pi/2 = pointing left, etc.
+    private func buildMoveGuideArrow(text: String, rotation: CGFloat) -> SKNode {
+        let node = SKNode()
+        node.zPosition = AC.ZPositions.courtLines + 1.5
+        node.alpha = 0
 
-        highBallLabel = SKLabelNode(text: "JUMP!")
-        highBallLabel.fontName = "AvenirNext-Bold"
-        highBallLabel.fontSize = 12
-        highBallLabel.verticalAlignmentMode = .top
-        highBallLabel.horizontalAlignmentMode = .center
-        highBallLabel.position = CGPoint(x: 0, y: 6)
-        highBallWarning.addChild(highBallLabel)
+        // Large triangle arrow (perspective-squished to look flat on court)
+        let arrowPath = CGMutablePath()
+        arrowPath.move(to: CGPoint(x: 0, y: 30))     // tip
+        arrowPath.addLine(to: CGPoint(x: -22, y: -10))  // bottom-left
+        arrowPath.addLine(to: CGPoint(x: 22, y: -10))   // bottom-right
+        arrowPath.closeSubpath()
 
-        addChild(highBallWarning)
+        let arrow = SKShapeNode(path: arrowPath)
+        arrow.fillColor = UIColor.systemGreen.withAlphaComponent(0.45)
+        arrow.strokeColor = UIColor.systemGreen.withAlphaComponent(0.85)
+        arrow.lineWidth = 2.5
+        arrow.zRotation = rotation
+        node.addChild(arrow)
 
-        // Lob landing indicator — orange circle on the court showing where to move
-        lobLandingIndicator = SKNode()
-        lobLandingIndicator.zPosition = AC.ZPositions.courtLines + 1
-        lobLandingIndicator.alpha = 0
+        // Text label
+        let label = SKLabelNode(text: text)
+        label.fontName = "AvenirNext-Heavy"
+        label.fontSize = 13
+        label.fontColor = .white
+        label.verticalAlignmentMode = .center
+        label.horizontalAlignmentMode = .center
+        // Offset text behind the arrow tip direction
+        let textOffset: CGFloat = -30
+        label.position = CGPoint(
+            x: sin(rotation) * textOffset,
+            y: -cos(rotation) * textOffset
+        )
+        node.addChild(label)
 
-        lobLandingCircle = SKShapeNode(circleOfRadius: 16)
-        lobLandingCircle.fillColor = UIColor.systemOrange.withAlphaComponent(0.25)
-        lobLandingCircle.strokeColor = UIColor.systemOrange.withAlphaComponent(0.8)
-        lobLandingCircle.lineWidth = 2.5
-        lobLandingIndicator.addChild(lobLandingCircle)
-
-        // Four arrow labels pointing inward (N, S, E, W)
-        let arrowChars = ["\u{25BC}", "\u{25B2}", "\u{25C0}", "\u{25B6}"]  // down, up, left, right
-        let arrowOffsets: [CGPoint] = [
-            CGPoint(x: 0, y: 24),   // top arrow points down
-            CGPoint(x: 0, y: -24),  // bottom arrow points up
-            CGPoint(x: 24, y: 0),   // right arrow points left
-            CGPoint(x: -24, y: 0),  // left arrow points right
-        ]
-        for (i, ch) in arrowChars.enumerated() {
-            let arrow = SKLabelNode(text: ch)
-            arrow.fontName = "AvenirNext-Bold"
-            arrow.fontSize = 14
-            arrow.fontColor = .systemOrange
-            arrow.verticalAlignmentMode = .center
-            arrow.horizontalAlignmentMode = .center
-            arrow.position = arrowOffsets[i]
-            lobLandingIndicator.addChild(arrow)
-            lobLandingArrows.append(arrow)
-        }
-
-        addChild(lobLandingIndicator)
+        return node
     }
 
     private func buildNPCBossBar() {
@@ -849,8 +849,11 @@ final class InteractiveMatchScene: SKScene {
         playerJumpTimer = 0
         playerJumpCooldownTimer = 0
         playerJumpHeightBonus = 0
-        highBallWarning.alpha = 0
-        lobLandingIndicator.alpha = 0
+        playerSpriteFlipped = false
+        npcSpriteFlipped = false
+        playerDinkPushTimer = 0
+        npcDinkPushTimer = 0
+        hideAllMoveGuides()
         wasLobbed = false
 
         // Recover stamina between points (scaled by stamina stat)
@@ -965,7 +968,8 @@ final class InteractiveMatchScene: SKScene {
         previousBallNY = ballSim.courtY
         ballNode.alpha = 1
         ballShadow.alpha = 1
-        playerAnimator.play(.serveSwing)
+        playerAnimator.play(.forehand(isNear: true))
+        playerSpriteFlipped = false
 
         let serveAccuracy = 1.0 - scatter * 3
         showShotMarkers(targetNX: targetNX, targetNY: targetNY, accuracy: max(0, serveAccuracy))
@@ -1041,7 +1045,8 @@ final class InteractiveMatchScene: SKScene {
         previousBallNY = ballSim.courtY
         ballNode.alpha = 1
         ballShadow.alpha = 1
-        npcAnimator.play(.serveSwing)
+        npcAnimator.play(.forehand(isNear: false))
+        npcSpriteFlipped = false
 
         showShotMarkers(targetNX: targetNX, targetNY: targetNY, accuracy: isDoubleFault ? 0.0 : 0.8)
     }
@@ -1478,10 +1483,15 @@ final class InteractiveMatchScene: SKScene {
             checkBallState()
             checkPlayerHit()
             checkNPCHit()
+
+            // Dink push animation timers
+            if playerDinkPushTimer > 0 { playerDinkPushTimer = max(0, playerDinkPushTimer - dt) }
+            if npcDinkPushTimer > 0 { npcDinkPushTimer = max(0, npcDinkPushTimer - dt) }
+
             syncAllPositions()
             updatePlayerStaminaBar()
             updateNPCBossBar()
-            updateHighBallIndicator()
+            updateMovementGuide()
             updateJumpButtonVisual()
 
         case .serving:
@@ -1603,123 +1613,133 @@ final class InteractiveMatchScene: SKScene {
         return sin(fraction * .pi) * P.jumpSpriteYOffset
     }
 
-    // MARK: - High Ball Indicator
+    // MARK: - Movement Guide
 
-    private func updateHighBallIndicator() {
-        guard ballSim.isActive && !ballSim.lastHitByPlayer else {
-            highBallWarning.alpha = 0
-            lobLandingIndicator.alpha = 0
-            return
-        }
-
-        // Only show when ball is approaching and within range
-        let dx = ballSim.courtX - playerNX
-        let dy = ballSim.courtY - playerNY
-        let dist = sqrt(dx * dx + dy * dy)
-        guard dist < P.highBallIndicatorDistance else {
-            highBallWarning.alpha = 0
-            lobLandingIndicator.alpha = 0
-            return
-        }
-        guard ballSim.vy < 0 else {  // ball must be heading toward player
-            highBallWarning.alpha = 0
-            lobLandingIndicator.alpha = 0
-            return
-        }
-
-        // Predict ball height when it reaches player's Y
-        let ballSpeedY = abs(ballSim.vy)
-        guard ballSpeedY > 0.01 else {
-            highBallWarning.alpha = 0
-            lobLandingIndicator.alpha = 0
-            return
-        }
-        let timeToPlayer = abs(ballSim.courtY - playerNY) / ballSpeedY
-        let predictedHeight = ballSim.height + ballSim.vz * timeToPlayer
-            - 0.5 * P.gravity * timeToPlayer * timeToPlayer
-
-        // Player's standing height reach
-        let speedStat = CGFloat(playerStats.stat(.speed))
-        let reflexesStat = CGFloat(playerStats.stat(.reflexes))
-        let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
-        let standingReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus
-        let jumpReach = standingReach + P.jumpHeightReachBonus
-
-        let excessAboveStanding = predictedHeight - standingReach
-
-        guard excessAboveStanding > P.highBallWarningThreshold else {
-            highBallWarning.alpha = 0
-            lobLandingIndicator.alpha = 0
-            return
-        }
-
-        // Position above player sprite
-        let screenPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
-        let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, playerNY)))
-        highBallWarning.position = CGPoint(x: screenPos.x, y: screenPos.y + 50 * pScale + 15)
-
-        if predictedHeight <= jumpReach {
-            // Orange: jump can reach it — auto-jump when ball is close
-            highBallChevron.fontColor = .systemOrange
-            highBallLabel.fontColor = .systemOrange
-            highBallLabel.text = "JUMP!"
-            lobLandingIndicator.alpha = 0
-            if timeToPlayer < 0.4 {
-                initiatePlayerJump()
-            }
-        } else {
-            // Lob going over head — predict landing spot and show indicator
-            highBallChevron.fontColor = .systemRed
-            highBallLabel.fontColor = .systemRed
-            highBallLabel.text = "BACK UP!"
-            updateLobLandingIndicator()
-        }
-
-        // Pulsing alpha based on urgency (closer = more opaque)
-        let urgency = 1.0 - min(dist / P.highBallIndicatorDistance, 1.0)
-        let pulse = 0.5 + 0.5 * abs(sin(CGFloat(CACurrentMediaTime()) * 6))
-        highBallWarning.alpha = (0.5 + urgency * 0.5) * pulse
+    private func hideAllMoveGuides() {
+        moveGuideBack.alpha = 0
+        moveGuideLeft.alpha = 0
+        moveGuideRight.alpha = 0
+        moveGuideForward.alpha = 0
     }
 
-    private func updateLobLandingIndicator() {
-        // Predict where the ball will land (height = 0) using projectile equation:
+    private func updateMovementGuide() {
+        guard ballSim.isActive && !ballSim.lastHitByPlayer else {
+            hideAllMoveGuides()
+            return
+        }
+        guard ballSim.vy < 0 else {  // ball heading toward player
+            hideAllMoveGuides()
+            return
+        }
+
+        // Predict landing position using projectile equation:
         // 0 = h + vz*t - 0.5*g*t²  →  t = (vz + sqrt(vz² + 2*g*h)) / g
         let h = ballSim.height
         let vzCur = ballSim.vz
         let g = P.gravity
-
         let discriminant = vzCur * vzCur + 2 * g * h
-        guard discriminant >= 0 else {
-            lobLandingIndicator.alpha = 0
-            return
-        }
+        guard discriminant >= 0 else { hideAllMoveGuides(); return }
 
         let timeToLand = (vzCur + sqrt(discriminant)) / g
-        guard timeToLand > 0.05 else {
-            lobLandingIndicator.alpha = 0
-            return
-        }
+        guard timeToLand > 0.05 else { hideAllMoveGuides(); return }
 
-        // Predicted landing court position
         let landNX = ballSim.courtX + ballSim.vx * timeToLand
         let landNY = ballSim.courtY + ballSim.vy * timeToLand
 
-        // Only show if landing is on the player's half
-        guard landNY < 0.5, landNX > -0.1, landNX < 1.1 else {
-            lobLandingIndicator.alpha = 0
-            return
+        // Only guide on player's half
+        guard landNY < 0.55 else { hideAllMoveGuides(); return }
+
+        // How far player needs to move to reach landing spot
+        let needDX = landNX - playerNX   // positive = need to go right
+        let needDY = landNY - playerNY   // negative = need to go back (lower Y)
+
+        // Threshold: only show if player needs to move a meaningful distance
+        let lateralThreshold: CGFloat = 0.12
+        let depthThreshold: CGFloat = 0.10
+
+        let needLeft = needDX < -lateralThreshold
+        let needRight = needDX > lateralThreshold
+        let needBack = needDY < -depthThreshold
+        let needForward = needDY > depthThreshold
+
+        // DUPR-based anticipation: higher DUPR = show guide earlier
+        // DUPR 2.0 → show at 0.6s before land, DUPR 8.0 → show at 1.5s before land
+        let dupr = player.duprRating
+        let anticipation: CGFloat = 0.6 + CGFloat((dupr - 2.0) / 6.0) * 0.9
+        guard timeToLand < anticipation else { hideAllMoveGuides(); return }
+
+        // Auto-jump for high balls within jump reach
+        let ballSpeedY = abs(ballSim.vy)
+        if ballSpeedY > 0.01 {
+            let timeToPlayerY = abs(ballSim.courtY - playerNY) / ballSpeedY
+            let heightAtPlayer = ballSim.height + ballSim.vz * timeToPlayerY
+                - 0.5 * g * timeToPlayerY * timeToPlayerY
+            let speedStat = CGFloat(playerStats.stat(.speed))
+            let reflexesStat = CGFloat(playerStats.stat(.reflexes))
+            let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
+            let standingReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus
+            let jumpReach = standingReach + P.jumpHeightReachBonus
+
+            if heightAtPlayer > standingReach && heightAtPlayer <= jumpReach && timeToPlayerY < 0.4 {
+                initiatePlayerJump()
+            }
+            // Mark as lob if unreachable even with jump
+            if heightAtPlayer > jumpReach {
+                wasLobbed = true
+            }
         }
 
-        // Position on court
-        let landScreenPos = CourtRenderer.courtPoint(nx: landNX, ny: max(0, landNY))
-        let landScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, landNY)))
-        lobLandingIndicator.position = landScreenPos
-        lobLandingIndicator.setScale(landScale)
+        // Pulsing alpha — faster pulse as ball gets closer
+        let urgency = 1.0 - min(timeToLand / anticipation, 1.0)
+        let pulseSpeed: CGFloat = 4 + urgency * 6
+        let pulse = (0.4 + urgency * 0.6) * (0.6 + 0.4 * abs(sin(CGFloat(CACurrentMediaTime()) * pulseSpeed)))
 
-        // Pulsing animation
-        let pulse = 0.6 + 0.4 * abs(sin(CGFloat(CACurrentMediaTime()) * 5))
-        lobLandingIndicator.alpha = pulse
-        wasLobbed = true
+        // Position each arrow on the court relative to the player
+        let pNY = max(0.0, playerNY)
+
+        if needBack {
+            let arrowNY = max(0.0, pNY - 0.12)
+            let pos = CourtRenderer.courtPoint(nx: playerNX, ny: arrowNY)
+            let scale = CourtRenderer.perspectiveScale(ny: arrowNY)
+            moveGuideBack.position = pos
+            moveGuideBack.setScale(scale)
+            moveGuideBack.alpha = pulse
+        } else {
+            moveGuideBack.alpha = 0
+        }
+
+        if needForward {
+            let arrowNY = min(0.48, pNY + 0.12)
+            let pos = CourtRenderer.courtPoint(nx: playerNX, ny: arrowNY)
+            let scale = CourtRenderer.perspectiveScale(ny: arrowNY)
+            moveGuideForward.position = pos
+            moveGuideForward.setScale(scale)
+            moveGuideForward.alpha = pulse
+        } else {
+            moveGuideForward.alpha = 0
+        }
+
+        if needLeft {
+            let arrowNX = max(0.05, playerNX - 0.14)
+            let pos = CourtRenderer.courtPoint(nx: arrowNX, ny: pNY)
+            let scale = CourtRenderer.perspectiveScale(ny: pNY)
+            moveGuideLeft.position = pos
+            moveGuideLeft.setScale(scale)
+            moveGuideLeft.alpha = pulse
+        } else {
+            moveGuideLeft.alpha = 0
+        }
+
+        if needRight {
+            let arrowNX = min(0.95, playerNX + 0.14)
+            let pos = CourtRenderer.courtPoint(nx: arrowNX, ny: pNY)
+            let scale = CourtRenderer.perspectiveScale(ny: pNY)
+            moveGuideRight.position = pos
+            moveGuideRight.setScale(scale)
+            moveGuideRight.alpha = pulse
+        } else {
+            moveGuideRight.alpha = 0
+        }
     }
 
     private func updateJumpButtonVisual() {
@@ -1745,7 +1765,7 @@ final class InteractiveMatchScene: SKScene {
 
     private func movePlayer(dt: CGFloat) {
         guard joystickMagnitude > 0.1 else {
-            playerAnimator.play(.ready)
+            playerAnimator.play(.idle(isNear: true))
             timeSinceLastSprint += dt
             if timeSinceLastSprint >= P.staminaRecoveryDelay {
                 stamina = min(P.maxStamina, stamina + P.staminaRecoveryRate * dt)
@@ -1800,12 +1820,18 @@ final class InteractiveMatchScene: SKScene {
         playerNX = max(0.0, min(1.0, playerNX))
         playerNY = max(-0.05, min(0.48 - P.playerPositioningOffset, playerNY))
 
+        // Movement animation: shuffle for non-sprint, runSide for sprint
         let dx = joystickDirection.dx
-        let dy = joystickDirection.dy
-        if abs(dx) > abs(dy) {
-            playerAnimator.play(dx > 0 ? .walkRight : .walkLeft)
+        if isSprinting {
+            // Sprint: use runSide (drawn as left, flip for right)
+            playerAnimator.play(.runSide)
+            playerSpriteFlipped = dx > 0 // flip when running right
         } else {
-            playerAnimator.play(dy > 0 ? .walkAway : .walkToward)
+            // Non-sprint: shuffle (drawn as right, flip for left)
+            playerAnimator.play(.shuffle(isNear: true))
+            if abs(dx) > 0.3 {
+                playerSpriteFlipped = dx < 0 // flip when shuffling left
+            }
         }
     }
 
@@ -1959,8 +1985,20 @@ final class InteractiveMatchScene: SKScene {
             isNetFault: isNetFault
         )
 
-        let animState: CharacterAnimationState = shot.shotType == .forehand ? .forehand : .backhand
+        // Pick animation: smash (overhead), dink (kitchen push), or forehand/backhand
+        let animState: CharacterAnimationState
+        if shot.smashFactor > 0 {
+            animState = .smash(isNear: true)
+        } else if playerNY > dinkKitchenThreshold && !activeShotModes.contains(.power) {
+            // Dink at kitchen: use run animation + push motion
+            animState = .run(isNear: true)
+            playerDinkPushTimer = dinkPushDuration
+        } else {
+            animState = shot.shotType == .forehand
+                ? .forehand(isNear: true) : .backhand(isNear: true)
+        }
         playerAnimator.play(animState)
+        playerSpriteFlipped = false
 
         ballSim.launch(
             from: CGPoint(x: playerNX, y: playerNY),
@@ -2032,7 +2070,7 @@ final class InteractiveMatchScene: SKScene {
                 rallyLength += 1
                 // Animate the whiff
                 let ballFromLeft = ballSim.courtX < npcAI.currentNX
-                npcAnimator.play(ballFromLeft ? .backhand : .forehand)
+                npcAnimator.play(ballFromLeft ? .backhand(isNear: false) : .forehand(isNear: false))
 
                 // Context-aware error type based on shot attempted
                 let errType = npcAI.errorType(for: npcAI.lastShotModes)
@@ -2101,8 +2139,19 @@ final class InteractiveMatchScene: SKScene {
                 errorRate: errDbg.errorRate
             )
 
-            let animState: CharacterAnimationState = shot.shotType == .forehand ? .forehand : .backhand
-            npcAnimator.play(animState)
+            // Pick animation: smash, dink (kitchen push), or forehand/backhand
+            let npcAnimState: CharacterAnimationState
+            if shot.smashFactor > 0 {
+                npcAnimState = .smash(isNear: false)
+            } else if npcAI.currentNY < (1.0 - dinkKitchenThreshold) && !npcAI.lastShotModes.contains(.power) {
+                npcAnimState = .run(isNear: false)
+                npcDinkPushTimer = dinkPushDuration
+            } else {
+                npcAnimState = shot.shotType == .forehand
+                    ? .forehand(isNear: false) : .backhand(isNear: false)
+            }
+            npcAnimator.play(npcAnimState)
+            npcSpriteFlipped = false
 
             ballSim.launch(
                 from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
@@ -2261,20 +2310,28 @@ final class InteractiveMatchScene: SKScene {
 
         // Jump Y-offset
         let jumpOffset = playerJumpSpriteYOffset * pScale
-        playerNode.position = CGPoint(x: screenPos.x, y: screenPos.y + jumpOffset)
 
-        // Squash/stretch during jump
+        // Dink push Y-offset (toward net = positive screen Y for player)
+        var dinkPushOffset: CGFloat = 0
+        if playerDinkPushTimer > 0 {
+            let progress = 1.0 - playerDinkPushTimer / dinkPushDuration
+            dinkPushOffset = sin(progress * .pi) * 8.0 * pScale
+        }
+        playerNode.position = CGPoint(x: screenPos.x, y: screenPos.y + jumpOffset + dinkPushOffset)
+
+        // Squash/stretch during jump + sprite flipping
         let baseScale = AC.Sprites.nearPlayerScale * pScale
         if playerJumpPhase != .grounded {
             let fraction = min(playerJumpTimer / P.jumpDuration, 1.0)
             let sinVal = sin(fraction * .pi)
             // Rising: narrow + tall. Landing: wide + short (squash).
-            let xScale = baseScale * (1.0 - sinVal * 0.12)
+            let xMag = baseScale * (1.0 - sinVal * 0.12)
             let yScale = baseScale * (1.0 + sinVal * 0.15)
-            playerNode.xScale = xScale
+            playerNode.xScale = playerSpriteFlipped ? -xMag : xMag
             playerNode.yScale = yScale
         } else {
-            playerNode.setScale(baseScale)
+            playerNode.xScale = playerSpriteFlipped ? -baseScale : baseScale
+            playerNode.yScale = baseScale
         }
         playerNode.zPosition = AC.ZPositions.nearPlayer - CGFloat(playerNY) * 0.1
 
@@ -2297,18 +2354,26 @@ final class InteractiveMatchScene: SKScene {
 
         // NPC jump Y-offset
         let jumpOffset = npcAI.jumpSpriteYOffset * pScale
-        npcNode.position = CGPoint(x: screenPos.x, y: screenPos.y + jumpOffset)
 
-        // Squash/stretch during NPC jump
+        // NPC dink push Y-offset (toward net = negative screen Y for NPC at top)
+        var dinkPushOffset: CGFloat = 0
+        if npcDinkPushTimer > 0 {
+            let progress = 1.0 - npcDinkPushTimer / dinkPushDuration
+            dinkPushOffset = -sin(progress * .pi) * 8.0 * pScale
+        }
+        npcNode.position = CGPoint(x: screenPos.x, y: screenPos.y + jumpOffset + dinkPushOffset)
+
+        // Squash/stretch during NPC jump + sprite flipping
         let baseScale = AC.Sprites.farPlayerScale * pScale
         if npcAI.jumpPhase != .grounded {
             let sinVal = sin(npcAI.jumpAnimationFraction * .pi)
-            let xScale = baseScale * (1.0 - sinVal * 0.12)
+            let xMag = baseScale * (1.0 - sinVal * 0.12)
             let yScale = baseScale * (1.0 + sinVal * 0.15)
-            npcNode.xScale = xScale
+            npcNode.xScale = npcSpriteFlipped ? -xMag : xMag
             npcNode.yScale = yScale
         } else {
-            npcNode.setScale(baseScale)
+            npcNode.xScale = npcSpriteFlipped ? -baseScale : baseScale
+            npcNode.yScale = baseScale
         }
         npcNode.zPosition = AC.ZPositions.farPlayer - CGFloat(npcAI.currentNY) * 0.1
     }
@@ -2521,14 +2586,24 @@ final class InteractiveMatchScene: SKScene {
         let centerPos = CourtRenderer.courtPoint(nx: baseNX, ny: npcAI.currentNY)
 
         let pace = SKAction.sequence([
-            .run { [weak self] in self?.npcAnimator.play(.walkLeft) },
+            .run { [weak self] in
+                self?.npcAnimator.play(.shuffle(isNear: false))
+                self?.npcSpriteFlipped = true  // shuffle-right flipped = going left
+            },
             .move(to: leftPos, duration: stepDuration),
-            .run { [weak self] in self?.npcAnimator.play(.walkRight) },
+            .run { [weak self] in
+                self?.npcAnimator.play(.shuffle(isNear: false))
+                self?.npcSpriteFlipped = false  // shuffle-right = going right
+            },
             .move(to: rightPos, duration: stepDuration * 2),
-            .run { [weak self] in self?.npcAnimator.play(.walkLeft) },
+            .run { [weak self] in
+                self?.npcAnimator.play(.shuffle(isNear: false))
+                self?.npcSpriteFlipped = true
+            },
             .move(to: centerPos, duration: stepDuration),
             .run { [weak self] in
-                self?.npcAnimator.play(.ready)
+                self?.npcAnimator.play(.idle(isNear: false))
+                self?.npcSpriteFlipped = false
                 self?.npcIsPacing = false
             }
         ])
@@ -2550,7 +2625,8 @@ final class InteractiveMatchScene: SKScene {
         hideNPCSpeech()
 
         // Animate NPC walking off to the right with muffled angry mumbles
-        npcAnimator.play(.walkRight)
+        npcAnimator.play(.runSide)
+        npcSpriteFlipped = true  // runSide is drawn as left, flip for right
 
         let walkDuration: TimeInterval = 3.0
         let startX = npcNode.position.x
