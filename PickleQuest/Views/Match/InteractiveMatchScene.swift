@@ -1970,6 +1970,7 @@ final class InteractiveMatchScene: SKScene {
             spin: shot.spinCurve,
             topspin: shot.topspinFactor
         )
+        ballSim.smashFactor = shot.smashFactor
         ballSim.lastHitByPlayer = true
         previousBallNY = ballSim.courtY
         checkedFirstBounce = false
@@ -2111,6 +2112,7 @@ final class InteractiveMatchScene: SKScene {
                 spin: shot.spinCurve,
                 topspin: shot.topspinFactor
             )
+            ballSim.smashFactor = shot.smashFactor
             ballSim.lastHitByPlayer = false
             previousBallNY = ballSim.courtY
             checkedFirstBounce = false

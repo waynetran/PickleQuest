@@ -25,6 +25,9 @@ final class DrillBallSimulation {
     var activeTime: CGFloat = 0
     var skipNetCorrection: Bool = false
 
+    /// Smash factor: 0 = normal shot, 1 = full overhead smash. Amplifies bounce height.
+    var smashFactor: CGFloat = 0
+
     // Sub-frame interpolated bounce position (exact landing spot)
     private(set) var lastBounceCourtX: CGFloat = 0.5
     private(set) var lastBounceCourtY: CGFloat = 0.5
@@ -82,6 +85,11 @@ final class DrillBallSimulation {
             vx *= P.courtFriction
             vy *= P.courtFriction
 
+            // Smash shots bounce higher (amplify vz after damping)
+            if smashFactor > 0 {
+                vz *= (1.0 + smashFactor * (P.smashBounceMultiplier - 1.0))
+            }
+
             // Topspin/backspin effects on bounce
             // Topspin: accelerates 30% after bounce, stays low (kills bounce height)
             // Slice (backspin): skids forward, stays very low after bounce
@@ -104,6 +112,7 @@ final class DrillBallSimulation {
 
     func launch(from origin: CGPoint, toward target: CGPoint, power: CGFloat, arc: CGFloat, spin: CGFloat, topspin: CGFloat = 0) {
         skipNetCorrection = false
+        smashFactor = 0
         courtX = origin.x
         courtY = origin.y
         height = 0.05  // slightly above ground for visual clarity
@@ -177,6 +186,7 @@ final class DrillBallSimulation {
         isActive = false
         lastHitByPlayer = false
         skipNetCorrection = false
+        smashFactor = 0
         activeTime = 0
         lastBounceCourtX = 0.5
         lastBounceCourtY = 0.5

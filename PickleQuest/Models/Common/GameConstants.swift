@@ -377,6 +377,12 @@ enum GameConstants {
         // Shot quality
         static let heightPowerBonus: CGFloat = 0.3        // bonus power for high ball (overhead smash)
 
+        // Overhead smash (high ball attack — punishes kitchen-line play)
+        static let smashHeightThreshold: CGFloat = 0.12   // ball height to trigger smash
+        static let smashPowerMultiplier: CGFloat = 2.0    // smash adds 2x what power mode adds
+        static let smashBounceMultiplier: CGFloat = 1.8   // smash bounces 80% higher than normal
+        static let smashArcBonus: CGFloat = 0.15          // steeper descent for realistic overhead angle
+
         // Drill ball count
         static let drillBallCount: Int = 10
         static let feedDelay: TimeInterval = 0.8

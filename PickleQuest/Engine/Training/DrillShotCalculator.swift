@@ -10,6 +10,7 @@ enum DrillShotCalculator {
         var targetNY: CGFloat      // target Y in court space
         let shotType: ShotType
         var topspinFactor: CGFloat // -1 = backspin, 0 = flat, +1 = topspin
+        var smashFactor: CGFloat = 0 // 0 = normal, 1 = full overhead smash
     }
 
     enum ShotType: Sendable {
@@ -249,6 +250,12 @@ enum DrillShotCalculator {
             power = max(0.30, 0.15 + (powerStat / 99.0) * 0.85)
             let heightBonus = min(ballHeight / 0.15, 1.0) * P.heightPowerBonus
             power += heightBonus
+
+            // Overhead smash: high ball → 2x power mode bonus, scaled by stamina
+            if ballHeight >= P.smashHeightThreshold {
+                let powerModeBonus = power * (powerStat / 99.0)
+                power += powerModeBonus * P.smashPowerMultiplier * staminaFraction
+            }
         }
 
         // Default target by drill type
@@ -349,6 +356,11 @@ enum DrillShotCalculator {
                 margin = 0.90  // slice floats — less arc needed
             }
             arc = arcToLandAt(distanceNY: distToTargetNY, distanceNX: distToTargetNX, power: power, arcMargin: margin)
+
+            // Overhead smash: steeper descent → higher bounce on opponent's side
+            if ballHeight >= P.smashHeightThreshold {
+                arc += P.smashArcBonus
+            }
         }
 
         // Apply scatter — allow targets outside court for genuine misses
@@ -367,6 +379,11 @@ enum DrillShotCalculator {
             targetNY = max(0.48, min(1.05, targetNY + scatterY))
         }
 
+        // Smash factor: scales 0→1 based on how far above smash threshold
+        let smashFactor: CGFloat = ballHeight >= P.smashHeightThreshold
+            ? min(1.0, (ballHeight - P.smashHeightThreshold) / 0.10)
+            : 0
+
         return ShotResult(
             power: power,
             accuracy: max(0, 1.0 - scatter * 5),
@@ -375,7 +392,8 @@ enum DrillShotCalculator {
             targetNX: targetNX,
             targetNY: targetNY,
             shotType: shotType,
-            topspinFactor: topspinFactor
+            topspinFactor: topspinFactor,
+            smashFactor: smashFactor
         )
     }
 
