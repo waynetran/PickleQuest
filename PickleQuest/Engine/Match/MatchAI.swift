@@ -495,6 +495,75 @@ final class MatchAI {
         return CGFloat.random(in: 0...1) < errorRate
     }
 
+    /// Debug info from the last `shouldMakeError` call. Call `computeErrorDebugInfo` to populate.
+    struct ErrorDebugInfo {
+        let errorRate: CGFloat
+        let baseError: CGFloat
+        let pressureError: CGFloat
+        let shotDifficulty: CGFloat
+        let speedFrac: CGFloat
+        let spinPressure: CGFloat
+        let stretchFrac: CGFloat
+        let stretchMultiplier: CGFloat
+        let staminaPct: CGFloat
+        let shotQuality: CGFloat
+        let duprMultiplier: CGFloat
+    }
+
+    /// Compute error debug info without rolling the dice (non-mutating snapshot).
+    func computeErrorDebugInfo(ball: DrillBallSimulation) -> ErrorDebugInfo {
+        let boost = statBoost
+        let consistencyStat = CGFloat(min(99, npcStats.stat(.consistency) + boost))
+        let focusStat = CGFloat(min(99, npcStats.stat(.focus) + boost))
+        let reflexesStat = CGFloat(min(99, npcStats.stat(.reflexes) + boost))
+        let avgStat = (consistencyStat + focusStat + reflexesStat) / 3.0
+        let statFraction = avgStat / 99.0
+        let baseError: CGFloat = P.npcBaseErrorRate * (1.0 - statFraction)
+
+        let dx = ball.courtX - currentNX
+        let dy = ball.courtY - currentNY
+        let dist = sqrt(dx * dx + dy * dy)
+        let stretchFraction = min(dist / hitboxRadius, 1.0)
+
+        let ballSpeed = sqrt(ball.vx * ball.vx + ball.vy * ball.vy)
+        let maxBallSpeed = P.baseShotSpeed + 2.0 * (P.maxShotSpeed - P.baseShotSpeed)
+        let speedFraction = max(0, min(1, (ballSpeed - P.baseShotSpeed) / (maxBallSpeed - P.baseShotSpeed)))
+        let spinPressure = min(abs(ball.spinCurve) + abs(ball.topspinFactor) * 0.5, 1.0)
+        let stretchMultiplier = 0.2 + stretchFraction * 0.8
+        let shotDifficulty = min(1.0, speedFraction * 0.8 * stretchMultiplier + spinPressure * 0.3)
+        let pressureError: CGFloat = shotDifficulty * P.npcPowerErrorScale * (1.0 - statFraction)
+        var errorRate = max(shotDifficulty * P.npcMinPowerErrorFloor, baseError + pressureError)
+
+        let staminaPct = stamina / P.maxStamina
+        if staminaPct < 0.30 {
+            let fatiguePenalty = 1.0 + (1.0 - staminaPct / 0.30)
+            errorRate *= fatiguePenalty
+        }
+        if stretchFraction > 0.6 {
+            errorRate *= 1.0 + (stretchFraction - 0.6) * 1.5
+        }
+        var shotQuality: CGFloat = 0
+        if !isHeadless {
+            shotQuality = assessPlayerShotQuality(ball: ball)
+            errorRate *= (1.0 + shotQuality)
+        }
+        var duprMultiplier: CGFloat = 1.0
+        let duprGap = npcDUPR - playerDUPR
+        if duprGap > 0 {
+            duprMultiplier = max(S.duprErrorFloor, CGFloat(exp(-Double(duprGap) * Double(S.duprErrorDecayRate))))
+            errorRate *= duprMultiplier
+        } else if duprGap < 0 {
+            duprMultiplier = min(S.duprErrorCeiling, CGFloat(exp(Double(abs(duprGap)) * Double(S.duprErrorGrowthRate))))
+            errorRate *= duprMultiplier
+        }
+        return ErrorDebugInfo(
+            errorRate: errorRate, baseError: baseError, pressureError: pressureError,
+            shotDifficulty: shotDifficulty, speedFrac: speedFraction, spinPressure: spinPressure,
+            stretchFrac: stretchFraction, stretchMultiplier: stretchMultiplier,
+            staminaPct: staminaPct, shotQuality: shotQuality, duprMultiplier: duprMultiplier
+        )
+    }
+
     // MARK: - Shot Quality Assessment
 
     /// Assess how well the player chose their shot based on the ball situation.

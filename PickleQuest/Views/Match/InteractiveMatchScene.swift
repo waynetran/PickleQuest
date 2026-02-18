@@ -181,6 +181,7 @@ final class InteractiveMatchScene: SKScene {
     private let contestedDropRarity: EquipmentRarity?
     private let contestedDropItemCount: Int
     private let onComplete: (MatchResult) -> Void
+    private let dbg = MatchDebugLogger.shared
 
     // MARK: - Init
 
@@ -240,6 +241,16 @@ final class InteractiveMatchScene: SKScene {
         }
         matchStartTime = Date()
         npcBossBar.alpha = 1
+
+        // Enable debug logging in dev mode
+        dbg.isEnabled = isDevMode
+        dbg.logMatchStart(
+            player: player,
+            playerStats: playerStats,
+            npc: npc,
+            npcStatBoost: P.npcStatBoost
+        )
+
         onScoreUpdate?(playerScore, npcScore, servingSide)
         startNextPoint()
     }
@@ -726,6 +737,19 @@ final class InteractiveMatchScene: SKScene {
 
         syncAllPositions()
         onScoreUpdate?(playerScore, npcScore, servingSide)
+
+        dbg.logPointStart(
+            pointNum: totalPointsPlayed + 1,
+            servingSide: servingSide,
+            playerScore: playerScore,
+            npcScore: npcScore,
+            playerNX: playerNX,
+            playerNY: playerNY,
+            playerStamina: stamina,
+            npcNX: npcAI.currentNX,
+            npcNY: npcAI.currentNY,
+            npcStamina: npcAI.stamina
+        )
     }
 
     private func playerServe(from startPos: CGPoint, to endPos: CGPoint) {
@@ -774,6 +798,14 @@ final class InteractiveMatchScene: SKScene {
         // Drain stamina for active modes
         if activeShotModes.contains(.power) { stamina = max(0, stamina - P.maxStamina * 0.20) }
         if activeShotModes.contains(.focus) { stamina = max(0, stamina - P.maxStamina * 0.10) }
+
+        dbg.logPlayerServe(
+            originNX: playerNX, originNY: max(0, playerNY),
+            targetNX: targetNX, targetNY: targetNY,
+            power: servePower, arc: serveArc,
+            scatter: scatter, modes: activeShotModes,
+            stamina: stamina
+        )
 
         phase = .playing
         ballSim.launch(
@@ -842,6 +874,15 @@ final class InteractiveMatchScene: SKScene {
             arcMargin: 1.30 // extra margin for cross-court angle
         )
 
+        dbg.logNPCServe(
+            originNX: npcAI.currentNX, originNY: npcAI.currentNY,
+            targetNX: targetNX, targetNY: targetNY,
+            power: shot.power, arc: serveArc,
+            faultRate: faultRate, isDoubleFault: isDoubleFault,
+            modes: npcAI.lastServeModes,
+            stamina: npcAI.stamina
+        )
+
         phase = .playing
         ballSim.launch(
             from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
@@ -867,6 +908,12 @@ final class InteractiveMatchScene: SKScene {
     }
 
     private func resolvePoint(_ result: PointResult, reason: String) {
+        dbg.logPointEnd(
+            result: result == .playerWon ? "PLAYER WON" : "NPC WON",
+            reason: reason,
+            rallyLength: rallyLength
+        )
+
         // Capture ball state before reset for debug
         let ballX = String(format: "%.2f", ballSim.courtX)
         let ballY = String(format: "%.2f", ballSim.courtY)
@@ -1258,6 +1305,21 @@ final class InteractiveMatchScene: SKScene {
                 firstBounceCourtY = ballSim.lastBounceCourtY
                 showLandingSpot(courtX: firstBounceCourtX, courtY: firstBounceCourtY)
             }
+            // Log when ball crosses player's Y line (NPC shots heading toward player)
+            if !ballSim.lastHitByPlayer && prevBallY > playerNY && ballSim.courtY <= playerNY {
+                let xDist = abs(ballSim.courtX - playerNX)
+                let positioningStat = CGFloat(playerStats.stat(.positioning))
+                let hitbox = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
+                dbg.logBallAtPlayerY(
+                    ballX: ballSim.courtX, ballY: ballSim.courtY, ballHeight: ballSim.height,
+                    playerNX: playerNX, playerNY: playerNY,
+                    xDistance: xDist,
+                    hitboxRadius: hitbox,
+                    wouldBeInHitbox: xDist <= hitbox,
+                    bounceCount: ballSim.bounceCount
+                )
+            }
+
             npcAI.playerPositionNX = playerNX
             npcAI.update(dt: dt, ball: ballSim)
             checkPlayerHit()
@@ -1443,6 +1505,7 @@ final class InteractiveMatchScene: SKScene {
         let reflexesStat = CGFloat(playerStats.stat(.reflexes))
         let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
         let heightReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus
+        let excessHeight_dbg = max(0, ballSim.height - heightReach)
 
         // Swept collision: find closest point on ball's path segment to player
         // This prevents fast balls from tunneling through the hitbox between frames
@@ -1451,6 +1514,31 @@ final class InteractiveMatchScene: SKScene {
             currX: ballSim.courtX, currY: ballSim.courtY, currH: ballSim.height,
             targetX: playerNX, targetY: playerNY, heightReach: heightReach
         )
+
+        // Also compute simple 2D distance for logging
+        let dx_dbg = ballSim.courtX - playerNX
+        let dy_dbg = ballSim.courtY - playerNY
+        let dist2D_dbg = sqrt(dx_dbg * dx_dbg + dy_dbg * dy_dbg)
+
+        let ballSpeed_dbg = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
+
+        // Log ball approaching player when it's within 2x hitbox (to see near-misses too)
+        if dist <= hitboxRadius * 2.0 {
+            dbg.logBallApproachingPlayer(
+                ballX: ballSim.courtX, ballY: ballSim.courtY, ballHeight: ballSim.height,
+                ballVX: ballSim.vx, ballVY: ballSim.vy, ballVZ: ballSim.vz,
+                ballSpeed: ballSpeed_dbg, ballSpin: ballSim.spinCurve, ballTopspin: ballSim.topspinFactor,
+                bounceCount: ballSim.bounceCount,
+                playerNX: playerNX, playerNY: playerNY,
+                hitboxRadius: hitboxRadius,
+                dist2D: dist2D_dbg,
+                dist3D: dist,
+                heightReach: heightReach,
+                excessHeight: excessHeight_dbg,
+                isInHitbox: dist <= hitboxRadius
+            )
+        }
+
         guard dist <= hitboxRadius else { return }
 
         // --- Forced error: player whiff on hard incoming shots ---
@@ -1485,8 +1573,28 @@ final class InteractiveMatchScene: SKScene {
         let gapAmplifier = 1.0 + CGFloat(duprGapForPlayer) * NPCS.duprForcedErrorAmplifier
         forcedErrorRate = (forcedErrorRate + pressureBonus) * gapAmplifier
 
-        if CGFloat.random(in: 0...1) < forcedErrorRate {
+        let whiffRoll = CGFloat.random(in: 0...1)
+        if whiffRoll < forcedErrorRate {
             // Ball passes through — player whiffs
+            dbg.logPlayerWhiff(
+                shotDifficulty: shotDifficulty,
+                speedFrac: speedFrac,
+                spinPressure: spinPressure,
+                stretchFrac: stretchFrac,
+                stretchMultiplier: stretchMultiplier,
+                forcedErrorRate: forcedErrorRate,
+                avgDefense: avgDefense,
+                rallyPressure: rallyPressure,
+                pressureThreshold: pressureThreshold,
+                pressureOverflow: pressureOverflow,
+                duprGapAmplifier: gapAmplifier,
+                ballSpeed: ballSpeed,
+                ballSpin: ballSim.spinCurve,
+                ballHeight: ballSim.height,
+                dist: dist,
+                hitboxRadius: hitboxRadius,
+                roll: whiffRoll
+            )
             playerErrors += 1
             showIndicator("Too good!", color: .systemRed)
             return // ball continues past player, will double-bounce or go out
@@ -1538,10 +1646,28 @@ final class InteractiveMatchScene: SKScene {
         let focusStat_nf = CGFloat(playerStats.stat(.focus))
         let avgControl_nf = (accuracyStat_nf + consistencyStat_nf + focusStat_nf) / 3.0
         let netFaultRate = PB.netFaultBaseRate * pow(1.0 - avgControl_nf / 99.0, 1.5)
-        if CGFloat.random(in: 0...1) < netFaultRate {
+        let netFaultRoll = CGFloat.random(in: 0...1)
+        let isNetFault = netFaultRoll < netFaultRate
+        if isNetFault {
             ballSim.skipNetCorrection = true
             shot.arc *= 0.15
         }
+
+        dbg.logPlayerHit(
+            shotDifficulty: shotDifficulty,
+            forcedErrorRate: forcedErrorRate,
+            roll: whiffRoll,
+            modes: activeShotModes,
+            stamina: stamina,
+            targetNX: shot.targetNX,
+            targetNY: shot.targetNY,
+            power: shot.power,
+            arc: shot.arc,
+            spinCurve: shot.spinCurve,
+            topspinFactor: shot.topspinFactor,
+            netFaultRate: netFaultRate,
+            isNetFault: isNetFault
+        )
 
         let animState: CharacterAnimationState = shot.shotType == .forehand ? .forehand : .backhand
         playerAnimator.play(animState)
@@ -1573,9 +1699,40 @@ final class InteractiveMatchScene: SKScene {
         // Two-bounce rule: NPC must let the ball bounce on return and 3rd shot
         if rallyLength < 2 && ballSim.bounceCount == 0 { return }
 
+        // Compute NPC hitbox metrics for logging (mirrors shouldSwing logic)
+        let npcSpeedStat = CGFloat(min(99, npc.stats.stat(.speed) + P.npcStatBoost))
+        let npcReflexesStat = CGFloat(min(99, npc.stats.stat(.reflexes) + P.npcStatBoost))
+        let npcAthleticism = (npcSpeedStat + npcReflexesStat) / 2.0 / 99.0
+        let npcHeightReach = P.baseHeightReach + npcAthleticism * P.maxHeightReachBonus
+        let npcExcessH = max(0, ballSim.height - npcHeightReach)
+        let npcDX = ballSim.courtX - npcAI.currentNX
+        let npcDY = ballSim.courtY - npcAI.currentNY
+        let npcDist = sqrt(npcDX * npcDX + npcDY * npcDY + npcExcessH * npcExcessH)
+        let npcBallSpeed = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
+        let npcInHitbox = npcDist <= npcAI.hitboxRadius
+
+        // Log when ball is near NPC (within 2x hitbox)
+        if npcDist <= npcAI.hitboxRadius * 2.0 {
+            dbg.logBallApproachingNPC(
+                ballX: ballSim.courtX, ballY: ballSim.courtY, ballHeight: ballSim.height,
+                ballVX: ballSim.vx, ballVY: ballSim.vy, ballVZ: ballSim.vz,
+                ballSpeed: npcBallSpeed, ballSpin: ballSim.spinCurve, ballTopspin: ballSim.topspinFactor,
+                bounceCount: ballSim.bounceCount,
+                npcNX: npcAI.currentNX, npcNY: npcAI.currentNY,
+                hitboxRadius: npcAI.hitboxRadius,
+                dist: npcDist,
+                heightReach: npcHeightReach,
+                excessHeight: npcExcessH,
+                isInHitbox: npcInHitbox
+            )
+        }
+
         if npcAI.shouldSwing(ball: ballSim) {
             // Pre-select modes so error type is context-aware
             npcAI.preselectModes(ball: ballSim)
+
+            // Capture debug info before the roll
+            let errDbg = npcAI.computeErrorDebugInfo(ball: ballSim)
 
             // Check for unforced error before generating the return
             if npcAI.shouldMakeError(ball: ballSim) {
@@ -1587,9 +1744,25 @@ final class InteractiveMatchScene: SKScene {
 
                 // Context-aware error type based on shot attempted
                 let errType = npcAI.errorType(for: npcAI.lastShotModes)
+
+                dbg.logNPCError(
+                    errorRate: errDbg.errorRate,
+                    baseError: errDbg.baseError,
+                    pressureError: errDbg.pressureError,
+                    shotDifficulty: errDbg.shotDifficulty,
+                    speedFrac: errDbg.speedFrac,
+                    spinPressure: errDbg.spinPressure,
+                    stretchFrac: errDbg.stretchFrac,
+                    stretchMultiplier: errDbg.stretchMultiplier,
+                    staminaPct: errDbg.staminaPct,
+                    shotQuality: errDbg.shotQuality,
+                    duprMultiplier: errDbg.duprMultiplier,
+                    errorType: errType,
+                    modes: npcAI.lastShotModes
+                )
+
                 switch errType {
                 case .net:
-                    // Hit into net — launch low and into the net
                     ballSim.launch(
                         from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
                         toward: CGPoint(x: CGFloat.random(in: 0.2...0.8), y: 0.3),
@@ -1598,7 +1771,6 @@ final class InteractiveMatchScene: SKScene {
                         spin: 0
                     )
                 case .long:
-                    // Hit long — launch hard past the baseline
                     ballSim.launch(
                         from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
                         toward: CGPoint(x: CGFloat.random(in: 0.2...0.8), y: CGFloat.random(in: -0.10...0.05)),
@@ -1607,7 +1779,6 @@ final class InteractiveMatchScene: SKScene {
                         spin: 0
                     )
                 case .wide:
-                    // Hit wide — launch toward the sideline
                     let wideTarget = Bool.random() ? CGFloat.random(in: -0.2...0.05) : CGFloat.random(in: 0.95...1.2)
                     ballSim.launch(
                         from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
@@ -1624,6 +1795,18 @@ final class InteractiveMatchScene: SKScene {
 
             rallyLength += 1
             let shot = npcAI.generateShot(ball: ballSim)
+
+            dbg.logNPCHit(
+                modes: npcAI.lastShotModes,
+                stamina: npcAI.stamina,
+                targetNX: shot.targetNX,
+                targetNY: shot.targetNY,
+                power: shot.power,
+                arc: shot.arc,
+                spinCurve: shot.spinCurve,
+                topspinFactor: shot.topspinFactor,
+                errorRate: errDbg.errorRate
+            )
 
             let animState: CharacterAnimationState = shot.shotType == .forehand ? .forehand : .backhand
             npcAnimator.play(animState)
@@ -1650,6 +1833,12 @@ final class InteractiveMatchScene: SKScene {
 
         // Net collision
         if ballSim.checkNetCollision(previousY: previousBallNY) {
+            dbg.logNetCollision(
+                ballHeight: ballSim.height,
+                previousBallNY: previousBallNY,
+                currentBallNY: ballSim.courtY,
+                lastHitByPlayer: ballSim.lastHitByPlayer
+            )
             let lastHitter: PointResult = ballSim.lastHitByPlayer ? .npcWon : .playerWon
             if ballSim.lastHitByPlayer {
                 playerErrors += 1
@@ -1665,6 +1854,16 @@ final class InteractiveMatchScene: SKScene {
         // Bounce-time line call: check on first bounce using interpolated position
         if ballSim.didBounceThisFrame && !checkedFirstBounce {
             checkedFirstBounce = true
+
+            dbg.logBallBounce(
+                bounceNum: 1,
+                courtX: firstBounceCourtX, courtY: firstBounceCourtY,
+                isOut: ballSim.isLandingOut,
+                isKitchenFault: rallyLength == 0 && (
+                    (ballSim.lastHitByPlayer && firstBounceCourtY >= 0.5 && firstBounceCourtY < 0.682) ||
+                    (!ballSim.lastHitByPlayer && firstBounceCourtY <= 0.5 && firstBounceCourtY > 0.318)
+                )
+            )
 
             // Out of bounds — ball landed outside the court lines (exact 0-1 boundaries)
             if ballSim.isLandingOut {
@@ -1702,6 +1901,7 @@ final class InteractiveMatchScene: SKScene {
 
         // Double bounce — ball bounced twice, point is over
         if ballSim.isDoubleBounce {
+            dbg.logDoubleBounce(courtY: ballSim.lastBounceCourtY, lastHitByPlayer: ballSim.lastHitByPlayer, bounceCount: ballSim.bounceCount)
             let bounceY = ballSim.lastBounceCourtY
             let side = bounceY < 0.5 ? "player" : "NPC"
             if bounceY < 0.5 {
