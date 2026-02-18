@@ -170,12 +170,11 @@ final class InteractiveMatchScene: SKScene {
     private let dinkPushDuration: CGFloat = 0.25
     private let dinkKitchenThreshold: CGFloat = 0.30
 
-    // Lateral lunge (sideways hop when joystick is horizontal and not sprinting)
-    private var lungeSpriteYOffset: CGFloat = 0   // current Y pixel offset for lunge hop
-    private var lungeTimer: CGFloat = 0           // tracks lunge animation progress
+    // Lateral lunge (fast sideways burst when joystick is horizontal and not sprinting)
+    private var lungeTimer: CGFloat = 0
     private var lungeActive: Bool = false
-    private let lungeDuration: CGFloat = 0.30     // total hop duration
-    private let lungeMaxYOffset: CGFloat = 25.0   // max pixel height of hop (before perspective)
+    private let lungeDuration: CGFloat = 0.20     // quick burst duration
+    private let lungeSpeedMultiplier: CGFloat = 3.5 // lateral speed boost during lunge
 
     // Movement guide arrows (court-painted directional hints)
     private var moveGuideBack: SKNode!
@@ -913,7 +912,6 @@ final class InteractiveMatchScene: SKScene {
         npcShotAnimTimer = 0
         lungeActive = false
         lungeTimer = 0
-        lungeSpriteYOffset = 0
         pendingPlayerShot = nil
         pendingNPCShot = nil
         pendingServeShot = nil
@@ -1960,10 +1958,20 @@ final class InteractiveMatchScene: SKScene {
         let dy = joystickDirection.dy
         let isMainlyHorizontal = abs(dx) > abs(dy)
 
-        // Lateral lunge: sideways non-sprint movement triggers a hop
+        // Lateral lunge: sideways non-sprint movement triggers a fast burst
         if !isSprinting && isMainlyHorizontal && abs(dx) > 0.3 && !lungeActive && playerJumpPhase == .grounded {
             lungeActive = true
             lungeTimer = 0
+        }
+
+        // Apply lunge speed boost
+        if lungeActive {
+            speed *= lungeSpeedMultiplier
+            lungeTimer += dt
+            if lungeTimer >= lungeDuration {
+                lungeActive = false
+                lungeTimer = 0
+            }
         }
 
         if canChangeAnim {
@@ -1982,7 +1990,7 @@ final class InteractiveMatchScene: SKScene {
                     playerSpriteFlipped = false
                 }
             } else {
-                // Non-sprint: shuffle in all directions (lunge hop handled by Y-offset)
+                // Non-sprint: shuffle in all directions
                 playerAnimator.play(.shuffle(isNear: true))
                 if abs(dx) > 0.3 {
                     playerSpriteFlipped = dx < 0 // flip when shuffling left
@@ -1990,22 +1998,6 @@ final class InteractiveMatchScene: SKScene {
                     playerSpriteFlipped = false
                 }
             }
-        }
-
-        // Update lunge hop animation
-        if lungeActive {
-            lungeTimer += dt
-            if lungeTimer >= lungeDuration {
-                lungeActive = false
-                lungeTimer = 0
-                lungeSpriteYOffset = 0
-            } else {
-                // Parabolic hop: sin curve for smooth up-and-down
-                let fraction = lungeTimer / lungeDuration
-                lungeSpriteYOffset = sin(fraction * .pi) * lungeMaxYOffset
-            }
-        } else {
-            lungeSpriteYOffset = 0
         }
     }
 
@@ -2596,10 +2588,7 @@ final class InteractiveMatchScene: SKScene {
             let progress = 1.0 - playerDinkPushTimer / dinkPushDuration
             dinkPushOffset = sin(progress * .pi) * 8.0 * pScale
         }
-        // Lunge hop Y-offset (lateral shuffle hop)
-        let lungeOffset = lungeSpriteYOffset * pScale
-
-        playerNode.position = CGPoint(x: screenPos.x, y: screenPos.y + jumpOffset + dinkPushOffset + lungeOffset)
+        playerNode.position = CGPoint(x: screenPos.x, y: screenPos.y + jumpOffset + dinkPushOffset)
 
         // Squash/stretch during jump + sprite flipping
         let baseScale = AC.Sprites.nearPlayerScale * pScale
