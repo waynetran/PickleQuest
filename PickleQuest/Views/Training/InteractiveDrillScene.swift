@@ -22,7 +22,7 @@ final class InteractiveDrillScene: SKScene {
     private var joystickOrigin: CGPoint = .zero
     private var joystickDirection: CGVector = .zero
     private var joystickMagnitude: CGFloat = 0
-    private let joystickBaseRadius: CGFloat = 60
+    private let joystickBaseRadius: CGFloat = 85
     private let joystickKnobRadius: CGFloat = 25
 
     // Swipe-to-serve state

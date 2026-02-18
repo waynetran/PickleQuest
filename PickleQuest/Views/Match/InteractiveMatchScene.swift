@@ -44,8 +44,8 @@ final class InteractiveMatchScene: SKScene {
     private var joystickOrigin: CGPoint = .zero
     private var joystickDirection: CGVector = .zero
     private var joystickMagnitude: CGFloat = 0
-    private let joystickBaseRadius: CGFloat = 60
-    private let joystickKnobRadius: CGFloat = 25
+    private let joystickBaseRadius: CGFloat = 85
+    private let joystickKnobRadius: CGFloat = 22
 
     // Swipe-to-serve state
     private var swipeTouchStart: CGPoint?
@@ -139,6 +139,10 @@ final class InteractiveMatchScene: SKScene {
     private var moveGuideRight: SKNode!
     private var moveGuideForward: SKNode!
     private var wasLobbed: Bool = false  // tracks if current point had an unreachable lob
+
+    // Split step animation (quick foot shuffle before opponent contacts ball)
+    private var playerSplitStepPlayed: Bool = false
+    private var npcSplitStepPlayed: Bool = false
 
     // Stamina
     private var stamina: CGFloat = P.maxStamina
@@ -853,6 +857,8 @@ final class InteractiveMatchScene: SKScene {
         npcSpriteFlipped = false
         playerDinkPushTimer = 0
         npcDinkPushTimer = 0
+        playerSplitStepPlayed = false
+        npcSplitStepPlayed = false
         hideAllMoveGuides()
         wasLobbed = false
 
@@ -1493,6 +1499,7 @@ final class InteractiveMatchScene: SKScene {
             updateNPCBossBar()
             updateMovementGuide()
             updateJumpButtonVisual()
+            updateSplitSteps()
 
         case .serving:
             movePlayer(dt: dt)
@@ -1758,6 +1765,53 @@ final class InteractiveMatchScene: SKScene {
         if playerJumpPhase != .grounded {
             jumpButtonBg.fillColor = UIColor.systemCyan.withAlphaComponent(0.7)
             jumpButtonBg.strokeColor = UIColor.systemCyan
+        }
+    }
+
+    // MARK: - Split Step
+
+    /// Trigger split step animation when the opponent is about to contact the ball.
+    /// Player split-steps when NPC is about to hit; NPC split-steps when player is about to hit.
+    private func updateSplitSteps() {
+        guard ballSim.isActive else { return }
+
+        let leadTime = SpriteSheetAnimator.splitStepRunDuration // 0.32s
+
+        // Player split step: ball heading toward NPC (player hit it), NPC about to return
+        if ballSim.lastHitByPlayer {
+            // Reset NPC split step flag (ball now going other way)
+            npcSplitStepPlayed = false
+
+            if !playerSplitStepPlayed {
+                let ballSpeed = abs(ballSim.vy)
+                if ballSpeed > 0.01 {
+                    let distToNPC = abs(ballSim.courtY - npcAI.currentNY)
+                    let timeToContact = distToNPC / ballSpeed
+                    // Only play split step if player is standing still (not moving via joystick)
+                    if timeToContact <= leadTime && timeToContact > 0 && joystickMagnitude < 0.1 {
+                        playerAnimator.playSplitStep()
+                        playerSpriteFlipped = false
+                        playerSplitStepPlayed = true
+                    }
+                }
+            }
+        } else {
+            // Ball heading toward player (NPC hit it), player about to return
+            // Reset player split step flag
+            playerSplitStepPlayed = false
+
+            if !npcSplitStepPlayed {
+                let ballSpeed = abs(ballSim.vy)
+                if ballSpeed > 0.01 {
+                    let distToPlayer = abs(ballSim.courtY - playerNY)
+                    let timeToContact = distToPlayer / ballSpeed
+                    if timeToContact <= leadTime && timeToContact > 0 {
+                        npcAnimator.playSplitStep()
+                        npcSpriteFlipped = false
+                        npcSplitStepPlayed = true
+                    }
+                }
+            }
         }
     }
 
