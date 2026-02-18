@@ -60,8 +60,8 @@ struct DevTrainingLauncher: View {
                         .background(drillType == type ? .green : .blue)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .padding(.horizontal, 40)
                     }
-                    .padding(.horizontal, 40)
 
                     // Practice Match button
                     Button("Practice Match") {

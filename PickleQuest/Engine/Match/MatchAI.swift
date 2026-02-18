@@ -92,6 +92,15 @@ struct NPCStrategyProfile: Sendable {
     }
 }
 
+// MARK: - NPC Error Type
+
+/// Context-aware error types that correlate with the shot being attempted.
+enum NPCErrorType {
+    case net   // Dinks/resets clip the net
+    case long  // Drives/power shots sail long
+    case wide  // Angled shots miss wide
+}
+
 // MARK: - Match AI
 
 /// Strategic AI opponent for interactive matches.
@@ -135,8 +144,18 @@ final class MatchAI {
     // Serve tracking
     var isServing: Bool = false
     private(set) var lastServeModes: DrillShotCalculator.ShotMode = []
+    private(set) var lastShotModes: DrillShotCalculator.ShotMode = []
     private var shotCountThisPoint: Int = 0
     private let startNY: CGFloat = 0.92
+
+    // Kitchen approach tracking
+    private var lastShotWasReset: Bool = false
+
+    // Player position for tactical placement (updated by scene each frame)
+    var playerPositionNX: CGFloat = 0.5
+
+    // Rally pattern memory (tracks player's recent shot X positions)
+    var playerShotHistory: [CGFloat] = []
 
     init(npc: NPC, playerDUPR: Double = 3.0) {
         self.npcStats = npc.stats
@@ -201,8 +220,22 @@ final class MatchAI {
         } else if ball.isActive && !ball.lastHitByPlayer {
             // Ball heading toward player — smart NPCs recover toward center, beginners stay put
             let recoveryStrength = strategy.aggressionControl
+
+            // Kitchen approach: after a reset/dink, skilled NPCs advance to kitchen line
+            let recoveryNY: CGFloat
+            if lastShotWasReset && roll(Double(strategy.kitchenApproach)) {
+                recoveryNY = 0.69 // kitchen line
+            } else {
+                recoveryNY = startNY
+            }
+
             targetNX = currentNX + (0.5 - currentNX) * recoveryStrength
-            targetNY = currentNY + (startNY - currentNY) * recoveryStrength
+            targetNY = currentNY + (recoveryNY - currentNY) * recoveryStrength
+
+            // Backpedal if ball is high and behind NPC (lob defense)
+            if ball.height > 0.20 && ball.courtY > currentNY + 0.05 {
+                targetNY = ball.courtY + 0.03
+            }
         } else {
             // Ball inactive — hold position
         }
@@ -243,9 +276,10 @@ final class MatchAI {
             currentNY += (dy / dist) * step
         }
 
-        // Clamp to AI's side of court (behind kitchen line at 0.682)
+        // Dynamic NY clamp: skilled NPCs can approach kitchen line (0.69), others stay back (0.72)
+        let minNY: CGFloat = strategy.kitchenApproach > 0.5 ? 0.69 : 0.72
         currentNX = max(0.0, min(1.0, currentNX))
-        currentNY = max(0.72, min(1.0, currentNY))
+        currentNY = max(minNY, min(1.0, currentNY))
     }
 
     private func recoverStamina(dt: CGFloat) {
@@ -263,11 +297,29 @@ final class MatchAI {
         let statBonus: CGFloat = (positioningStat / 99.0) * 0.5
         let lookAhead = baseLookAhead + statBonus  // 0.6 to 1.1 seconds
 
-        let predictedX = ball.courtX + ball.vx * lookAhead
+        var predictedX = ball.courtX + ball.vx * lookAhead
         let predictedY = ball.courtY + ball.vy * lookAhead
 
+        // Rally adaptation: if player tends to hit to one side, shade toward it
+        if let anticipated = anticipatedPlayerSide(), roll(Double(strategy.placementAwareness)) {
+            let bias: CGFloat = 0.15
+            predictedX += (anticipated - predictedX) * bias
+        }
+
+        let minNY: CGFloat = strategy.kitchenApproach > 0.5 ? 0.69 : 0.72
         targetNX = max(0.05, min(0.95, predictedX))
-        targetNY = max(0.72, min(0.98, predictedY))
+        targetNY = max(minNY, min(0.98, predictedY))
+    }
+
+    /// Detect if the player has been consistently hitting to one side.
+    /// Returns the anticipated X position if last 3+ shots all went to the same half.
+    private func anticipatedPlayerSide() -> CGFloat? {
+        guard playerShotHistory.count >= 3 else { return nil }
+        let recent = playerShotHistory.suffix(3)
+        let allRight = recent.allSatisfy { $0 > 0.55 }
+        let allLeft = recent.allSatisfy { $0 < 0.45 }
+        guard allRight || allLeft else { return nil }
+        return recent.reduce(0, +) / CGFloat(recent.count)
     }
 
     // MARK: - Hit Detection
@@ -276,7 +328,10 @@ final class MatchAI {
     func shouldSwing(ball: DrillBallSimulation) -> Bool {
         guard ball.isActive, ball.lastHitByPlayer else { return false }
         guard ball.bounceCount < 2 else { return false }
-        guard ball.height < 0.20 else { return false }
+
+        // Stat-gated overhead reach: skilled NPCs can hit high balls (lob defense)
+        let maxSwingHeight: CGFloat = 0.20 + strategy.driveOnHighBall * 0.15
+        guard ball.height < maxSwingHeight else { return false }
 
         // Pre-bounce: don't reach forward — wait for ball to arrive at NPC's Y
         if ball.bounceCount == 0 && ball.courtY < currentNY { return false }
@@ -406,12 +461,34 @@ final class MatchAI {
 
     // MARK: - Shot Generation
 
+    /// Pre-select shot modes for the current ball situation.
+    /// Call this before `shouldMakeError` so `lastShotModes` is populated for error type.
+    func preselectModes(ball: DrillBallSimulation) {
+        var modes = selectShotModes(ball: ball)
+        if ball.height > 0.20 {
+            modes.insert(.power)
+            modes.remove(.reset)
+        }
+        lastShotModes = modes
+    }
+
     /// Generate a shot using the player shot calculator with stat-gated modes.
     /// The NPC gets boosted stats to compensate for perfect human joystick positioning.
     func generateShot(ball: DrillBallSimulation) -> DrillShotCalculator.ShotResult {
-        let modes = selectShotModes(ball: ball)
+        // Use pre-selected modes if available, otherwise select fresh
+        var modes = lastShotModes.isEmpty ? selectShotModes(ball: ball) : lastShotModes
         shotCountThisPoint += 1
         let staminaFraction = stamina / P.maxStamina
+
+        // Overhead smash: hitting a high ball always adds power
+        if ball.height > 0.20 {
+            modes.insert(.power)
+            modes.remove(.reset)
+        }
+
+        // Track whether this shot was a reset (for kitchen approach logic)
+        lastShotWasReset = modes.contains(.reset)
+        lastShotModes = modes
 
         // Drain stamina for power/focus shots
         if modes.contains(.power) {
@@ -428,7 +505,9 @@ final class MatchAI {
             ballHeight: ball.height,
             courtNY: currentNY,
             modes: modes,
-            staminaFraction: staminaFraction
+            staminaFraction: staminaFraction,
+            opponentNX: playerPositionNX,
+            placementFraction: strategy.placementAwareness
         )
     }
 
@@ -457,6 +536,7 @@ final class MatchAI {
         }
 
         lastServeModes = modes
+        lastShotModes = modes
 
         var result = DrillShotCalculator.calculatePlayerShot(
             stats: effectiveStats,
@@ -465,7 +545,9 @@ final class MatchAI {
             ballHeight: 0.05,
             courtNY: currentNY,
             modes: modes,
-            staminaFraction: stamina / P.maxStamina
+            staminaFraction: stamina / P.maxStamina,
+            opponentNX: playerPositionNX,
+            placementFraction: strategy.placementAwareness
         )
 
         // 4.5+ NPCs reduce serve power for control — they place serves, not blast them.
@@ -549,8 +631,10 @@ final class MatchAI {
         let isServeReturn = shotCountThisPoint == 0 && !isServing
         if isServeReturn {
             // Smart NPCs play clean returns; dumb NPCs fall through to normal selection
-            // and often overhit → errors via error model
-            if roll(Double(strategy.aggressionControl)) {
+            // and often overhit → errors via error model.
+            // Scale by DUPR: 5.0+ NPCs almost always return cleanly.
+            let returnChance = max(strategy.aggressionControl, strategy.serveReturnDepth)
+            if roll(Double(returnChance)) {
                 // Focus for tighter placement on manageable returns
                 if roll(Double(strategy.aggressionControl * 0.6)) {
                     modes.insert(.focus)
@@ -643,16 +727,51 @@ final class MatchAI {
 
     // MARK: - Reset
 
-    /// Reset stamina between points (partial recovery).
+    /// Reset stamina between points (recovery scaled by stamina stat).
     func recoverBetweenPoints() {
-        stamina = min(P.maxStamina, stamina + 15)
+        let staminaStat = CGFloat(npcStats.stat(.stamina))
+        let baseRecovery: CGFloat = 8
+        let staminaBonus = (staminaStat / 99.0) * 12  // stat 10 → +1.2, stat 85 → +10.3
+        stamina = min(P.maxStamina, stamina + baseRecovery + staminaBonus)
     }
 
     func reset(npcScore: Int, isServing: Bool) {
         self.isServing = isServing
         self.shotCountThisPoint = 0
+        self.lastShotWasReset = false
+        self.playerShotHistory = []
+        self.lastShotModes = []
         if isServing {
             positionForServe(npcScore: npcScore)
         }
+    }
+
+    // MARK: - Error Type
+
+    /// Return a context-aware error type based on the last shot modes attempted.
+    func errorType(for modes: DrillShotCalculator.ShotMode) -> NPCErrorType {
+        let roll = CGFloat.random(in: 0...1)
+        if modes.contains(.reset) {
+            // Dinks/resets → mostly net errors
+            if roll < 0.70 { return .net }
+            if roll < 0.90 { return .long }
+            return .wide
+        }
+        if modes.contains(.power) {
+            // Power shots → mostly long errors
+            if roll < 0.20 { return .net }
+            if roll < 0.70 { return .long }
+            return .wide
+        }
+        if modes.contains(.angled) {
+            // Angled shots → mostly wide errors
+            if roll < 0.10 { return .net }
+            if roll < 0.30 { return .long }
+            return .wide
+        }
+        // Default
+        if roll < 0.40 { return .net }
+        if roll < 0.80 { return .long }
+        return .wide
     }
 }

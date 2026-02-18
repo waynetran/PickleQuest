@@ -2,14 +2,14 @@ import Foundation
 
 enum DrillShotCalculator {
     struct ShotResult: Sendable {
-        let power: CGFloat         // 0-1 speed magnitude
-        let accuracy: CGFloat      // 0-1 deviation from target
-        let spinCurve: CGFloat     // -1 to 1 lateral curve
-        let arc: CGFloat           // 0-1 initial vertical velocity
-        let targetNX: CGFloat      // target X in court space
-        let targetNY: CGFloat      // target Y in court space
+        var power: CGFloat         // 0-1 speed magnitude
+        var accuracy: CGFloat      // 0-1 deviation from target
+        var spinCurve: CGFloat     // -1 to 1 lateral curve
+        var arc: CGFloat           // 0-1 initial vertical velocity
+        var targetNX: CGFloat      // target X in court space
+        var targetNY: CGFloat      // target Y in court space
         let shotType: ShotType
-        let topspinFactor: CGFloat // -1 = backspin, 0 = flat, +1 = topspin
+        var topspinFactor: CGFloat // -1 = backspin, 0 = flat, +1 = topspin
     }
 
     enum ShotType: Sendable {
@@ -155,6 +155,8 @@ enum DrillShotCalculator {
     /// - ballHeight: ball height at time of contact (logical units)
     /// - courtNY: player's current court position (0=near baseline, 0.5=net)
     /// - modes: combinable shot mode toggles (power, reset, slice, topspin, angled)
+    /// - opponentNX: opponent's X position in court space (nil = no tactical bias)
+    /// - placementFraction: 0 = full random, 1 = full bias toward opponent's weak side
     static func calculatePlayerShot(
         stats: PlayerStats,
         ballApproachFromLeft: Bool,
@@ -162,7 +164,9 @@ enum DrillShotCalculator {
         ballHeight: CGFloat = 0.0,
         courtNY: CGFloat = 0.1,
         modes: ShotMode = [],
-        staminaFraction: CGFloat = 1.0
+        staminaFraction: CGFloat = 1.0,
+        opponentNX: CGFloat? = nil,
+        placementFraction: CGFloat = 0
     ) -> ShotResult {
         let P = GameConstants.DrillPhysics.self
 
@@ -215,9 +219,9 @@ enum DrillShotCalculator {
         if drillType == .dinkingDrill && modes.isEmpty {
             power = 0.15 + (powerStat / 99.0) * 0.20
         } else if drillType == .baselineRally && modes.isEmpty {
-            power = 0.5 + (powerStat / 99.0) * 0.5
+            power = 0.15 + (powerStat / 99.0) * 0.85
         } else {
-            power = 0.3 + (powerStat / 99.0) * 0.7
+            power = 0.15 + (powerStat / 99.0) * 0.85
             let heightBonus = min(ballHeight / 0.15, 1.0) * P.heightPowerBonus
             power += heightBonus
         }
@@ -233,11 +237,24 @@ enum DrillShotCalculator {
             targetNY = max(0.55, min(0.95, baseNY))
         }
 
+        // --- Tactical placement: bias shot away from opponent ---
+        if !modes.contains(.angled), let oppNX = opponentNX, placementFraction > 0 {
+            if oppNX > 0.6 {
+                // Opponent on right side → aim left
+                let biasTarget = CGFloat.random(in: 0.15...0.35)
+                targetNX = targetNX + (biasTarget - targetNX) * placementFraction
+            } else if oppNX < 0.4 {
+                // Opponent on left side → aim right
+                let biasTarget = CGFloat.random(in: 0.65...0.85)
+                targetNX = targetNX + (biasTarget - targetNX) * placementFraction
+            }
+        }
+
         // --- Base scatter from stats (always present) ---
         // Accuracy, consistency, and focus all contribute to shot control.
-        // stat 1 → scatter ~0.12 (frequent misses), stat 99 → scatter ~0 (laser accurate)
+        // stat 1 → scatter ~0.20 (frequent misses), stat 99 → scatter ~0 (laser accurate)
         let avgControl = (accuracyStat + consistencyStat + focusStat) / 3.0
-        var scatter = 0.12 * (1.0 - avgControl / 99.0)
+        var scatter = GameConstants.PlayerBalance.baseScatter * (1.0 - avgControl / 99.0)
 
         // Fatigue increases scatter: below 50% stamina, scatter grows up to 50% more
         if staminaFraction < 0.5 {
@@ -249,7 +266,7 @@ enum DrillShotCalculator {
         // Power mode: 2x ball speed at full stamina, scales down to regular at 0 stamina
         if modes.contains(.power) {
             let regularPower = power
-            let fullPower = regularPower * 2.0
+            let fullPower = regularPower * (1.0 + powerStat / 99.0)
             power = regularPower + (fullPower - regularPower) * staminaFraction
             // Power adds extra scatter on top of base
             let powerScatter = 0.06 * (1.0 - accuracyStat / 99.0)

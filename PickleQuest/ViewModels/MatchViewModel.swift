@@ -359,12 +359,10 @@ final class MatchViewModel {
             return
         }
 
-        let lastGame = result.gameScores.last ?? result.finalScore
         let change = DUPRCalculator.calculateRatingChange(
             playerRating: player.duprRating,
             opponentRating: opponent.duprRating,
-            playerPoints: lastGame.playerPoints,
-            opponentPoints: lastGame.opponentPoints,
+            gameScores: result.gameScores,
             pointsToWin: matchConfig.pointsToWin,
             kFactor: player.duprProfile.kFactor
         )

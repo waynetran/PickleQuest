@@ -147,6 +147,7 @@ final class HeadlessMatchSimulator {
             }
 
             playerAI.update(dt: dt, ball: ballSim)
+            npcAI.playerPositionNX = playerAI.currentNX
             npcAI.update(dt: dt, ball: ballSim)
 
             if checkPlayerHit() { break }
@@ -300,26 +301,36 @@ final class HeadlessMatchSimulator {
         previousBallNY = ballSim.courtY
         checkedFirstBounce = false
 
+        // Push player shot X to NPC pattern memory (keep last 5)
+        npcAI.playerShotHistory.append(shot.targetNX)
+        if npcAI.playerShotHistory.count > 5 {
+            npcAI.playerShotHistory.removeFirst()
+        }
+
         return false
     }
 
     private func checkNPCHit() -> Bool {
         guard ballSim.isActive && ballSim.lastHitByPlayer else { return false }
         guard ballSim.bounceCount < 2 else { return false }
-        guard ballSim.height < 0.20 else { return false }
 
         // Two-bounce rule
         if rallyLength < 2 && ballSim.bounceCount == 0 { return false }
 
         guard npcAI.shouldSwing(ball: ballSim) else { return false }
 
+        // Pre-select modes so error type is context-aware
+        npcAI.preselectModes(ball: ballSim)
+
         // Error check
         if npcAI.shouldMakeError(ball: ballSim) {
             npcErrors += 1
             rallyLength += 1
 
-            // Error ball: 50% net, 50% out (mirrors InteractiveMatchScene)
-            if Bool.random() {
+            // Context-aware error type based on shot attempted
+            let errType = npcAI.errorType(for: npcAI.lastShotModes)
+            switch errType {
+            case .net:
                 ballSim.launch(
                     from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
                     toward: CGPoint(x: CGFloat.random(in: 0.2...0.8), y: 0.3),
@@ -327,15 +338,23 @@ final class HeadlessMatchSimulator {
                     arc: 0.02,
                     spin: 0
                 )
-            } else {
+            case .long:
+                ballSim.launch(
+                    from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
+                    toward: CGPoint(x: CGFloat.random(in: 0.2...0.8), y: CGFloat.random(in: -0.10...0.05)),
+                    power: 0.8,
+                    arc: 0.15,
+                    spin: 0
+                )
+            case .wide:
                 let wideTarget = Bool.random()
                     ? CGFloat.random(in: -0.2...0.05)
                     : CGFloat.random(in: 0.95...1.2)
                 ballSim.launch(
                     from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
-                    toward: CGPoint(x: wideTarget, y: CGFloat.random(in: 0.0...0.15)),
-                    power: 0.8,
-                    arc: 0.15,
+                    toward: CGPoint(x: wideTarget, y: CGFloat.random(in: 0.0...0.20)),
+                    power: 0.7,
+                    arc: 0.12,
                     spin: 0
                 )
             }

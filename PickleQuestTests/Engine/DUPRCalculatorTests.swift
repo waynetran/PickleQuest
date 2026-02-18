@@ -5,73 +5,7 @@ import Foundation
 @Suite("DUPR Calculator Tests")
 struct DUPRCalculatorTests {
 
-    // MARK: - Expected Score
-
-    @Test("Equal ratings produce 0.5 expected score")
-    func equalRatingsExpectedScore() {
-        let expected = DUPRCalculator.expectedScore(playerRating: 4.0, opponentRating: 4.0)
-        #expect(abs(expected - 0.5) < 0.001)
-    }
-
-    @Test("Higher rated player has expected score > 0.5")
-    func higherRatedPlayerExpectedScore() {
-        let expected = DUPRCalculator.expectedScore(playerRating: 5.0, opponentRating: 4.0)
-        #expect(expected > 0.5)
-        #expect(expected < 1.0)
-    }
-
-    @Test("Lower rated player has expected score < 0.5")
-    func lowerRatedPlayerExpectedScore() {
-        let expected = DUPRCalculator.expectedScore(playerRating: 3.0, opponentRating: 4.0)
-        #expect(expected < 0.5)
-        #expect(expected > 0.0)
-    }
-
-    @Test("Expected scores are symmetric")
-    func expectedScoresSymmetric() {
-        let highExpected = DUPRCalculator.expectedScore(playerRating: 5.0, opponentRating: 4.0)
-        let lowExpected = DUPRCalculator.expectedScore(playerRating: 4.0, opponentRating: 5.0)
-        #expect(abs(highExpected + lowExpected - 1.0) < 0.001)
-    }
-
-    // MARK: - Actual Score (Margin of Victory)
-
-    @Test("Blowout win produces high actual score")
-    func blowoutWinActualScore() {
-        let actual = DUPRCalculator.actualScore(playerPoints: 11, opponentPoints: 2, pointsToWin: 11)
-        #expect(actual > 0.85)
-        #expect(actual <= 1.0)
-    }
-
-    @Test("Close win produces moderate actual score above 0.5")
-    func closeWinActualScore() {
-        let actual = DUPRCalculator.actualScore(playerPoints: 11, opponentPoints: 9, pointsToWin: 11)
-        #expect(actual > 0.5)
-        #expect(actual < 0.75)
-    }
-
-    @Test("Close loss produces moderate actual score below 0.5")
-    func closeLossActualScore() {
-        let actual = DUPRCalculator.actualScore(playerPoints: 9, opponentPoints: 11, pointsToWin: 11)
-        #expect(actual < 0.5)
-        #expect(actual > 0.25)
-    }
-
-    @Test("Blowout loss produces low actual score")
-    func blowoutLossActualScore() {
-        let actual = DUPRCalculator.actualScore(playerPoints: 2, opponentPoints: 11, pointsToWin: 11)
-        #expect(actual < 0.15)
-        #expect(actual >= 0.0)
-    }
-
-    @Test("Actual scores are symmetric")
-    func actualScoresSymmetric() {
-        let winScore = DUPRCalculator.actualScore(playerPoints: 11, opponentPoints: 5, pointsToWin: 11)
-        let lossScore = DUPRCalculator.actualScore(playerPoints: 5, opponentPoints: 11, pointsToWin: 11)
-        #expect(abs(winScore + lossScore - 1.0) < 0.001)
-    }
-
-    // MARK: - Rating Change Scenarios
+    // MARK: - Rating Change (Single Game)
 
     @Test("Win against equal opponent gains rating")
     func winAgainstEqualGainsRating() {
@@ -93,28 +27,6 @@ struct DUPRCalculatorTests {
         #expect(change < 0)
     }
 
-    @Test("Close loss to stronger opponent can gain rating")
-    func closeLossToStrongerCanGain() {
-        // With a 1.5 DUPR gap, expected score is low (~0.30).
-        // A close 9-11 loss gives actual ~0.37, which exceeds expected → gain.
-        let change = DUPRCalculator.calculateRatingChange(
-            playerRating: 3.0, opponentRating: 4.5,
-            playerPoints: 9, opponentPoints: 11, pointsToWin: 11,
-            kFactor: 64.0
-        )
-        #expect(change > 0)
-    }
-
-    @Test("Blowout loss to weaker opponent loses significant rating")
-    func blowoutLossToWeakerLosesBig() {
-        let change = DUPRCalculator.calculateRatingChange(
-            playerRating: 5.0, opponentRating: 3.5,
-            playerPoints: 2, opponentPoints: 11, pointsToWin: 11,
-            kFactor: 32.0
-        )
-        #expect(change < -0.05)
-    }
-
     @Test("Bigger margin of victory produces bigger rating gain")
     func biggerMarginBiggerGain() {
         let closeWin = DUPRCalculator.calculateRatingChange(
@@ -130,6 +42,28 @@ struct DUPRCalculatorTests {
         #expect(blowoutWin > closeWin)
     }
 
+    @Test("Winning by less than expected loses rating")
+    func winByLessThanExpectedLosesRating() {
+        // 5.0 vs 3.0: expected margin is huge. Winning 11-10 is way below expected.
+        let change = DUPRCalculator.calculateRatingChange(
+            playerRating: 5.0, opponentRating: 3.0,
+            playerPoints: 11, opponentPoints: 10, pointsToWin: 11,
+            kFactor: 32.0
+        )
+        #expect(change < 0)
+    }
+
+    @Test("Losing by less than expected gains rating")
+    func losingByLessThanExpectedGainsRating() {
+        // 3.0 vs 5.0: expected to lose badly. A close 9-11 loss beats expectations.
+        let change = DUPRCalculator.calculateRatingChange(
+            playerRating: 3.0, opponentRating: 5.0,
+            playerPoints: 9, opponentPoints: 11, pointsToWin: 11,
+            kFactor: 32.0
+        )
+        #expect(change > 0)
+    }
+
     @Test("Higher K-factor produces larger swings")
     func higherKFactorLargerSwings() {
         let lowK = DUPRCalculator.calculateRatingChange(
@@ -143,6 +77,99 @@ struct DUPRCalculatorTests {
             kFactor: 64.0
         )
         #expect(abs(highK) > abs(lowK))
+    }
+
+    @Test("Rating change is bounded by sensible values")
+    func ratingChangeBounded() {
+        let change = DUPRCalculator.calculateRatingChange(
+            playerRating: 3.0, opponentRating: 3.0,
+            playerPoints: 11, opponentPoints: 0, pointsToWin: 11,
+            kFactor: 64.0
+        )
+        #expect(abs(change) < 1.0)
+    }
+
+    // MARK: - Rating Change (Multi-Game)
+
+    @Test("Multi-game averages performance across all games")
+    func multiGameAveragesPerformance() {
+        let scores = [
+            MatchScore(playerPoints: 11, opponentPoints: 5, playerGames: 1, opponentGames: 0),
+            MatchScore(playerPoints: 11, opponentPoints: 8, playerGames: 2, opponentGames: 0)
+        ]
+        let multiChange = DUPRCalculator.calculateRatingChange(
+            playerRating: 4.0, opponentRating: 4.0,
+            gameScores: scores, pointsToWin: 11, kFactor: 32.0
+        )
+        // Average of two wins → positive
+        #expect(multiChange > 0)
+    }
+
+    @Test("Multi-game split produces smaller change than sweep")
+    func multiGameSplitSmallerThanSweep() {
+        let sweep = [
+            MatchScore(playerPoints: 11, opponentPoints: 5, playerGames: 1, opponentGames: 0),
+            MatchScore(playerPoints: 11, opponentPoints: 5, playerGames: 2, opponentGames: 0)
+        ]
+        let split = [
+            MatchScore(playerPoints: 11, opponentPoints: 5, playerGames: 1, opponentGames: 0),
+            MatchScore(playerPoints: 5, opponentPoints: 11, playerGames: 1, opponentGames: 1),
+            MatchScore(playerPoints: 11, opponentPoints: 5, playerGames: 2, opponentGames: 1)
+        ]
+        let sweepChange = DUPRCalculator.calculateRatingChange(
+            playerRating: 4.0, opponentRating: 4.0,
+            gameScores: sweep, pointsToWin: 11, kFactor: 32.0
+        )
+        let splitChange = DUPRCalculator.calculateRatingChange(
+            playerRating: 4.0, opponentRating: 4.0,
+            gameScores: split, pointsToWin: 11, kFactor: 32.0
+        )
+        #expect(sweepChange > splitChange)
+    }
+
+    @Test("Empty game scores returns zero")
+    func emptyGameScoresReturnsZero() {
+        let change = DUPRCalculator.calculateRatingChange(
+            playerRating: 4.0, opponentRating: 4.0,
+            gameScores: [], pointsToWin: 11, kFactor: 32.0
+        )
+        #expect(change == 0.0)
+    }
+
+    // MARK: - Lopsidedness Discount
+
+    @Test("Lopsided match produces smaller rating change")
+    func lopsidedMatchSmallChange() {
+        // Equal gap: no discount
+        let normalChange = DUPRCalculator.calculateRatingChange(
+            playerRating: 4.0, opponentRating: 4.0,
+            playerPoints: 11, opponentPoints: 5, pointsToWin: 11,
+            kFactor: 32.0
+        )
+        // 1.0 gap: lopsidedness discount kicks in (threshold is 0.625)
+        let lopsidedChange = DUPRCalculator.calculateRatingChange(
+            playerRating: 4.0, opponentRating: 3.0,
+            playerPoints: 11, opponentPoints: 5, pointsToWin: 11,
+            kFactor: 32.0
+        )
+        #expect(abs(lopsidedChange) < abs(normalChange))
+    }
+
+    // MARK: - High-Level Damping
+
+    @Test("High-rated players have dampened rating changes")
+    func highLevelDamping() {
+        let midLevelChange = DUPRCalculator.calculateRatingChange(
+            playerRating: 3.5, opponentRating: 3.5,
+            playerPoints: 11, opponentPoints: 5, pointsToWin: 11,
+            kFactor: 32.0
+        )
+        let highLevelChange = DUPRCalculator.calculateRatingChange(
+            playerRating: 5.0, opponentRating: 5.0,
+            playerPoints: 11, opponentPoints: 5, pointsToWin: 11,
+            kFactor: 32.0
+        )
+        #expect(abs(highLevelChange) < abs(midLevelChange))
     }
 
     // MARK: - K-Factor Tiers
@@ -217,8 +244,9 @@ struct DUPRCalculatorTests {
 
     @Test("Large rating gap triggers auto-unrate")
     func autoUnrateLargeGap() {
-        #expect(DUPRCalculator.shouldAutoUnrate(playerRating: 3.0, opponentRating: 4.5))
-        #expect(DUPRCalculator.shouldAutoUnrate(playerRating: 5.0, opponentRating: 3.5))
+        // maxRatedGap is 1.5, so >1.5 triggers auto-unrate
+        #expect(DUPRCalculator.shouldAutoUnrate(playerRating: 3.0, opponentRating: 5.0))
+        #expect(DUPRCalculator.shouldAutoUnrate(playerRating: 6.0, opponentRating: 4.0))
     }
 
     @Test("Small rating gap does not auto-unrate")
@@ -227,27 +255,9 @@ struct DUPRCalculatorTests {
         #expect(!DUPRCalculator.shouldAutoUnrate(playerRating: 4.0, opponentRating: 4.0))
     }
 
-    @Test("Exactly 1.0 gap does not auto-unrate")
+    @Test("Exactly maxRatedGap does not auto-unrate")
     func exactGapNoAutoUnrate() {
-        #expect(!DUPRCalculator.shouldAutoUnrate(playerRating: 3.0, opponentRating: 4.0))
-    }
-
-    // MARK: - Edge Cases
-
-    @Test("Zero-zero score returns 0.5 actual score")
-    func zeroZeroScore() {
-        let actual = DUPRCalculator.actualScore(playerPoints: 0, opponentPoints: 0, pointsToWin: 11)
-        #expect(actual == 0.5)
-    }
-
-    @Test("Rating change is bounded by sensible values")
-    func ratingChangeBounded() {
-        // Even with max K-factor and max margin, change should be reasonable
-        let change = DUPRCalculator.calculateRatingChange(
-            playerRating: 3.0, opponentRating: 3.0,
-            playerPoints: 11, opponentPoints: 0, pointsToWin: 11,
-            kFactor: 64.0
-        )
-        #expect(abs(change) < 1.0)
+        // 1.5 gap is exactly at the boundary — uses > not >=
+        #expect(!DUPRCalculator.shouldAutoUnrate(playerRating: 3.0, opponentRating: 4.5))
     }
 }

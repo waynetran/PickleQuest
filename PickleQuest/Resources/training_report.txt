@@ -1,0 +1,68 @@
+PickleQuest AI Training Report
+==============================
+Generations: 16
+Final Fitness: 7.8586
+Avg Rally Length: 2.0 shots
+Duration: 0m 17s
+
+Stat Profiles by DUPR (bare NPC stats):
+                2.0   3.0   4.0   5.0   6.0   7.0   8.0
+power            10    25    40    55    69    84    99
+accuracy         10    25    40    55    69    84    99
+spin             10    25    40    55    69    84    99
+speed            10    25    40    55    69    84    99
+defense          10    25    40    55    69    84    99
+reflexes         10    25    40    55    69    84    99
+positioning      10    25    40    55    69    84    99
+clutch           10    25    40    55    69    84    99
+focus            10    25    40    55    69    84    99
+stamina          10    25    40    55    69    84    99
+consistency      10    25    40    55    69    84    99
+
+NPC Virtual Equipment Bonus by DUPR:
+  DUPR 2.0: +2 per stat
+  DUPR 3.0: +3 per stat
+  DUPR 4.0: +4 per stat
+  DUPR 5.0: +5 per stat
+  DUPR 6.0: +5 per stat
+  DUPR 7.0: +6 per stat
+  DUPR 8.0: +7 per stat
+
+NPC-vs-NPC Point Differentials (Higher - Lower):
+  Matchup           Target   Actual   WinRate
+  2.5 vs 2.0         +6.0     +4.6     80.6%
+  3.0 vs 2.5         +6.0     +4.3     78.0%
+  3.5 vs 3.0         +6.0     +3.4     71.0%
+  4.0 vs 3.5         +6.0     +4.5     79.6%
+  4.5 vs 4.0         +6.0     +4.0     77.8%
+  5.0 vs 4.5         +6.0     +4.0     75.0%
+  5.5 vs 5.0         +6.0     +3.4     73.2%
+  6.0 vs 5.5         +6.0     +3.9     76.4%
+  6.5 vs 6.0         +6.0     +4.5     79.8%
+  7.0 vs 6.5         +6.0     +3.3     72.4%
+  7.5 vs 7.0         +6.0     +4.0     78.2%
+  3.0 vs 2.0        +10.5     +6.7     91.6%
+  5.0 vs 3.0        +10.5     +9.0     99.4%
+  6.0 vs 4.0        +10.5     +9.1     99.0%
+  8.0 vs 5.0        +10.5    +10.2    100.0%
+
+Player vs NPC Balance (bare stats vs NPC+equip, same DUPR):
+  DUPR   Equip   Target   Actual   WinRate
+  2.0     +2      -2.0     +0.2     50.4%
+  3.0     +3      -2.0     -0.1     48.6%
+  4.0     +4      -2.0     -0.9     41.0%
+  5.0     +5      -2.0     -0.8     42.8%
+  6.0     +5      -2.0     -1.4     38.0%
+  7.0     +6      -2.0     -1.2     40.4%
+
+Starter Balance (trained stats vs NPC at DUPR 2.0):
+  Trained starter: pow=10 acc=10 spn=7 spd=10 def=10 ref=10 pos=10 clu=7 foc=10 sta=13 con=13
+  Point diff: +0.6 (target: +0.0), Win rate: 53.2%
+
+Headless Interactive Validation (player vs NPC, same DUPR):
+  DUPR   PointDiff   WinRate   AvgRally   Matches
+  2.0      +6.4      96.0%       1.1       50
+  3.0      +8.2     100.0%       1.1       50
+  4.0      +9.5     100.0%       1.2       50
+  5.0      +9.4     100.0%       1.2       50
+  6.0      +9.1     100.0%       1.1       50

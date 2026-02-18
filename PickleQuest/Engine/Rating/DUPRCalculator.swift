@@ -1,35 +1,17 @@
 import Foundation
 
 enum DUPRCalculator {
-    /// Expected score (0.0-1.0) based on rating gap, using Elo formula.
-    /// A player with a higher rating has expectedScore > 0.5.
-    static func expectedScore(playerRating: Double, opponentRating: Double) -> Double {
-        let gap = (opponentRating - playerRating) * GameConstants.DUPRRating.duprToEloScale
-        return 1.0 / (1.0 + pow(10.0, gap / GameConstants.DUPRRating.eloScaleFactor))
-    }
 
-    /// Actual score (0.0-1.0) derived from margin of victory.
-    /// Uses the final game score to produce a normalized performance value.
-    /// - Blowout win (11-2): ~0.95
-    /// - Close win (11-9): ~0.6
-    /// - Close loss (9-11): ~0.4
-    /// - Blowout loss (2-11): ~0.05
-    static func actualScore(playerPoints: Int, opponentPoints: Int, pointsToWin: Int) -> Double {
-        let total = playerPoints + opponentPoints
-        guard total > 0 else { return 0.5 }
+    // MARK: - Rating Change (Single Game)
 
-        let margin = Double(playerPoints - opponentPoints)
-        let maxMargin = Double(pointsToWin)
-        let normalizedMargin = margin / maxMargin // -1.0 to ~1.0
-
-        // Apply sigmoid-like curve for smooth 0-1 mapping
-        // tanh maps (-inf, inf) → (-1, 1), we shift to (0, 1)
-        let curved = tanh(normalizedMargin * GameConstants.DUPRRating.marginExponent)
-        return 0.5 + curved * 0.5
-    }
-
-    /// Calculate rating change for a single match.
-    /// Returns the raw change value (positive or negative).
+    /// Calculate rating change for a single game using margin-based performance.
+    ///
+    /// Real DUPR rules modeled here:
+    /// - 0.1 DUPR gap ≈ 1.2 expected point margin in an 11-point game
+    /// - Score matters, not just win/loss: winning by less than expected DECREASES rating
+    /// - Losing by less than expected INCREASES rating
+    /// - Lopsided matches (gap > 0.625) are discounted
+    /// - Higher-rated players (4.0+) have dampened swings
     static func calculateRatingChange(
         playerRating: Double,
         opponentRating: Double,
@@ -38,9 +20,74 @@ enum DUPRCalculator {
         pointsToWin: Int,
         kFactor: Double
     ) -> Double {
-        let expected = expectedScore(playerRating: playerRating, opponentRating: opponentRating)
-        let actual = actualScore(playerPoints: playerPoints, opponentPoints: opponentPoints, pointsToWin: pointsToWin)
-        return kFactor * (actual - expected) / GameConstants.DUPRRating.ratingChangeDivisor
+        let C = GameConstants.DUPRRating.self
+        let gap = playerRating - opponentRating
+
+        // Expected point margin: 0.1 DUPR gap = 1.2 points, scaled to game length
+        let expectedMargin = gap * C.pointsPerDUPRGap * Double(pointsToWin) / 11.0
+        let actualMargin = Double(playerPoints - opponentPoints)
+
+        // Performance: how much better/worse than expected, normalized
+        let rawPerformance = (actualMargin - expectedMargin) / Double(pointsToWin)
+        let performance = tanh(rawPerformance * C.performanceCurve)
+
+        let effectiveK = effectiveKFactor(kFactor: kFactor, playerRating: playerRating, gap: gap)
+        return effectiveK * performance / C.ratingChangeDivisor
+    }
+
+    // MARK: - Rating Change (Multi-Game)
+
+    /// Calculate rating change across multiple games (e.g., best-of-3).
+    /// Averages performance across all games — every game counts, not just the last.
+    static func calculateRatingChange(
+        playerRating: Double,
+        opponentRating: Double,
+        gameScores: [MatchScore],
+        pointsToWin: Int,
+        kFactor: Double
+    ) -> Double {
+        guard !gameScores.isEmpty else { return 0.0 }
+
+        let C = GameConstants.DUPRRating.self
+        let gap = playerRating - opponentRating
+        let expectedMargin = gap * C.pointsPerDUPRGap * Double(pointsToWin) / 11.0
+
+        var totalPerformance = 0.0
+        for score in gameScores {
+            let actualMargin = Double(score.playerPoints - score.opponentPoints)
+            let rawPerf = (actualMargin - expectedMargin) / Double(pointsToWin)
+            totalPerformance += tanh(rawPerf * C.performanceCurve)
+        }
+        let avgPerformance = totalPerformance / Double(gameScores.count)
+
+        let effectiveK = effectiveKFactor(kFactor: kFactor, playerRating: playerRating, gap: gap)
+        return effectiveK * avgPerformance / C.ratingChangeDivisor
+    }
+
+    // MARK: - K-Factor
+
+    /// Effective K-factor after applying lopsidedness discount and high-level damping.
+    private static func effectiveKFactor(kFactor: Double, playerRating: Double, gap: Double) -> Double {
+        let C = GameConstants.DUPRRating.self
+        var k = kFactor
+
+        // Lopsidedness discount: graduated reduction above 0.625 gap
+        let absGap = abs(gap)
+        if absGap > C.lopsidedGapThreshold {
+            let discountRange = C.maxRatedGap - C.lopsidedGapThreshold
+            if discountRange > 0 {
+                let discountProgress = min(1.0, (absGap - C.lopsidedGapThreshold) / discountRange)
+                let discount = 1.0 - discountProgress * (1.0 - C.lopsidedDiscountFloor)
+                k *= discount
+            }
+        }
+
+        // High-level convergence: dampened swings at 4.0+
+        if playerRating >= C.highLevelThreshold {
+            k *= C.highLevelDamping
+        }
+
+        return k
     }
 
     /// K-factor based on reliability tier.
@@ -53,6 +100,8 @@ enum DUPRCalculator {
             return GameConstants.DUPRRating.kFactorEstablished
         }
     }
+
+    // MARK: - Reliability
 
     /// Compute reliability (0.0-1.0) from profile data.
     static func computeReliability(profile: DUPRProfile, currentDate: Date = Date()) -> Double {
@@ -95,6 +144,8 @@ enum DUPRCalculator {
             return 1.0 - (1.0 - minimum) * (elapsed / decayRange)
         }
     }
+
+    // MARK: - Auto-Unrate
 
     /// Whether a match should be auto-unrated due to rating gap.
     static func shouldAutoUnrate(playerRating: Double, opponentRating: Double) -> Bool {

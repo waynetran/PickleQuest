@@ -1247,6 +1247,7 @@ final class InteractiveMatchScene: SKScene {
                 firstBounceCourtY = ballSim.lastBounceCourtY
                 showLandingSpot(courtX: firstBounceCourtX, courtY: firstBounceCourtY)
             }
+            npcAI.playerPositionNX = playerNX
             npcAI.update(dt: dt, ball: ballSim)
             checkPlayerHit()
             checkNPCHit()
@@ -1495,18 +1496,26 @@ final class InteractiveMatchScene: SKScene {
         ballSim.lastHitByPlayer = true
         previousBallNY = ballSim.courtY
 
+        // Push player shot X to NPC pattern memory (keep last 5)
+        npcAI.playerShotHistory.append(shot.targetNX)
+        if npcAI.playerShotHistory.count > 5 {
+            npcAI.playerShotHistory.removeFirst()
+        }
+
         showShotMarkers(targetNX: shot.targetNX, targetNY: shot.targetNY, accuracy: shot.accuracy)
     }
 
     private func checkNPCHit() {
         guard ballSim.isActive && ballSim.lastHitByPlayer else { return }
         guard ballSim.bounceCount < 2 else { return }
-        guard ballSim.height < 0.20 else { return }
 
         // Two-bounce rule: NPC must let the ball bounce on return and 3rd shot
         if rallyLength < 2 && ballSim.bounceCount == 0 { return }
 
         if npcAI.shouldSwing(ball: ballSim) {
+            // Pre-select modes so error type is context-aware
+            npcAI.preselectModes(ball: ballSim)
+
             // Check for unforced error before generating the return
             if npcAI.shouldMakeError(ball: ballSim) {
                 npcErrors += 1
@@ -1515,8 +1524,10 @@ final class InteractiveMatchScene: SKScene {
                 let ballFromLeft = ballSim.courtX < npcAI.currentNX
                 npcAnimator.play(ballFromLeft ? .backhand : .forehand)
 
-                // Error type: 50% net, 50% out
-                if Bool.random() {
+                // Context-aware error type based on shot attempted
+                let errType = npcAI.errorType(for: npcAI.lastShotModes)
+                switch errType {
+                case .net:
                     // Hit into net — launch low and into the net
                     ballSim.launch(
                         from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
@@ -1525,14 +1536,23 @@ final class InteractiveMatchScene: SKScene {
                         arc: 0.02,
                         spin: 0
                     )
-                } else {
-                    // Hit long/wide — launch hard and out of bounds
+                case .long:
+                    // Hit long — launch hard past the baseline
+                    ballSim.launch(
+                        from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
+                        toward: CGPoint(x: CGFloat.random(in: 0.2...0.8), y: CGFloat.random(in: -0.10...0.05)),
+                        power: 0.8,
+                        arc: 0.15,
+                        spin: 0
+                    )
+                case .wide:
+                    // Hit wide — launch toward the sideline
                     let wideTarget = Bool.random() ? CGFloat.random(in: -0.2...0.05) : CGFloat.random(in: 0.95...1.2)
                     ballSim.launch(
                         from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
-                        toward: CGPoint(x: wideTarget, y: CGFloat.random(in: 0.0...0.15)),
-                        power: 0.8,
-                        arc: 0.15,
+                        toward: CGPoint(x: wideTarget, y: CGFloat.random(in: 0.0...0.20)),
+                        power: 0.7,
+                        arc: 0.12,
                         spin: 0
                     )
                 }

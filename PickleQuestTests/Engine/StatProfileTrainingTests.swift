@@ -34,9 +34,18 @@ struct StatProfileTrainingTests {
         let jsonData = try encoder.encode(report.parameters)
         try jsonData.write(to: outputURL)
 
+        // Write formatted report to text file for automated analysis
+        let reportURL = repoRoot
+            .appendingPathComponent("PickleQuest")
+            .appendingPathComponent("Resources")
+            .appendingPathComponent("training_report.txt")
+        let reportText = report.formattedReport()
+        try reportText.write(to: reportURL, atomically: true, encoding: .utf8)
+
         // Print summary to test output
-        print(report.formattedReport())
+        print(reportText)
         print("\nJSON written to: \(outputURL.path)")
+        print("Report written to: \(reportURL.path)")
 
         // Basic sanity checks
         #expect(report.fitnessScore.isFinite, "Fitness should be a finite number")
