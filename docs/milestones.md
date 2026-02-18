@@ -1040,6 +1040,31 @@ Match end → MatchResult → existing processResult() pipeline
 - `Engine/AITrainer/TrainingReport.swift` — added `HeadlessInteractiveEntry`, `headlessInteractiveTable` field, report formatting
 - `Engine/AITrainer/TrainingSession.swift` — added `evaluateHeadlessInteractive()` validation pass
 
+### AI Realism Improvements + Training Feedback Loop
+
+**Commit**: `77031bb`
+
+Seven realism gaps in the interactive match AI were fixed, making NPC opponents feel more human at every DUPR level:
+
+#### Interactive match AI (MatchAI.swift)
+1. **Kitchen line approach**: `kitchenApproach` strategy field now drives NPC forward to kitchen (NY=0.69) after reset shots. 4.5+ NPCs approach; beginners stay at baseline.
+2. **Tactical shot placement**: `placementAwareness` now reads player position and biases shots away from them. Added `opponentNX` and `placementFraction` params to `calculatePlayerShot()`.
+3. **Lob defense / overhead smash**: Height gate raised from hard 0.20 to `baseHeightReach + athleticism * maxHeightReachBonus`. Skilled NPCs can smash high balls; backpedal logic for lob defense.
+4. **Context-aware error types**: `NPCErrorType` enum (net/long/wide) with shot-context probability — dinks→net, drives→long, angles→wide.
+5. **Serve return fix**: High-DUPR NPCs reliably return serves cleanly using `max(aggressionControl, serveReturnDepth)`.
+6. **DUPR-scaled stamina recovery**: `recoverBetweenPoints()` uses `8 + (staminaStat/99) * 12` instead of flat +15.
+7. **Rally adaptation / pattern memory**: `playerShotHistory` tracks last 5 player shots; `anticipatedPlayerSide()` detects patterns and biases prediction (gated by `placementAwareness`).
+
+#### Headless balance
+- All 7 features are **gated by `isHeadless`** — headless mode uses symmetric SimulatedPlayerAI-equivalent behavior for balanced training.
+- Immediate error resolution: error shots resolve the point instantly instead of launching physics balls that could create asymmetric secondary errors.
+- Unified serve system: both sides use identical `executeServe()` with cross-court targeting, stat-based scatter, and symmetric fault zones.
+
+#### Automated training feedback loop
+- `Scripts/train_with_feedback.sh`: iterative training → Claude CLI analysis → PASS/FAIL with balance criteria
+- `StatProfileTrainingTests` writes `training_report.txt` alongside `stat_profiles.json`
+- Claude analyzes NPC-vs-NPC point diffs, player-vs-NPC balance, rally lengths, and win rates
+
 ### Headless Balance Fixes + Dev Training Dashboard
 
 **Commit**: `09eb009`
