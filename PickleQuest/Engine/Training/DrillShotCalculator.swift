@@ -235,17 +235,33 @@ enum DrillShotCalculator {
             )
         }
 
-        // --- Lob mode: high arc to deep baseline (mutually exclusive with touch/power) ---
+        // --- Lob mode: high arc to baseline (mutually exclusive with touch/power) ---
+        // Low-skill: lobs land short (mid-court), wide scatter, not deep enough
+        // High-skill: lobs target baseline corners precisely
         if modes.contains(.lob) {
             let accuracyStat = CGFloat(stats.stat(.accuracy))
             let consistencyStat = CGFloat(stats.stat(.consistency))
+            let avgControl = (accuracyStat + consistencyStat) / 2.0
+            let lobSkill = min(avgControl / 99.0, 1.0) // 0 = beginner, 1 = expert
 
             // Lob power: moderate — enough to reach the baseline
             let lobPower = CGFloat.random(in: 0.30...0.50)
 
-            // Target: deep baseline, spread across court width
-            var lobTargetNX = CGFloat.random(in: 0.20...0.80)
-            var lobTargetNY = CGFloat.random(in: 0.82...0.98)
+            // Target depth: beginners land mid-court (0.65-0.80), experts hit deep baseline (0.88-0.98)
+            let minDepth = 0.65 + lobSkill * 0.23  // beginner: 0.65, expert: 0.88
+            let maxDepth = 0.80 + lobSkill * 0.18  // beginner: 0.80, expert: 0.98
+            var lobTargetNY = CGFloat.random(in: minDepth...maxDepth)
+
+            // Target width: beginners aim center, experts target corners
+            var lobTargetNX: CGFloat
+            if lobSkill > 0.6 {
+                // Experts: aim for baseline corners (away from opponent if possible)
+                let corner = Bool.random() ? CGFloat.random(in: 0.10...0.25) : CGFloat.random(in: 0.75...0.90)
+                lobTargetNX = corner
+            } else {
+                // Beginners: scatter around center
+                lobTargetNX = CGFloat.random(in: 0.25...0.75)
+            }
 
             // Angled modifier on lob
             if modes.contains(.angled) {
@@ -258,8 +274,7 @@ enum DrillShotCalculator {
             }
 
             // Beginner scatter: low-stat players lob too short or too long
-            let avgControl = (accuracyStat + consistencyStat) / 2.0
-            let lobScatter = 0.15 * (1.0 - avgControl / 99.0)
+            let lobScatter = 0.15 * (1.0 - lobSkill)
             lobTargetNX += CGFloat.random(in: -lobScatter...lobScatter)
             lobTargetNY += CGFloat.random(in: -lobScatter...lobScatter)
 
@@ -272,7 +287,6 @@ enum DrillShotCalculator {
             }
 
             // High arc: beginners don't lob high enough, experts lob perfectly
-            let lobSkill = min(avgControl / 99.0, 1.0)
             let lobArc = 0.50 + lobSkill * 0.30 + CGFloat.random(in: -0.08...0.08)
 
             let spinDirection: CGFloat = Bool.random() ? 1.0 : -1.0

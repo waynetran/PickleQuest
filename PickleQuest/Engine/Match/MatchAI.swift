@@ -1045,16 +1045,20 @@ final class MatchAI {
             modes.insert(.focus)
         }
 
-        // Lob: defensive lob when stretched and at the kitchen, or as a change-up
-        // Smart NPCs lob when pinned at the kitchen to reset positioning
+        // Lob: low-level NPCs panic-lob often, high-level NPCs lob tactically
+        // DUPR fraction: 0 = beginner (2.0), 1 = expert (8.0)
         if !modes.contains(.power) && !modes.contains(.touch) {
+            let duprFrac = CGFloat(max(0, min(1, (npcDUPR - 2.0) / 6.0)))
             let isAtKitchen = abs(currentNY - 0.5) < 0.25
-            if isAtKitchen && difficulty > 0.5 {
-                // Defensive lob when under pressure at kitchen
-                let lobChance = strategy.resetWhenStretched * positioningStat * difficulty
-                if roll(Double(lobChance * 0.4)) {
-                    modes.insert(.lob)
-                }
+
+            // Beginners: panic lob when under any pressure (high chance, scales down with skill)
+            // Experts: tactical lob only when stretched at kitchen (low chance, very deliberate)
+            let beginnerLobChance = (1.0 - duprFrac) * 0.35 * difficulty  // up to 35% at DUPR 2.0
+            let expertLobChance = duprFrac * strategy.resetWhenStretched * 0.15 * difficulty
+            let lobChance = isAtKitchen ? (beginnerLobChance + expertLobChance) : beginnerLobChance * 0.3
+
+            if roll(Double(lobChance)) {
+                modes.insert(.lob)
             }
         }
 
