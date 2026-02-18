@@ -147,6 +147,10 @@ final class InteractiveMatchScene: SKScene {
     private var totalPointsPlayed: Int = 0
     private var rallyLength: Int = 0
 
+    // Whiff lock: once player whiffs on a ball, don't re-check hit detection
+    // until the ball leaves the hitbox or the point ends.
+    private var playerWhiffedCurrentBall: Bool = false
+
     // Match stats tracking
     private var playerAces: Int = 0
     private var playerWinners: Int = 0
@@ -695,6 +699,7 @@ final class InteractiveMatchScene: SKScene {
     private func startNextPoint() {
         rallyLength = 0
         rallyPressure = 0
+        playerWhiffedCurrentBall = false
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
@@ -1492,6 +1497,7 @@ final class InteractiveMatchScene: SKScene {
     private func checkPlayerHit() {
         guard ballSim.isActive && !ballSim.lastHitByPlayer else { return }
         guard ballSim.bounceCount < 2 else { return }
+        guard !playerWhiffedCurrentBall else { return }
 
         let positioningStat = CGFloat(playerStats.stat(.positioning))
         let hitboxRadius = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
@@ -1596,6 +1602,7 @@ final class InteractiveMatchScene: SKScene {
                 roll: whiffRoll
             )
             playerErrors += 1
+            playerWhiffedCurrentBall = true
             showIndicator("Too good!", color: .systemRed)
             return // ball continues past player, will double-bounce or go out
         }
