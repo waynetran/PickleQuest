@@ -189,7 +189,7 @@ enum DrillShotCalculator {
 
             // Angled modifier on reset
             if modes.contains(.angled) {
-                if ballApproachFromLeft { targetNX = 0.90 } else { targetNX = 0.10 }
+                if ballApproachFromLeft { targetNX = 0.82 } else { targetNX = 0.18 }
             }
 
             let spinDirection: CGFloat = Bool.random() ? 1.0 : -1.0
@@ -289,7 +289,7 @@ enum DrillShotCalculator {
             // Power adds extra scatter on top of base
             let powerScatter = 0.06 * (1.0 - accuracyStat / 99.0)
             scatter += powerScatter
-            targetNY = CGFloat.random(in: 0.90...0.95)
+            targetNY = CGFloat.random(in: 0.80...0.92)
         }
 
         // Slice: slightly less power, backspin — skids after bounce
@@ -304,12 +304,12 @@ enum DrillShotCalculator {
             topspinFactor = 0.8
         }
 
-        // Angled: target sidelines (~2ft from line = ~0.10 or 0.90 nx)
+        // Angled: target sidelines — slightly inside the lines so shots are reachable
         if modes.contains(.angled) {
             if ballApproachFromLeft {
-                targetNX = 0.90
+                targetNX = 0.82
             } else {
-                targetNX = 0.10
+                targetNX = 0.18
             }
         }
 
