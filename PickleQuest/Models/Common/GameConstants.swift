@@ -439,9 +439,9 @@ enum GameConstants {
 
         // Serve fault mode penalties — power/spin serves are harder to land
         // Raw penalty is reduced by aggressionControl (skilled NPCs manage the risk)
-        static let npcServePowerFaultPenalty: CGFloat = 0.40   // raw fault increase for power serves
-        static let npcServeSpinFaultPenalty: CGFloat = 0.25    // raw fault increase for spin serves
-        static let npcServeControlExponent: CGFloat = 0.7      // how fast skill reduces mode fault risk
+        static let npcServePowerFaultPenalty: CGFloat = 0.20   // raw fault increase for power serves
+        static let npcServeSpinFaultPenalty: CGFloat = 0.12    // raw fault increase for spin serves
+        static let npcServeControlExponent: CGFloat = 1.2      // how fast skill reduces mode fault risk
 
         // Shot quality modifiers (interactive match)
         static let goodShotErrorBonus: CGFloat = 0.25     // max NPC error rate increase from good player shot

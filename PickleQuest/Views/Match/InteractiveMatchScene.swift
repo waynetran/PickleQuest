@@ -137,19 +137,12 @@ final class InteractiveMatchScene: SKScene {
     private var prevBallY: CGFloat = 0.5
     private var prevBallHeight: CGFloat = 0.0
 
-    // Rally pressure (cumulative difficulty during a rally)
-    private var rallyPressure: CGFloat = 0
-
     // Match scoring (side-out singles)
     private var playerScore: Int = 0
     private var npcScore: Int = 0
     private var servingSide: MatchSide = .player
     private var totalPointsPlayed: Int = 0
     private var rallyLength: Int = 0
-
-    // Whiff lock: once player whiffs on a ball, don't re-check hit detection
-    // until the ball leaves the hitbox or the point ends.
-    private var playerWhiffedCurrentBall: Bool = false
 
     // Match stats tracking
     private var playerAces: Int = 0
@@ -698,8 +691,6 @@ final class InteractiveMatchScene: SKScene {
 
     private func startNextPoint() {
         rallyLength = 0
-        rallyPressure = 0
-        playerWhiffedCurrentBall = false
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
@@ -1327,9 +1318,9 @@ final class InteractiveMatchScene: SKScene {
 
             npcAI.playerPositionNX = playerNX
             npcAI.update(dt: dt, ball: ballSim)
+            checkBallState()
             checkPlayerHit()
             checkNPCHit()
-            checkBallState()
             syncAllPositions()
             updatePlayerStaminaBar()
             updateNPCBossBar()
@@ -1497,7 +1488,6 @@ final class InteractiveMatchScene: SKScene {
     private func checkPlayerHit() {
         guard ballSim.isActive && !ballSim.lastHitByPlayer else { return }
         guard ballSim.bounceCount < 2 else { return }
-        guard !playerWhiffedCurrentBall else { return }
 
         let positioningStat = CGFloat(playerStats.stat(.positioning))
         let hitboxRadius = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
@@ -1546,66 +1536,6 @@ final class InteractiveMatchScene: SKScene {
         }
 
         guard dist <= hitboxRadius else { return }
-
-        // --- Forced error: player whiff on hard incoming shots ---
-        let ballSpeed = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
-        let maxSpeed = P.baseShotSpeed + 2.0 * (P.maxShotSpeed - P.baseShotSpeed)
-        let speedFrac = max(0, min(1, (ballSpeed - P.baseShotSpeed) / (maxSpeed - P.baseShotSpeed)))
-        let spinPressure = min(abs(ballSim.spinCurve) / P.spinCurveFactor, 1.0)
-        let stretchFrac = min(dist / hitboxRadius, 1.0)
-        // Speed is only dangerous when combined with stretch — a fast ball straight at you
-        // is easy to return; a fast ball at arm's length is hard. Discount speed when stretch
-        // is low: at stretch=0 speed contributes only 20% of its weight.
-        let stretchMultiplier = 0.2 + stretchFrac * 0.8
-        let shotDifficulty = speedFrac * PB.forcedErrorSpeedWeight * stretchMultiplier
-            + spinPressure * PB.forcedErrorSpinWeight
-            + stretchFrac * PB.forcedErrorStretchWeight
-
-        let consistencyStat_fe = CGFloat(playerStats.stat(.consistency))
-        let defenseStat = CGFloat(playerStats.stat(.defense))
-        let avgDefense = (reflexesStat + consistencyStat_fe + defenseStat) / 3.0 / 99.0
-        var forcedErrorRate = shotDifficulty * PB.forcedErrorScale * pow(1.0 - avgDefense, PB.forcedErrorExponent)
-
-        // Rally pressure: accumulate difficulty, break down weaker player over sustained rallies
-        let NPCS = GameConstants.NPCStrategy.self
-        rallyPressure = max(0, rallyPressure - NPCS.pressureDecayPerShot)
-        rallyPressure += shotDifficulty
-        let pressureThreshold = NPCS.pressureBaseThreshold + avgDefense * NPCS.pressureStatScale
-        let pressureOverflow = max(0, rallyPressure - pressureThreshold)
-        let pressureBonus = pressureOverflow * NPCS.pressureErrorScale
-
-        // DUPR gap forced error amplifier: stronger NPCs force more player whiffs
-        let duprGapForPlayer = max(0, npc.duprRating - player.duprRating)
-        let gapAmplifier = 1.0 + CGFloat(duprGapForPlayer) * NPCS.duprForcedErrorAmplifier
-        forcedErrorRate = (forcedErrorRate + pressureBonus) * gapAmplifier
-
-        let whiffRoll = CGFloat.random(in: 0...1)
-        if whiffRoll < forcedErrorRate {
-            // Ball passes through — player whiffs
-            dbg.logPlayerWhiff(
-                shotDifficulty: shotDifficulty,
-                speedFrac: speedFrac,
-                spinPressure: spinPressure,
-                stretchFrac: stretchFrac,
-                stretchMultiplier: stretchMultiplier,
-                forcedErrorRate: forcedErrorRate,
-                avgDefense: avgDefense,
-                rallyPressure: rallyPressure,
-                pressureThreshold: pressureThreshold,
-                pressureOverflow: pressureOverflow,
-                duprGapAmplifier: gapAmplifier,
-                ballSpeed: ballSpeed,
-                ballSpin: ballSim.spinCurve,
-                ballHeight: ballSim.height,
-                dist: dist,
-                hitboxRadius: hitboxRadius,
-                roll: whiffRoll
-            )
-            playerErrors += 1
-            playerWhiffedCurrentBall = true
-            showIndicator("Too good!", color: .systemRed)
-            return // ball continues past player, will double-bounce or go out
-        }
 
         // Two-bounce rule: return of serve AND server's 3rd shot must be off the bounce
         if rallyLength < 2 && ballSim.bounceCount == 0 {
@@ -1661,9 +1591,6 @@ final class InteractiveMatchScene: SKScene {
         }
 
         dbg.logPlayerHit(
-            shotDifficulty: shotDifficulty,
-            forcedErrorRate: forcedErrorRate,
-            roll: whiffRoll,
             modes: activeShotModes,
             stamina: stamina,
             targetNX: shot.targetNX,
@@ -1689,6 +1616,7 @@ final class InteractiveMatchScene: SKScene {
         )
         ballSim.lastHitByPlayer = true
         previousBallNY = ballSim.courtY
+        checkedFirstBounce = false
 
         // Push player shot X to NPC pattern memory (keep last 5)
         npcAI.playerShotHistory.append(shot.targetNX)
@@ -1797,6 +1725,7 @@ final class InteractiveMatchScene: SKScene {
                 }
                 ballSim.lastHitByPlayer = false
                 previousBallNY = ballSim.courtY
+                checkedFirstBounce = false
                 return
             }
 
@@ -1828,6 +1757,7 @@ final class InteractiveMatchScene: SKScene {
             )
             ballSim.lastHitByPlayer = false
             previousBallNY = ballSim.courtY
+            checkedFirstBounce = false
 
             showShotMarkers(targetNX: shot.targetNX, targetNY: shot.targetNY, accuracy: shot.accuracy)
         }

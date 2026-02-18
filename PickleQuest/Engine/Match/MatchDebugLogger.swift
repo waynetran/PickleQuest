@@ -197,11 +197,8 @@ final class MatchDebugLogger {
         """)
     }
 
-    /// Log when player successfully returns (no whiff).
+    /// Log when player successfully returns the ball.
     func logPlayerHit(
-        shotDifficulty: CGFloat,
-        forcedErrorRate: CGFloat,
-        roll: CGFloat,
         modes: DrillShotCalculator.ShotMode,
         stamina: CGFloat,
         targetNX: CGFloat,
@@ -218,7 +215,6 @@ final class MatchDebugLogger {
         let netStr = isNetFault ? " *** NET FAULT ***" : ""
         print("""
         \(tag)   [HIT] Player #\(shotInPoint) stamina=\(f(stamina)) modes=\(modesStr(modes))\(netStr)
-        \(tag)     whiffRate=\(f3(forcedErrorRate)) roll=\(f3(roll)) → survived
         \(tag)     target=(\(f(targetNX)),\(f(targetNY))) pow=\(f(power)) arc=\(f(arc))
         \(tag)     spin=\(f(spinCurve)) topspin=\(f(topspinFactor)) netFaultRate=\(f3(netFaultRate))
         """)
