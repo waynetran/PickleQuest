@@ -340,9 +340,11 @@ final class HeadlessMatchSimulator {
             serveTargetNY = max(minNY, min(maxNY, targetBaseNY + scatterY))
         }
 
+        let serveDistNX = abs(serveTargetNX - originX)
         let serveDistNY = abs(serveTargetNY - originNY)
         let serveArc = DrillShotCalculator.arcToLandAt(
             distanceNY: serveDistNY,
+            distanceNX: serveDistNX,
             power: shot.power,
             arcMargin: 1.30
         )

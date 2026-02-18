@@ -129,8 +129,10 @@ enum DrillShotCalculator {
     /// Calculate the arc value needed so the ball lands at the target distance.
     /// Uses projectile physics: arc is the value passed to launch(), which sets vz = arc * speed * 2.0.
     /// Returns the arc such that h(travelTime) ≈ 0, with a margin for net clearance.
+    /// - distanceNX: X distance to target (used for accurate travel time on cross-court shots)
     static func arcToLandAt(
         distanceNY: CGFloat,
+        distanceNX: CGFloat = 0,
         power: CGFloat,
         initialHeight: CGFloat = 0.05,
         arcMargin: CGFloat = 1.15 // 15% extra arc for net clearance margin
@@ -139,8 +141,9 @@ enum DrillShotCalculator {
         let speed = P.baseShotSpeed + power * (P.maxShotSpeed - P.baseShotSpeed)
         guard speed > 0.01, distanceNY > 0.01 else { return 0.3 }
 
-        // Time for ball to travel to target (horizontal speed ≈ total speed for mostly-forward shots)
-        let travelTime = distanceNY / speed
+        // Travel time based on total distance (launch() splits speed by direction vector)
+        let totalDist = sqrt(distanceNX * distanceNX + distanceNY * distanceNY)
+        let travelTime = totalDist / speed
 
         // Solve for vz so that h(t) = 0 at travelTime:
         // 0 = h0 + vz*t - 0.5*g*t²  →  vz = (0.5*g*t² - h0) / t
@@ -148,7 +151,8 @@ enum DrillShotCalculator {
 
         // Convert vz to arc: launch() does vz = arc * speed * 2.0
         let arc = vzNeeded / (speed * 2.0)
-        return max(0.08, arc * arcMargin)
+        // Cap arc to prevent absurdly floaty trajectories at low power
+        return min(0.85, max(0.08, arc * arcMargin))
     }
 
     /// Generate a shot for the player.
@@ -162,6 +166,7 @@ enum DrillShotCalculator {
         ballApproachFromLeft: Bool,
         drillType: DrillType,
         ballHeight: CGFloat = 0.0,
+        courtNX: CGFloat = 0.5,
         courtNY: CGFloat = 0.1,
         modes: ShotMode = [],
         staminaFraction: CGFloat = 1.0,
@@ -206,9 +211,10 @@ enum DrillShotCalculator {
 
             // Physics-based arc for correct distance
             let resetDistNY = abs(targetNY - courtNY)
+            let resetDistNX = abs(targetNX - courtNX)
             let resetArc: CGFloat
             if shootingFromFarSide {
-                resetArc = arcToLandAt(distanceNY: resetDistNY, power: resetPower, arcMargin: 1.30)
+                resetArc = arcToLandAt(distanceNY: resetDistNY, distanceNX: resetDistNX, power: resetPower, arcMargin: 1.30)
             } else {
                 resetArc = CGFloat.random(in: 0.55...0.75)
             }
@@ -237,9 +243,9 @@ enum DrillShotCalculator {
         if drillType == .dinkingDrill && modes.isEmpty {
             power = 0.15 + (powerStat / 99.0) * 0.20
         } else if drillType == .baselineRally && modes.isEmpty {
-            power = 0.15 + (powerStat / 99.0) * 0.85
+            power = max(0.30, 0.15 + (powerStat / 99.0) * 0.85)
         } else {
-            power = 0.15 + (powerStat / 99.0) * 0.85
+            power = max(0.30, 0.15 + (powerStat / 99.0) * 0.85)
             let heightBonus = min(ballHeight / 0.15, 1.0) * P.heightPowerBonus
             power += heightBonus
         }
@@ -327,7 +333,8 @@ enum DrillShotCalculator {
         }
 
         // --- Physics-based arc calculation ---
-        let distToTarget = abs(targetNY - courtNY)
+        let distToTargetNY = abs(targetNY - courtNY)
+        let distToTargetNX = abs(targetNX - courtNX)
 
         if drillType == .dinkingDrill && modes.isEmpty {
             arc = CGFloat.random(in: 0.5...0.7)
@@ -340,7 +347,7 @@ enum DrillShotCalculator {
             } else if modes.contains(.power) {
                 margin = 1.10
             }
-            arc = arcToLandAt(distanceNY: distToTarget, power: power, arcMargin: margin)
+            arc = arcToLandAt(distanceNY: distToTargetNY, distanceNX: distToTargetNX, power: power, arcMargin: margin)
         }
 
         // Apply scatter — allow targets outside court for genuine misses

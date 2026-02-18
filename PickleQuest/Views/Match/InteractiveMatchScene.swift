@@ -705,8 +705,10 @@ final class InteractiveMatchScene: SKScene {
         npcIsPacing = false
         npcNode?.removeAction(forKey: "frustrationPace")
 
-        // Recover stamina between points
-        stamina = min(P.maxStamina, stamina + 10)
+        // Recover stamina between points (scaled by stamina stat)
+        let staminaStat = CGFloat(playerStats.stat(.stamina))
+        let staminaRecovery: CGFloat = 10 + (staminaStat / 99.0) * 12
+        stamina = min(P.maxStamina, stamina + staminaRecovery)
         npcAI.recoverBetweenPoints()
 
         // Reset NPC state for new point (clears shot count, pattern memory, kitchen approach)
@@ -777,18 +779,18 @@ final class InteractiveMatchScene: SKScene {
         // Light swipe → mid-box, strong swipe → deep near baseline
         let baseTargetNY: CGFloat = 0.78 + rawPowerFactor * 0.15
         let targetNX = max(0.15, min(0.85, 0.5 + angleDeviation + scatterX))
-        let targetNY = max(0.73, min(0.97, baseTargetNY + scatterY))
+        let targetNY = max(0.73, min(0.92, baseTargetNY + scatterY))
 
         // Power mode boosts serve speed
         let powerMultiplier: CGFloat = activeShotModes.contains(.power) ? 1.2 : 1.0
-        let servePower = (0.10 + min(rawPowerFactor, 1.3) * 0.75) * powerMultiplier
+        let servePower = max(0.30, (0.10 + min(rawPowerFactor, 1.3) * 0.75) * powerMultiplier)
 
         // Physics-based arc: compute exact arc to land at target distance
         let serveDistNY = abs(targetNY - max(0, playerNY))
         let serveArc = DrillShotCalculator.arcToLandAt(
             distanceNY: serveDistNY,
             power: servePower,
-            arcMargin: 1.30 // extra margin for cross-court angle
+            arcMargin: 1.15 // net clearance margin
         )
 
         // Drain stamina for active modes
@@ -1492,9 +1494,10 @@ final class InteractiveMatchScene: SKScene {
         let positioningStat = CGFloat(playerStats.stat(.positioning))
         let hitboxRadius = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
 
-        // Pre-bounce: don't reach forward — wait for ball to arrive at player's Y
-        // For swept check: allow if ball was above player last frame but is at/below now
-        if ballSim.bounceCount == 0 && ballSim.courtY > playerNY && prevBallY > playerNY { return }
+        // Two-bounce rule: during serve return (rally 0) and 3rd shot (rally 1),
+        // the ball MUST bounce before being hit. Instead of penalizing a "volley fault",
+        // simply ignore the ball — the player's avatar auto-moves and can't avoid it.
+        if rallyLength < 2 && ballSim.bounceCount == 0 { return }
 
         // 3D hitbox: height reach based on athleticism (speed + reflexes)
         let speedStat = CGFloat(playerStats.stat(.speed))
@@ -1536,14 +1539,6 @@ final class InteractiveMatchScene: SKScene {
         }
 
         guard dist <= hitboxRadius else { return }
-
-        // Two-bounce rule: return of serve AND server's 3rd shot must be off the bounce
-        if rallyLength < 2 && ballSim.bounceCount == 0 {
-            playerErrors += 1
-            showIndicator("Volley Fault!", color: .systemRed)
-            resolvePoint(.npcWon, reason: "Volley fault (two-bounce rule, rally=\(rallyLength))")
-            return
-        }
 
         rallyLength += 1
 

@@ -410,6 +410,7 @@ final class SimulatedPlayerAI {
             ballApproachFromLeft: ball.courtX < currentNX,
             drillType: .baselineRally,
             ballHeight: ball.height,
+            courtNX: currentNX,
             courtNY: currentNY,
             modes: modes,
             staminaFraction: staminaFraction
@@ -433,6 +434,7 @@ final class SimulatedPlayerAI {
             ballApproachFromLeft: false,
             drillType: .baselineRally,
             ballHeight: 0.05,
+            courtNX: currentNX,
             courtNY: currentNY,
             modes: modes,
             staminaFraction: stamina / P.maxStamina
