@@ -42,6 +42,16 @@ final class HeadlessMatchSimulator {
         // Kitchen faults
         let playerKitchenFaults: Int
         let npcKitchenFaults: Int
+        // Serve position diagnostics
+        let playerServeFootFaults: Int
+        let npcServeFootFaults: Int
+        let playerTwoBounceViolations: Int
+        let npcTwoBounceViolations: Int
+        // Serve position aggregates (NY at serve time)
+        let avgPlayerServeNY: Double
+        let avgNPCServeNY: Double
+        let avgPlayerReceiveNY: Double
+        let avgNPCReceiveNY: Double
     }
 
     // MARK: - Components
@@ -84,6 +94,17 @@ final class HeadlessMatchSimulator {
     // Kitchen fault tracking
     private var playerKitchenFaults: Int = 0
     private var npcKitchenFaults: Int = 0
+    // Serve position / rule violation tracking
+    private var playerServeFootFaults: Int = 0
+    private var npcServeFootFaults: Int = 0
+    private var playerTwoBounceViolations: Int = 0
+    private var npcTwoBounceViolations: Int = 0
+    private var totalPlayerServeNY: CGFloat = 0
+    private var totalNPCServeNY: CGFloat = 0
+    private var totalPlayerReceiveNY: CGFloat = 0
+    private var totalNPCReceiveNY: CGFloat = 0
+    private var playerServeCount: Int = 0
+    private var npcServeCount: Int = 0
 
     // First bounce tracking
     private var firstBounceCourtX: CGFloat = 0.5
@@ -132,6 +153,16 @@ final class HeadlessMatchSimulator {
         npcOutWide = 0
         playerKitchenFaults = 0
         npcKitchenFaults = 0
+        playerServeFootFaults = 0
+        npcServeFootFaults = 0
+        playerTwoBounceViolations = 0
+        npcTwoBounceViolations = 0
+        totalPlayerServeNY = 0
+        totalNPCServeNY = 0
+        totalPlayerReceiveNY = 0
+        totalNPCReceiveNY = 0
+        playerServeCount = 0
+        npcServeCount = 0
 
         while !isMatchOver() {
             simulatePoint()
@@ -168,7 +199,15 @@ final class HeadlessMatchSimulator {
             playerOutWide: playerOutWide,
             npcOutWide: npcOutWide,
             playerKitchenFaults: playerKitchenFaults,
-            npcKitchenFaults: npcKitchenFaults
+            npcKitchenFaults: npcKitchenFaults,
+            playerServeFootFaults: playerServeFootFaults,
+            npcServeFootFaults: npcServeFootFaults,
+            playerTwoBounceViolations: playerTwoBounceViolations,
+            npcTwoBounceViolations: npcTwoBounceViolations,
+            avgPlayerServeNY: playerServeCount > 0 ? Double(totalPlayerServeNY) / Double(playerServeCount) : 0,
+            avgNPCServeNY: npcServeCount > 0 ? Double(totalNPCServeNY) / Double(npcServeCount) : 0,
+            avgPlayerReceiveNY: npcServeCount > 0 ? Double(totalPlayerReceiveNY) / Double(npcServeCount) : 0,
+            avgNPCReceiveNY: playerServeCount > 0 ? Double(totalNPCReceiveNY) / Double(playerServeCount) : 0
         )
     }
 
@@ -187,6 +226,31 @@ final class HeadlessMatchSimulator {
         } else {
             playerAI.positionForServe(playerScore: playerScore)
             npcAI.positionForReceive(playerScore: playerScore)
+        }
+
+        // Record serve positions and check for foot faults
+        // Player baseline = Y=0, NPC baseline = Y=1.0
+        // Server must be at or behind their baseline (player NY <= baseline, NPC NY >= baseline)
+        let playerBaselineNY: CGFloat = 0.0
+        let npcBaselineNY: CGFloat = 1.0
+        let footFaultTolerance: CGFloat = 0.01 // small tolerance for floating point
+
+        if servingSide == .player {
+            playerServeCount += 1
+            totalPlayerServeNY += playerAI.currentNY
+            totalNPCReceiveNY += npcAI.currentNY
+            // Foot fault: player serving from too far inside the court
+            if playerAI.currentNY > playerBaselineNY + footFaultTolerance {
+                playerServeFootFaults += 1
+            }
+        } else {
+            npcServeCount += 1
+            totalNPCServeNY += npcAI.currentNY
+            totalPlayerReceiveNY += playerAI.currentNY
+            // Foot fault: NPC serving from too far inside the court
+            if npcAI.currentNY < npcBaselineNY - footFaultTolerance {
+                npcServeFootFaults += 1
+            }
         }
 
         // Execute serve
@@ -326,14 +390,10 @@ final class HeadlessMatchSimulator {
     // MARK: - Hit Detection (returns true if point ended)
 
     private func checkPlayerHit() -> Bool {
-        guard playerAI.canHit(ball: ballSim) else { return false }
+        // Two-bounce rule: return of serve and 3rd shot must bounce first
+        if rallyLength < 2 && ballSim.bounceCount == 0 { return false }
 
-        // Two-bounce rule: return of serve and 3rd shot must be off the bounce
-        if rallyLength < 2 && ballSim.bounceCount == 0 {
-            playerErrors += 1
-            resolvePoint(.npcWon)
-            return true
-        }
+        guard playerAI.canHit(ball: ballSim) else { return false }
 
         // Pre-select shot modes for error context
         let shotModes = playerAI.selectShotModes(ball: ballSim)

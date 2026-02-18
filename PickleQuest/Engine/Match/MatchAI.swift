@@ -220,7 +220,7 @@ final class MatchAI {
     func positionForServe(npcScore: Int) {
         let evenScore = npcScore % 2 == 0
         currentNX = evenScore ? 0.75 : 0.25
-        currentNY = startNY
+        currentNY = 1.0  // Behind baseline (NPC baseline = Y=1.0)
         targetNX = currentNX
         targetNY = currentNY
     }

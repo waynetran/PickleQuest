@@ -84,7 +84,7 @@ final class SimulatedPlayerAI {
     func positionForServe(playerScore: Int) {
         let evenScore = playerScore % 2 == 0
         currentNX = evenScore ? 0.75 : 0.25
-        currentNY = startNY
+        currentNY = 0.0  // Behind baseline (player baseline = Y=0)
         targetNX = currentNX
         targetNY = currentNY
     }
