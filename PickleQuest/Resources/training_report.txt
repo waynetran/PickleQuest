@@ -61,8 +61,8 @@ Starter Balance (trained stats vs NPC at DUPR 2.0):
 
 Headless Interactive Validation (player vs NPC, same DUPR):
   DUPR   PointDiff   WinRate   AvgRally   Matches
-  2.0      -0.4      46.0%       0.9       50
-  3.0      -0.5      42.0%       1.4       50
-  4.0      -0.4      48.0%       1.4       50
-  5.0      -2.0      30.0%       1.3       50
-  6.0      -1.3      42.0%       1.5       50
+  2.0      -2.1      32.0%       0.8       50
+  3.0      -1.2      44.0%       1.4       50
+  4.0      -1.1      36.0%       1.4       50
+  5.0      -2.4      32.0%       1.3       50
+  6.0      -3.1      20.0%       1.5       50
