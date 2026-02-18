@@ -120,7 +120,7 @@ enum GameConstants {
         static let minRallyShots: Int = 1
         static let maxRallyShots: Int = 30
         static let baseWinnerChance: Double = 0.15
-        static let baseErrorChance: Double = 0.18
+        static let baseErrorChance: Double = 0.16
 
         // Doubles dink phase
         static let doublesDinkMinShots: Int = 3
