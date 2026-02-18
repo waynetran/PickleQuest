@@ -101,6 +101,15 @@ enum NPCErrorType {
     case wide  // Angled shots miss wide
 }
 
+// MARK: - Jump Phase (shared by player and NPC)
+
+enum JumpPhase {
+    case grounded
+    case rising
+    case hanging
+    case falling
+}
+
 // MARK: - Match AI
 
 /// Strategic AI opponent for interactive matches.
@@ -126,6 +135,13 @@ final class MatchAI {
     // Stamina
     var stamina: CGFloat = P.maxStamina
     private var timeSinceLastSprint: CGFloat = 10 // start recovered
+
+    // Jump state
+    private(set) var jumpPhase: JumpPhase = .grounded
+    private var jumpTimer: CGFloat = 0
+    private var jumpCooldownTimer: CGFloat = 0
+    /// Current height reach bonus from jump (0 when grounded, up to jumpHeightReachBonus at peak)
+    private(set) var jumpHeightBonus: CGFloat = 0
 
     // Derived movement speed
     private let moveSpeed: CGFloat
@@ -225,6 +241,109 @@ final class MatchAI {
         self.targetNY = startNY
     }
 
+    // MARK: - Jump
+
+    /// Attempt to jump. Returns true if jump started.
+    @discardableResult
+    func initiateJump() -> Bool {
+        guard jumpPhase == .grounded else { return false }
+        guard jumpCooldownTimer <= 0 else { return false }
+        guard stamina >= P.jumpMinStamina else { return false }
+        stamina -= P.jumpStaminaCost
+        jumpPhase = .rising
+        jumpTimer = 0
+        return true
+    }
+
+    /// Update jump state machine. Call each frame.
+    func updateJump(dt: CGFloat) {
+        // Cooldown timer ticks even when grounded
+        if jumpCooldownTimer > 0 {
+            jumpCooldownTimer = max(0, jumpCooldownTimer - dt)
+        }
+
+        guard jumpPhase != .grounded else {
+            jumpHeightBonus = 0
+            return
+        }
+
+        jumpTimer += dt
+        let totalDuration = P.jumpDuration
+        let riseEnd = totalDuration * P.jumpRiseFraction
+        let hangEnd = riseEnd + totalDuration * P.jumpHangFraction
+
+        switch jumpPhase {
+        case .rising:
+            let riseFraction = min(jumpTimer / riseEnd, 1.0)
+            jumpHeightBonus = P.jumpHeightReachBonus * riseFraction
+            if jumpTimer >= riseEnd {
+                jumpPhase = .hanging
+            }
+        case .hanging:
+            jumpHeightBonus = P.jumpHeightReachBonus
+            if jumpTimer >= hangEnd {
+                jumpPhase = .falling
+            }
+        case .falling:
+            let fallStart = hangEnd
+            let fallDuration = totalDuration * P.jumpFallFraction
+            let fallFraction = min((jumpTimer - fallStart) / fallDuration, 1.0)
+            jumpHeightBonus = P.jumpHeightReachBonus * (1.0 - fallFraction)
+            if jumpTimer >= totalDuration {
+                jumpPhase = .grounded
+                jumpHeightBonus = 0
+                jumpCooldownTimer = P.jumpCooldown
+            }
+        case .grounded:
+            break
+        }
+    }
+
+    /// Fraction through the jump animation (0 = start, 1 = landing). Used for sprite Y-offset.
+    var jumpAnimationFraction: CGFloat {
+        guard jumpPhase != .grounded else { return 0 }
+        return min(jumpTimer / P.jumpDuration, 1.0)
+    }
+
+    /// Sprite Y-offset for jump visual. Follows a sine arc: 0 → peak → 0.
+    var jumpSpriteYOffset: CGFloat {
+        guard jumpPhase != .grounded else { return 0 }
+        let fraction = jumpAnimationFraction
+        // Sine curve: smooth rise and fall
+        return sin(fraction * .pi) * P.jumpSpriteYOffset
+    }
+
+    /// NPC jump decision: should the NPC jump to reach a high ball?
+    /// Called in update() when ball is approaching and within decision range.
+    private func shouldJump(ball: DrillBallSimulation) -> Bool {
+        guard jumpPhase == .grounded && jumpCooldownTimer <= 0 else { return false }
+        guard stamina >= P.jumpMinStamina else { return false }
+
+        // Only interactive NPCs jump (headless AI doesn't need it)
+        guard !isHeadless else { return false }
+
+        // Athleticism gate
+        let speedStat = CGFloat(min(99, npcStats.stat(.speed) + statBoost))
+        let reflexesStat = CGFloat(min(99, npcStats.stat(.reflexes) + statBoost))
+        let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
+        guard athleticism >= P.npcJumpAthleticismThreshold else { return false }
+
+        // Check if ball will be too high for standing reach
+        let heightReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus
+        let predictedHeight = ball.height + ball.vz * P.npcJumpDecisionLeadTime
+            - 0.5 * P.gravity * P.npcJumpDecisionLeadTime * P.npcJumpDecisionLeadTime
+        let excessHeight = predictedHeight - heightReach
+        guard excessHeight > 0 else { return false }
+
+        // Check if jump would bring ball into range
+        let jumpReach = heightReach + P.jumpHeightReachBonus
+        guard predictedHeight <= jumpReach else { return false }
+
+        // Roll against athleticism-scaled chance
+        let jumpChance = athleticism * P.npcJumpChanceScale
+        return CGFloat.random(in: 0...1) < jumpChance
+    }
+
     // MARK: - Positioning
 
     /// Position for serving: right side when score is even, left when odd.
@@ -261,6 +380,24 @@ final class MatchAI {
 
     /// Update AI position each frame.
     func update(dt: CGFloat, ball: DrillBallSimulation) {
+        // Update jump state machine
+        updateJump(dt: dt)
+
+        // NPC jump decision: when ball is approaching and high
+        if ball.isActive && ball.lastHitByPlayer && jumpPhase == .grounded {
+            // Estimate time to contact
+            let dy = currentNY - ball.courtY
+            let ballSpeedY = abs(ball.vy)
+            if ballSpeedY > 0.01 {
+                let timeToContact = dy / ballSpeedY
+                if timeToContact > 0 && timeToContact < P.npcJumpDecisionLeadTime * 2 {
+                    if shouldJump(ball: ball) {
+                        initiateJump()
+                    }
+                }
+            }
+        }
+
         if ball.isActive && ball.lastHitByPlayer {
             // Ball heading toward AI — intercept
             if isHeadless {
@@ -430,11 +567,11 @@ final class MatchAI {
         // Pre-bounce: don't reach forward — wait for ball to arrive at NPC's Y
         if ball.bounceCount == 0 && ball.courtY < currentNY { return false }
 
-        // 3D hitbox: height reach based on athleticism (speed + reflexes)
+        // 3D hitbox: height reach based on athleticism (speed + reflexes) + jump bonus
         let speedStat = CGFloat(min(99, npcStats.stat(.speed) + statBoost))
         let reflexesStat = CGFloat(min(99, npcStats.stat(.reflexes) + statBoost))
         let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
-        let heightReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus
+        let heightReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus + jumpHeightBonus
         let excessHeight = max(0, ball.height - heightReach)
 
         let dx = ball.courtX - currentNX
@@ -980,6 +1117,10 @@ final class MatchAI {
         self.reactionTimer = 0
         self.hasComputedNoise = false
         self.serveTargetHint = nil
+        self.jumpPhase = .grounded
+        self.jumpTimer = 0
+        self.jumpCooldownTimer = 0
+        self.jumpHeightBonus = 0
         if isServing {
             positionForServe(npcScore: npcScore)
         }

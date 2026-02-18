@@ -97,6 +97,22 @@ final class InteractiveMatchScene: SKScene {
     private var shotModeBgs: [SKShapeNode] = []
     private var shotModeTouch: UITouch?
 
+    // Jump button
+    private var jumpButton: SKNode!
+    private var jumpButtonBg: SKShapeNode!
+    private var jumpButtonLabel: SKLabelNode!
+
+    // Jump state (player)
+    private var playerJumpPhase: JumpPhase = .grounded
+    private var playerJumpTimer: CGFloat = 0
+    private var playerJumpCooldownTimer: CGFloat = 0
+    private var playerJumpHeightBonus: CGFloat = 0
+
+    // High ball indicator
+    private var highBallWarning: SKNode!
+    private var highBallChevron: SKLabelNode!
+    private var highBallLabel: SKLabelNode!
+
     // Stamina
     private var stamina: CGFloat = P.maxStamina
     private var timeSinceLastSprint: CGFloat = 10
@@ -330,6 +346,12 @@ final class InteractiveMatchScene: SKScene {
         // Shot mode buttons
         buildShotButtons()
 
+        // Jump button
+        buildJumpButton()
+
+        // High ball indicator
+        buildHighBallIndicator()
+
         // NPC boss bar
         buildNPCBossBar()
 
@@ -406,6 +428,66 @@ final class InteractiveMatchScene: SKScene {
             shotModeButtons.append(btn)
             shotModeBgs.append(bg)
         }
+    }
+
+    private func buildJumpButton() {
+        let buttonRadius: CGFloat = 28
+        let buttonX: CGFloat = 51  // left side, mirroring shot buttons on right
+        let buttonY: CGFloat = 350
+
+        jumpButton = SKNode()
+        jumpButton.position = CGPoint(x: buttonX, y: buttonY)
+        jumpButton.zPosition = 20
+        jumpButton.name = "jumpButton"
+
+        jumpButtonBg = SKShapeNode(circleOfRadius: buttonRadius)
+        jumpButtonBg.fillColor = UIColor.systemCyan.withAlphaComponent(0.35)
+        jumpButtonBg.strokeColor = UIColor.systemCyan.withAlphaComponent(0.6)
+        jumpButtonBg.lineWidth = 2
+        jumpButton.addChild(jumpButtonBg)
+
+        jumpButtonLabel = SKLabelNode(text: "\u{25B2}")  // upward triangle
+        jumpButtonLabel.fontName = "AvenirNext-Bold"
+        jumpButtonLabel.fontSize = 22
+        jumpButtonLabel.fontColor = .white
+        jumpButtonLabel.verticalAlignmentMode = .center
+        jumpButtonLabel.horizontalAlignmentMode = .center
+        jumpButton.addChild(jumpButtonLabel)
+
+        let subLabel = SKLabelNode(text: "JUMP")
+        subLabel.fontName = "AvenirNext-Bold"
+        subLabel.fontSize = 8
+        subLabel.fontColor = UIColor.white.withAlphaComponent(0.7)
+        subLabel.verticalAlignmentMode = .top
+        subLabel.horizontalAlignmentMode = .center
+        subLabel.position = CGPoint(x: 0, y: -12)
+        jumpButton.addChild(subLabel)
+
+        addChild(jumpButton)
+    }
+
+    private func buildHighBallIndicator() {
+        highBallWarning = SKNode()
+        highBallWarning.zPosition = AC.ZPositions.text + 2
+        highBallWarning.alpha = 0
+
+        highBallChevron = SKLabelNode(text: "\u{25B2}\u{25B2}")  // double chevron up
+        highBallChevron.fontName = "AvenirNext-Bold"
+        highBallChevron.fontSize = 18
+        highBallChevron.verticalAlignmentMode = .bottom
+        highBallChevron.horizontalAlignmentMode = .center
+        highBallChevron.position = CGPoint(x: 0, y: 8)
+        highBallWarning.addChild(highBallChevron)
+
+        highBallLabel = SKLabelNode(text: "JUMP!")
+        highBallLabel.fontName = "AvenirNext-Bold"
+        highBallLabel.fontSize = 12
+        highBallLabel.verticalAlignmentMode = .top
+        highBallLabel.horizontalAlignmentMode = .center
+        highBallLabel.position = CGPoint(x: 0, y: 6)
+        highBallWarning.addChild(highBallLabel)
+
+        addChild(highBallWarning)
     }
 
     private func buildNPCBossBar() {
@@ -706,6 +788,13 @@ final class InteractiveMatchScene: SKScene {
         nextPaceTime = 20
         npcIsPacing = false
         npcNode?.removeAction(forKey: "frustrationPace")
+
+        // Reset jump state
+        playerJumpPhase = .grounded
+        playerJumpTimer = 0
+        playerJumpCooldownTimer = 0
+        playerJumpHeightBonus = 0
+        highBallWarning.alpha = 0
 
         // Recover stamina between points (scaled by stamina stat)
         let staminaStat = CGFloat(playerStats.stat(.stamina))
@@ -1127,6 +1216,12 @@ final class InteractiveMatchScene: SKScene {
 
             guard phase == .playing || phase == .serving else { continue }
 
+            // Check jump button
+            if phase == .playing, let jb = jumpButton, hitTestButton(jb, at: pos, size: CGSize(width: 56, height: 56)) {
+                initiatePlayerJump()
+                continue
+            }
+
             // Check shot mode buttons first (works during serve too)
             var hitButton = false
             for (i, btn) in shotModeButtons.enumerated() {
@@ -1291,6 +1386,7 @@ final class InteractiveMatchScene: SKScene {
 
         switch phase {
         case .playing:
+            updatePlayerJump(dt: dt)
             movePlayer(dt: dt)
             let prevBounces = ballSim.bounceCount
             previousBallNY = ballSim.courtY
@@ -1328,6 +1424,8 @@ final class InteractiveMatchScene: SKScene {
             syncAllPositions()
             updatePlayerStaminaBar()
             updateNPCBossBar()
+            updateHighBallIndicator()
+            updateJumpButtonVisual()
 
         case .serving:
             movePlayer(dt: dt)
@@ -1387,6 +1485,154 @@ final class InteractiveMatchScene: SKScene {
         }
     }
 
+    // MARK: - Player Jump
+
+    private func initiatePlayerJump() {
+        guard playerJumpPhase == .grounded else { return }
+        guard playerJumpCooldownTimer <= 0 else { return }
+        guard stamina >= P.jumpMinStamina else { return }
+        stamina -= P.jumpStaminaCost
+        playerJumpPhase = .rising
+        playerJumpTimer = 0
+    }
+
+    private func updatePlayerJump(dt: CGFloat) {
+        // Cooldown
+        if playerJumpCooldownTimer > 0 {
+            playerJumpCooldownTimer = max(0, playerJumpCooldownTimer - dt)
+        }
+
+        guard playerJumpPhase != .grounded else {
+            playerJumpHeightBonus = 0
+            return
+        }
+
+        playerJumpTimer += dt
+        let totalDuration = P.jumpDuration
+        let riseEnd = totalDuration * P.jumpRiseFraction
+        let hangEnd = riseEnd + totalDuration * P.jumpHangFraction
+
+        switch playerJumpPhase {
+        case .rising:
+            let riseFraction = min(playerJumpTimer / riseEnd, 1.0)
+            playerJumpHeightBonus = P.jumpHeightReachBonus * riseFraction
+            if playerJumpTimer >= riseEnd {
+                playerJumpPhase = .hanging
+            }
+        case .hanging:
+            playerJumpHeightBonus = P.jumpHeightReachBonus
+            if playerJumpTimer >= hangEnd {
+                playerJumpPhase = .falling
+            }
+        case .falling:
+            let fallStart = hangEnd
+            let fallDuration = totalDuration * P.jumpFallFraction
+            let fallFraction = min((playerJumpTimer - fallStart) / fallDuration, 1.0)
+            playerJumpHeightBonus = P.jumpHeightReachBonus * (1.0 - fallFraction)
+            if playerJumpTimer >= totalDuration {
+                playerJumpPhase = .grounded
+                playerJumpHeightBonus = 0
+                playerJumpCooldownTimer = P.jumpCooldown
+            }
+        case .grounded:
+            break
+        }
+    }
+
+    /// Sprite Y-offset for player jump visual. Sine arc: 0 → peak → 0.
+    private var playerJumpSpriteYOffset: CGFloat {
+        guard playerJumpPhase != .grounded else { return 0 }
+        let fraction = min(playerJumpTimer / P.jumpDuration, 1.0)
+        return sin(fraction * .pi) * P.jumpSpriteYOffset
+    }
+
+    // MARK: - High Ball Indicator
+
+    private func updateHighBallIndicator() {
+        guard ballSim.isActive && !ballSim.lastHitByPlayer else {
+            highBallWarning.alpha = 0
+            return
+        }
+
+        // Only show when ball is approaching and within range
+        let dx = ballSim.courtX - playerNX
+        let dy = ballSim.courtY - playerNY
+        let dist = sqrt(dx * dx + dy * dy)
+        guard dist < P.highBallIndicatorDistance else {
+            highBallWarning.alpha = 0
+            return
+        }
+        guard ballSim.vy < 0 else {  // ball must be heading toward player
+            highBallWarning.alpha = 0
+            return
+        }
+
+        // Predict ball height when it reaches player's Y
+        let ballSpeedY = abs(ballSim.vy)
+        guard ballSpeedY > 0.01 else {
+            highBallWarning.alpha = 0
+            return
+        }
+        let timeToPlayer = abs(ballSim.courtY - playerNY) / ballSpeedY
+        let predictedHeight = ballSim.height + ballSim.vz * timeToPlayer
+            - 0.5 * P.gravity * timeToPlayer * timeToPlayer
+
+        // Player's standing height reach
+        let speedStat = CGFloat(playerStats.stat(.speed))
+        let reflexesStat = CGFloat(playerStats.stat(.reflexes))
+        let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
+        let standingReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus
+        let jumpReach = standingReach + P.jumpHeightReachBonus
+
+        let excessAboveStanding = predictedHeight - standingReach
+
+        guard excessAboveStanding > P.highBallWarningThreshold else {
+            highBallWarning.alpha = 0
+            return
+        }
+
+        // Position above player sprite
+        let screenPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
+        let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, playerNY)))
+        highBallWarning.position = CGPoint(x: screenPos.x, y: screenPos.y + 50 * pScale + 15)
+
+        if predictedHeight <= jumpReach {
+            // Orange: jump can reach it
+            highBallChevron.fontColor = .systemOrange
+            highBallLabel.fontColor = .systemOrange
+            highBallLabel.text = "JUMP!"
+        } else {
+            // Red: back up
+            highBallChevron.fontColor = .systemRed
+            highBallLabel.fontColor = .systemRed
+            highBallLabel.text = "BACK UP!"
+        }
+
+        // Pulsing alpha based on urgency (closer = more opaque)
+        let urgency = 1.0 - min(dist / P.highBallIndicatorDistance, 1.0)
+        let pulse = 0.5 + 0.5 * abs(sin(CGFloat(CACurrentMediaTime()) * 6))
+        highBallWarning.alpha = (0.5 + urgency * 0.5) * pulse
+    }
+
+    private func updateJumpButtonVisual() {
+        let canJump = playerJumpPhase == .grounded
+            && playerJumpCooldownTimer <= 0
+            && stamina >= P.jumpMinStamina
+        jumpButtonBg.fillColor = canJump
+            ? UIColor.systemCyan.withAlphaComponent(0.35)
+            : UIColor.gray.withAlphaComponent(0.2)
+        jumpButtonBg.strokeColor = canJump
+            ? UIColor.systemCyan.withAlphaComponent(0.6)
+            : UIColor.gray.withAlphaComponent(0.3)
+        jumpButtonLabel.fontColor = canJump ? .white : UIColor.white.withAlphaComponent(0.3)
+
+        // Flash when airborne
+        if playerJumpPhase != .grounded {
+            jumpButtonBg.fillColor = UIColor.systemCyan.withAlphaComponent(0.7)
+            jumpButtonBg.strokeColor = UIColor.systemCyan
+        }
+    }
+
     // MARK: - Player Movement
 
     private func movePlayer(dt: CGFloat) {
@@ -1401,6 +1647,11 @@ final class InteractiveMatchScene: SKScene {
 
         let normalMag = min(joystickMagnitude, 1.0)
         var speed = playerMoveSpeed * normalMag
+
+        // Jump air mobility penalty
+        if playerJumpPhase != .grounded {
+            speed *= P.jumpAirMobilityFactor
+        }
 
         let staminaPct = stamina / P.maxStamina
         let canSprint = joystickMagnitude > 1.0 && staminaPct > 0.10
@@ -1501,11 +1752,11 @@ final class InteractiveMatchScene: SKScene {
         // simply ignore the ball — the player's avatar auto-moves and can't avoid it.
         if rallyLength < 2 && ballSim.bounceCount == 0 { return }
 
-        // 3D hitbox: height reach based on athleticism (speed + reflexes)
+        // 3D hitbox: height reach based on athleticism (speed + reflexes) + jump bonus
         let speedStat = CGFloat(playerStats.stat(.speed))
         let reflexesStat = CGFloat(playerStats.stat(.reflexes))
         let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
-        let heightReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus
+        let heightReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus + playerJumpHeightBonus
         let excessHeight_dbg = max(0, ballSim.height - heightReach)
 
         // Swept collision: find closest point on ball's path segment to player
@@ -1635,7 +1886,7 @@ final class InteractiveMatchScene: SKScene {
         let npcSpeedStat = CGFloat(min(99, npc.stats.stat(.speed) + npcBoost))
         let npcReflexesStat = CGFloat(min(99, npc.stats.stat(.reflexes) + npcBoost))
         let npcAthleticism = (npcSpeedStat + npcReflexesStat) / 2.0 / 99.0
-        let npcHeightReach = P.baseHeightReach + npcAthleticism * P.maxHeightReachBonus
+        let npcHeightReach = P.baseHeightReach + npcAthleticism * P.maxHeightReachBonus + npcAI.jumpHeightBonus
         let npcExcessH = max(0, ballSim.height - npcHeightReach)
         let npcDX = ballSim.courtX - npcAI.currentNX
         let npcDY = ballSim.courtY - npcAI.currentNY
@@ -1893,10 +2144,25 @@ final class InteractiveMatchScene: SKScene {
 
     private func syncPlayerPosition() {
         let screenPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
-        playerNode.position = screenPos
-
         let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, playerNY)))
-        playerNode.setScale(AC.Sprites.nearPlayerScale * pScale)
+
+        // Jump Y-offset
+        let jumpOffset = playerJumpSpriteYOffset * pScale
+        playerNode.position = CGPoint(x: screenPos.x, y: screenPos.y + jumpOffset)
+
+        // Squash/stretch during jump
+        let baseScale = AC.Sprites.nearPlayerScale * pScale
+        if playerJumpPhase != .grounded {
+            let fraction = min(playerJumpTimer / P.jumpDuration, 1.0)
+            let sinVal = sin(fraction * .pi)
+            // Rising: narrow + tall. Landing: wide + short (squash).
+            let xScale = baseScale * (1.0 - sinVal * 0.12)
+            let yScale = baseScale * (1.0 + sinVal * 0.15)
+            playerNode.xScale = xScale
+            playerNode.yScale = yScale
+        } else {
+            playerNode.setScale(baseScale)
+        }
         playerNode.zPosition = AC.ZPositions.nearPlayer - CGFloat(playerNY) * 0.1
 
         // Stamina tint
@@ -1914,10 +2180,23 @@ final class InteractiveMatchScene: SKScene {
 
     private func syncNPCPosition() {
         let screenPos = CourtRenderer.courtPoint(nx: npcAI.currentNX, ny: npcAI.currentNY)
-        npcNode.position = screenPos
-
         let pScale = CourtRenderer.perspectiveScale(ny: npcAI.currentNY)
-        npcNode.setScale(AC.Sprites.farPlayerScale * pScale)
+
+        // NPC jump Y-offset
+        let jumpOffset = npcAI.jumpSpriteYOffset * pScale
+        npcNode.position = CGPoint(x: screenPos.x, y: screenPos.y + jumpOffset)
+
+        // Squash/stretch during NPC jump
+        let baseScale = AC.Sprites.farPlayerScale * pScale
+        if npcAI.jumpPhase != .grounded {
+            let sinVal = sin(npcAI.jumpAnimationFraction * .pi)
+            let xScale = baseScale * (1.0 - sinVal * 0.12)
+            let yScale = baseScale * (1.0 + sinVal * 0.15)
+            npcNode.xScale = xScale
+            npcNode.yScale = yScale
+        } else {
+            npcNode.setScale(baseScale)
+        }
         npcNode.zPosition = AC.ZPositions.farPlayer - CGFloat(npcAI.currentNY) * 0.1
     }
 

@@ -424,6 +424,27 @@ enum GameConstants {
         /// slower than rally drives. Controls ace rate: lower = fewer aces.
         /// At 0.45, serve speed ≈ 0.60 (vs rally max ~0.90). Tunable training param.
         static let servePowerCap: CGFloat = 0.45
+
+        // MARK: Jump Mechanic
+        static let jumpStaminaCost: CGFloat = 15       // per jump (power shot = 20 for comparison)
+        static let jumpDuration: CGFloat = 0.45        // total seconds: rise + hang + fall
+        static let jumpRiseFraction: CGFloat = 0.33    // first 33% rising
+        static let jumpHangFraction: CGFloat = 0.34    // middle 34% at peak
+        static let jumpFallFraction: CGFloat = 0.33    // last 33% falling
+        static let jumpHeightReachBonus: CGFloat = 0.25 // added to heightReach at peak
+        static let jumpSpriteYOffset: CGFloat = 40.0   // max pixel offset at peak (before perspective)
+        static let jumpCooldown: CGFloat = 0.3         // seconds after landing before next jump
+        static let jumpMinStamina: CGFloat = 10        // minimum stamina to jump
+        static let jumpAirMobilityFactor: CGFloat = 0.3 // movement speed multiplier while airborne
+
+        // MARK: NPC Jump
+        static let npcJumpAthleticismThreshold: CGFloat = 0.25 // NPC won't attempt below this
+        static let npcJumpDecisionLeadTime: CGFloat = 0.3      // seconds before contact to decide
+        static let npcJumpChanceScale: CGFloat = 0.8           // max jump chance = athleticism * scale
+
+        // MARK: High Ball Indicator
+        static let highBallWarningThreshold: CGFloat = 0.08    // excess height above reach triggers warning
+        static let highBallIndicatorDistance: CGFloat = 0.3     // only show when ball within this court distance
     }
 
     // MARK: - NPC Strategy
