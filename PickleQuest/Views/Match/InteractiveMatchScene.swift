@@ -82,6 +82,21 @@ final class InteractiveMatchScene: SKScene {
         "Last chance.\nI'm not kidding. ⚠️",
         "That's it. I'm done.",
     ]
+    /// Lob taunts — NPC says something after successfully lobbing the player
+    private static let lobTaunts: [String] = [
+        "See ya! 👋",
+        "Fore! ...wait,\nwrong sport",
+        "Fly ball! \nAnybody? No?",
+        "I believe I can fly 🎵",
+        "Did you see\nthat hang time?",
+        "Lob city, baby! 🏙️",
+        "Hope you packed\na parachute",
+        "Watch the birdie! 🐦",
+        "That one had\nfrequent flyer miles",
+        "Over your head?\nCouldn't tell 😏",
+        "*chef's kiss* 👨‍🍳",
+        "Roof! Oh wait,\nwe're outside",
+    ]
     /// Muffled angry text shown during walkoff animation
     private static let walkoffMumbles: [String] = [
         "@#$%&!!",
@@ -117,6 +132,7 @@ final class InteractiveMatchScene: SKScene {
     private var lobLandingIndicator: SKNode!
     private var lobLandingCircle: SKShapeNode!
     private var lobLandingArrows: [SKLabelNode] = []
+    private var wasLobbed: Bool = false  // tracks if current point had an unreachable lob
 
     // Stamina
     private var stamina: CGFloat = P.maxStamina
@@ -835,6 +851,7 @@ final class InteractiveMatchScene: SKScene {
         playerJumpHeightBonus = 0
         highBallWarning.alpha = 0
         lobLandingIndicator.alpha = 0
+        wasLobbed = false
 
         // Recover stamina between points (scaled by stamina stat)
         let staminaStat = CGFloat(playerStats.stat(.stamina))
@@ -1702,6 +1719,7 @@ final class InteractiveMatchScene: SKScene {
         // Pulsing animation
         let pulse = 0.6 + 0.4 * abs(sin(CGFloat(CACurrentMediaTime()) * 5))
         lobLandingIndicator.alpha = pulse
+        wasLobbed = true
     }
 
     private func updateJumpButtonVisual() {
@@ -2186,7 +2204,10 @@ final class InteractiveMatchScene: SKScene {
                     showIndicator("Out!", color: .systemOrange)
                 } else {
                     if rallyLength <= 1 { npcAces += 1 } else { npcWinners += 1 }
-                    showIndicator("Miss!", color: .systemYellow)
+                    showIndicator(wasLobbed ? "Lobbed!" : "Miss!", color: .systemYellow)
+                    if wasLobbed {
+                        showNPCSpeech(Self.lobTaunts.randomElement() ?? "See ya!")
+                    }
                 }
                 resolvePoint(.npcWon, reason: "Double bounce on \(side) side")
             } else {
