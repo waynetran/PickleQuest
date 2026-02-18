@@ -102,6 +102,8 @@ struct HeadlessMatchSimulatorTests {
             var totalNOutLong = 0
             var totalPOutWide = 0
             var totalNOutWide = 0
+            var totalPKitchenFault = 0
+            var totalNKitchenFault = 0
 
             for _ in 0..<matchCount {
                 let npc = NPC.headlessOpponent(dupr: nDUPR)
@@ -130,6 +132,8 @@ struct HeadlessMatchSimulatorTests {
                 totalNOutLong += result.npcOutLong
                 totalPOutWide += result.playerOutWide
                 totalNOutWide += result.npcOutWide
+                totalPKitchenFault += result.playerKitchenFaults
+                totalNKitchenFault += result.npcKitchenFaults
             }
 
             let n = Double(matchCount)
@@ -142,6 +146,7 @@ struct HeadlessMatchSimulatorTests {
                   Net:     P=\(f(totalPNet)) N=\(f(totalNNet))
                   Out(total): P=\(f(totalPOut)) N=\(f(totalNOut))
                   Physics(L/W): P=\(f(totalPOutLong))/\(f(totalPOutWide)) N=\(f(totalNOutLong))/\(f(totalNOutWide))
+                  Kitchen:  P=\(f(totalPKitchenFault)) N=\(f(totalNKitchenFault))
                   Aces:    P=\(f(totalPAces)) N=\(f(totalNAces))
                   Winners: P=\(f(totalPWinners)) N=\(f(totalNWinners))
                 """)

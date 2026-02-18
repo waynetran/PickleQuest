@@ -130,6 +130,8 @@ final class HeadlessMatchSimulator {
         npcOutLong = 0
         playerOutWide = 0
         npcOutWide = 0
+        playerKitchenFaults = 0
+        npcKitchenFaults = 0
 
         while !isMatchOver() {
             simulatePoint()
