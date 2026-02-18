@@ -192,6 +192,11 @@ final class InteractiveMatchScene: SKScene {
     private var stamina: CGFloat = P.maxStamina
     private var timeSinceLastSprint: CGFloat = 10
 
+    // Footstep sound cadence
+    private var footstepTimer: CGFloat = 0
+    private let footstepInterval: CGFloat = 0.28
+    private let footstepSprintInterval: CGFloat = 0.18
+
     // Score callback (SwiftUI scoreboard replaces SpriteKit HUD)
     var onScoreUpdate: ((Int, Int, MatchSide) -> Void)?
     var isDevMode: Bool = true
@@ -1136,7 +1141,6 @@ final class InteractiveMatchScene: SKScene {
 
     private func resolvePoint(_ result: PointResult, reason: String) {
         run(SoundManager.shared.skAction(for: .pointChime))
-        HapticManager.shared.pointScored()
 
         dbg.logPointEnd(
             result: result == .playerWon ? "PLAYER WON" : "NPC WON",
@@ -1249,9 +1253,7 @@ final class InteractiveMatchScene: SKScene {
 
         run(SoundManager.shared.skAction(for: didPlayerWin ? .matchWin : .matchLose))
         if didPlayerWin {
-            HapticManager.shared.matchWon()
         } else {
-            HapticManager.shared.matchLost()
         }
 
         let duration = matchStartTime.map { Date().timeIntervalSince($0) } ?? 0
@@ -1485,7 +1487,6 @@ final class InteractiveMatchScene: SKScene {
         updateShotButtonVisuals()
         updateShotModeDots()
         run(SoundManager.shared.skAction(for: .buttonClick))
-        HapticManager.shared.buttonTap()
     }
 
     private func updateShotModeDots() {
@@ -1914,6 +1915,7 @@ final class InteractiveMatchScene: SKScene {
 
         guard joystickMagnitude > 0.1 else {
             if canChangeAnim { playerAnimator.play(.idle(isNear: true)) }
+            footstepTimer = 0
             timeSinceLastSprint += dt
             if timeSinceLastSprint >= P.staminaRecoveryDelay {
                 stamina = min(P.maxStamina, stamina + P.staminaRecoveryRate * dt)
@@ -2016,6 +2018,15 @@ final class InteractiveMatchScene: SKScene {
                     playerSpriteFlipped = false
                 }
             }
+        }
+
+        // Footstep sounds on cadence timer
+        footstepTimer += dt
+        let interval = isSprinting ? footstepSprintInterval : footstepInterval
+        if footstepTimer >= interval {
+            footstepTimer = 0
+            let soundID: SoundManager.SoundID = isSprinting ? .footstepSprint : .footstep
+            run(SoundManager.shared.skAction(for: soundID))
         }
     }
 
@@ -2273,10 +2284,8 @@ final class InteractiveMatchScene: SKScene {
         let isSmashShot = (playerJumpPhase != .grounded || shot.smashFactor > 0) && !activeShotModes.contains(.touch)
         if isSmashShot {
             run(SoundManager.shared.skAction(for: .paddleHitSmash))
-            HapticManager.shared.smashHit()
         } else {
             run(SoundManager.shared.skAction(for: .paddleHit))
-            HapticManager.shared.paddleHit()
         }
 
         // Hide ball during swing wind-up (it reappears on launch)

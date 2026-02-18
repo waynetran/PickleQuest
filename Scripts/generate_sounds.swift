@@ -101,15 +101,21 @@ let specs: [ToneSpec] = [
         return samples
     },
 
-    // Ball bounce: sine sweep 300→100Hz
+    // Ball bounce: hollow pickleball pop (sharp attack, resonant body, fast decay)
     ToneSpec(name: "ball_bounce") { sr in
-        let count = Int(0.06 * sr)
+        let count = Int(0.10 * sr)
         var samples = (0..<count).map { i -> Float in
             let t = Double(i) / sr
-            let freq = 300.0 - (200.0 * t / 0.06)
-            return Float(sin(2.0 * .pi * freq * t)) * 0.8
+            // Sharp initial transient click (wide-band)
+            let click = (t < 0.003) ? Float.random(in: -0.8...0.8) : Float(0)
+            // Hollow body resonance: two close frequencies create the "plastic" character
+            let body1 = Float(sin(2.0 * .pi * 420 * t)) * 0.6
+            let body2 = Float(sin(2.0 * .pi * 520 * t)) * 0.3
+            // Sub thump for floor impact feel
+            let sub = Float(sin(2.0 * .pi * 120 * t)) * 0.4 * Float(max(0, 1.0 - t * 30))
+            return click + body1 + body2 + sub
         }
-        envelope(samples: &samples, attack: Int(0.001 * sr), decay: Int(0.04 * sr))
+        envelope(samples: &samples, attack: Int(0.0005 * sr), decay: Int(0.08 * sr))
         return samples
     },
 
@@ -212,6 +218,40 @@ let specs: [ToneSpec] = [
             return Float(sin(2.0 * .pi * 1200 * t)) * 0.4
         }
         envelope(samples: &samples, attack: Int(0.001 * sr), decay: Int(0.025 * sr))
+        return samples
+    },
+
+    // Footstep: soft court-shoe scuff (short noise burst, low-pass)
+    ToneSpec(name: "footstep") { sr in
+        let count = Int(0.05 * sr)
+        var samples = noiseBuffer(count: count, amplitude: 0.3)
+        // Low-pass filter: running average for muffled court shoe feel
+        for i in 1..<samples.count {
+            samples[i] = samples[i] * 0.25 + samples[i-1] * 0.75
+        }
+        // Add very slight tonal thump
+        for i in 0..<count {
+            let t = Double(i) / sr
+            samples[i] += Float(sin(2.0 * .pi * 100 * t)) * 0.15
+        }
+        envelope(samples: &samples, attack: Int(0.001 * sr), decay: Int(0.035 * sr))
+        return samples
+    },
+
+    // Footstep sprint: slightly louder/snappier shoe squeak
+    ToneSpec(name: "footstep_sprint") { sr in
+        let count = Int(0.04 * sr)
+        var samples = noiseBuffer(count: count, amplitude: 0.4)
+        // Slightly brighter than normal footstep
+        for i in 1..<samples.count {
+            samples[i] = samples[i] * 0.35 + samples[i-1] * 0.65
+        }
+        // Sharper tonal thump
+        for i in 0..<count {
+            let t = Double(i) / sr
+            samples[i] += Float(sin(2.0 * .pi * 140 * t)) * 0.2
+        }
+        envelope(samples: &samples, attack: Int(0.0005 * sr), decay: Int(0.03 * sr))
         return samples
     },
 

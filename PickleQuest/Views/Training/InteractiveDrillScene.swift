@@ -63,6 +63,11 @@ final class InteractiveDrillScene: SKScene {
     private var stamina: CGFloat = GameConstants.DrillPhysics.maxStamina
     private var timeSinceLastSprint: CGFloat = 10 // start recovered
 
+    // Footstep sound cadence
+    private var footstepTimer: CGFloat = 0
+    private let footstepInterval: CGFloat = 0.28
+    private let footstepSprintInterval: CGFloat = 0.18
+
     // Shot animation lock (prevents movePlayer from overwriting swing animations)
     private var playerShotAnimTimer: CGFloat = 0
     private let shotAnimDuration: CGFloat = 0.40
@@ -908,6 +913,7 @@ final class InteractiveDrillScene: SKScene {
 
         guard joystickMagnitude > 0.1 else {
             if canChangeAnim { playerAnimator.play(.idle(isNear: true)) }
+            footstepTimer = 0
             // Recover stamina when standing still
             timeSinceLastSprint += dt
             if timeSinceLastSprint >= P.staminaRecoveryDelay {
@@ -994,6 +1000,15 @@ final class InteractiveDrillScene: SKScene {
                 }
             }
         }
+
+        // Footstep sounds on cadence timer
+        footstepTimer += dt
+        let interval = isSprinting ? footstepSprintInterval : footstepInterval
+        if footstepTimer >= interval {
+            footstepTimer = 0
+            let soundID: SoundManager.SoundID = isSprinting ? .footstepSprint : .footstep
+            run(SoundManager.shared.skAction(for: soundID))
+        }
     }
 
     // MARK: - Hit Detection
@@ -1067,7 +1082,6 @@ final class InteractiveDrillScene: SKScene {
         playerShotAnimTimer = shotAnimDuration
 
         run(SoundManager.shared.skAction(for: .paddleHit))
-        HapticManager.shared.paddleHit()
 
         ballSim.launch(
             from: CGPoint(x: playerNX, y: playerNY),
@@ -1123,7 +1137,6 @@ final class InteractiveDrillScene: SKScene {
 
             if dist <= P.coneHitRadius {
                 run(SoundManager.shared.skAction(for: .pointChime))
-                HapticManager.shared.pointScored()
                 scorekeeper.onConeHit()
                 showCoachSpeech(coachPersonality.coneHitLine(), duration: 2.5)
                 // Flash cone green
@@ -1559,7 +1572,6 @@ final class InteractiveDrillScene: SKScene {
         ballShadow.alpha = 0
 
         run(SoundManager.shared.skAction(for: .matchWin))
-        HapticManager.shared.matchWon()
 
         let result = scorekeeper.calculateResult()
         onComplete(result)

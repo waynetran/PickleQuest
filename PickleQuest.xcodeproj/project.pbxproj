@@ -34,6 +34,7 @@
 		1BF9A8BD192E4934152BF672 /* TrainingReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38000396F34067370B0A5A19 /* TrainingReport.swift */; };
 		1C5BCB7D4CC87D0E42E704F7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 82570377146F7C1A2620EFAD /* Assets.xcassets */; };
 		1D4054E15A14E383E1E5DA81 /* InventoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCDD3AF27C7FE92C46AD5297 /* InventoryViewModel.swift */; };
+		1D89F01B2C21E521D8D61B31 /* footstep_sprint.caf in Resources */ = {isa = PBXBuildFile; fileRef = CD0ED3333443C28BDFDE1D48 /* footstep_sprint.caf */; };
 		1DC9B1FABAB31EEF4FDF4E8C /* GearDrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2744F99DA3460D2B79440E12 /* GearDrop.swift */; };
 		1DFA20353BD0EAC474762221 /* MatchSimulationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73B3FD5E1D993A1A80123844 /* MatchSimulationView.swift */; };
 		1E70999B50D15BAE06FB335A /* TutorialPostMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F9416C9EFFF9B1BF256D661 /* TutorialPostMatchView.swift */; };
@@ -43,6 +44,7 @@
 		212750AE86BB8B0CA9686870 /* GearDropState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 186AA9698F0CDF0423DC6C90 /* GearDropState.swift */; };
 		21A8FEC6BE691264FAE691E7 /* MatchEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB744DF042767593746C101B /* MatchEngineTests.swift */; };
 		226884E62658075562C0DB9F /* AlphaNPCGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD07BCE35CB5A979F86D4A2F /* AlphaNPCGenerator.swift */; };
+		25B211B9489BAA051E9B03C0 /* footstep.caf in Resources */ = {isa = PBXBuildFile; fileRef = EF62E377374E5314D7DB72A2 /* footstep.caf */; };
 		25BCE5BEB1E98890F051A673 /* EquipmentSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F96F8D08C8F4FC655940785 /* EquipmentSet.swift */; };
 		26134A1B57938FFC3E195A26 /* Wallet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 775C461714AC3A47F1E99E0B /* Wallet.swift */; };
 		2839DF2A3E920AD06E50AAA3 /* PlayerProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14730B939773D5593EEF66F9 /* PlayerProfileViewModel.swift */; };
@@ -234,7 +236,6 @@
 		F891F09CDE18A4C95117C196 /* CharacterPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7553D70815FA074D7998B6C /* CharacterPreset.swift */; };
 		F8EB27192BD681D5C6389AD3 /* PickleQuestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9C040E3A053E3DAC2DD0AC /* PickleQuestApp.swift */; };
 		F9C82CF66E109919D8C69B64 /* TeamSynergy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326BA1D6C93F3860C77AD690 /* TeamSynergy.swift */; };
-		FE3E018CDE19C7D6C6F13954 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 492E2A6CF30EA8FA97089144 /* HapticManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -327,7 +328,6 @@
 		46473886B6F00CB5E23F17C8 /* DoublesScoreTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoublesScoreTracker.swift; sourceTree = "<group>"; };
 		46B06729836D2E4D76ECC28B /* MatchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchService.swift; sourceTree = "<group>"; };
 		483A1384C44EE8F2B3BC8DA0 /* GearDropRevealSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearDropRevealSheet.swift; sourceTree = "<group>"; };
-		492E2A6CF30EA8FA97089144 /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
 		4C0D6A9C6DD259AB87FE0D21 /* EquipmentSlot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentSlot.swift; sourceTree = "<group>"; };
 		4C5825303620F6476326FCC3 /* SwiftDataPersistenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataPersistenceService.swift; sourceTree = "<group>"; };
 		4CA19548572F4F8FCC62AD3C /* NPCPersonality+Display.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NPCPersonality+Display.swift"; sourceTree = "<group>"; };
@@ -440,6 +440,7 @@
 		CC56C33DEA89A36C94D6A5DE /* EquipmentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentDetailView.swift; sourceTree = "<group>"; };
 		CCDA3BA6ED33B0BCB7D1E92D /* ball.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = ball.png; sourceTree = "<group>"; };
 		CCDD3AF27C7FE92C46AD5297 /* InventoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryViewModel.swift; sourceTree = "<group>"; };
+		CD0ED3333443C28BDFDE1D48 /* footstep_sprint.caf */ = {isa = PBXFileReference; path = footstep_sprint.caf; sourceTree = "<group>"; };
 		CDABEB3FE4D53ECE0EF7759B /* EquipmentNameGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentNameGenerator.swift; sourceTree = "<group>"; };
 		CE09A927C4E070179DA2B55B /* MockNPCService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockNPCService.swift; sourceTree = "<group>"; };
 		D04EFD98530E4003CFF56BD1 /* DevMatchLogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevMatchLogEntry.swift; sourceTree = "<group>"; };
@@ -468,6 +469,7 @@
 		EACFC1726A4D0C790A37B600 /* MapPlayerAnnotation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapPlayerAnnotation.swift; sourceTree = "<group>"; };
 		EBB3E4E68CAE3058FA644C8C /* TutorialMatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialMatchView.swift; sourceTree = "<group>"; };
 		ECEA1686848E23241264008F /* MatchConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchConfig.swift; sourceTree = "<group>"; };
+		EF62E377374E5314D7DB72A2 /* footstep.caf */ = {isa = PBXFileReference; path = footstep.caf; sourceTree = "<group>"; };
 		F2A19669AA5BDC8969456AA4 /* HeadlessMatchSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadlessMatchSimulator.swift; sourceTree = "<group>"; };
 		F35FD040AF4661A856F9D6FA /* RallySimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RallySimulator.swift; sourceTree = "<group>"; };
 		F39ADA4591D8FEDB86F5DAE7 /* MockCourtService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockCourtService.swift; sourceTree = "<group>"; };
@@ -493,7 +495,6 @@
 		01221201A40B6CB2A273CFEF /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				492E2A6CF30EA8FA97089144 /* HapticManager.swift */,
 				626A44F16E3DD96990C0879B /* LocationManager.swift */,
 				BAB01A15D42EC656229D4950 /* NotificationManager.swift */,
 				DF6F2733F9EDDE0596354AA1 /* SoundManager.swift */,
@@ -1114,6 +1115,8 @@
 			children = (
 				93C808F152AD2E944371ADD9 /* ball_bounce.caf */,
 				DF63C2A5FE25F2BCB5FE7565 /* button_click.caf */,
+				CD0ED3333443C28BDFDE1D48 /* footstep_sprint.caf */,
+				EF62E377374E5314D7DB72A2 /* footstep.caf */,
 				808EFCEF3AE63CFA8E28CAB5 /* loot_reveal.caf */,
 				A8132B7814ADDAEF7BBA842F /* match_lose.caf */,
 				ABD79E6B662ECA23A5719AF4 /* match_win.caf */,
@@ -1241,6 +1244,8 @@
 				39FBF9BC33777DDA1DD7F949 /* button_click.caf in Resources */,
 				C31CD5CA9BE818B447085B10 /* character1-Sheet.png in Resources */,
 				571951E2E4725FBDC54CDA84 /* character2-Sheet.png in Resources */,
+				25B211B9489BAA051E9B03C0 /* footstep.caf in Resources */,
+				1D89F01B2C21E521D8D61B31 /* footstep_sprint.caf in Resources */,
 				6C03653B83A9DC70B76AFF6A /* loot_reveal.caf in Resources */,
 				C71E85D03FC011F7263236E7 /* match_lose.caf in Resources */,
 				1E949A3A9609B41640749C85 /* match_win.caf in Resources */,
@@ -1362,7 +1367,6 @@
 				5DA5E82C7D1127AA17D91857 /* GearDropService.swift in Sources */,
 				DDF106C6BA80AD50CC113924 /* GearDropSpawnEngine.swift in Sources */,
 				212750AE86BB8B0CA9686870 /* GearDropState.swift in Sources */,
-				FE3E018CDE19C7D6C6F13954 /* HapticManager.swift in Sources */,
 				B1EE177B4904E4B0CFA60A0F /* HeadlessMatchSimulator.swift in Sources */,
 				D0832371A2C980AEBC8970D8 /* HustlerLootGenerator.swift in Sources */,
 				E1799A56C51681C244B964E8 /* HustlerNPCGenerator.swift in Sources */,
