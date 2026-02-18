@@ -448,6 +448,10 @@ enum GameConstants {
         static let npcJumpDecisionLeadTime: CGFloat = 0.3      // seconds before contact to decide
         static let npcJumpChanceScale: CGFloat = 0.8           // max jump chance = athleticism * scale
 
+        // MARK: Kitchen Volley Power
+        static let kitchenVolleyMaxBonus: CGFloat = 0.8   // max additional power at net with high ball
+        static let kitchenVolleyRange: CGFloat = 0.25     // court distance from net (0.5) for kitchen zone
+
         // MARK: High Ball Indicator
         static let highBallWarningThreshold: CGFloat = 0.08    // excess height above reach triggers warning
         static let highBallIndicatorDistance: CGFloat = 0.3     // only show when ball within this court distance

@@ -28,6 +28,10 @@ final class DrillBallSimulation {
     /// Smash factor: 0 = normal shot, 1 = full overhead smash. Amplifies bounce height.
     var smashFactor: CGFloat = 0
 
+    /// Ball height at the moment it crossed the net (y=0.5). Used for smash/volley decisions
+    /// since the ball descends between the net and the player's contact point.
+    private(set) var heightAtNetCrossing: CGFloat = 0
+
     // Sub-frame interpolated bounce position (exact landing spot)
     private(set) var lastBounceCourtX: CGFloat = 0.5
     private(set) var lastBounceCourtY: CGFloat = 0.5
@@ -63,6 +67,14 @@ final class DrillBallSimulation {
 
         // Update height
         height += vz * dt
+
+        // Track ball height when it crosses the net (y = 0.5)
+        let crossedNetLine = (prevCourtY < 0.5 && courtY >= 0.5) || (prevCourtY > 0.5 && courtY <= 0.5)
+        if crossedNetLine {
+            let totalDY = abs(courtY - prevCourtY)
+            let frac = totalDY > 0.0001 ? abs(0.5 - prevCourtY) / totalDY : 0.5
+            heightAtNetCrossing = prevHeight + (height - prevHeight) * frac
+        }
 
         // Bounce off court surface
         if height <= 0 && vz < 0 {
@@ -113,6 +125,7 @@ final class DrillBallSimulation {
     func launch(from origin: CGPoint, toward target: CGPoint, power: CGFloat, arc: CGFloat, spin: CGFloat, topspin: CGFloat = 0) {
         skipNetCorrection = false
         smashFactor = 0
+        heightAtNetCrossing = 0
         courtX = origin.x
         courtY = origin.y
         height = 0.05  // slightly above ground for visual clarity
@@ -187,6 +200,7 @@ final class DrillBallSimulation {
         lastHitByPlayer = false
         skipNetCorrection = false
         smashFactor = 0
+        heightAtNetCrossing = 0
         activeTime = 0
         lastBounceCourtX = 0.5
         lastBounceCourtY = 0.5

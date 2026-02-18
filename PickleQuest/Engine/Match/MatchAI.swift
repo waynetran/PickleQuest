@@ -825,6 +825,7 @@ final class MatchAI {
             ballApproachFromLeft: ball.courtX < currentNX,
             drillType: .baselineRally,
             ballHeight: ball.height,
+            ballHeightAtNet: ball.heightAtNetCrossing,
             courtNX: currentNX,
             courtNY: currentNY,
             modes: modes,
@@ -1044,9 +1045,28 @@ final class MatchAI {
             modes.insert(.focus)
         }
 
+        // Lob: defensive lob when stretched and at the kitchen, or as a change-up
+        // Smart NPCs lob when pinned at the kitchen to reset positioning
+        if !modes.contains(.power) && !modes.contains(.touch) {
+            let isAtKitchen = abs(currentNY - 0.5) < 0.25
+            if isAtKitchen && difficulty > 0.5 {
+                // Defensive lob when under pressure at kitchen
+                let lobChance = strategy.resetWhenStretched * positioningStat * difficulty
+                if roll(Double(lobChance * 0.4)) {
+                    modes.insert(.lob)
+                }
+            }
+        }
+
         // Enforce mutual exclusivity
         if modes.contains(.power) && modes.contains(.touch) {
             modes.remove(.touch)
+        }
+        if modes.contains(.power) && modes.contains(.lob) {
+            modes.remove(.lob)
+        }
+        if modes.contains(.touch) && modes.contains(.lob) {
+            modes.remove(.lob)
         }
         if modes.contains(.topspin) && modes.contains(.slice) {
             modes.remove(.slice)

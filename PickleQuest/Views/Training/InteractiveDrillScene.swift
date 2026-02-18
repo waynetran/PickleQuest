@@ -22,8 +22,8 @@ final class InteractiveDrillScene: SKScene {
     private var joystickOrigin: CGPoint = .zero
     private var joystickDirection: CGVector = .zero
     private var joystickMagnitude: CGFloat = 0
-    private let joystickBaseRadius: CGFloat = 85
-    private let joystickKnobRadius: CGFloat = 25
+    private let joystickBaseRadius: CGFloat = 70
+    private let joystickKnobRadius: CGFloat = 30
 
     // Swipe-to-serve state
     private var swipeTouchStart: CGPoint?
@@ -62,6 +62,10 @@ final class InteractiveDrillScene: SKScene {
     // Stamina
     private var stamina: CGFloat = GameConstants.DrillPhysics.maxStamina
     private var timeSinceLastSprint: CGFloat = 10 // start recovered
+
+    // Shot animation lock (prevents movePlayer from overwriting swing animations)
+    private var playerShotAnimTimer: CGFloat = 0
+    private let shotAnimDuration: CGFloat = 0.40
 
     // Swipe hint (serve mode)
     private var swipeHintNode: SKSpriteNode?
@@ -874,6 +878,7 @@ final class InteractiveDrillScene: SKScene {
             checkPlayerHit()
             checkCoachHit()
             checkBallState()
+            if playerShotAnimTimer > 0 { playerShotAnimTimer = max(0, playerShotAnimTimer - dt) }
             syncAllPositions()
             updateHUD()
         } else if phase == .feedPause {
@@ -899,8 +904,10 @@ final class InteractiveDrillScene: SKScene {
     // MARK: - Player Movement
 
     private func movePlayer(dt: CGFloat) {
+        let canChangeAnim = playerShotAnimTimer <= 0
+
         guard joystickMagnitude > 0.1 else {
-            playerAnimator.play(.idle(isNear: true))
+            if canChangeAnim { playerAnimator.play(.idle(isNear: true)) }
             // Recover stamina when standing still
             timeSinceLastSprint += dt
             if timeSinceLastSprint >= P.staminaRecoveryDelay {
@@ -958,13 +965,34 @@ final class InteractiveDrillScene: SKScene {
         playerNX = max(drillConfig.playerMinNX, min(drillConfig.playerMaxNX, playerNX))
         playerNY = max(drillConfig.playerMinNY, min(drillConfig.playerMaxNY, playerNY))
 
-        // Walk animation based on dominant joystick direction
-        let dx = joystickDirection.dx
-        let dy = joystickDirection.dy
-        if isSprinting {
-            playerAnimator.play(.runSide)
-        } else {
-            playerAnimator.play(.shuffle(isNear: true))
+        // Walk animation: direction-aware sprint vs shuffle
+        // Only change animation if no shot animation is playing
+        if canChangeAnim {
+            let dx = joystickDirection.dx
+            let dy = joystickDirection.dy
+            let isMainlyHorizontal = abs(dx) > abs(dy)
+
+            if isSprinting {
+                if isMainlyHorizontal {
+                    playerAnimator.play(.runSide)
+                    let xMag = abs(playerNode.xScale)
+                    playerNode.xScale = dx < 0 ? -xMag : xMag  // base = right, flip for left
+                } else if dy > 0 {
+                    playerAnimator.play(.run(isNear: true))
+                    let xMag = abs(playerNode.xScale)
+                    playerNode.xScale = xMag
+                } else {
+                    playerAnimator.play(.shuffle(isNear: true))
+                    let xMag = abs(playerNode.xScale)
+                    playerNode.xScale = xMag
+                }
+            } else {
+                playerAnimator.play(.shuffle(isNear: true))
+                if abs(dx) > 0.3 {
+                    let xMag = abs(playerNode.xScale)
+                    playerNode.xScale = dx < 0 ? -xMag : xMag  // flip when shuffling left
+                }
+            }
         }
     }
 
@@ -1036,6 +1064,7 @@ final class InteractiveDrillScene: SKScene {
         let animState: CharacterAnimationState = shot.shotType == .forehand
             ? .forehand(isNear: true) : .backhand(isNear: true)
         playerAnimator.play(animState)
+        playerShotAnimTimer = shotAnimDuration
 
         ballSim.launch(
             from: CGPoint(x: playerNX, y: playerNY),

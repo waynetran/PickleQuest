@@ -44,8 +44,8 @@ final class InteractiveMatchScene: SKScene {
     private var joystickOrigin: CGPoint = .zero
     private var joystickDirection: CGVector = .zero
     private var joystickMagnitude: CGFloat = 0
-    private let joystickBaseRadius: CGFloat = 85
-    private let joystickKnobRadius: CGFloat = 22
+    private let joystickBaseRadius: CGFloat = 70
+    private let joystickKnobRadius: CGFloat = 30
 
     // Swipe-to-serve state
     private var swipeTouchStart: CGPoint?
@@ -127,11 +127,55 @@ final class InteractiveMatchScene: SKScene {
     private var playerSpriteFlipped: Bool = false
     private var npcSpriteFlipped: Bool = false
 
+    // Shot animation lock — prevents movePlayer() from overwriting one-shot animations
+    private var playerShotAnimTimer: CGFloat = 0
+    private var npcShotAnimTimer: CGFloat = 0
+    private let shotAnimDuration: CGFloat = 0.40  // lock duration for shot animations
+
+    // Swing timing: delay ball launch so contact aligns with mid-animation
+    // Swing animations are ~10 frames at 0.06s = 0.60s. Mid-swing ≈ 0.15s delay.
+    private let swingContactDelay: CGFloat = 0.15  // delay from animation start to ball launch
+    private var pendingPlayerShot: PendingShot?
+    private var pendingNPCShot: PendingShot?
+    private var pendingServeShot: PendingServe?
+
+    private struct PendingShot {
+        let origin: CGPoint
+        let target: CGPoint
+        let power: CGFloat
+        let arc: CGFloat
+        let spin: CGFloat
+        let topspin: CGFloat
+        let smashFactor: CGFloat
+        let isPlayer: Bool
+        let targetNX: CGFloat
+        let targetNY: CGFloat
+        let accuracy: CGFloat
+        var timer: CGFloat
+    }
+
+    private struct PendingServe {
+        let origin: CGPoint
+        let target: CGPoint
+        let power: CGFloat
+        let arc: CGFloat
+        let spin: CGFloat
+        let accuracy: CGFloat
+        var timer: CGFloat
+    }
+
     // Dink push animation
     private var playerDinkPushTimer: CGFloat = 0
     private var npcDinkPushTimer: CGFloat = 0
     private let dinkPushDuration: CGFloat = 0.25
     private let dinkKitchenThreshold: CGFloat = 0.30
+
+    // Lateral lunge (sideways hop when joystick is horizontal and not sprinting)
+    private var lungeSpriteYOffset: CGFloat = 0   // current Y pixel offset for lunge hop
+    private var lungeTimer: CGFloat = 0           // tracks lunge animation progress
+    private var lungeActive: Bool = false
+    private let lungeDuration: CGFloat = 0.30     // total hop duration
+    private let lungeMaxYOffset: CGFloat = 25.0   // max pixel height of hop (before perspective)
 
     // Movement guide arrows (court-painted directional hints)
     private var moveGuideBack: SKNode!
@@ -177,6 +221,7 @@ final class InteractiveMatchScene: SKScene {
     private var playerNX: CGFloat = 0.5
     private var playerNY: CGFloat = 0.08
     private var playerMoveSpeed: CGFloat = 0.6
+    private var playerSprintSpeed: CGFloat = 1.0 // stat-based sprint multiplier
     private var lastUpdateTime: TimeInterval = 0
     private var previousBallNY: CGFloat = 0.5
     // Previous frame ball position for swept collision detection
@@ -257,7 +302,11 @@ final class InteractiveMatchScene: SKScene {
         self.backgroundColor = UIColor(hex: "#2C3E50")
 
         let speedStat = CGFloat(playerStats.stat(.speed))
+        let reflexesStat = CGFloat(playerStats.stat(.reflexes))
+        let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
         playerMoveSpeed = P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus
+        // Sprint speed scales with athleticism: low stats = 50% boost, high stats = 150% boost
+        playerSprintSpeed = 0.5 + athleticism * 1.0
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -422,6 +471,7 @@ final class InteractiveMatchScene: SKScene {
         let defs: [(name: String, color: UIColor, mode: SM)] = [
             ("Power", .systemRed, .power),
             ("Touch", .systemTeal, .touch),
+            ("Lob", .systemIndigo, .lob),
             ("Slice", .systemPurple, .slice),
             ("Topspin", .systemGreen, .topspin),
             ("Angled", .systemOrange, .angled),
@@ -859,6 +909,14 @@ final class InteractiveMatchScene: SKScene {
         npcDinkPushTimer = 0
         playerSplitStepPlayed = false
         npcSplitStepPlayed = false
+        playerShotAnimTimer = 0
+        npcShotAnimTimer = 0
+        lungeActive = false
+        lungeTimer = 0
+        lungeSpriteYOffset = 0
+        pendingPlayerShot = nil
+        pendingNPCShot = nil
+        pendingServeShot = nil
         hideAllMoveGuides()
         wasLobbed = false
 
@@ -962,23 +1020,21 @@ final class InteractiveMatchScene: SKScene {
             stamina: stamina
         )
 
-        phase = .playing
-        ballSim.launch(
-            from: CGPoint(x: playerNX, y: max(0, playerNY)),
-            toward: CGPoint(x: targetNX, y: targetNY),
-            power: servePower,
-            arc: serveArc,
-            spin: angleDeviation * 0.3
-        )
-        ballSim.lastHitByPlayer = true
-        previousBallNY = ballSim.courtY
-        ballNode.alpha = 1
-        ballShadow.alpha = 1
+        // Play forehand swing animation immediately — ball launches at mid-swing
         playerAnimator.play(.forehand(isNear: true))
+        playerShotAnimTimer = shotAnimDuration
         playerSpriteFlipped = false
 
         let serveAccuracy = 1.0 - scatter * 3
-        showShotMarkers(targetNX: targetNX, targetNY: targetNY, accuracy: max(0, serveAccuracy))
+        pendingServeShot = PendingServe(
+            origin: CGPoint(x: playerNX, y: max(0, playerNY)),
+            target: CGPoint(x: targetNX, y: targetNY),
+            power: servePower,
+            arc: serveArc,
+            spin: angleDeviation * 0.3,
+            accuracy: max(0, serveAccuracy),
+            timer: swingContactDelay
+        )
     }
 
     private func npcServe() {
@@ -1039,22 +1095,34 @@ final class InteractiveMatchScene: SKScene {
             stamina: npcAI.stamina
         )
 
-        phase = .playing
-        ballSim.launch(
-            from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
-            toward: CGPoint(x: targetNX, y: targetNY),
-            power: shot.power,
-            arc: serveArc,
-            spin: shot.spinCurve
-        )
-        ballSim.lastHitByPlayer = false
-        previousBallNY = ballSim.courtY
-        ballNode.alpha = 1
-        ballShadow.alpha = 1
+        // Play forehand swing animation — ball launches at mid-swing after delay
         npcAnimator.play(.forehand(isNear: false))
+        npcShotAnimTimer = shotAnimDuration
         npcSpriteFlipped = false
 
-        showShotMarkers(targetNX: targetNX, targetNY: targetNY, accuracy: isDoubleFault ? 0.0 : 0.8)
+        let launchOrigin = CGPoint(x: npcAI.currentNX, y: npcAI.currentNY)
+        let launchTarget = CGPoint(x: targetNX, y: targetNY)
+        let launchPower = shot.power
+        let launchSpin = shot.spinCurve
+        let serveAccuracy: CGFloat = isDoubleFault ? 0.0 : 0.8
+
+        // Delay ball launch to mid-swing
+        let delay = SKAction.wait(forDuration: TimeInterval(swingContactDelay))
+        let launch = SKAction.run { [weak self] in
+            guard let self else { return }
+            self.phase = .playing
+            self.ballSim.launch(
+                from: launchOrigin, toward: launchTarget,
+                power: launchPower, arc: serveArc,
+                spin: launchSpin
+            )
+            self.ballSim.lastHitByPlayer = false
+            self.previousBallNY = self.ballSim.courtY
+            self.ballNode.alpha = 1
+            self.ballShadow.alpha = 1
+            self.showShotMarkers(targetNX: targetNX, targetNY: targetNY, accuracy: serveAccuracy)
+        }
+        self.run(.sequence([delay, launch]))
     }
 
     // MARK: - Point Resolution
@@ -1387,15 +1455,17 @@ final class InteractiveMatchScene: SKScene {
 
     private func toggleShotMode(at index: Int) {
         typealias SM = DrillShotCalculator.ShotMode
-        let modes: [SM] = [.power, .touch, .slice, .topspin, .angled, .focus]
+        let modes: [SM] = [.power, .touch, .lob, .slice, .topspin, .angled, .focus]
         guard index < modes.count else { return }
 
         let mode = modes[index]
         if activeShotModes.contains(mode) {
             activeShotModes.remove(mode)
         } else {
-            if mode == .power { activeShotModes.remove(.touch) }
-            else if mode == .touch { activeShotModes.remove(.power) }
+            // Mutual exclusivity: power/touch/lob are mutually exclusive
+            if mode == .power { activeShotModes.remove(.touch); activeShotModes.remove(.lob) }
+            else if mode == .touch { activeShotModes.remove(.power); activeShotModes.remove(.lob) }
+            else if mode == .lob { activeShotModes.remove(.power); activeShotModes.remove(.touch) }
             else if mode == .topspin { activeShotModes.remove(.slice) }
             else if mode == .slice { activeShotModes.remove(.topspin) }
             activeShotModes.insert(mode)
@@ -1406,8 +1476,8 @@ final class InteractiveMatchScene: SKScene {
 
     private func updateShotModeDots() {
         typealias SM = DrillShotCalculator.ShotMode
-        let modes: [SM] = [.power, .touch, .slice, .topspin, .angled, .focus]
-        let colors: [UIColor] = [.systemRed, .systemTeal, .systemPurple, .systemGreen, .systemOrange, .systemYellow]
+        let modes: [SM] = [.power, .touch, .lob, .slice, .topspin, .angled, .focus]
+        let colors: [UIColor] = [.systemRed, .systemTeal, .systemIndigo, .systemPurple, .systemGreen, .systemOrange, .systemYellow]
 
         for (i, dot) in shotModeDotNodes.enumerated() {
             guard i < modes.count else { break }
@@ -1420,8 +1490,8 @@ final class InteractiveMatchScene: SKScene {
 
     private func updateShotButtonVisuals() {
         typealias SM = DrillShotCalculator.ShotMode
-        let modes: [SM] = [.power, .touch, .slice, .topspin, .angled, .focus]
-        let colors: [UIColor] = [.systemRed, .systemTeal, .systemPurple, .systemGreen, .systemOrange, .systemYellow]
+        let modes: [SM] = [.power, .touch, .lob, .slice, .topspin, .angled, .focus]
+        let colors: [UIColor] = [.systemRed, .systemTeal, .systemIndigo, .systemPurple, .systemGreen, .systemOrange, .systemYellow]
 
         for (i, bg) in shotModeBgs.enumerated() {
             guard i < modes.count else { break }
@@ -1490,6 +1560,13 @@ final class InteractiveMatchScene: SKScene {
             checkPlayerHit()
             checkNPCHit()
 
+            // Shot animation lock timers (prevent movePlayer from overwriting swing animations)
+            if playerShotAnimTimer > 0 { playerShotAnimTimer = max(0, playerShotAnimTimer - dt) }
+            if npcShotAnimTimer > 0 { npcShotAnimTimer = max(0, npcShotAnimTimer - dt) }
+
+            // Pending shot timers — launch ball at mid-swing
+            tickPendingShots(dt: dt)
+
             // Dink push animation timers
             if playerDinkPushTimer > 0 { playerDinkPushTimer = max(0, playerDinkPushTimer - dt) }
             if npcDinkPushTimer > 0 { npcDinkPushTimer = max(0, npcDinkPushTimer - dt) }
@@ -1503,6 +1580,7 @@ final class InteractiveMatchScene: SKScene {
 
         case .serving:
             movePlayer(dt: dt)
+            tickPendingServe(dt: dt)
             syncAllPositions()
             updatePlayerStaminaBar()
             updateNPCBossBar()
@@ -1787,8 +1865,8 @@ final class InteractiveMatchScene: SKScene {
                 if ballSpeed > 0.01 {
                     let distToNPC = abs(ballSim.courtY - npcAI.currentNY)
                     let timeToContact = distToNPC / ballSpeed
-                    // Only play split step if player is standing still (not moving via joystick)
-                    if timeToContact <= leadTime && timeToContact > 0 && joystickMagnitude < 0.1 {
+                    // Only play split step if player is standing still and not in shot animation
+                    if timeToContact <= leadTime && timeToContact > 0 && joystickMagnitude < 0.1 && playerShotAnimTimer <= 0 {
                         playerAnimator.playSplitStep()
                         playerSpriteFlipped = false
                         playerSplitStepPlayed = true
@@ -1805,7 +1883,7 @@ final class InteractiveMatchScene: SKScene {
                 if ballSpeed > 0.01 {
                     let distToPlayer = abs(ballSim.courtY - playerNY)
                     let timeToContact = distToPlayer / ballSpeed
-                    if timeToContact <= leadTime && timeToContact > 0 {
+                    if timeToContact <= leadTime && timeToContact > 0 && npcShotAnimTimer <= 0 {
                         npcAnimator.playSplitStep()
                         npcSpriteFlipped = false
                         npcSplitStepPlayed = true
@@ -1818,8 +1896,10 @@ final class InteractiveMatchScene: SKScene {
     // MARK: - Player Movement
 
     private func movePlayer(dt: CGFloat) {
+        let canChangeAnim = playerShotAnimTimer <= 0
+
         guard joystickMagnitude > 0.1 else {
-            playerAnimator.play(.idle(isNear: true))
+            if canChangeAnim { playerAnimator.play(.idle(isNear: true)) }
             timeSinceLastSprint += dt
             if timeSinceLastSprint >= P.staminaRecoveryDelay {
                 stamina = min(P.maxStamina, stamina + P.staminaRecoveryRate * dt)
@@ -1840,7 +1920,7 @@ final class InteractiveMatchScene: SKScene {
         let isSprinting = canSprint
         if isSprinting {
             let sprintFraction = min((joystickMagnitude - 1.0) / 0.5, 1.0)
-            var sprintBonus = sprintFraction * P.maxSprintSpeedBoost * playerMoveSpeed
+            var sprintBonus = sprintFraction * playerSprintSpeed * playerMoveSpeed
             if staminaPct < 0.50 { sprintBonus *= 0.5 }
             speed += sprintBonus
             stamina = max(0, stamina - P.sprintDrainRate * dt)
@@ -1874,17 +1954,127 @@ final class InteractiveMatchScene: SKScene {
         playerNX = max(0.0, min(1.0, playerNX))
         playerNY = max(-0.05, min(0.48 - P.playerPositioningOffset, playerNY))
 
-        // Movement animation: shuffle for non-sprint, runSide for sprint
+        // Movement animation: direction-aware sprint vs shuffle
+        // Only change animation if no shot animation is playing
         let dx = joystickDirection.dx
-        if isSprinting {
-            // Sprint: use runSide (drawn as left, flip for right)
-            playerAnimator.play(.runSide)
-            playerSpriteFlipped = dx > 0 // flip when running right
+        let dy = joystickDirection.dy
+        let isMainlyHorizontal = abs(dx) > abs(dy)
+
+        // Lateral lunge: sideways non-sprint movement triggers a hop
+        if !isSprinting && isMainlyHorizontal && abs(dx) > 0.3 && !lungeActive && playerJumpPhase == .grounded {
+            lungeActive = true
+            lungeTimer = 0
+        }
+
+        if canChangeAnim {
+            if isSprinting {
+                if isMainlyHorizontal {
+                    // Horizontal sprint: runSide (base = running right, flip for left)
+                    playerAnimator.play(.runSide)
+                    playerSpriteFlipped = dx < 0
+                } else if dy > 0 {
+                    // Forward sprint (toward net): run forward
+                    playerAnimator.play(.run(isNear: true))
+                    playerSpriteFlipped = false
+                } else {
+                    // Backward sprint: fast shuffle (don't turn around)
+                    playerAnimator.play(.shuffle(isNear: true))
+                    playerSpriteFlipped = false
+                }
+            } else {
+                // Non-sprint: shuffle in all directions (lunge hop handled by Y-offset)
+                playerAnimator.play(.shuffle(isNear: true))
+                if abs(dx) > 0.3 {
+                    playerSpriteFlipped = dx < 0 // flip when shuffling left
+                } else {
+                    playerSpriteFlipped = false
+                }
+            }
+        }
+
+        // Update lunge hop animation
+        if lungeActive {
+            lungeTimer += dt
+            if lungeTimer >= lungeDuration {
+                lungeActive = false
+                lungeTimer = 0
+                lungeSpriteYOffset = 0
+            } else {
+                // Parabolic hop: sin curve for smooth up-and-down
+                let fraction = lungeTimer / lungeDuration
+                lungeSpriteYOffset = sin(fraction * .pi) * lungeMaxYOffset
+            }
         } else {
-            // Non-sprint: shuffle (drawn as right, flip for left)
-            playerAnimator.play(.shuffle(isNear: true))
-            if abs(dx) > 0.3 {
-                playerSpriteFlipped = dx < 0 // flip when shuffling left
+            lungeSpriteYOffset = 0
+        }
+    }
+
+    // MARK: - Pending Shot Timing
+
+    /// Tick pending player/NPC shots — launches ball at mid-swing
+    private func tickPendingShots(dt: CGFloat) {
+        if var shot = pendingPlayerShot {
+            shot.timer -= dt
+            if shot.timer <= 0 {
+                ballSim.launch(
+                    from: shot.origin, toward: shot.target,
+                    power: shot.power, arc: shot.arc,
+                    spin: shot.spin, topspin: shot.topspin
+                )
+                ballSim.smashFactor = shot.smashFactor
+                ballSim.lastHitByPlayer = true
+                previousBallNY = ballSim.courtY
+                checkedFirstBounce = false
+                ballNode.alpha = 1
+                ballShadow.alpha = 1
+                showShotMarkers(targetNX: shot.targetNX, targetNY: shot.targetNY, accuracy: shot.accuracy)
+                pendingPlayerShot = nil
+            } else {
+                pendingPlayerShot = shot
+            }
+        }
+
+        if var shot = pendingNPCShot {
+            shot.timer -= dt
+            if shot.timer <= 0 {
+                ballSim.launch(
+                    from: shot.origin, toward: shot.target,
+                    power: shot.power, arc: shot.arc,
+                    spin: shot.spin, topspin: shot.topspin
+                )
+                ballSim.smashFactor = shot.smashFactor
+                ballSim.lastHitByPlayer = false
+                previousBallNY = ballSim.courtY
+                checkedFirstBounce = false
+                ballNode.alpha = 1
+                ballShadow.alpha = 1
+                showShotMarkers(targetNX: shot.targetNX, targetNY: shot.targetNY, accuracy: shot.accuracy)
+                pendingNPCShot = nil
+            } else {
+                pendingNPCShot = shot
+            }
+        }
+    }
+
+    /// Tick pending serve — launches ball at mid-swing
+    private func tickPendingServe(dt: CGFloat) {
+        if var serve = pendingServeShot {
+            serve.timer -= dt
+            if serve.timer <= 0 {
+                phase = .playing
+                ballSim.launch(
+                    from: serve.origin, toward: serve.target,
+                    power: serve.power, arc: serve.arc,
+                    spin: serve.spin
+                )
+                ballSim.lastHitByPlayer = true
+                previousBallNY = ballSim.courtY
+                ballNode.alpha = 1
+                ballShadow.alpha = 1
+                showShotMarkers(targetNX: serve.target.x, targetNY: serve.target.y, accuracy: serve.accuracy)
+                pendingServeShot = nil
+            } else {
+                pendingServeShot = serve
             }
         }
     }
@@ -2008,6 +2198,7 @@ final class InteractiveMatchScene: SKScene {
             ballApproachFromLeft: ballFromLeft,
             drillType: .baselineRally,
             ballHeight: ballSim.height,
+            ballHeightAtNet: ballSim.heightAtNetCrossing,
             courtNY: playerNY,
             modes: activeShotModes,
             staminaFraction: staminaPct
@@ -2039,10 +2230,23 @@ final class InteractiveMatchScene: SKScene {
             isNetFault: isNetFault
         )
 
-        // Pick animation: smash (overhead), dink (kitchen push), or forehand/backhand
+        // Pick animation based on shot context:
+        // - Smash: jumping (lobbed) or high overhead
+        // - Volley: ball hasn't bounced and no jump needed — show swing unless touch mode
+        // - Dink: at kitchen without power — push motion
+        // - Normal: forehand/backhand swing
         let animState: CharacterAnimationState
-        if shot.smashFactor > 0 {
+        let isVolley = ballSim.bounceCount == 0 && playerJumpPhase == .grounded
+        if playerJumpPhase != .grounded || shot.smashFactor > 0 {
             animState = .smash(isNear: true)
+        } else if isVolley && activeShotModes.contains(.touch) {
+            // Touch volley: soft dink push (no swing animation)
+            animState = .run(isNear: true)
+            playerDinkPushTimer = dinkPushDuration
+        } else if isVolley {
+            // Volley: show swing animation (forehand/backhand)
+            animState = shot.shotType == .forehand
+                ? .forehand(isNear: true) : .backhand(isNear: true)
         } else if playerNY > dinkKitchenThreshold && !activeShotModes.contains(.power) {
             // Dink at kitchen: use run animation + push motion
             animState = .run(isNear: true)
@@ -2052,20 +2256,13 @@ final class InteractiveMatchScene: SKScene {
                 ? .forehand(isNear: true) : .backhand(isNear: true)
         }
         playerAnimator.play(animState)
+        playerShotAnimTimer = shotAnimDuration
         playerSpriteFlipped = false
 
-        ballSim.launch(
-            from: CGPoint(x: playerNX, y: playerNY),
-            toward: CGPoint(x: shot.targetNX, y: shot.targetNY),
-            power: shot.power,
-            arc: shot.arc,
-            spin: shot.spinCurve,
-            topspin: shot.topspinFactor
-        )
-        ballSim.smashFactor = shot.smashFactor
-        ballSim.lastHitByPlayer = true
-        previousBallNY = ballSim.courtY
-        checkedFirstBounce = false
+        // Hide ball during swing wind-up (it reappears on launch)
+        ballSim.isActive = false
+        ballNode.alpha = 0
+        ballShadow.alpha = 0
 
         // Push player shot X to NPC pattern memory (keep last 5)
         npcAI.playerShotHistory.append(shot.targetNX)
@@ -2073,7 +2270,21 @@ final class InteractiveMatchScene: SKScene {
             npcAI.playerShotHistory.removeFirst()
         }
 
-        showShotMarkers(targetNX: shot.targetNX, targetNY: shot.targetNY, accuracy: shot.accuracy)
+        // Defer ball launch to mid-swing
+        pendingPlayerShot = PendingShot(
+            origin: CGPoint(x: playerNX, y: playerNY),
+            target: CGPoint(x: shot.targetNX, y: shot.targetNY),
+            power: shot.power,
+            arc: shot.arc,
+            spin: shot.spinCurve,
+            topspin: shot.topspinFactor,
+            smashFactor: shot.smashFactor,
+            isPlayer: true,
+            targetNX: shot.targetNX,
+            targetNY: shot.targetNY,
+            accuracy: shot.accuracy,
+            timer: swingContactDelay
+        )
     }
 
     private func checkNPCHit() {
@@ -2193,10 +2404,17 @@ final class InteractiveMatchScene: SKScene {
                 errorRate: errDbg.errorRate
             )
 
-            // Pick animation: smash, dink (kitchen push), or forehand/backhand
+            // Pick animation based on shot context (mirrors player logic)
             let npcAnimState: CharacterAnimationState
-            if shot.smashFactor > 0 {
+            let npcIsVolley = ballSim.bounceCount == 0 && npcAI.jumpPhase == .grounded
+            if npcAI.jumpPhase != .grounded || shot.smashFactor > 0 {
                 npcAnimState = .smash(isNear: false)
+            } else if npcIsVolley && npcAI.lastShotModes.contains(.touch) {
+                npcAnimState = .run(isNear: false)
+                npcDinkPushTimer = dinkPushDuration
+            } else if npcIsVolley {
+                npcAnimState = shot.shotType == .forehand
+                    ? .forehand(isNear: false) : .backhand(isNear: false)
             } else if npcAI.currentNY < (1.0 - dinkKitchenThreshold) && !npcAI.lastShotModes.contains(.power) {
                 npcAnimState = .run(isNear: false)
                 npcDinkPushTimer = dinkPushDuration
@@ -2205,22 +2423,29 @@ final class InteractiveMatchScene: SKScene {
                     ? .forehand(isNear: false) : .backhand(isNear: false)
             }
             npcAnimator.play(npcAnimState)
+            npcShotAnimTimer = shotAnimDuration
             npcSpriteFlipped = false
 
-            ballSim.launch(
-                from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
-                toward: CGPoint(x: shot.targetNX, y: shot.targetNY),
+            // Hide ball during swing wind-up (it reappears on launch)
+            ballSim.isActive = false
+            ballNode.alpha = 0
+            ballShadow.alpha = 0
+
+            // Defer ball launch to mid-swing
+            pendingNPCShot = PendingShot(
+                origin: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
+                target: CGPoint(x: shot.targetNX, y: shot.targetNY),
                 power: shot.power,
                 arc: shot.arc,
                 spin: shot.spinCurve,
-                topspin: shot.topspinFactor
+                topspin: shot.topspinFactor,
+                smashFactor: shot.smashFactor,
+                isPlayer: false,
+                targetNX: shot.targetNX,
+                targetNY: shot.targetNY,
+                accuracy: shot.accuracy,
+                timer: swingContactDelay
             )
-            ballSim.smashFactor = shot.smashFactor
-            ballSim.lastHitByPlayer = false
-            previousBallNY = ballSim.courtY
-            checkedFirstBounce = false
-
-            showShotMarkers(targetNX: shot.targetNX, targetNY: shot.targetNY, accuracy: shot.accuracy)
         }
     }
 
@@ -2371,7 +2596,10 @@ final class InteractiveMatchScene: SKScene {
             let progress = 1.0 - playerDinkPushTimer / dinkPushDuration
             dinkPushOffset = sin(progress * .pi) * 8.0 * pScale
         }
-        playerNode.position = CGPoint(x: screenPos.x, y: screenPos.y + jumpOffset + dinkPushOffset)
+        // Lunge hop Y-offset (lateral shuffle hop)
+        let lungeOffset = lungeSpriteYOffset * pScale
+
+        playerNode.position = CGPoint(x: screenPos.x, y: screenPos.y + jumpOffset + dinkPushOffset + lungeOffset)
 
         // Squash/stretch during jump + sprite flipping
         let baseScale = AC.Sprites.nearPlayerScale * pScale
@@ -2680,7 +2908,7 @@ final class InteractiveMatchScene: SKScene {
 
         // Animate NPC walking off to the right with muffled angry mumbles
         npcAnimator.play(.runSide)
-        npcSpriteFlipped = true  // runSide is drawn as left, flip for right
+        npcSpriteFlipped = false  // runSide base = running right, walkoff goes right
 
         let walkDuration: TimeInterval = 3.0
         let startX = npcNode.position.x

@@ -7,7 +7,7 @@ enum CharacterAnimationState: Hashable, Sendable {
     case shuffleBack        // row 3 — back shuffle right (flip xScale for left)
     case runFront           // row 4 — front run (also used for dink animation)
     case runBack            // row 5 — back run (also used for dink animation)
-    case runSide            // row 6 — run left (flip xScale for right)
+    case runSide            // row 6 — run right (flip xScale for left)
     case smashFront         // row 7 — front overhead smash w/ jump
     case smashBack          // row 8 — back overhead smash
     case forehandFront      // row 9 — front forehand swing

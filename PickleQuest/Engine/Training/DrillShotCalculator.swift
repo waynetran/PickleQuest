@@ -27,6 +27,7 @@ enum DrillShotCalculator {
         static let topspin = ShotMode(rawValue: 1 << 3) // topspin — flatter arc, more power
         static let angled  = ShotMode(rawValue: 1 << 4) // cross-court sideline target
         static let focus   = ShotMode(rawValue: 1 << 5) // accuracy boost, drains stamina
+        static let lob    = ShotMode(rawValue: 1 << 6) // high lob to baseline — mutually exclusive with touch/power
     }
 
     /// Legacy intensity enum — still used by coach shots internally.
@@ -167,6 +168,7 @@ enum DrillShotCalculator {
         ballApproachFromLeft: Bool,
         drillType: DrillType,
         ballHeight: CGFloat = 0.0,
+        ballHeightAtNet: CGFloat = 0.0,
         courtNX: CGFloat = 0.5,
         courtNY: CGFloat = 0.1,
         modes: ShotMode = [],
@@ -233,6 +235,61 @@ enum DrillShotCalculator {
             )
         }
 
+        // --- Lob mode: high arc to deep baseline (mutually exclusive with touch/power) ---
+        if modes.contains(.lob) {
+            let accuracyStat = CGFloat(stats.stat(.accuracy))
+            let consistencyStat = CGFloat(stats.stat(.consistency))
+
+            // Lob power: moderate — enough to reach the baseline
+            let lobPower = CGFloat.random(in: 0.30...0.50)
+
+            // Target: deep baseline, spread across court width
+            var lobTargetNX = CGFloat.random(in: 0.20...0.80)
+            var lobTargetNY = CGFloat.random(in: 0.82...0.98)
+
+            // Angled modifier on lob
+            if modes.contains(.angled) {
+                if ballApproachFromLeft { lobTargetNX = 0.85 } else { lobTargetNX = 0.15 }
+            }
+
+            // Mirror target for far-side shooter
+            if shootingFromFarSide {
+                lobTargetNY = 1.0 - lobTargetNY
+            }
+
+            // Beginner scatter: low-stat players lob too short or too long
+            let avgControl = (accuracyStat + consistencyStat) / 2.0
+            let lobScatter = 0.15 * (1.0 - avgControl / 99.0)
+            lobTargetNX += CGFloat.random(in: -lobScatter...lobScatter)
+            lobTargetNY += CGFloat.random(in: -lobScatter...lobScatter)
+
+            // Soft clamp: allow slightly out for genuine misses
+            lobTargetNX = max(-0.05, min(1.05, lobTargetNX))
+            if shootingFromFarSide {
+                lobTargetNY = max(-0.05, min(0.52, lobTargetNY))
+            } else {
+                lobTargetNY = max(0.48, min(1.05, lobTargetNY))
+            }
+
+            // High arc: beginners don't lob high enough, experts lob perfectly
+            let lobSkill = min(avgControl / 99.0, 1.0)
+            let lobArc = 0.50 + lobSkill * 0.30 + CGFloat.random(in: -0.08...0.08)
+
+            let spinDirection: CGFloat = Bool.random() ? 1.0 : -1.0
+            let spinCurve = spinDirection * (CGFloat(stats.stat(.spin)) / 99.0) * 0.2
+
+            return ShotResult(
+                power: lobPower,
+                accuracy: max(0, 1.0 - lobScatter * 5),
+                spinCurve: spinCurve,
+                arc: lobArc,
+                targetNX: lobTargetNX,
+                targetNY: lobTargetNY,
+                shotType: shotType,
+                topspinFactor: 0
+            )
+        }
+
         // --- Base shot (default medium behavior) ---
         var power: CGFloat
         var arc: CGFloat
@@ -256,6 +313,19 @@ enum DrillShotCalculator {
                 let powerModeBonus = power * (powerStat / 99.0)
                 power += powerModeBonus * P.smashPowerMultiplier * staminaFraction
             }
+        }
+
+        // Kitchen volley: significantly more power when near net and ball is above net height
+        // Uses ballHeightAtNet (height when ball crossed the net) since the ball descends
+        // between the net and the contact point — the net-crossing height reflects true advantage
+        let distFromNet = abs(courtNY - 0.5)
+        let effectiveHeight = max(ballHeight, ballHeightAtNet)
+        if distFromNet < P.kitchenVolleyRange && effectiveHeight > P.netLogicalHeight
+            && !(drillType == .dinkingDrill && modes.isEmpty) {
+            let kitchenProximity = 1.0 - distFromNet / P.kitchenVolleyRange
+            let excessAboveNet = effectiveHeight - P.netLogicalHeight
+            let heightFraction = min(excessAboveNet / 0.15, 1.0)
+            power += heightFraction * kitchenProximity * P.kitchenVolleyMaxBonus * (powerStat / 99.0)
         }
 
         // Default target by drill type
@@ -333,7 +403,13 @@ enum DrillShotCalculator {
             scatter *= (1.0 - focusReduction)
         }
 
-        power = max(0.15, min(2.0, power))
+        // Smash put-away: 2x power when ball is high enough for a smash and touch is off
+        // Touch mode converts smashes/volleys into soft drops toward kitchen instead
+        if ballHeight >= P.smashHeightThreshold && !modes.contains(.touch) {
+            power *= 2.0
+        }
+
+        power = max(0.15, min(2.5, power))
 
         // Far-side shooters: mirror target to opponent's court half
         if shootingFromFarSide {
