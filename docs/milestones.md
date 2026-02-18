@@ -26,6 +26,7 @@
 | 10 | Interactive Match Mode | **Complete** |
 | 10c | Equipment Power Budget & Trait System | **Complete** |
 | 10d | Headless Interactive Match Simulator | **Complete** |
+| 11 | MVP Polish: Sound, Stats, Notifications, Tutorial, Theme | **Complete** |
 | 7c | Persistence Polish, Cloud Prep, Multiplayer Prep | Planned |
 
 ---
@@ -1120,6 +1121,63 @@ Seven realism gaps in the interactive match AI were fixed, making NPC opponents 
 
 #### Updated `/npctrain` skill
 - Now includes iterative fix loop: runs training, analyzes balance, applies targeted fixes, repeats up to 5 iterations until all criteria pass
+
+---
+
+## Milestone 11: MVP Polish — Sound, Stats, Notifications, Tutorial, Theme
+
+**Commit**: `1e62187`
+
+### What was built
+
+**Phase 1 — Sound Effects + Haptics**
+- `SoundManager` singleton: SKAction factory for SpriteKit scenes + AVAudioPlayer for SwiftUI, 12 synthesized .caf sound effects
+- `HapticManager` singleton: pre-warmed UIImpactFeedbackGenerator instances for zero-latency haptics
+- Sound generation script (`Scripts/generate_sounds.swift`): synthesizes all 12 sounds via AVAudioEngine
+- Hooked into InteractiveMatchScene (serve whoosh, paddle hits, smash, NPC distant hit, ball bounce, net thud, point chime, match win/lose)
+- Hooked into InteractiveDrillScene (paddle hit, cone hit, drill complete)
+- SwiftUI hooks in GearDropRevealSheet (loot reveal) and MatchResultView (match win/lose)
+
+**Phase 2 — Career Stats + Match History**
+- Added `aces`, `winners`, `unforcedErrors`, `longestRally` to MatchHistoryEntry with backwards-compatible decoding
+- Added `DUPRSnapshot` and `ratingHistory` to DUPRProfile (auto-appends on rated match, capped at 50)
+- Added `currentWinStreak`, `bestWinStreak`, `overallWinRate` computed properties to Player
+- Redesigned PerformanceView: SUPR/Rep cards, quick stats row, SUPR history line chart, lifetime stats grid, enhanced match history
+- Enhanced MatchHistoryRow: match type badge (1v1/2v2), wager coin display, partner name
+
+**Phase 3 — Notification System**
+- `NotificationManager` singleton wrapping UNUserNotificationCenter
+- 5 notification types: contested drop expiring, trail expiring, daily challenge reset, energy full, court cache ready
+- Deferred permission strategy (first gear drop pickup, not onboarding)
+
+**Phase 4 — Tutorial/Onboarding Polish**
+- Expanded tutorial from 3 generic slides to 6 content-rich slides with per-slide accent colors
+- Added page indicator dots to tutorial flow
+- Added first-match control hint overlay in InteractiveMatchView
+
+**Phase 5 — Visual Polish + Theme System**
+- `AppTheme` enum with shared constants (corner radii, materials, difficulty colors)
+- Migrated `difficultyColor` from 8 inline switch statements to `AppTheme.difficultyColor()`
+- Unified InteractiveMatchView result overlay: trophy/xmark icons, regularMaterial background
+
+**Phase 6 — Persistence Hardening**
+- Replaced `try?` with `do/catch` error logging in `AppState.saveCurrentPlayer`
+- Added migration scaffold stub in `SwiftDataPersistenceService`
+
+### New files
+- `Services/SoundManager.swift`
+- `Services/HapticManager.swift`
+- `Services/NotificationManager.swift`
+- `Views/Theme/AppTheme.swift`
+- `Resources/Sounds/*.caf` (12 sound files)
+- `Scripts/generate_sounds.swift`
+
+### Modified files (25)
+- InteractiveMatchScene, InteractiveDrillScene, InteractiveMatchView, MatchResultView, MatchHubView
+- MatchHistoryEntry, DUPRProfile, Player
+- PerformanceView, MatchHistoryRow, StatBar, TutorialMatchView, TutorialViewModel, TutorialTip
+- CourtAnnotationView, CourtDetailSheet, WagerSelectionSheet, ContestedDropSheet, NPCPickerView, PartnerPickerView
+- GearDropRevealSheet, MapViewModel, AppState, SwiftDataPersistenceService
 
 ---
 
