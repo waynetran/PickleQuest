@@ -1,6 +1,5 @@
 import CoreGraphics
 
-@MainActor
 final class DrillBallSimulation {
     private typealias P = GameConstants.DrillPhysics
 
@@ -24,6 +23,7 @@ final class DrillBallSimulation {
     var isActive: Bool = false
     var lastHitByPlayer: Bool = false
     var activeTime: CGFloat = 0
+    var skipNetCorrection: Bool = false
 
     // Sub-frame interpolated bounce position (exact landing spot)
     private(set) var lastBounceCourtX: CGFloat = 0.5
@@ -103,6 +103,7 @@ final class DrillBallSimulation {
     }
 
     func launch(from origin: CGPoint, toward target: CGPoint, power: CGFloat, arc: CGFloat, spin: CGFloat, topspin: CGFloat = 0) {
+        skipNetCorrection = false
         courtX = origin.x
         courtY = origin.y
         height = 0.05  // slightly above ground for visual clarity
@@ -141,6 +142,7 @@ final class DrillBallSimulation {
     /// Calculates whether the current trajectory clears the net at ny=0.5.
     /// If not, boosts vz to the minimum needed (with margin).
     private func ensureNetClearance() {
+        guard !skipNetCorrection else { return }
         // Only relevant if the ball crosses the net
         let crossesNet = (courtY < 0.5 && vy > 0) || (courtY > 0.5 && vy < 0)
         guard crossesNet, abs(vy) > 0.001 else { return }
@@ -174,6 +176,7 @@ final class DrillBallSimulation {
         bounceCount = 0
         isActive = false
         lastHitByPlayer = false
+        skipNetCorrection = false
         activeTime = 0
         lastBounceCourtX = 0.5
         lastBounceCourtY = 0.5
@@ -181,7 +184,7 @@ final class DrillBallSimulation {
     }
 
     /// Convert logical position to screen position via CourtRenderer.
-    func screenPosition() -> CGPoint {
+    @MainActor func screenPosition() -> CGPoint {
         let groundPos = CourtRenderer.courtPoint(nx: courtX, ny: courtY)
         // Convert height to screen pixels, scaled by perspective at this depth
         let scale = CourtRenderer.perspectiveScale(ny: max(0, min(1, courtY)))
@@ -190,7 +193,7 @@ final class DrillBallSimulation {
     }
 
     /// Ground-level position for the ball shadow.
-    func shadowScreenPosition() -> CGPoint {
+    @MainActor func shadowScreenPosition() -> CGPoint {
         CourtRenderer.courtPoint(nx: courtX, ny: courtY)
     }
 

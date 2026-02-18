@@ -25,6 +25,7 @@
 | 9.1 | Drill System Redesign + UI Polish | **Complete** |
 | 10 | Interactive Match Mode | **Complete** |
 | 10c | Equipment Power Budget & Trait System | **Complete** |
+| 10d | Headless Interactive Match Simulator | **Complete** |
 | 7c | Persistence Polish, Cloud Prep, Multiplayer Prep | Planned |
 
 ---
@@ -1011,6 +1012,33 @@ Match end → MatchResult → existing processResult() pipeline
 - `EquipmentCardView.swift` — trait names with tier colors
 - NEW: `EquipmentTrait.swift` — TraitType, TraitTier, EquipmentTrait with statModifiers
 - NEW: `EquipmentBalanceTests.swift` — 9 balance verification tests
+
+---
+
+## Post-Milestone 10d: Headless Interactive Match Simulator
+
+### What was built
+- **HeadlessMatchSimulator**: Runs the same physics, AI, and shot mechanics as `InteractiveMatchScene` at 120Hz fixed timestep without SpriteKit rendering. Mirrors the full game loop: serve, rally, hit detection, ball state, scoring, match-over logic.
+- **SimulatedPlayerAI**: Human-player simulator that replaces joystick input. Uses raw stats (no stat boost), player-side hitbox constants, reaction delay (0.20s beginner → 0.03s expert), positioning noise (computed once per ball approach), and skill-gated shot mode selection (competence scales with skill²).
+- **@MainActor removal**: Removed class-level `@MainActor` from `DrillBallSimulation` (kept only on `screenPosition()` and `shadowScreenPosition()`) and `MatchAI`, enabling nonisolated use by the headless simulator while maintaining compatibility with `InteractiveMatchScene`.
+- **Training integration**: Added `HeadlessInteractiveEntry` to `TrainingReport` and a validation pass in `TrainingSession` that runs headless matches at DUPR [2.0, 3.0, 4.0, 5.0, 6.0] after ES training completes.
+- **Test suite**: 3 tests verifying match completion, DUPR discrimination (higher DUPR wins more), and bounded rally length.
+
+### Architecture notes
+- Each `HeadlessMatchSimulator` instance owns its own `DrillBallSimulation`, `MatchAI`, and `SimulatedPlayerAI` — no cross-isolation sharing.
+- `SimulatedPlayerAI` differs from `MatchAI` by design: no stat boost, smaller hitbox, reaction delay, positioning noise. This accurately reflects the NPC's +20 stat boost being a compensation for human joystick advantage.
+- Rally lengths are shorter than real pickleball (~1.1 avg) because the simulated player lacks joystick advantage but faces the same boosted NPC. This is expected and documented.
+
+### Files created (3)
+- `Engine/AITrainer/HeadlessMatchSimulator.swift` — match orchestrator
+- `Engine/AITrainer/SimulatedPlayerAI.swift` — human-player AI
+- `PickleQuestTests/Engine/HeadlessMatchSimulatorTests.swift` — 3 tests
+
+### Files modified (4)
+- `Engine/Training/DrillBallSimulation.swift` — removed class-level `@MainActor`, added to 2 screen methods
+- `Engine/Match/MatchAI.swift` — removed class-level `@MainActor`
+- `Engine/AITrainer/TrainingReport.swift` — added `HeadlessInteractiveEntry`, `headlessInteractiveTable` field, report formatting
+- `Engine/AITrainer/TrainingSession.swift` — added `evaluateHeadlessInteractive()` validation pass
 
 ---
 

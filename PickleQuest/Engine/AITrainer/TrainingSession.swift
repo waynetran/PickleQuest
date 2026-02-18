@@ -196,6 +196,7 @@ final class TrainingSession {
         let finalNPCEntries = evaluateNPCDetailed(params: finalParams, seed: 42, matchCount: 500)
         let finalPlayerEntries = evaluatePlayerVsNPCDetailed(params: finalParams, seed: 42, matchCount: 500)
         let finalStarterEntry = evaluateStarterDetailed(params: finalParams, seed: 42, matchCount: 500)
+        let headlessEntries = evaluateHeadlessInteractive(params: finalParams, matchCount: 50)
 
         return TrainingReport(
             parameters: finalParams,
@@ -205,7 +206,8 @@ final class TrainingSession {
             playerVsNPCTable: finalPlayerEntries,
             starterBalance: finalStarterEntry,
             avgRallyLength: avgRallyLength,
-            elapsedSeconds: elapsed
+            elapsedSeconds: elapsed,
+            headlessInteractiveTable: headlessEntries
         )
     }
 
@@ -482,6 +484,50 @@ final class TrainingSession {
             actualWinRate: Double(playerWins) / Double(matchCount),
             matchesPlayed: matchCount
         )
+    }
+
+    // MARK: - Headless Interactive Validation
+
+    /// Run headless interactive matches at various DUPR levels.
+    /// Validation only — does NOT affect ES fitness.
+    private nonisolated func evaluateHeadlessInteractive(
+        params: SimulationParameters,
+        matchCount: Int
+    ) -> [TrainingReport.HeadlessInteractiveEntry] {
+        let testDUPRs: [Double] = [2.0, 3.0, 4.0, 5.0, 6.0]
+        var entries: [TrainingReport.HeadlessInteractiveEntry] = []
+
+        for dupr in testDUPRs {
+            let playerStats = params.toPlayerStats(dupr: dupr)
+            let npc = NPC.practiceOpponent(dupr: dupr)
+
+            var playerWins = 0
+            var totalPointDiff = 0.0
+            var totalAvgRally = 0.0
+
+            for _ in 0..<matchCount {
+                let sim = HeadlessMatchSimulator(
+                    npc: npc,
+                    playerStats: playerStats,
+                    playerDUPR: dupr
+                )
+                let result = sim.simulateMatch()
+
+                if result.winnerSide == .player { playerWins += 1 }
+                totalPointDiff += Double(result.playerScore - result.opponentScore)
+                totalAvgRally += result.avgRallyLength
+            }
+
+            entries.append(TrainingReport.HeadlessInteractiveEntry(
+                dupr: dupr,
+                actualPointDiff: totalPointDiff / Double(matchCount),
+                actualWinRate: Double(playerWins) / Double(matchCount),
+                avgRallyLength: totalAvgRally / Double(matchCount),
+                matchesPlayed: matchCount
+            ))
+        }
+
+        return entries
     }
 
     // MARK: - Gaussian Noise (Box-Muller)

@@ -10,6 +10,7 @@ struct TrainingReport: Sendable {
     let starterBalance: PlayerVsNPCEntry
     let avgRallyLength: Double
     let elapsedSeconds: Double
+    let headlessInteractiveTable: [HeadlessInteractiveEntry]
 
     struct PointDiffEntry: Sendable, Identifiable {
         let id = UUID()
@@ -28,6 +29,15 @@ struct TrainingReport: Sendable {
         let actualPointDiff: Double
         let targetPointDiff: Double
         let actualWinRate: Double
+        let matchesPlayed: Int
+    }
+
+    struct HeadlessInteractiveEntry: Sendable, Identifiable {
+        let id = UUID()
+        let dupr: Double
+        let actualPointDiff: Double
+        let actualWinRate: Double
+        let avgRallyLength: Double
         let matchesPlayed: Int
     }
 
@@ -126,6 +136,20 @@ struct TrainingReport: Sendable {
         lines.append(String(format: "  Point diff: %+.1f (target: %+.1f), Win rate: %.1f%%",
                             starterBalance.actualPointDiff, starterBalance.targetPointDiff,
                             starterBalance.actualWinRate * 100))
+
+        // Headless interactive validation
+        if !headlessInteractiveTable.isEmpty {
+            lines.append("")
+            lines.append("Headless Interactive Validation (player vs NPC, same DUPR):")
+            lines.append("  DUPR   PointDiff   WinRate   AvgRally   Matches")
+            for entry in headlessInteractiveTable {
+                let dupr = String(format: "%.1f", entry.dupr)
+                let diff = String(format: "%+5.1f", entry.actualPointDiff)
+                let winRate = String(format: "%5.1f%%", entry.actualWinRate * 100)
+                let rally = String(format: "%5.1f", entry.avgRallyLength)
+                lines.append("  \(dupr)     \(diff)     \(winRate)     \(rally)       \(entry.matchesPlayed)")
+            }
+        }
 
         return lines.joined(separator: "\n")
     }

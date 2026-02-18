@@ -1,0 +1,360 @@
+import CoreGraphics
+
+/// Simulates a human player for headless match testing.
+/// Unlike `MatchAI` (which compensates for human joystick advantage with stat boosts
+/// and larger hitbox), `SimulatedPlayerAI` models a human at a given DUPR skill level
+/// with reaction delay, positioning noise, and skill-gated shot mode selection.
+final class SimulatedPlayerAI {
+    private typealias P = GameConstants.DrillPhysics
+    private typealias PB = GameConstants.PlayerBalance
+    typealias SM = DrillShotCalculator.ShotMode
+
+    let stats: PlayerStats
+    let dupr: Double
+
+    // Position in court space (player is on the near side: ny ~0.0–0.318)
+    var currentNX: CGFloat
+    var currentNY: CGFloat
+    private var targetNX: CGFloat
+    private var targetNY: CGFloat
+
+    // Stamina
+    var stamina: CGFloat = P.maxStamina
+    private var timeSinceLastSprint: CGFloat = 10
+
+    // Derived movement speed (no stat boost — raw stats)
+    private let moveSpeed: CGFloat
+    private let sprintSpeed: CGFloat
+
+    // Hitbox (player-side constants — smaller than NPC)
+    let hitboxRadius: CGFloat
+
+    // Skill parameters derived from DUPR
+    private let skillFraction: CGFloat     // 0.0 at DUPR 2.0, 1.0 at DUPR 8.0
+    private let reactionDelay: CGFloat     // time before starting to move toward ball
+    private let positioningNoise: CGFloat  // noise in landing prediction
+    private let shotModeCompetence: CGFloat // probability of using advanced shot modes
+
+    // Rally tracking
+    private var shotCountThisPoint: Int = 0
+    var isServing: Bool = false
+    private let startNY: CGFloat = 0.08
+
+    // Reaction delay tracking
+    private var reactionTimer: CGFloat = 0
+    private var hasReacted: Bool = false
+
+    // Positioning noise: computed once per ball approach, not every frame
+    private var noiseOffsetX: CGFloat = 0
+    private var noiseOffsetY: CGFloat = 0
+    private var hasComputedNoise: Bool = false
+
+    // Rally pressure (mirrors InteractiveMatchScene)
+    var rallyPressure: CGFloat = 0
+
+    init(stats: PlayerStats, dupr: Double) {
+        self.stats = stats
+        self.dupr = dupr
+
+        // Skill parameters
+        let fraction = CGFloat(max(0, min(1, (dupr - 2.0) / 6.0)))
+        self.skillFraction = fraction
+        self.reactionDelay = 0.20 - fraction * 0.17   // 0.20s beginner → 0.03s expert
+        self.positioningNoise = 0.08 - fraction * 0.07 // 0.08 beginner → 0.01 expert
+        self.shotModeCompetence = fraction * fraction   // 0.0 beginner → 1.0 expert
+
+        // Movement speed from raw stats
+        let speedStat = CGFloat(stats.stat(.speed))
+        self.moveSpeed = P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus
+        self.sprintSpeed = moveSpeed * (1.0 + P.maxSprintSpeedBoost)
+
+        // Hitbox from raw positioning stat (player-side constants)
+        let positioningStat = CGFloat(stats.stat(.positioning))
+        self.hitboxRadius = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
+
+        // Start at center near baseline
+        self.currentNX = 0.5
+        self.currentNY = startNY
+        self.targetNX = 0.5
+        self.targetNY = startNY
+    }
+
+    // MARK: - Positioning
+
+    func positionForServe(playerScore: Int) {
+        let evenScore = playerScore % 2 == 0
+        currentNX = evenScore ? 0.75 : 0.25
+        currentNY = startNY
+        targetNX = currentNX
+        targetNY = currentNY
+    }
+
+    func positionForReceive(npcScore: Int) {
+        let npcServingRight = npcScore % 2 == 0
+        // Cross-court from NPC server
+        currentNX = npcServingRight ? 0.25 : 0.75
+        currentNY = startNY
+        targetNX = currentNX
+        targetNY = currentNY
+    }
+
+    // MARK: - Update
+
+    func update(dt: CGFloat, ball: DrillBallSimulation) {
+        if ball.isActive && !ball.lastHitByPlayer {
+            // Ball heading toward player — intercept with reaction delay
+            if !hasReacted {
+                reactionTimer += dt
+                if reactionTimer >= reactionDelay {
+                    hasReacted = true
+                    // Compute noise offset once when reaction triggers
+                    if !hasComputedNoise {
+                        noiseOffsetX = CGFloat.random(in: -positioningNoise...positioningNoise)
+                        noiseOffsetY = CGFloat.random(in: -positioningNoise...positioningNoise)
+                        hasComputedNoise = true
+                    }
+                }
+            }
+            if hasReacted {
+                predictLanding(ball: ball)
+            }
+        } else if ball.isActive && ball.lastHitByPlayer {
+            // Ball heading toward NPC — recover toward center and reset reaction for next approach
+            hasReacted = false
+            reactionTimer = 0
+            hasComputedNoise = false
+            let recovery = skillFraction * 0.5
+            targetNX = currentNX + (0.5 - currentNX) * recovery
+            targetNY = currentNY + (startNY - currentNY) * recovery
+        }
+
+        // Move toward target
+        let dx = targetNX - currentNX
+        let dy = targetNY - currentNY
+        let dist = sqrt(dx * dx + dy * dy)
+
+        guard dist > 0.01 else {
+            recoverStamina(dt: dt)
+            return
+        }
+
+        let staminaPct = stamina / P.maxStamina
+        let shouldSprint = dist > 0.10 && staminaPct > 0.20
+        let effectiveSpeed: CGFloat
+
+        if shouldSprint {
+            let sprintFactor: CGFloat = staminaPct < 0.50 ? 0.5 : 1.0
+            effectiveSpeed = moveSpeed + (sprintSpeed - moveSpeed) * sprintFactor
+            stamina = max(0, stamina - P.sprintDrainRate * dt)
+            timeSinceLastSprint = 0
+        } else {
+            effectiveSpeed = moveSpeed
+            recoverStamina(dt: dt)
+        }
+
+        let step = effectiveSpeed * dt
+        if step >= dist {
+            currentNX = targetNX
+            currentNY = targetNY
+        } else {
+            currentNX += (dx / dist) * step
+            currentNY += (dy / dist) * step
+        }
+
+        // Clamp to player's side of court (in front of kitchen line at 0.318)
+        currentNX = max(0.0, min(1.0, currentNX))
+        currentNY = max(0.0, min(0.30, currentNY))
+    }
+
+    private func recoverStamina(dt: CGFloat) {
+        timeSinceLastSprint += dt
+        if timeSinceLastSprint >= P.staminaRecoveryDelay {
+            stamina = min(P.maxStamina, stamina + P.staminaRecoveryRate * dt)
+        }
+    }
+
+    private func predictLanding(ball: DrillBallSimulation) {
+        let positioningStat = CGFloat(stats.stat(.positioning))
+        let baseLookAhead: CGFloat = 0.6
+        let statBonus: CGFloat = (positioningStat / 99.0) * 0.5
+        let lookAhead = baseLookAhead + statBonus
+
+        let predictedX = ball.courtX + ball.vx * lookAhead
+        let predictedY = ball.courtY + ball.vy * lookAhead
+
+        // Use pre-computed noise offset (stable per ball approach)
+        targetNX = max(0.05, min(0.95, predictedX + noiseOffsetX))
+        targetNY = max(0.0, min(0.28, predictedY + noiseOffsetY))
+    }
+
+    // MARK: - Hit Detection
+
+    /// Check if ball is within player's hitbox and hittable.
+    func canHit(ball: DrillBallSimulation) -> Bool {
+        guard ball.isActive, !ball.lastHitByPlayer else { return false }
+        guard ball.bounceCount < 2 else { return false }
+        guard ball.height < 0.20 else { return false }
+
+        // Pre-bounce: don't reach forward
+        if ball.bounceCount == 0 && ball.courtY > currentNY { return false }
+
+        let dx = ball.courtX - currentNX
+        let dy = ball.courtY - currentNY
+        let dist = sqrt(dx * dx + dy * dy)
+        return dist <= hitboxRadius
+    }
+
+    // MARK: - Forced Error (mirrors InteractiveMatchScene checkPlayerHit)
+
+    func shouldCommitForcedError(ball: DrillBallSimulation, npcDUPR: Double) -> Bool {
+        let ballSpeed = sqrt(ball.vx * ball.vx + ball.vy * ball.vy)
+        let maxSpeed = P.baseShotSpeed + 2.0 * (P.maxShotSpeed - P.baseShotSpeed)
+        let speedFrac = max(0, min(1, (ballSpeed - P.baseShotSpeed) / (maxSpeed - P.baseShotSpeed)))
+        let spinPressure = min(abs(ball.spinCurve) / P.spinCurveFactor, 1.0)
+
+        let dx = ball.courtX - currentNX
+        let dy = ball.courtY - currentNY
+        let dist = sqrt(dx * dx + dy * dy)
+        let stretchFrac = min(dist / hitboxRadius, 1.0)
+
+        let shotDifficulty = speedFrac * PB.forcedErrorSpeedWeight
+            + spinPressure * PB.forcedErrorSpinWeight
+            + stretchFrac * PB.forcedErrorStretchWeight
+
+        let reflexesStat = CGFloat(stats.stat(.reflexes))
+        let consistencyStat = CGFloat(stats.stat(.consistency))
+        let defenseStat = CGFloat(stats.stat(.defense))
+        let avgDefense = (reflexesStat + consistencyStat + defenseStat) / 3.0 / 99.0
+        var forcedErrorRate = shotDifficulty * PB.forcedErrorScale * pow(1.0 - avgDefense, PB.forcedErrorExponent)
+
+        // Rally pressure
+        let NPCS = GameConstants.NPCStrategy.self
+        rallyPressure = max(0, rallyPressure - NPCS.pressureDecayPerShot)
+        rallyPressure += shotDifficulty
+        let pressureThreshold = NPCS.pressureBaseThreshold + avgDefense * NPCS.pressureStatScale
+        let pressureOverflow = max(0, rallyPressure - pressureThreshold)
+        let pressureBonus = pressureOverflow * NPCS.pressureErrorScale
+
+        // DUPR gap amplifier
+        let duprGapForPlayer = max(0, npcDUPR - dupr)
+        let gapAmplifier = 1.0 + CGFloat(duprGapForPlayer) * NPCS.duprForcedErrorAmplifier
+        forcedErrorRate = (forcedErrorRate + pressureBonus) * gapAmplifier
+
+        return CGFloat.random(in: 0...1) < forcedErrorRate
+    }
+
+    // MARK: - Net Fault
+
+    func shouldCommitNetFault() -> Bool {
+        let accuracyStat = CGFloat(stats.stat(.accuracy))
+        let consistencyStat = CGFloat(stats.stat(.consistency))
+        let focusStat = CGFloat(stats.stat(.focus))
+        let avgControl = (accuracyStat + consistencyStat + focusStat) / 3.0
+        let netFaultRate = PB.netFaultBaseRate * pow(1.0 - avgControl / 99.0, 1.5)
+        return CGFloat.random(in: 0...1) < netFaultRate
+    }
+
+    // MARK: - Shot Mode Selection
+
+    func selectShotModes(ball: DrillBallSimulation) -> SM {
+        var modes: SM = []
+        let staminaPct = stamina / P.maxStamina
+        guard staminaPct > 0.10 else { return modes }
+
+        // Skill-gated: beginners rarely use modes
+        guard CGFloat.random(in: 0...1) < shotModeCompetence else { return modes }
+
+        let ballHeight = ball.height
+        let isHighBall = ballHeight > 0.06
+
+        // Power on high balls
+        if isHighBall && CGFloat.random(in: 0...1) < skillFraction * 0.6 {
+            modes.insert(.power)
+        }
+
+        // Topspin or slice
+        if !modes.contains(.power) && CGFloat.random(in: 0...1) < skillFraction * 0.3 {
+            modes.insert(Bool.random() ? .topspin : .slice)
+        }
+
+        // Angled shots
+        if CGFloat.random(in: 0...1) < skillFraction * 0.3 {
+            modes.insert(.angled)
+        }
+
+        // Focus
+        if staminaPct > 0.30 && CGFloat.random(in: 0...1) < skillFraction * 0.2 {
+            modes.insert(.focus)
+        }
+
+        return modes
+    }
+
+    // MARK: - Shot Generation
+
+    func generateShot(ball: DrillBallSimulation) -> DrillShotCalculator.ShotResult {
+        let modes = selectShotModes(ball: ball)
+        shotCountThisPoint += 1
+        let staminaFraction = stamina / P.maxStamina
+
+        if modes.contains(.power) {
+            stamina = max(0, stamina - P.maxStamina * 0.20)
+        }
+        if modes.contains(.focus) {
+            stamina = max(0, stamina - P.maxStamina * 0.10)
+        }
+
+        return DrillShotCalculator.calculatePlayerShot(
+            stats: stats,
+            ballApproachFromLeft: ball.courtX < currentNX,
+            drillType: .baselineRally,
+            ballHeight: ball.height,
+            courtNY: currentNY,
+            modes: modes,
+            staminaFraction: staminaFraction
+        )
+    }
+
+    func generateServe(playerScore: Int) -> DrillShotCalculator.ShotResult {
+        // Simulated player serve: skill-gated power/spin
+        var modes: SM = []
+
+        if CGFloat.random(in: 0...1) < shotModeCompetence * 0.5 {
+            modes.insert(.power)
+            stamina = max(0, stamina - P.maxStamina * 0.20)
+        }
+        if CGFloat.random(in: 0...1) < shotModeCompetence * 0.3 {
+            modes.insert(Bool.random() ? .topspin : .slice)
+        }
+
+        return DrillShotCalculator.calculatePlayerShot(
+            stats: stats,
+            ballApproachFromLeft: false,
+            drillType: .baselineRally,
+            ballHeight: 0.05,
+            courtNY: currentNY,
+            modes: modes,
+            staminaFraction: stamina / P.maxStamina
+        )
+    }
+
+    // MARK: - Reset
+
+    func recoverBetweenPoints() {
+        stamina = min(P.maxStamina, stamina + 10)
+    }
+
+    func reset(isServing: Bool, playerScore: Int, npcScore: Int) {
+        self.isServing = isServing
+        self.shotCountThisPoint = 0
+        self.rallyPressure = 0
+        self.hasReacted = false
+        self.reactionTimer = 0
+        self.hasComputedNoise = false
+        if isServing {
+            positionForServe(playerScore: playerScore)
+        } else {
+            positionForReceive(npcScore: npcScore)
+        }
+    }
+}

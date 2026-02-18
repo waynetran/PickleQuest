@@ -97,7 +97,6 @@ struct NPCStrategyProfile: Sendable {
 /// Strategic AI opponent for interactive matches.
 /// Uses `DrillShotCalculator.calculatePlayerShot()` with stat-gated shot modes,
 /// its own stamina system, and positioning logic based on NPC stats.
-@MainActor
 final class MatchAI {
     private typealias P = GameConstants.DrillPhysics
     private typealias S = GameConstants.NPCStrategy
