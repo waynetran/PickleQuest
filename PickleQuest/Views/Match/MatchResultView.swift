@@ -260,6 +260,14 @@ struct MatchResultView: View {
                 StatAllocationView(viewModel: vm)
             }
         }
+        .onAppear {
+            SoundManager.shared.playUI(result.didPlayerWin ? .matchWin : .matchLose)
+            if result.didPlayerWin {
+                HapticManager.shared.matchWon()
+            } else {
+                HapticManager.shared.matchLost()
+            }
+        }
     }
 
     @ViewBuilder

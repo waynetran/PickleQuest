@@ -107,12 +107,6 @@ struct NPCCard: View {
     }
 
     private var difficultyColor: Color {
-        switch npc.difficulty {
-        case .beginner: return .green
-        case .intermediate: return .blue
-        case .advanced: return .purple
-        case .expert: return .orange
-        case .master: return .red
-        }
+        AppTheme.difficultyColor(npc.difficulty)
     }
 }

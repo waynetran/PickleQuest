@@ -134,12 +134,6 @@ struct PartnerPickerView: View {
     }
 
     private func difficultyColor(_ difficulty: NPCDifficulty) -> Color {
-        switch difficulty {
-        case .beginner: return .green
-        case .intermediate: return .blue
-        case .advanced: return .purple
-        case .expert: return .orange
-        case .master: return .red
-        }
+        AppTheme.difficultyColor(difficulty)
     }
 }

@@ -21,6 +21,10 @@ struct MatchHistoryEntry: Identifiable, Codable, Equatable, Sendable {
     let partnerName: String?
     let opponent2Name: String?
     let wagerAmount: Int
+    let aces: Int
+    let winners: Int
+    let unforcedErrors: Int
+    let longestRally: Int
 
     init(
         id: UUID,
@@ -42,7 +46,11 @@ struct MatchHistoryEntry: Identifiable, Codable, Equatable, Sendable {
         matchType: MatchType = .singles,
         partnerName: String? = nil,
         opponent2Name: String? = nil,
-        wagerAmount: Int = 0
+        wagerAmount: Int = 0,
+        aces: Int = 0,
+        winners: Int = 0,
+        unforcedErrors: Int = 0,
+        longestRally: Int = 0
     ) {
         self.id = id
         self.date = date
@@ -64,6 +72,10 @@ struct MatchHistoryEntry: Identifiable, Codable, Equatable, Sendable {
         self.partnerName = partnerName
         self.opponent2Name = opponent2Name
         self.wagerAmount = wagerAmount
+        self.aces = aces
+        self.winners = winners
+        self.unforcedErrors = unforcedErrors
+        self.longestRally = longestRally
     }
 
     // MARK: - Codable (backwards-compatible with older saves)
@@ -90,5 +102,9 @@ struct MatchHistoryEntry: Identifiable, Codable, Equatable, Sendable {
         partnerName = try c.decodeIfPresent(String.self, forKey: .partnerName)
         opponent2Name = try c.decodeIfPresent(String.self, forKey: .opponent2Name)
         wagerAmount = try c.decodeIfPresent(Int.self, forKey: .wagerAmount) ?? 0
+        aces = try c.decodeIfPresent(Int.self, forKey: .aces) ?? 0
+        winners = try c.decodeIfPresent(Int.self, forKey: .winners) ?? 0
+        unforcedErrors = try c.decodeIfPresent(Int.self, forKey: .unforcedErrors) ?? 0
+        longestRally = try c.decodeIfPresent(Int.self, forKey: .longestRally) ?? 0
     }
 }

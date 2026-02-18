@@ -45,10 +45,11 @@ struct TutorialMatchView: View {
             Spacer()
 
             if let tip = viewModel.currentTip {
+                let accent = tip.accentColor ?? Color.accentColor
                 VStack(spacing: 16) {
                     Image(systemName: tip.icon)
                         .font(.system(size: 48))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(accent)
 
                     Text(tip.title)
                         .font(.title2.bold())
@@ -62,13 +63,24 @@ struct TutorialMatchView: View {
                 .background(.regularMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 32)
+
+                // Page indicator dots
+                HStack(spacing: 8) {
+                    ForEach(0..<viewModel.introTips.count, id: \.self) { index in
+                        Circle()
+                            .fill(index == viewModel.currentTipIndex ? accent : Color.secondary.opacity(0.3))
+                            .frame(width: 8, height: 8)
+                    }
+                }
             }
 
             Spacer()
 
             if viewModel.hasMoreTips {
                 Button("Next") {
-                    viewModel.advanceTip()
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.advanceTip()
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)

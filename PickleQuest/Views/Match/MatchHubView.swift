@@ -319,7 +319,11 @@ struct MatchHubView: View {
             matchType: matchVM.isDoublesMode ? .doubles : .singles,
             partnerName: matchVM.selectedPartner?.name,
             opponent2Name: matchVM.opponentPartner?.name,
-            wagerAmount: matchVM.wagerAmount
+            wagerAmount: matchVM.wagerAmount,
+            aces: result.playerStats.aces,
+            winners: result.playerStats.winners,
+            unforcedErrors: result.playerStats.unforcedErrors,
+            longestRally: result.playerStats.longestRally
         )
         player.matchHistory.append(historyEntry)
 
@@ -333,5 +337,10 @@ struct MatchHubView: View {
             inventory: currentInventory,
             consumables: currentConsumables
         )
+
+        // Schedule energy full notification
+        if player.currentEnergy < GameConstants.PersistentEnergy.maxEnergy {
+            NotificationManager.shared.scheduleEnergyFull(currentEnergy: player.currentEnergy)
+        }
     }
 }

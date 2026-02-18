@@ -798,20 +798,10 @@ struct CourtDetailSheet: View {
     }
 
     private var difficultyColor: Color {
-        npcDifficultyColor(for: court.primaryDifficulty)
+        AppTheme.difficultyColor(court.primaryDifficulty)
     }
 
     private func npcDifficultyColor(_ npc: NPC) -> Color {
-        npcDifficultyColor(for: npc.difficulty)
-    }
-
-    private func npcDifficultyColor(for difficulty: NPCDifficulty) -> Color {
-        switch difficulty {
-        case .beginner: return .green
-        case .intermediate: return .blue
-        case .advanced: return .purple
-        case .expert: return .orange
-        case .master: return .red
-        }
+        AppTheme.difficultyColor(npc.difficulty)
     }
 }

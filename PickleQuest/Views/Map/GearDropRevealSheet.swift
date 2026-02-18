@@ -59,6 +59,10 @@ struct GearDropRevealSheet: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.medium, .large])
+        .onAppear {
+            SoundManager.shared.playUI(.lootReveal)
+            HapticManager.shared.lootPickup()
+        }
     }
 
     private var headerView: some View {

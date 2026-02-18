@@ -19,6 +19,7 @@ struct InteractiveMatchView: View {
     @State private var playerScore: Int = 0
     @State private var npcScore: Int = 0
     @State private var servingSide: MatchSide = .player
+    @State private var showControlHint: Bool = false
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -64,6 +65,11 @@ struct InteractiveMatchView: View {
                 }
             }
 
+            // First-match control hint overlay
+            if showControlHint {
+                controlHintOverlay
+            }
+
             // Result overlay (after match ends)
             if let result = matchResult {
                 VStack {
@@ -77,10 +83,15 @@ struct InteractiveMatchView: View {
         .navigationBarBackButtonHidden(true)
         .task {
             guard scene == nil else { return }
-            let newScene = makeScene()
-            scene = newScene
-            // Auto-start the match immediately — instructions were already shown
-            newScene.beginMatch()
+
+            // Show control hint for first non-tutorial match
+            if player.matchHistory.isEmpty {
+                showControlHint = true
+            } else {
+                let newScene = makeScene()
+                scene = newScene
+                newScene.beginMatch()
+            }
         }
     }
 
@@ -106,19 +117,77 @@ struct InteractiveMatchView: View {
         return scene
     }
 
+    // MARK: - Control Hint
+
+    private var controlHintOverlay: some View {
+        VStack {
+            Spacer()
+            VStack(spacing: 16) {
+                Text("Quick Controls")
+                    .font(.title3.bold())
+
+                VStack(alignment: .leading, spacing: 10) {
+                    controlRow(icon: "arrow.up.and.down.and.arrow.left.and.right", label: "Left side", detail: "Joystick to move")
+                    controlRow(icon: "hand.draw.fill", label: "Right side", detail: "Swipe up to serve")
+                    controlRow(icon: "slider.horizontal.3", label: "Bottom buttons", detail: "Toggle shot modes")
+                    controlRow(icon: "bolt.fill", label: "Stamina bar", detail: "Above your player")
+                }
+
+                Button {
+                    showControlHint = false
+                    let newScene = makeScene()
+                    scene = newScene
+                    newScene.beginMatch()
+                } label: {
+                    Text("Got it!")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(.blue)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .padding()
+            .background(.regularMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .padding()
+        }
+    }
+
+    private func controlRow(icon: String, label: String, detail: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(.blue)
+                .frame(width: 30)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.subheadline.bold())
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
     // MARK: - Result Overlay
 
     private func resultOverlay(result: MatchResult) -> some View {
         VStack(spacing: 16) {
-            // Win/Loss banner
+            // Win/Loss icon + banner (matches MatchResultView style)
+            Image(systemName: result.didPlayerWin ? "trophy.fill" : "xmark.circle")
+                .font(.system(size: 44))
+                .foregroundStyle(result.didPlayerWin ? .yellow : .red)
+
             Text(result.didPlayerWin ? "Victory!" : "Defeat")
-                .font(.system(size: 48, weight: .heavy, design: .rounded))
+                .font(.system(size: 36, weight: .heavy, design: .rounded))
                 .foregroundStyle(result.didPlayerWin ? .green : .red)
 
             // Score
             Text("\(result.finalScore.playerPoints) — \(result.finalScore.opponentPoints)")
-                .font(.system(size: 36, weight: .bold).monospacedDigit())
-                .foregroundStyle(.white)
+                .font(.system(size: 28, weight: .bold).monospacedDigit())
+                .foregroundStyle(.primary)
 
             Divider()
 
@@ -183,8 +252,8 @@ struct InteractiveMatchView: View {
             }
         }
         .padding()
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.sheetRadius))
         .padding()
     }
 }

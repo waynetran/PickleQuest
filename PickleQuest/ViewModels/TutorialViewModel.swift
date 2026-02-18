@@ -17,18 +17,39 @@ final class TutorialViewModel {
         [
             TutorialTip(
                 title: "Welcome to PickleQuest!",
-                body: "You're about to play your very first pickleball match. Coach Pickles will go easy on you.",
-                icon: "hand.wave.fill"
+                body: "Your first match is a warmup. Don't worry about controls yet — just get a feel for the court.",
+                icon: "hand.wave.fill",
+                accentColor: .green
             ),
             TutorialTip(
-                title: "How Matches Work",
-                body: "Matches simulate point-by-point. Your stats, equipment, and strategy determine the outcome.",
-                icon: "sportscourt.fill"
+                title: "Scoring",
+                body: "Pickleball to 11, win by 2. Side-out scoring means you only score when you're serving.",
+                icon: "number.circle.fill",
+                accentColor: .blue
             ),
             TutorialTip(
-                title: "Ready?",
-                body: "Let's step onto the court and show Coach Pickles what you're made of!",
-                icon: "figure.pickleball"
+                title: "Movement + Serve",
+                body: "Use the joystick (left side) to move your player. Swipe up on the right side to serve.",
+                icon: "arrow.up.and.down.and.arrow.left.and.right",
+                accentColor: .cyan
+            ),
+            TutorialTip(
+                title: "Shot Modes",
+                body: "7 buttons: Power (hard), Touch (precise), Lob (high arc), Slice (low), Topspin (kick), Angled (cross-court), Focus (accuracy).",
+                icon: "slider.horizontal.3",
+                accentColor: .orange
+            ),
+            TutorialTip(
+                title: "Stamina",
+                body: "The bar above your player is sprint stamina. Power shots drain it fast. Rest between points to recover.",
+                icon: "bolt.fill",
+                accentColor: .yellow
+            ),
+            TutorialTip(
+                title: "Let's Play!",
+                body: "Coach Pickles is waiting on the other side. He'll go easy on you — this time.",
+                icon: "figure.pickleball",
+                accentColor: .red
             ),
         ]
     }

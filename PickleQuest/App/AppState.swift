@@ -58,7 +58,13 @@ final class AppState {
             fogCells: revealedFogCells,
             tutorialCompleted: tutorialCompleted
         )
-        try? await persistenceService.savePlayer(bundle)
+        do {
+            try await persistenceService.savePlayer(bundle)
+        } catch {
+            #if DEBUG
+            print("[AppState] Save failed: \(error)")
+            #endif
+        }
     }
 
     func loadFromBundle(_ bundle: SavedPlayerBundle) {

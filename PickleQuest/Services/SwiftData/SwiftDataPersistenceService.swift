@@ -2,10 +2,18 @@ import Foundation
 import SwiftData
 
 actor SwiftDataPersistenceService: PersistenceService {
+    private static let schemaVersion = 1
     private let modelContainer: ModelContainer
 
     init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
+    }
+
+    private func migrateIfNeeded() {
+        // Migration scaffold — add versioned migration blocks here as needed.
+        // Example for future use:
+        // if currentSchemaVersion < 2 { migrateV1toV2() }
+        let _ = Self.schemaVersion
     }
 
     private func makeContext() -> ModelContext {
@@ -23,6 +31,7 @@ actor SwiftDataPersistenceService: PersistenceService {
     }
 
     func loadPlayer(id: UUID) async throws -> SavedPlayerBundle {
+        migrateIfNeeded()
         let context = makeContext()
         var descriptor = FetchDescriptor<SavedPlayer>(
             predicate: #Predicate { $0.playerID == id }

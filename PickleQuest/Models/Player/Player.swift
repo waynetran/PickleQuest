@@ -81,6 +81,34 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
         equippedItems[.paddle] != nil
     }
 
+    var currentWinStreak: Int {
+        var streak = 0
+        for entry in matchHistory.reversed() {
+            if entry.didWin { streak += 1 } else { break }
+        }
+        return streak
+    }
+
+    var bestWinStreak: Int {
+        var best = 0
+        var current = 0
+        for entry in matchHistory {
+            if entry.didWin {
+                current += 1
+                if current > best { best = current }
+            } else {
+                current = 0
+            }
+        }
+        return best
+    }
+
+    var overallWinRate: Double {
+        guard !matchHistory.isEmpty else { return 0 }
+        let wins = matchHistory.filter(\.didWin).count
+        return Double(wins) / Double(matchHistory.count)
+    }
+
     // MARK: - Codable (backwards-compatible with older saves)
 
     init(from decoder: Decoder) throws {

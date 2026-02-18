@@ -47,12 +47,6 @@ struct CourtAnnotationView: View {
     }
 
     private var difficultyColor: Color {
-        switch court.primaryDifficulty {
-        case .beginner: return .green
-        case .intermediate: return .blue
-        case .advanced: return .purple
-        case .expert: return .orange
-        case .master: return .red
-        }
+        AppTheme.difficultyColor(court.primaryDifficulty)
     }
 }

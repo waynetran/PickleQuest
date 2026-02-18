@@ -22,12 +22,38 @@ struct MatchHistoryRow: View {
                         .background(difficultyColor.opacity(0.2))
                         .foregroundStyle(difficultyColor)
                         .clipShape(Capsule())
+
+                    // Match type badge
+                    Text(entry.matchType == .doubles ? "2v2" : "1v1")
+                        .font(.caption2.bold())
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(.blue.opacity(0.15))
+                        .foregroundStyle(.blue)
+                        .clipShape(Capsule())
                 }
 
                 HStack(spacing: 8) {
                     Text(entry.scoreString)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    if let partner = entry.partnerName {
+                        Text("w/ \(partner)")
+                            .font(.caption2)
+                            .foregroundStyle(.cyan)
+                    }
+
+                    if entry.wagerAmount > 0 {
+                        HStack(spacing: 2) {
+                            Image(systemName: "dollarsign.circle.fill")
+                                .font(.caption2)
+                                .foregroundStyle(.yellow)
+                            Text("\(entry.wagerAmount)")
+                                .font(.caption2.monospacedDigit())
+                                .foregroundStyle(.yellow)
+                        }
+                    }
 
                     Text(entry.date, style: .relative)
                         .font(.caption2)
@@ -71,12 +97,6 @@ struct MatchHistoryRow: View {
     }
 
     private var difficultyColor: Color {
-        switch entry.opponentDifficulty {
-        case .beginner: return .green
-        case .intermediate: return .blue
-        case .advanced: return .purple
-        case .expert: return .orange
-        case .master: return .red
-        }
+        AppTheme.difficultyColor(entry.opponentDifficulty)
     }
 }

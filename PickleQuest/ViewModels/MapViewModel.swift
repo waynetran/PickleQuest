@@ -349,6 +349,12 @@ final class MapViewModel {
 
         // Remove from active list
         activeGearDrops.removeAll { $0.id == drop.id }
+
+        // Request notification permission on first pickup
+        await NotificationManager.shared.requestPermissionIfNeeded()
+        if NotificationManager.shared.permissionGranted {
+            NotificationManager.shared.scheduleDailyChallengeReset()
+        }
     }
 
     /// Unlock court cache after winning a match at a court.
@@ -360,6 +366,13 @@ final class MapViewModel {
         if let index = activeGearDrops.firstIndex(where: { $0.id == unlockedDrop.id }) {
             activeGearDrops[index] = unlockedDrop
         }
+
+        // Schedule court cache cooldown notification
+        NotificationManager.shared.scheduleCourtCacheReady(
+            courtID: courtID.uuidString,
+            courtName: unlockedDrop.type.displayName,
+            cooldownEnd: unlockedDrop.expiresAt
+        )
 
         return unlockedDrop
     }

@@ -1066,6 +1066,9 @@ final class InteractiveDrillScene: SKScene {
         playerAnimator.play(animState)
         playerShotAnimTimer = shotAnimDuration
 
+        run(SoundManager.shared.skAction(for: .paddleHit))
+        HapticManager.shared.paddleHit()
+
         ballSim.launch(
             from: CGPoint(x: playerNX, y: playerNY),
             toward: CGPoint(x: shot.targetNX, y: shot.targetNY),
@@ -1119,6 +1122,8 @@ final class InteractiveDrillScene: SKScene {
             let dist = sqrt(dx * dx + dy * dy)
 
             if dist <= P.coneHitRadius {
+                run(SoundManager.shared.skAction(for: .pointChime))
+                HapticManager.shared.pointScored()
                 scorekeeper.onConeHit()
                 showCoachSpeech(coachPersonality.coneHitLine(), duration: 2.5)
                 // Flash cone green
@@ -1552,6 +1557,9 @@ final class InteractiveDrillScene: SKScene {
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
+
+        run(SoundManager.shared.skAction(for: .matchWin))
+        HapticManager.shared.matchWon()
 
         let result = scorekeeper.calculateResult()
         onComplete(result)

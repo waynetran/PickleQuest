@@ -975,6 +975,8 @@ final class InteractiveMatchScene: SKScene {
         playerServeStallTimer = 0
         serveStallTauntIndex = 0
 
+        run(SoundManager.shared.skAction(for: .serveWhoosh))
+
         let swipeAngle = atan2(dx, dy)
         let angleDeviation = max(-P.serveSwipeAngleRange, min(P.serveSwipeAngleRange, swipeAngle))
         let rawPowerFactor = distance / P.serveSwipeMaxPower
@@ -1131,6 +1133,9 @@ final class InteractiveMatchScene: SKScene {
     }
 
     private func resolvePoint(_ result: PointResult, reason: String) {
+        run(SoundManager.shared.skAction(for: .pointChime))
+        HapticManager.shared.pointScored()
+
         dbg.logPointEnd(
             result: result == .playerWon ? "PLAYER WON" : "NPC WON",
             reason: reason,
@@ -1238,6 +1243,13 @@ final class InteractiveMatchScene: SKScene {
             didPlayerWin = false
         } else {
             didPlayerWin = playerScore > npcScore
+        }
+
+        run(SoundManager.shared.skAction(for: didPlayerWin ? .matchWin : .matchLose))
+        if didPlayerWin {
+            HapticManager.shared.matchWon()
+        } else {
+            HapticManager.shared.matchLost()
         }
 
         let duration = matchStartTime.map { Date().timeIntervalSince($0) } ?? 0
@@ -1470,6 +1482,8 @@ final class InteractiveMatchScene: SKScene {
         }
         updateShotButtonVisuals()
         updateShotModeDots()
+        run(SoundManager.shared.skAction(for: .buttonClick))
+        HapticManager.shared.buttonTap()
     }
 
     private func updateShotModeDots() {
@@ -2251,6 +2265,16 @@ final class InteractiveMatchScene: SKScene {
         playerShotAnimTimer = shotAnimDuration
         playerSpriteFlipped = false
 
+        // Sound + haptic
+        let isSmashShot = playerJumpPhase != .grounded || shot.smashFactor > 0
+        if isSmashShot {
+            run(SoundManager.shared.skAction(for: .paddleHitSmash))
+            HapticManager.shared.smashHit()
+        } else {
+            run(SoundManager.shared.skAction(for: .paddleHit))
+            HapticManager.shared.paddleHit()
+        }
+
         // Hide ball during swing wind-up (it reappears on launch)
         ballSim.isActive = false
         ballNode.alpha = 0
@@ -2418,6 +2442,8 @@ final class InteractiveMatchScene: SKScene {
             npcShotAnimTimer = shotAnimDuration
             npcSpriteFlipped = false
 
+            run(SoundManager.shared.skAction(for: .paddleHitDistant))
+
             // Hide ball during swing wind-up (it reappears on launch)
             ballSim.isActive = false
             ballNode.alpha = 0
@@ -2461,6 +2487,7 @@ final class InteractiveMatchScene: SKScene {
                 npcErrors += 1
             }
             let h = String(format: "%.3f", ballSim.height)
+            run(SoundManager.shared.skAction(for: .netThud))
             showIndicator("Net!", color: .systemRed)
             resolvePoint(lastHitter, reason: "Net collision (h=\(h), prevY=\(String(format: "%.2f", previousBallNY)))")
             return
@@ -2469,6 +2496,7 @@ final class InteractiveMatchScene: SKScene {
         // Bounce-time line call: check on first bounce using interpolated position
         if ballSim.didBounceThisFrame && !checkedFirstBounce {
             checkedFirstBounce = true
+            run(SoundManager.shared.skAction(for: .ballBounce))
 
             dbg.logBallBounce(
                 bounceNum: 1,
