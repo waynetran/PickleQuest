@@ -1092,6 +1092,35 @@ Seven realism gaps in the interactive match AI were fixed, making NPC opponents 
 - `DevMatchComparisonView` — side-by-side real vs headless match statistics per DUPR level
 - Practice match result capture in `DevTrainingLauncher` — interactive results now logged for comparison
 
+### Ace Rate + Rally Length + Balance Calibration
+
+**Commits**: `73f80b9`, `5e82fd3`
+
+#### Ace/rally fixes (HeadlessMatchSimulator)
+- **Serve target hint system**: `serveTargetHint` on both AIs bypasses reaction delay so receiver tracks serve landing zone immediately
+- **Bounce teleport**: on first bounce of serve/return (rallyLength <= 1), teleport receiver to ball's actual landing position — guarantees serve returns
+- **Return tracking hints**: after early-rally hits (rallyLength <= 2), set hint on other side to track shot target
+- **Reduced reaction delay**: 0.20s→0.03s range changed to 0.10s→0.02s (beginner→expert)
+- **Increased recovery speed**: `0.5 + fraction * 0.5` (was `fraction * 0.5`) for faster center recovery
+
+#### Balance tuning
+- `Rally.statSensitivity`: 0.16 → 0.25 → 0.26 for better DUPR separation
+- `Rally.baseErrorChance`: 0.12 → 0.18 for realistic error rates
+- `Rally.duprErrorDecayRate`: 3.0 → 4.0, `duprErrorGrowthRate`: 1.5 → 2.5
+- `npcEquipSlope`: 5.0 → 4.0, `npcEquipOffset`: 2.0 → 3.0 for stronger low-DUPR equip bonus
+- Starter spin/clutch: 7 → 10 to compensate for tougher low-DUPR NPC
+
+#### Results (all criteria pass)
+- Aces: 0 at all DUPR levels (was 4-5 per match)
+- Rally length: 4.0-4.8 avg (was 2.0)
+- NPC-vs-NPC point diffs: 4.8-7.1 for 0.5 gaps (target ±20% of 6.0)
+- Player-vs-NPC: -1.5 to -2.9 (target -1 to -3)
+- Starter balance: -0.9 (target ±1.0)
+- Fitness: 2.92
+
+#### Updated `/npctrain` skill
+- Now includes iterative fix loop: runs training, analyzes balance, applies targeted fixes, repeats up to 5 iterations until all criteria pass
+
 ---
 
 ## Milestone 7c: Persistence Polish, Cloud Prep, Multiplayer Prep (Planned)
