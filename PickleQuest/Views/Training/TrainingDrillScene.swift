@@ -113,8 +113,8 @@ final class TrainingDrillScene: SKScene {
     // MARK: - Coach Feeding Animation
 
     private func runCoachFeedingAnimation(coach: SKSpriteNode, duration: Double) {
-        let forehandFrames = coachTextures[.forehand] ?? []
-        let backhandFrames = coachTextures[.backhand] ?? []
+        let forehandFrames = coachTextures[.forehandFront] ?? []
+        let backhandFrames = coachTextures[.backhandFront] ?? []
 
         let forehandAction = forehandFrames.isEmpty
             ? SKAction.wait(forDuration: 0.3)
@@ -143,13 +143,13 @@ final class TrainingDrillScene: SKScene {
         let moveToServe = SKAction.move(to: servePrepPos, duration: 0.4)
 
         // Serve prep animation
-        let prepFrames = playerTextures[.servePrep] ?? []
+        let prepFrames = playerTextures[.idleBack] ?? []
         let prepAction = prepFrames.isEmpty
             ? SKAction.wait(forDuration: 0.3)
             : SKAction.animate(with: prepFrames, timePerFrame: 0.10)
 
         // Serve swing
-        let swingFrames = playerTextures[.serveSwing] ?? []
+        let swingFrames = playerTextures[.forehandBack] ?? []
         let swingAction = swingFrames.isEmpty
             ? SKAction.wait(forDuration: 0.3)
             : SKAction.animate(with: swingFrames, timePerFrame: 0.06)
@@ -177,8 +177,8 @@ final class TrainingDrillScene: SKScene {
         let leftPos = CourtRenderer.courtPoint(nx: 0.3, ny: 0.25)
         let rightPos = CourtRenderer.courtPoint(nx: 0.7, ny: 0.25)
 
-        let forehandFrames = playerTextures[.forehand] ?? []
-        let backhandFrames = playerTextures[.backhand] ?? []
+        let forehandFrames = playerTextures[.forehandBack] ?? []
+        let backhandFrames = playerTextures[.backhandBack] ?? []
 
         let forehandAction = forehandFrames.isEmpty
             ? SKAction.wait(forDuration: 0.3)
@@ -209,12 +209,12 @@ final class TrainingDrillScene: SKScene {
 
     private func runDefenseAnimation(player: SKSpriteNode, coach: SKSpriteNode, duration: Double) {
         let centerPos = CourtRenderer.courtPoint(nx: 0.5, ny: 0.20)
-        let forehandFrames = playerTextures[.forehand] ?? []
-        let backhandFrames = playerTextures[.backhand] ?? []
-        let diveFrames = playerTextures[.runDive] ?? []
+        let forehandFrames = playerTextures[.forehandBack] ?? []
+        let backhandFrames = playerTextures[.backhandBack] ?? []
+        let diveFrames = playerTextures[.forehandBack] ?? []
 
-        let coachForehand = coachTextures[.forehand] ?? []
-        let coachBackhand = coachTextures[.backhand] ?? []
+        let coachForehand = coachTextures[.forehandFront] ?? []
+        let coachBackhand = coachTextures[.backhandFront] ?? []
 
         let forehandAction = forehandFrames.isEmpty
             ? SKAction.wait(forDuration: 0.3)
@@ -266,15 +266,12 @@ final class TrainingDrillScene: SKScene {
     }
 
     private func runFootworkAnimation(player: SKSpriteNode, duration: Double) {
-        let leftFrames = playerTextures[.walkLeft] ?? []
-        let rightFrames = playerTextures[.walkRight] ?? []
+        let shuffleFrames = playerTextures[.shuffleBack] ?? []
 
-        let walkLeftAction = leftFrames.isEmpty
+        let walkLeftAction = shuffleFrames.isEmpty
             ? SKAction.wait(forDuration: 0.4)
-            : SKAction.animate(with: leftFrames, timePerFrame: 0.10)
-        let walkRightAction = rightFrames.isEmpty
-            ? SKAction.wait(forDuration: 0.4)
-            : SKAction.animate(with: rightFrames, timePerFrame: 0.10)
+            : SKAction.animate(with: shuffleFrames, timePerFrame: 0.10)
+        let walkRightAction = walkLeftAction
 
         let leftPos = CourtRenderer.courtPoint(nx: 0.15, ny: 0.20)
         let rightPos = CourtRenderer.courtPoint(nx: 0.85, ny: 0.20)

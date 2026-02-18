@@ -97,9 +97,10 @@ enum SpriteFactory {
     // MARK: - All States
 
     private static let allAnimationStates: [CharacterAnimationState] = [
-        .idleBack, .idleFront, .walkToward, .walkAway,
-        .walkLeft, .walkRight, .ready, .servePrep,
-        .serveSwing, .forehand, .backhand, .runDive, .celebrate
+        .idleFront, .idleBack, .shuffleFront, .shuffleBack,
+        .runFront, .runBack, .runSide, .smashFront,
+        .smashBack, .forehandFront, .forehandBack,
+        .backhandFront, .backhandBack
     ]
 
     // MARK: - Fallback (Programmatic Sprites)

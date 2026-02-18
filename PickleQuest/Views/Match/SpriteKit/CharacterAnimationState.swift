@@ -1,70 +1,97 @@
 import Foundation
 
 enum CharacterAnimationState: Hashable, Sendable {
-    case idleBack
-    case idleFront
-    case walkToward
-    case walkAway
-    case walkLeft
-    case walkRight
-    case ready
-    case servePrep
-    case serveSwing
-    case forehand
-    case backhand
-    case runDive
-    case celebrate
+    case idleFront          // row 0 — facing camera
+    case idleBack           // row 1 — back to camera
+    case shuffleFront       // row 2 — front shuffle right (flip xScale for left)
+    case shuffleBack        // row 3 — back shuffle right (flip xScale for left)
+    case runFront           // row 4 — front run (also used for dink animation)
+    case runBack            // row 5 — back run (also used for dink animation)
+    case runSide            // row 6 — run left (flip xScale for right)
+    case smashFront         // row 7 — front overhead smash w/ jump
+    case smashBack          // row 8 — back overhead smash
+    case forehandFront      // row 9 — front forehand swing
+    case forehandBack       // row 10 — back forehand swing
+    case backhandFront      // row 11 — front backhand swing
+    case backhandBack       // row 12 — back backhand swing
 
     var sheetRow: Int {
         switch self {
-        case .idleBack:    return 1
-        case .idleFront:   return 0
-        case .walkToward:  return 2
-        case .walkAway:    return 3
-        case .walkLeft:    return 4
-        case .walkRight:   return 5
-        case .ready:       return 6
-        case .servePrep:   return 7
-        case .serveSwing:  return 8
-        case .forehand:    return 9
-        case .backhand:    return 10
-        case .runDive:     return 11
-        case .celebrate:   return 12
+        case .idleFront:      return 0
+        case .idleBack:       return 1
+        case .shuffleFront:   return 2
+        case .shuffleBack:    return 3
+        case .runFront:       return 4
+        case .runBack:        return 5
+        case .runSide:        return 6
+        case .smashFront:     return 7
+        case .smashBack:      return 8
+        case .forehandFront:  return 9
+        case .forehandBack:   return 10
+        case .backhandFront:  return 11
+        case .backhandBack:   return 12
         }
     }
 
     var loops: Bool {
         switch self {
-        case .idleBack, .idleFront, .walkToward, .walkAway,
-             .walkLeft, .walkRight, .ready:
+        case .idleFront, .idleBack,
+             .shuffleFront, .shuffleBack,
+             .runFront, .runBack, .runSide:
             return true
-        case .servePrep, .serveSwing, .forehand, .backhand,
-             .runDive, .celebrate:
+        case .smashFront, .smashBack,
+             .forehandFront, .forehandBack,
+             .backhandFront, .backhandBack:
             return false
         }
     }
 
     var frameDuration: TimeInterval {
         switch self {
-        case .idleBack, .idleFront, .ready:
+        case .idleFront, .idleBack:
             return 0.15
-        case .walkToward, .walkAway, .walkLeft, .walkRight:
+        case .shuffleFront, .shuffleBack:
             return 0.10
-        case .servePrep:
-            return 0.10
-        case .serveSwing:
-            return 0.06
-        case .forehand, .backhand:
-            return 0.06
-        case .runDive:
+        case .runFront, .runBack, .runSide:
             return 0.08
-        case .celebrate:
-            return 0.12
+        case .smashFront, .smashBack:
+            return 0.06
+        case .forehandFront, .forehandBack:
+            return 0.06
+        case .backhandFront, .backhandBack:
+            return 0.06
         }
     }
 
-    /// Default idle state for near (back-view) vs far (front-view) player
+    // MARK: - isNear Helpers
+
+    /// Idle: near player (bottom) shows back, far player (top) shows front
     static func idle(isNear: Bool) -> CharacterAnimationState {
         isNear ? .idleBack : .idleFront
+    }
+
+    /// Shuffle: lateral movement for non-sprint (dinks, returns, positioning)
+    static func shuffle(isNear: Bool) -> CharacterAnimationState {
+        isNear ? .shuffleBack : .shuffleFront
+    }
+
+    /// Run toward/away: also used for dink push animation
+    static func run(isNear: Bool) -> CharacterAnimationState {
+        isNear ? .runBack : .runFront
+    }
+
+    /// Forehand swing
+    static func forehand(isNear: Bool) -> CharacterAnimationState {
+        isNear ? .forehandBack : .forehandFront
+    }
+
+    /// Backhand swing
+    static func backhand(isNear: Bool) -> CharacterAnimationState {
+        isNear ? .backhandBack : .backhandFront
+    }
+
+    /// Overhead smash (with jump)
+    static func smash(isNear: Bool) -> CharacterAnimationState {
+        isNear ? .smashBack : .smashFront
     }
 }

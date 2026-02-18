@@ -62,10 +62,10 @@ struct MapContentView: View {
                         DevMovementPad(mapVM: mapVM, appState: appState) { direction in
                             // Set walk animation matching direction
                             switch direction {
-                            case .north: playerAnimationState = .walkAway
-                            case .south: playerAnimationState = .walkToward
-                            case .east: playerAnimationState = .walkRight
-                            case .west: playerAnimationState = .walkLeft
+                            case .north: playerAnimationState = .runBack
+                            case .south: playerAnimationState = .runFront
+                            case .east: playerAnimationState = .runSide
+                            case .west: playerAnimationState = .runSide
                             }
                             // Reset to idle after a short delay
                             walkResetTask?.cancel()

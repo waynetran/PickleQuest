@@ -846,7 +846,7 @@ final class InteractiveDrillScene: SKScene {
         ballShadow.alpha = 1
 
         // Play serve animation
-        playerAnimator.play(.serveSwing)
+        playerAnimator.play(.forehand(isNear: true))
 
         scorekeeper.onBallFed()
     }
@@ -900,7 +900,7 @@ final class InteractiveDrillScene: SKScene {
 
     private func movePlayer(dt: CGFloat) {
         guard joystickMagnitude > 0.1 else {
-            playerAnimator.play(.ready)
+            playerAnimator.play(.idle(isNear: true))
             // Recover stamina when standing still
             timeSinceLastSprint += dt
             if timeSinceLastSprint >= P.staminaRecoveryDelay {
@@ -961,10 +961,10 @@ final class InteractiveDrillScene: SKScene {
         // Walk animation based on dominant joystick direction
         let dx = joystickDirection.dx
         let dy = joystickDirection.dy
-        if abs(dx) > abs(dy) {
-            playerAnimator.play(dx > 0 ? .walkRight : .walkLeft)
+        if isSprinting {
+            playerAnimator.play(.runSide)
         } else {
-            playerAnimator.play(dy > 0 ? .walkAway : .walkToward)
+            playerAnimator.play(.shuffle(isNear: true))
         }
     }
 
@@ -1033,7 +1033,8 @@ final class InteractiveDrillScene: SKScene {
             staminaFraction: staminaPct
         )
 
-        let animState: CharacterAnimationState = shot.shotType == .forehand ? .forehand : .backhand
+        let animState: CharacterAnimationState = shot.shotType == .forehand
+            ? .forehand(isNear: true) : .backhand(isNear: true)
         playerAnimator.play(animState)
 
         ballSim.launch(
@@ -1055,7 +1056,8 @@ final class InteractiveDrillScene: SKScene {
         if coachAI.shouldSwing(ball: ballSim) {
             let shot = coachAI.generateShot(ball: ballSim)
 
-            let animState: CharacterAnimationState = shot.shotType == .forehand ? .forehand : .backhand
+            let animState: CharacterAnimationState = shot.shotType == .forehand
+                ? .forehand(isNear: false) : .backhand(isNear: false)
             coachAnimator.play(animState)
 
             ballSim.launch(
