@@ -556,8 +556,8 @@ final class InteractiveDrillScene: SKScene {
         // Store bar width for updateHUD
         hudBarWidthCurrent = barWidth
 
-        // Container — full width, with top padding for safe area
-        let topPadding: CGFloat = 24
+        // Container — full width, with top padding for Dynamic Island
+        let topPadding: CGFloat = 60
         hudContainer = SKNode()
         hudContainer.position = CGPoint(x: margin, y: AC.sceneHeight - topPadding - containerHeight)
         hudContainer.zPosition = AC.ZPositions.text - 0.2

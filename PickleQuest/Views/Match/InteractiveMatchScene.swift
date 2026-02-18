@@ -463,6 +463,7 @@ final class InteractiveMatchScene: SKScene {
         subLabel.position = CGPoint(x: 0, y: -12)
         jumpButton.addChild(subLabel)
 
+        jumpButton.isHidden = true  // jump is now automatic
         addChild(jumpButton)
     }
 
@@ -1597,10 +1598,13 @@ final class InteractiveMatchScene: SKScene {
         highBallWarning.position = CGPoint(x: screenPos.x, y: screenPos.y + 50 * pScale + 15)
 
         if predictedHeight <= jumpReach {
-            // Orange: jump can reach it
+            // Orange: jump can reach it — auto-jump when ball is close
             highBallChevron.fontColor = .systemOrange
             highBallLabel.fontColor = .systemOrange
             highBallLabel.text = "JUMP!"
+            if timeToPlayer < 0.4 {
+                initiatePlayerJump()
+            }
         } else {
             // Red: back up
             highBallChevron.fontColor = .systemRed
