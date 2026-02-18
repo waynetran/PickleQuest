@@ -162,8 +162,8 @@ final class MatchAI {
     /// Cleared after the ball bounces (receiver has locked onto landing zone).
     var serveTargetHint: CGPoint?
 
-    /// Effective stat boost: full boost for interactive, zero for headless.
-    private var statBoost: Int { isHeadless ? 0 : P.npcStatBoost }
+    /// Effective stat boost: DUPR-scaled for interactive, zero for headless.
+    private let statBoost: Int
 
     // Headless mode: reaction delay + positioning noise (mirrors SimulatedPlayerAI)
     private let reactionDelay: CGFloat
@@ -184,7 +184,14 @@ final class MatchAI {
 
         // In headless mode, skip stat boost — SimulatedPlayerAI already models human imperfection
         // via reaction delay, positioning noise, and smaller hitbox.
-        let boost = headless ? 0 : P.npcStatBoost
+        // In interactive mode, scale boost by NPC's base stat average (low DUPR = small boost).
+        let boost: Int
+        if headless {
+            boost = 0
+        } else {
+            boost = P.npcStatBoost(forBaseStatAverage: CGFloat(npc.stats.average))
+        }
+        self.statBoost = boost
         let speedStat = CGFloat(min(99, npc.stats.stat(.speed) + boost))
         self.moveSpeed = P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus
         self.sprintSpeed = moveSpeed * (1.0 + P.maxSprintSpeedBoost)

@@ -179,6 +179,7 @@ final class InteractiveMatchScene: SKScene {
     private let contestedDropItemCount: Int
     private let onComplete: (MatchResult) -> Void
     private let dbg = MatchDebugLogger.shared
+    private let npcBoost: Int
 
     // MARK: - Init
 
@@ -201,6 +202,7 @@ final class InteractiveMatchScene: SKScene {
         self.contestedDropItemCount = contestedDropItemCount
         self.onComplete = onComplete
         self.playerStats = player.stats
+        self.npcBoost = P.npcStatBoost(forBaseStatAverage: CGFloat(npc.stats.average))
 
         super.init(size: CGSize(width: AC.sceneWidth, height: AC.sceneHeight))
         self.scaleMode = .aspectFill
@@ -245,7 +247,7 @@ final class InteractiveMatchScene: SKScene {
             player: player,
             playerStats: playerStats,
             npc: npc,
-            npcStatBoost: P.npcStatBoost
+            npcStatBoost: npcBoost
         )
 
         onScoreUpdate?(playerScore, npcScore, servingSide)
@@ -832,8 +834,8 @@ final class InteractiveMatchScene: SKScene {
         let S = GameConstants.NPCStrategy.self
 
         // NPC double fault chance — base rate from stats + mode penalties for power/spin
-        let consistencyStat = CGFloat(min(99, npc.stats.stat(.consistency) + P.npcStatBoost))
-        let accuracyStat = CGFloat(min(99, npc.stats.stat(.accuracy) + P.npcStatBoost))
+        let consistencyStat = CGFloat(min(99, npc.stats.stat(.consistency) + npcBoost))
+        let accuracyStat = CGFloat(min(99, npc.stats.stat(.accuracy) + npcBoost))
         let serveStat = (consistencyStat + accuracyStat) / 2.0
         let baseFaultRate = P.npcBaseServeFaultRate * (1.0 - serveStat / 99.0)
 
@@ -1630,8 +1632,8 @@ final class InteractiveMatchScene: SKScene {
         if rallyLength < 2 && ballSim.bounceCount == 0 { return }
 
         // Compute NPC hitbox metrics for logging (mirrors shouldSwing logic)
-        let npcSpeedStat = CGFloat(min(99, npc.stats.stat(.speed) + P.npcStatBoost))
-        let npcReflexesStat = CGFloat(min(99, npc.stats.stat(.reflexes) + P.npcStatBoost))
+        let npcSpeedStat = CGFloat(min(99, npc.stats.stat(.speed) + npcBoost))
+        let npcReflexesStat = CGFloat(min(99, npc.stats.stat(.reflexes) + npcBoost))
         let npcAthleticism = (npcSpeedStat + npcReflexesStat) / 2.0 / 99.0
         let npcHeightReach = P.baseHeightReach + npcAthleticism * P.maxHeightReachBonus
         let npcExcessH = max(0, ballSim.height - npcHeightReach)
