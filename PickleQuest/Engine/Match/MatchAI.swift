@@ -150,7 +150,7 @@ final class MatchAI {
     private let startNY: CGFloat = 0.92
 
     // Kitchen approach tracking
-    private var lastShotWasReset: Bool = false
+    private var lastShotWasTouch: Bool = false
 
     // Player position for tactical placement (updated by scene each frame)
     var playerPositionNX: CGFloat = 0.5
@@ -307,7 +307,7 @@ final class MatchAI {
                 let recoveryStrength = strategy.aggressionControl
 
                 let recoveryNY: CGFloat
-                if lastShotWasReset && roll(Double(strategy.kitchenApproach)) {
+                if lastShotWasTouch && roll(Double(strategy.kitchenApproach)) {
                     recoveryNY = 0.69 // kitchen line
                 } else {
                     recoveryNY = startNY
@@ -608,8 +608,8 @@ final class MatchAI {
             quality += S.goodShotErrorBonus * 0.6
         }
 
-        // Good: Reset/slice when under pressure (fast incoming or stretched)
-        if modes.contains(.reset) && (isFastIncoming || lastPlayerHitDifficulty > 0.5) {
+        // Good: Touch/slice when under pressure (fast incoming or stretched)
+        if modes.contains(.touch) && (isFastIncoming || lastPlayerHitDifficulty > 0.5) {
             quality += S.goodShotErrorBonus * 0.5
         }
 
@@ -624,7 +624,7 @@ final class MatchAI {
         }
 
         // Bad: Reset on a sitter — gives NPC free attack
-        if modes.contains(.reset) && isHighBall && lastPlayerHitDifficulty < 0.3 {
+        if modes.contains(.touch) && isHighBall && lastPlayerHitDifficulty < 0.3 {
             quality += S.badShotErrorPenalty * 0.8
         }
 
@@ -645,7 +645,7 @@ final class MatchAI {
         // Overhead smash: interactive only (headless uses competence-gated mode selection)
         if !isHeadless && ball.height > 0.20 {
             modes.insert(.power)
-            modes.remove(.reset)
+            modes.remove(.touch)
         }
         lastShotModes = modes
     }
@@ -663,11 +663,11 @@ final class MatchAI {
         // In headless mode, SimulatedPlayerAI handles this via selectShotModes competence gate
         if !isHeadless && ball.height > 0.20 {
             modes.insert(.power)
-            modes.remove(.reset)
+            modes.remove(.touch)
         }
 
-        // Track whether this shot was a reset (for kitchen approach logic)
-        lastShotWasReset = modes.contains(.reset)
+        // Track whether this shot was a touch (for kitchen approach logic)
+        lastShotWasTouch = modes.contains(.touch)
         lastShotModes = modes
 
         // Drain stamina for power/focus shots
@@ -871,13 +871,13 @@ final class MatchAI {
                 // Hard incoming shot — smart NPCs reset to protect themselves
                 let resetChance = strategy.resetWhenStretched * positioningStat
                 if roll(Double(resetChance)) {
-                    modes.insert(.reset)
+                    modes.insert(.touch)
                 }
             } else if aggression < 0.4 {
                 // Low aggression situation (near kitchen, defensive play) — dink
                 let dinkChance = strategy.dinkWhenAppropriate * 0.5
                 if roll(Double(dinkChance)) {
-                    modes.insert(.reset)
+                    modes.insert(.touch)
                 }
             }
         }
@@ -908,8 +908,8 @@ final class MatchAI {
         }
 
         // Enforce mutual exclusivity
-        if modes.contains(.power) && modes.contains(.reset) {
-            modes.remove(.reset)
+        if modes.contains(.power) && modes.contains(.touch) {
+            modes.remove(.touch)
         }
         if modes.contains(.topspin) && modes.contains(.slice) {
             modes.remove(.slice)
@@ -973,7 +973,7 @@ final class MatchAI {
     func reset(npcScore: Int, isServing: Bool) {
         self.isServing = isServing
         self.shotCountThisPoint = 0
-        self.lastShotWasReset = false
+        self.lastShotWasTouch = false
         self.playerShotHistory = []
         self.lastShotModes = []
         self.hasReacted = false
@@ -995,7 +995,7 @@ final class MatchAI {
             if modes.contains(.power) {
                 return roll < 0.6 ? .long : .wide
             }
-            if modes.contains(.reset) || modes.contains(.slice) {
+            if modes.contains(.touch) || modes.contains(.slice) {
                 return roll < 0.7 ? .net : .wide
             }
             if modes.contains(.angled) {
@@ -1008,7 +1008,7 @@ final class MatchAI {
 
         // Interactive: NPC-specific distributions
         let roll = CGFloat.random(in: 0...1)
-        if modes.contains(.reset) {
+        if modes.contains(.touch) {
             if roll < 0.70 { return .net }
             if roll < 0.90 { return .long }
             return .wide

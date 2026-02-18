@@ -21,7 +21,7 @@ enum DrillShotCalculator {
     struct ShotMode: OptionSet, Sendable {
         let rawValue: UInt
         static let power   = ShotMode(rawValue: 1 << 0) // drive — more speed, more scatter
-        static let reset   = ShotMode(rawValue: 1 << 1) // lob to kitchen — mutually exclusive with power
+        static let touch   = ShotMode(rawValue: 1 << 1) // dink/drop/reset — mutually exclusive with power
         static let slice   = ShotMode(rawValue: 1 << 2) // backspin — low arc, less power
         static let topspin = ShotMode(rawValue: 1 << 3) // topspin — flatter arc, more power
         static let angled  = ShotMode(rawValue: 1 << 4) // cross-court sideline target
@@ -186,13 +186,14 @@ enum DrillShotCalculator {
         // Far-side shooters (NPC at ny>0.5): targets must be mirrored to opponent's court half
         let shootingFromFarSide = courtNY > 0.5
 
-        // --- Reset mode: soft lob to kitchen (mutually exclusive with power) ---
-        if modes.contains(.reset) {
-            let resetPower = CGFloat.random(in: 0.15...0.35)
+        // --- Touch mode: dink/drop/reset to kitchen (mutually exclusive with power) ---
+        if modes.contains(.touch) {
+            let touchPower = CGFloat.random(in: 0.15...0.35)
             var targetNX = CGFloat.random(in: 0.25...0.75)
-            var targetNY = CGFloat.random(in: 0.52...0.66)
+            // Target the kitchen zone (net to kitchen line)
+            var targetNY = CGFloat.random(in: 0.52...0.68)
 
-            // Angled modifier on reset
+            // Angled modifier on touch
             if modes.contains(.angled) {
                 if ballApproachFromLeft { targetNX = 0.82 } else { targetNX = 0.18 }
             }
@@ -209,21 +210,21 @@ enum DrillShotCalculator {
                 targetNY = max(0.52, min(0.68, targetNY))
             }
 
-            // Physics-based arc for correct distance
-            let resetDistNY = abs(targetNY - courtNY)
-            let resetDistNX = abs(targetNX - courtNX)
-            let resetArc: CGFloat
-            if shootingFromFarSide {
-                resetArc = arcToLandAt(distanceNY: resetDistNY, distanceNX: resetDistNX, power: resetPower, arcMargin: 1.05)
-            } else {
-                resetArc = CGFloat.random(in: 0.55...0.75)
-            }
+            // Always use physics-based arc so the ball actually lands at the target
+            let touchDistNY = abs(targetNY - courtNY)
+            let touchDistNX = abs(targetNX - courtNX)
+            let touchArc = arcToLandAt(
+                distanceNY: touchDistNY,
+                distanceNX: touchDistNX,
+                power: touchPower,
+                arcMargin: shootingFromFarSide ? 1.05 : 1.10
+            )
 
             return ShotResult(
-                power: resetPower,
+                power: touchPower,
                 accuracy: 1.0,
                 spinCurve: spinCurve,
-                arc: resetArc,
+                arc: touchArc,
                 targetNX: targetNX,
                 targetNY: targetNY,
                 shotType: shotType,

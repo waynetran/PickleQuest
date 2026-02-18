@@ -288,7 +288,7 @@ final class SimulatedPlayerAI {
         if modes.contains(.power) {
             return roll < 0.6 ? .long : .wide
         }
-        if modes.contains(.reset) || modes.contains(.slice) {
+        if modes.contains(.touch) || modes.contains(.slice) {
             return roll < 0.7 ? .net : .wide
         }
         if modes.contains(.angled) {

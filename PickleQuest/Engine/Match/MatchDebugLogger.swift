@@ -370,7 +370,7 @@ final class MatchDebugLogger {
     private func modesStr(_ modes: DrillShotCalculator.ShotMode) -> String {
         var parts: [String] = []
         if modes.contains(.power) { parts.append("PWR") }
-        if modes.contains(.reset) { parts.append("RST") }
+        if modes.contains(.touch) { parts.append("TCH") }
         if modes.contains(.slice) { parts.append("SLC") }
         if modes.contains(.topspin) { parts.append("TOP") }
         if modes.contains(.angled) { parts.append("ANG") }

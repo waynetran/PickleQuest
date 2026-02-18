@@ -58,7 +58,7 @@ struct InteractiveMatchView: View {
                         }
                     }
                     .padding(.horizontal, 12)
-                    .padding(.top, 8)
+                    .padding(.top, 54)
 
                     Spacer()
                 }

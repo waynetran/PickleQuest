@@ -368,7 +368,7 @@ final class InteractiveMatchScene: SKScene {
 
         let defs: [(name: String, color: UIColor, mode: SM)] = [
             ("Power", .systemRed, .power),
-            ("Reset", .systemTeal, .reset),
+            ("Touch", .systemTeal, .touch),
             ("Slice", .systemPurple, .slice),
             ("Topspin", .systemGreen, .topspin),
             ("Angled", .systemOrange, .angled),
@@ -1224,15 +1224,15 @@ final class InteractiveMatchScene: SKScene {
 
     private func toggleShotMode(at index: Int) {
         typealias SM = DrillShotCalculator.ShotMode
-        let modes: [SM] = [.power, .reset, .slice, .topspin, .angled, .focus]
+        let modes: [SM] = [.power, .touch, .slice, .topspin, .angled, .focus]
         guard index < modes.count else { return }
 
         let mode = modes[index]
         if activeShotModes.contains(mode) {
             activeShotModes.remove(mode)
         } else {
-            if mode == .power { activeShotModes.remove(.reset) }
-            else if mode == .reset { activeShotModes.remove(.power) }
+            if mode == .power { activeShotModes.remove(.touch) }
+            else if mode == .touch { activeShotModes.remove(.power) }
             else if mode == .topspin { activeShotModes.remove(.slice) }
             else if mode == .slice { activeShotModes.remove(.topspin) }
             activeShotModes.insert(mode)
@@ -1243,7 +1243,7 @@ final class InteractiveMatchScene: SKScene {
 
     private func updateShotModeDots() {
         typealias SM = DrillShotCalculator.ShotMode
-        let modes: [SM] = [.power, .reset, .slice, .topspin, .angled, .focus]
+        let modes: [SM] = [.power, .touch, .slice, .topspin, .angled, .focus]
         let colors: [UIColor] = [.systemRed, .systemTeal, .systemPurple, .systemGreen, .systemOrange, .systemYellow]
 
         for (i, dot) in shotModeDotNodes.enumerated() {
@@ -1257,7 +1257,7 @@ final class InteractiveMatchScene: SKScene {
 
     private func updateShotButtonVisuals() {
         typealias SM = DrillShotCalculator.ShotMode
-        let modes: [SM] = [.power, .reset, .slice, .topspin, .angled, .focus]
+        let modes: [SM] = [.power, .touch, .slice, .topspin, .angled, .focus]
         let colors: [UIColor] = [.systemRed, .systemTeal, .systemPurple, .systemGreen, .systemOrange, .systemYellow]
 
         for (i, bg) in shotModeBgs.enumerated() {

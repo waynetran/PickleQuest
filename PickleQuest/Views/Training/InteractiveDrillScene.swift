@@ -307,7 +307,7 @@ final class InteractiveDrillScene: SKScene {
 
         let defs: [(name: String, color: UIColor, mode: SM)] = [
             ("Power", .systemRed, .power),
-            ("Reset", .systemTeal, .reset),
+            ("Touch", .systemTeal, .touch),
             ("Slice", .systemPurple, .slice),
             ("Topspin", .systemGreen, .topspin),
             ("Angled", .systemOrange, .angled),
@@ -350,7 +350,7 @@ final class InteractiveDrillScene: SKScene {
 
     private func toggleShotMode(at index: Int) {
         typealias SM = DrillShotCalculator.ShotMode
-        let modes: [SM] = [.power, .reset, .slice, .topspin, .angled, .focus]
+        let modes: [SM] = [.power, .touch, .slice, .topspin, .angled, .focus]
         guard index < modes.count else { return }
 
         let mode = modes[index]
@@ -358,10 +358,10 @@ final class InteractiveDrillScene: SKScene {
         if activeShotModes.contains(mode) {
             activeShotModes.remove(mode)
         } else {
-            // Power/Reset mutually exclusive; Topspin/Slice mutually exclusive
+            // Power/Touch mutually exclusive; Topspin/Slice mutually exclusive
             if mode == .power {
-                activeShotModes.remove(.reset)
-            } else if mode == .reset {
+                activeShotModes.remove(.touch)
+            } else if mode == .touch {
                 activeShotModes.remove(.power)
             } else if mode == .topspin {
                 activeShotModes.remove(.slice)
@@ -375,7 +375,7 @@ final class InteractiveDrillScene: SKScene {
 
     private func updateShotButtonVisuals() {
         typealias SM = DrillShotCalculator.ShotMode
-        let modes: [SM] = [.power, .reset, .slice, .topspin, .angled, .focus]
+        let modes: [SM] = [.power, .touch, .slice, .topspin, .angled, .focus]
         let colors: [UIColor] = [.systemRed, .systemTeal, .systemPurple, .systemGreen, .systemOrange, .systemYellow]
 
         for (i, bg) in shotModeBgs.enumerated() {
