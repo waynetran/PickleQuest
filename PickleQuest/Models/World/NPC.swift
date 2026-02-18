@@ -47,6 +47,34 @@ struct NPC: Identifiable, Codable, Equatable, Hashable, Sendable {
         self.hiddenStats = hiddenStats
         self.baseWagerAmount = baseWagerAmount
     }
+    /// Create a headless simulation opponent at a target DUPR rating.
+    /// Uses bare stats (no equipment bonus, no variance) for symmetric balance testing.
+    static func headlessOpponent(dupr: Double) -> NPC {
+        let stats = StatProfileLoader.shared.toPlayerStats(dupr: dupr)
+        let difficulty: NPCDifficulty
+        switch dupr {
+        case ..<3.0: difficulty = .beginner
+        case ..<4.0: difficulty = .intermediate
+        case ..<5.0: difficulty = .advanced
+        case ..<6.5: difficulty = .expert
+        default: difficulty = .master
+        }
+        return NPC(
+            id: UUID(),
+            name: "Headless Bot",
+            title: "DUPR \(String(format: "%.1f", dupr))",
+            difficulty: difficulty,
+            stats: stats,
+            personality: .allRounder,
+            dialogue: NPCDialogue(
+                greeting: "", onWin: "", onLose: "", taunt: ""
+            ),
+            portraitName: "npc_practice",
+            rewardMultiplier: 0,
+            duprRating: dupr
+        )
+    }
+
     /// Create a practice match opponent at a target DUPR rating.
     static func practiceOpponent(dupr: Double) -> NPC {
         let baseStats = StatProfileLoader.shared.toNPCStats(dupr: dupr)

@@ -178,10 +178,12 @@ enum DrillShotCalculator {
         // Shot type from ball approach direction
         let shotType: ShotType = ballApproachFromLeft ? .backhand : .forehand
 
+        // Far-side shooters (NPC at ny>0.5): targets must be mirrored to opponent's court half
+        let shootingFromFarSide = courtNY > 0.5
+
         // --- Reset mode: soft lob to kitchen (mutually exclusive with power) ---
         if modes.contains(.reset) {
             let resetPower = CGFloat.random(in: 0.15...0.35)
-            let resetArc = CGFloat.random(in: 0.55...0.75)
             var targetNX = CGFloat.random(in: 0.25...0.75)
             var targetNY = CGFloat.random(in: 0.52...0.66)
 
@@ -193,7 +195,23 @@ enum DrillShotCalculator {
             let spinDirection: CGFloat = Bool.random() ? 1.0 : -1.0
             let spinCurve = spinDirection * (spinStat / 99.0) * 0.3
             targetNX = max(0.05, min(0.95, targetNX))
-            targetNY = max(0.52, min(0.68, targetNY))
+
+            // Mirror target for far-side shooter
+            if shootingFromFarSide {
+                targetNY = 1.0 - targetNY
+                targetNY = max(0.32, min(0.48, targetNY))
+            } else {
+                targetNY = max(0.52, min(0.68, targetNY))
+            }
+
+            // Physics-based arc for correct distance
+            let resetDistNY = abs(targetNY - courtNY)
+            let resetArc: CGFloat
+            if shootingFromFarSide {
+                resetArc = arcToLandAt(distanceNY: resetDistNY, power: resetPower, arcMargin: 1.30)
+            } else {
+                resetArc = CGFloat.random(in: 0.55...0.75)
+            }
 
             return ShotResult(
                 power: resetPower,
@@ -303,6 +321,11 @@ enum DrillShotCalculator {
 
         power = max(0.15, min(2.0, power))
 
+        // Far-side shooters: mirror target to opponent's court half
+        if shootingFromFarSide {
+            targetNY = 1.0 - targetNY
+        }
+
         // --- Physics-based arc calculation ---
         let distToTarget = abs(targetNY - courtNY)
 
@@ -330,7 +353,11 @@ enum DrillShotCalculator {
 
         // Soft clamp: allow targets slightly past court edges for out balls
         targetNX = max(-0.05, min(1.05, targetNX + scatterX))
-        targetNY = max(0.48, min(1.05, targetNY + scatterY))
+        if shootingFromFarSide {
+            targetNY = max(-0.05, min(0.52, targetNY + scatterY))
+        } else {
+            targetNY = max(0.48, min(1.05, targetNY + scatterY))
+        }
 
         return ShotResult(
             power: power,

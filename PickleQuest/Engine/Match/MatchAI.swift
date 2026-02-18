@@ -115,6 +115,7 @@ final class MatchAI {
     let npcName: String
     let npcDUPR: Double
     let playerDUPR: Double
+    let isHeadless: Bool
 
     // Position in court space (NPC is on the far side: ny ~0.85–1.0)
     var currentNX: CGFloat
@@ -157,24 +158,54 @@ final class MatchAI {
     // Rally pattern memory (tracks player's recent shot X positions)
     var playerShotHistory: [CGFloat] = []
 
-    init(npc: NPC, playerDUPR: Double = 3.0) {
+    /// Effective stat boost: full boost for interactive, zero for headless.
+    private var statBoost: Int { isHeadless ? 0 : P.npcStatBoost }
+
+    // Headless mode: reaction delay + positioning noise (mirrors SimulatedPlayerAI)
+    private let reactionDelay: CGFloat
+    private let positioningNoise: CGFloat
+    private var reactionTimer: CGFloat = 0
+    private var hasReacted: Bool = false
+    private var noiseOffsetX: CGFloat = 0
+    private var noiseOffsetY: CGFloat = 0
+    private var hasComputedNoise: Bool = false
+
+    init(npc: NPC, playerDUPR: Double = 3.0, headless: Bool = false) {
         self.npcStats = npc.stats
         self.npcName = npc.name
         self.npcDUPR = npc.duprRating
         self.playerDUPR = playerDUPR
+        self.isHeadless = headless
         self.strategy = NPCStrategyProfile.build(dupr: npc.duprRating, personality: npc.personality)
 
-        // Use boosted stats for movement and hitbox (compensate for human joystick advantage)
-        let boost = P.npcStatBoost
+        // In headless mode, skip stat boost — SimulatedPlayerAI already models human imperfection
+        // via reaction delay, positioning noise, and smaller hitbox.
+        let boost = headless ? 0 : P.npcStatBoost
         let speedStat = CGFloat(min(99, npc.stats.stat(.speed) + boost))
         self.moveSpeed = P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus
         self.sprintSpeed = moveSpeed * (1.0 + P.maxSprintSpeedBoost)
 
-        // Hitbox uses the better of reflexes and positioning (boosted)
-        let reflexesStat = CGFloat(min(99, npc.stats.stat(.reflexes) + boost))
-        let positioningStat = CGFloat(min(99, npc.stats.stat(.positioning) + boost))
-        let reachStat = max(reflexesStat, positioningStat)
-        self.hitboxRadius = P.npcBaseHitboxRadius + (reachStat / 99.0) * P.npcHitboxBonus
+        if headless {
+            // Use player-equivalent hitbox formula (no compensatory inflation)
+            let positioningStat = CGFloat(npc.stats.stat(.positioning))
+            self.hitboxRadius = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
+        } else {
+            // Interactive: larger hitbox compensates for human joystick advantage
+            let reflexesStat = CGFloat(min(99, npc.stats.stat(.reflexes) + boost))
+            let positioningStat = CGFloat(min(99, npc.stats.stat(.positioning) + boost))
+            let reachStat = max(reflexesStat, positioningStat)
+            self.hitboxRadius = P.npcBaseHitboxRadius + (reachStat / 99.0) * P.npcHitboxBonus
+        }
+
+        // Headless mode: add reaction delay and positioning noise (mirrors SimulatedPlayerAI)
+        if headless {
+            let fraction = CGFloat(max(0, min(1, (npc.duprRating - 2.0) / 6.0)))
+            self.reactionDelay = 0.20 - fraction * 0.17
+            self.positioningNoise = 0.08 - fraction * 0.07
+        } else {
+            self.reactionDelay = 0
+            self.positioningNoise = 0
+        }
 
         // Start at center far baseline
         self.currentNX = 0.5
@@ -195,17 +226,22 @@ final class MatchAI {
     }
 
     /// Position for receiving: cross-court from server.
-    /// Smart NPCs stand deep behind baseline to handle fast serves.
+    /// Smart NPCs stand deep behind baseline to handle fast serves (interactive only).
     func positionForReceive(playerScore: Int) {
         let playerServingRight = playerScore % 2 == 0
         // Cross-court: if player serves from right (0.75), NPC goes left (0.25)
         currentNX = playerServingRight ? 0.25 : 0.75
 
-        // Roll against serveReturnDepth — smart NPCs stand deep for returns
-        if CGFloat.random(in: 0...1) < strategy.serveReturnDepth {
-            currentNY = CGFloat.random(in: S.deepReturnNYMin...S.deepReturnNYMax)
+        if isHeadless {
+            // Headless: symmetric with SimulatedPlayerAI — always stand at startNY
+            currentNY = startNY
         } else {
-            currentNY = S.defaultReturnNY
+            // Interactive: roll against serveReturnDepth — smart NPCs stand deep for returns
+            if CGFloat.random(in: 0...1) < strategy.serveReturnDepth {
+                currentNY = CGFloat.random(in: S.deepReturnNYMin...S.deepReturnNYMax)
+            } else {
+                currentNY = S.defaultReturnNY
+            }
         }
 
         targetNX = currentNX
@@ -216,25 +252,55 @@ final class MatchAI {
     func update(dt: CGFloat, ball: DrillBallSimulation) {
         if ball.isActive && ball.lastHitByPlayer {
             // Ball heading toward AI — intercept
-            predictLanding(ball: ball)
-        } else if ball.isActive && !ball.lastHitByPlayer {
-            // Ball heading toward player — smart NPCs recover toward center, beginners stay put
-            let recoveryStrength = strategy.aggressionControl
-
-            // Kitchen approach: after a reset/dink, skilled NPCs advance to kitchen line
-            let recoveryNY: CGFloat
-            if lastShotWasReset && roll(Double(strategy.kitchenApproach)) {
-                recoveryNY = 0.69 // kitchen line
+            if isHeadless {
+                // Headless: apply reaction delay (mirrors SimulatedPlayerAI)
+                if !hasReacted {
+                    reactionTimer += dt
+                    if reactionTimer >= reactionDelay {
+                        hasReacted = true
+                        if !hasComputedNoise {
+                            noiseOffsetX = CGFloat.random(in: -positioningNoise...positioningNoise)
+                            noiseOffsetY = CGFloat.random(in: -positioningNoise...positioningNoise)
+                            hasComputedNoise = true
+                        }
+                    }
+                }
+                if hasReacted {
+                    predictLanding(ball: ball)
+                }
             } else {
-                recoveryNY = startNY
+                predictLanding(ball: ball)
             }
+        } else if ball.isActive && !ball.lastHitByPlayer {
+            // Reset reaction state for next incoming ball
+            if isHeadless {
+                hasReacted = false
+                reactionTimer = 0
+                hasComputedNoise = false
 
-            targetNX = currentNX + (0.5 - currentNX) * recoveryStrength
-            targetNY = currentNY + (recoveryNY - currentNY) * recoveryStrength
+                // Headless: symmetric recovery (mirrors SimulatedPlayerAI)
+                let fraction = CGFloat(max(0, min(1, (npcDUPR - 2.0) / 6.0)))
+                let recovery = fraction * 0.5
+                targetNX = currentNX + (0.5 - currentNX) * recovery
+                targetNY = currentNY + (startNY - currentNY) * recovery
+            } else {
+                // Interactive: strategy-based recovery with kitchen approach
+                let recoveryStrength = strategy.aggressionControl
 
-            // Backpedal if ball is high and behind NPC (lob defense)
-            if ball.height > 0.20 && ball.courtY > currentNY + 0.05 {
-                targetNY = ball.courtY + 0.03
+                let recoveryNY: CGFloat
+                if lastShotWasReset && roll(Double(strategy.kitchenApproach)) {
+                    recoveryNY = 0.69 // kitchen line
+                } else {
+                    recoveryNY = startNY
+                }
+
+                targetNX = currentNX + (0.5 - currentNX) * recoveryStrength
+                targetNY = currentNY + (recoveryNY - currentNY) * recoveryStrength
+
+                // Backpedal if ball is high and behind NPC (lob defense)
+                if ball.height > 0.20 && ball.courtY > currentNY + 0.05 {
+                    targetNY = ball.courtY + 0.03
+                }
             }
         } else {
             // Ball inactive — hold position
@@ -276,10 +342,15 @@ final class MatchAI {
             currentNY += (dy / dist) * step
         }
 
-        // Dynamic NY clamp: skilled NPCs can approach kitchen line (0.69), others stay back (0.72)
-        let minNY: CGFloat = strategy.kitchenApproach > 0.5 ? 0.69 : 0.72
         currentNX = max(0.0, min(1.0, currentNX))
-        currentNY = max(minNY, min(1.0, currentNY))
+        if isHeadless {
+            // Headless: symmetric Y range — mirrors player's max(0.0, min(0.30, ...))
+            currentNY = max(0.70, min(1.0, currentNY))
+        } else {
+            // Interactive: skilled NPCs can approach kitchen line (0.69), others stay back (0.72)
+            let minNY: CGFloat = strategy.kitchenApproach > 0.5 ? 0.69 : 0.72
+            currentNY = max(minNY, min(1.0, currentNY))
+        }
     }
 
     private func recoverStamina(dt: CGFloat) {
@@ -292,7 +363,7 @@ final class MatchAI {
     /// Predict where the ball will land and set as movement target.
     private func predictLanding(ball: DrillBallSimulation) {
         // Scale lookahead with positioning stat (boosted) — better players read the ball earlier
-        let positioningStat = CGFloat(min(99, npcStats.stat(.positioning) + P.npcStatBoost))
+        let positioningStat = CGFloat(min(99, npcStats.stat(.positioning) + statBoost))
         let baseLookAhead: CGFloat = 0.6
         let statBonus: CGFloat = (positioningStat / 99.0) * 0.5
         let lookAhead = baseLookAhead + statBonus  // 0.6 to 1.1 seconds
@@ -300,15 +371,23 @@ final class MatchAI {
         var predictedX = ball.courtX + ball.vx * lookAhead
         let predictedY = ball.courtY + ball.vy * lookAhead
 
-        // Rally adaptation: if player tends to hit to one side, shade toward it
-        if let anticipated = anticipatedPlayerSide(), roll(Double(strategy.placementAwareness)) {
+        // Rally adaptation: interactive only (headless uses symmetric prediction)
+        if !isHeadless, let anticipated = anticipatedPlayerSide(), roll(Double(strategy.placementAwareness)) {
             let bias: CGFloat = 0.15
             predictedX += (anticipated - predictedX) * bias
         }
 
-        let minNY: CGFloat = strategy.kitchenApproach > 0.5 ? 0.69 : 0.72
-        targetNX = max(0.05, min(0.95, predictedX))
-        targetNY = max(minNY, min(0.98, predictedY))
+        if isHeadless {
+            // Headless: symmetric with SimulatedPlayerAI prediction range
+            // Player uses max(0.0, min(0.28, ...)) → 0.20 forward from startNY=0.08
+            // NPC mirror: max(0.72, min(1.0, ...)) → 0.20 forward from startNY=0.92
+            targetNX = max(0.05, min(0.95, predictedX + noiseOffsetX))
+            targetNY = max(0.72, min(1.0, predictedY + noiseOffsetY))
+        } else {
+            let minNY: CGFloat = strategy.kitchenApproach > 0.5 ? 0.69 : 0.72
+            targetNX = max(0.05, min(0.95, predictedX))
+            targetNY = max(minNY, min(0.98, predictedY))
+        }
     }
 
     /// Detect if the player has been consistently hitting to one side.
@@ -324,21 +403,24 @@ final class MatchAI {
 
     // MARK: - Hit Detection
 
-    /// Check if ball is within AI's hitbox and hittable.
+    /// Check if ball is within AI's hitbox and hittable (3D distance with stat-gated height reach).
     func shouldSwing(ball: DrillBallSimulation) -> Bool {
         guard ball.isActive, ball.lastHitByPlayer else { return false }
         guard ball.bounceCount < 2 else { return false }
 
-        // Stat-gated overhead reach: skilled NPCs can hit high balls (lob defense)
-        let maxSwingHeight: CGFloat = 0.20 + strategy.driveOnHighBall * 0.15
-        guard ball.height < maxSwingHeight else { return false }
-
         // Pre-bounce: don't reach forward — wait for ball to arrive at NPC's Y
         if ball.bounceCount == 0 && ball.courtY < currentNY { return false }
 
+        // 3D hitbox: height reach based on athleticism (speed + reflexes)
+        let speedStat = CGFloat(min(99, npcStats.stat(.speed) + statBoost))
+        let reflexesStat = CGFloat(min(99, npcStats.stat(.reflexes) + statBoost))
+        let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
+        let heightReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus
+        let excessHeight = max(0, ball.height - heightReach)
+
         let dx = ball.courtX - currentNX
         let dy = ball.courtY - currentNY
-        let dist = sqrt(dx * dx + dy * dy)
+        let dist = sqrt(dx * dx + dy * dy + excessHeight * excessHeight)
         return dist <= hitboxRadius
     }
 
@@ -348,7 +430,7 @@ final class MatchAI {
     /// Error rate factors in incoming ball speed + spin (shot difficulty), NPC stats,
     /// player shot quality, and DUPR gap.
     func shouldMakeError(ball: DrillBallSimulation) -> Bool {
-        let boost = P.npcStatBoost
+        let boost = statBoost
         let consistencyStat = CGFloat(min(99, npcStats.stat(.consistency) + boost))
         let focusStat = CGFloat(min(99, npcStats.stat(.focus) + boost))
         let reflexesStat = CGFloat(min(99, npcStats.stat(.reflexes) + boost))
@@ -358,12 +440,20 @@ final class MatchAI {
         // Base error rate on neutral/easy shots
         let baseError: CGFloat = P.npcBaseErrorRate * (1.0 - statFraction)
 
+        // Stretch: compute early so speed discount can use it
+        let dx = ball.courtX - currentNX
+        let dy = ball.courtY - currentNY
+        let dist = sqrt(dx * dx + dy * dy)
+        let stretchFraction = min(dist / hitboxRadius, 1.0)
+
         // Shot difficulty from incoming ball speed and spin
         let ballSpeed = sqrt(ball.vx * ball.vx + ball.vy * ball.vy)
         let maxBallSpeed = P.baseShotSpeed + 2.0 * (P.maxShotSpeed - P.baseShotSpeed)
         let speedFraction = max(0, min(1, (ballSpeed - P.baseShotSpeed) / (maxBallSpeed - P.baseShotSpeed)))
         let spinPressure = min(abs(ball.spinCurve) + abs(ball.topspinFactor) * 0.5, 1.0)
-        let shotDifficulty = min(1.0, speedFraction * 0.8 + spinPressure * 0.3)
+        // Speed is only dangerous at reach — a fast ball straight at you is easy to return
+        let stretchMultiplier = 0.2 + stretchFraction * 0.8
+        let shotDifficulty = min(1.0, speedFraction * 0.8 * stretchMultiplier + spinPressure * 0.3)
 
         // Pressure error: harder shots cause more errors for lower-skilled NPCs
         let pressureError: CGFloat = shotDifficulty * P.npcPowerErrorScale * (1.0 - statFraction)
@@ -379,17 +469,16 @@ final class MatchAI {
         }
 
         // Stretch shots (ball far from NPC center) are harder to return cleanly
-        let dx = ball.courtX - currentNX
-        let dy = ball.courtY - currentNY
-        let dist = sqrt(dx * dx + dy * dy)
-        let stretchFraction = min(dist / hitboxRadius, 1.0)
         if stretchFraction > 0.6 {
             errorRate *= 1.0 + (stretchFraction - 0.6) * 1.5 // up to 60% more errors at max reach
         }
 
         // Shot quality modifier: good player shots → more NPC errors, bad → fewer
-        let shotQuality = assessPlayerShotQuality(ball: ball)
-        errorRate *= (1.0 + shotQuality)
+        // Skip in headless mode — both sides are AI, no asymmetric quality assessment
+        if !isHeadless {
+            let shotQuality = assessPlayerShotQuality(ball: ball)
+            errorRate *= (1.0 + shotQuality)
+        }
 
         // DUPR gap scaling: exponential error adjustment
         let duprGap = npcDUPR - playerDUPR
@@ -465,7 +554,8 @@ final class MatchAI {
     /// Call this before `shouldMakeError` so `lastShotModes` is populated for error type.
     func preselectModes(ball: DrillBallSimulation) {
         var modes = selectShotModes(ball: ball)
-        if ball.height > 0.20 {
+        // Overhead smash: interactive only (headless uses competence-gated mode selection)
+        if !isHeadless && ball.height > 0.20 {
             modes.insert(.power)
             modes.remove(.reset)
         }
@@ -480,8 +570,9 @@ final class MatchAI {
         shotCountThisPoint += 1
         let staminaFraction = stamina / P.maxStamina
 
-        // Overhead smash: hitting a high ball always adds power
-        if ball.height > 0.20 {
+        // Overhead smash: hitting a high ball always adds power (interactive only)
+        // In headless mode, SimulatedPlayerAI handles this via selectShotModes competence gate
+        if !isHeadless && ball.height > 0.20 {
             modes.insert(.power)
             modes.remove(.reset)
         }
@@ -498,6 +589,11 @@ final class MatchAI {
             stamina = max(0, stamina - 3)
         }
 
+        // In headless mode, skip tactical placement — SimulatedPlayerAI doesn't use it,
+        // so both sides should generate random targets for symmetric balance.
+        let oppNX: CGFloat? = isHeadless ? nil : playerPositionNX
+        let placeFrac: CGFloat = isHeadless ? 0 : strategy.placementAwareness
+
         return DrillShotCalculator.calculatePlayerShot(
             stats: effectiveStats,
             ballApproachFromLeft: ball.courtX < currentNX,
@@ -506,8 +602,8 @@ final class MatchAI {
             courtNY: currentNY,
             modes: modes,
             staminaFraction: staminaFraction,
-            opponentNX: playerPositionNX,
-            placementFraction: strategy.placementAwareness
+            opponentNX: oppNX,
+            placementFraction: placeFrac
         )
     }
 
@@ -517,22 +613,29 @@ final class MatchAI {
     func generateServe(npcScore: Int) -> DrillShotCalculator.ShotResult {
         var modes: SM = []
 
-        // Strategy-based serve mode selection:
-        // driveOnHighBall gates willingness to add power to serves
-        // aggressionControl gates whether they use controlled vs wild power
-        if roll(Double(strategy.driveOnHighBall)) {
-            modes.insert(.power)
-            stamina = max(0, stamina - 5)
-        }
-
-        // Spin on serves: smart NPCs add spin for movement
-        if roll(Double(strategy.placementAwareness * 0.8)) {
-            modes.insert(Bool.random() ? .topspin : .slice)
-        }
-
-        // Smart NPCs add placement to target corners
-        if roll(Double(strategy.placementAwareness * 0.5)) {
-            modes.insert(.angled)
+        if isHeadless {
+            // Headless: symmetric with SimulatedPlayerAI.generateServe()
+            let fraction = CGFloat(max(0, min(1, (npcDUPR - 2.0) / 6.0)))
+            let shotModeCompetence = fraction * fraction
+            if CGFloat.random(in: 0...1) < shotModeCompetence * 0.5 {
+                modes.insert(.power)
+                stamina = max(0, stamina - 5)
+            }
+            if CGFloat.random(in: 0...1) < shotModeCompetence * 0.3 {
+                modes.insert(Bool.random() ? .topspin : .slice)
+            }
+        } else {
+            // Interactive: strategy-based serve mode selection
+            if roll(Double(strategy.driveOnHighBall)) {
+                modes.insert(.power)
+                stamina = max(0, stamina - 5)
+            }
+            if roll(Double(strategy.placementAwareness * 0.8)) {
+                modes.insert(Bool.random() ? .topspin : .slice)
+            }
+            if roll(Double(strategy.placementAwareness * 0.5)) {
+                modes.insert(.angled)
+            }
         }
 
         lastServeModes = modes
@@ -545,17 +648,14 @@ final class MatchAI {
             ballHeight: 0.05,
             courtNY: currentNY,
             modes: modes,
-            staminaFraction: stamina / P.maxStamina,
-            opponentNX: playerPositionNX,
-            placementFraction: strategy.placementAwareness
+            staminaFraction: stamina / P.maxStamina
         )
 
-        // 4.5+ NPCs reduce serve power for control — they place serves, not blast them.
-        // aggressionControl scales how much power is dialed back.
-        // High aggressionControl (0.6-0.9) → multiply power by 0.55-0.7 (controlled)
-        // Low aggressionControl (0.1-0.3) → multiply power by 0.85-0.95 (still wild)
-        let powerReduction = 1.0 - strategy.aggressionControl * 0.45
-        result.power *= powerReduction
+        // 4.5+ NPCs reduce serve power for control (interactive only)
+        if !isHeadless {
+            let powerReduction = 1.0 - strategy.aggressionControl * 0.45
+            result.power *= powerReduction
+        }
 
         return result
     }
@@ -566,7 +666,7 @@ final class MatchAI {
     /// challenging enough that the human's low stats (small hitbox, slow speed,
     /// weak shots) actually matter.
     private var effectiveStats: PlayerStats {
-        let boost = P.npcStatBoost
+        let boost = statBoost
         return PlayerStats(
             power: min(99, npcStats.power + boost),
             accuracy: min(99, npcStats.accuracy + boost),
@@ -618,6 +718,12 @@ final class MatchAI {
 
     /// Select shot modes based on situational difficulty and NPC strategy profile.
     private func selectShotModes(ball: DrillBallSimulation) -> SM {
+        // Headless mode: use symmetric skill-gated selection (mirrors SimulatedPlayerAI)
+        // This ensures both sides have the same scatter behavior at equal DUPR.
+        if isHeadless {
+            return selectShotModesHeadless(ball: ball)
+        }
+
         var modes: SM = []
         let staminaPct = stamina / P.maxStamina
 
@@ -655,7 +761,7 @@ final class MatchAI {
         // Dumb NPCs (low aggressionControl) stay aggressive even on hard balls → more errors via error model
         let aggression = (1.0 - difficulty) * (S.baseAggressionFloor + strategy.aggressionControl * S.baseAggressionFloor)
 
-        let boost = P.npcStatBoost
+        let boost = statBoost
         let powerStat = CGFloat(min(99, npcStats.stat(.power) + boost)) / 99.0
         let accuracyStat = CGFloat(min(99, npcStats.stat(.accuracy) + boost)) / 99.0
         let spinStat = CGFloat(min(99, npcStats.stat(.spin) + boost)) / 99.0
@@ -721,6 +827,44 @@ final class MatchAI {
         return modes
     }
 
+    /// Symmetric skill-gated mode selection for headless mode.
+    /// Mirrors SimulatedPlayerAI.selectShotModes so both sides have identical scatter behavior.
+    private func selectShotModesHeadless(ball: DrillBallSimulation) -> SM {
+        var modes: SM = []
+        let staminaPct = stamina / P.maxStamina
+        guard staminaPct > 0.10 else { return modes }
+
+        // Skill competence: same formula as SimulatedPlayerAI (fraction²)
+        let fraction = CGFloat(max(0, min(1, (npcDUPR - 2.0) / 6.0)))
+        let shotModeCompetence = fraction * fraction
+        guard CGFloat.random(in: 0...1) < shotModeCompetence else { return modes }
+
+        let ballHeight = ball.height
+        let isHighBall = ballHeight > 0.06
+
+        // Power on high balls
+        if isHighBall && CGFloat.random(in: 0...1) < fraction * 0.6 {
+            modes.insert(.power)
+        }
+
+        // Topspin or slice
+        if !modes.contains(.power) && CGFloat.random(in: 0...1) < fraction * 0.3 {
+            modes.insert(Bool.random() ? .topspin : .slice)
+        }
+
+        // Angled shots
+        if CGFloat.random(in: 0...1) < fraction * 0.3 {
+            modes.insert(.angled)
+        }
+
+        // Focus
+        if staminaPct > 0.30 && CGFloat.random(in: 0...1) < fraction * 0.2 {
+            modes.insert(.focus)
+        }
+
+        return modes
+    }
+
     private func roll(_ chance: Double) -> Bool {
         Double.random(in: 0...1) < chance
     }
@@ -741,6 +885,9 @@ final class MatchAI {
         self.lastShotWasReset = false
         self.playerShotHistory = []
         self.lastShotModes = []
+        self.hasReacted = false
+        self.reactionTimer = 0
+        self.hasComputedNoise = false
         if isServing {
             positionForServe(npcScore: npcScore)
         }
@@ -750,26 +897,40 @@ final class MatchAI {
 
     /// Return a context-aware error type based on the last shot modes attempted.
     func errorType(for modes: DrillShotCalculator.ShotMode) -> NPCErrorType {
+        // Headless: use symmetric distribution matching SimulatedPlayerAI.errorType
+        if isHeadless {
+            let roll = CGFloat.random(in: 0...1)
+            if modes.contains(.power) {
+                return roll < 0.6 ? .long : .wide
+            }
+            if modes.contains(.reset) || modes.contains(.slice) {
+                return roll < 0.7 ? .net : .wide
+            }
+            if modes.contains(.angled) {
+                return roll < 0.6 ? .wide : .net
+            }
+            if roll < 0.4 { return .net }
+            if roll < 0.7 { return .long }
+            return .wide
+        }
+
+        // Interactive: NPC-specific distributions
         let roll = CGFloat.random(in: 0...1)
         if modes.contains(.reset) {
-            // Dinks/resets → mostly net errors
             if roll < 0.70 { return .net }
             if roll < 0.90 { return .long }
             return .wide
         }
         if modes.contains(.power) {
-            // Power shots → mostly long errors
             if roll < 0.20 { return .net }
             if roll < 0.70 { return .long }
             return .wide
         }
         if modes.contains(.angled) {
-            // Angled shots → mostly wide errors
             if roll < 0.10 { return .net }
             if roll < 0.30 { return .long }
             return .wide
         }
-        // Default
         if roll < 0.40 { return .net }
         if roll < 0.80 { return .long }
         return .wide

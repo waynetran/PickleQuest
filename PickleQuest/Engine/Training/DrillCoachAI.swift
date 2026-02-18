@@ -104,11 +104,10 @@ final class DrillCoachAI {
         }
     }
 
-    /// Check if ball is within coach's hitbox and hittable.
+    /// Check if ball is within coach's hitbox and hittable (3D distance).
     func shouldSwing(ball: DrillBallSimulation) -> Bool {
         guard ball.isActive, ball.lastHitByPlayer else { return false }
         guard ball.bounceCount < 2 else { return false }
-        guard ball.height < 0.20 else { return false }
 
         // In serve practice and return of serve, coach doesn't return — just catches
         if drillType == .servePractice || drillType == .returnOfServe { return false }
@@ -116,9 +115,13 @@ final class DrillCoachAI {
         // Pre-bounce: don't reach forward — wait for ball to arrive at coach's Y
         if ball.bounceCount == 0 && ball.courtY < currentNY { return false }
 
+        // 3D hitbox: coach has high athleticism (stat 80 equivalent reach)
+        let coachHeightReach = P.baseHeightReach + 0.8 * P.maxHeightReachBonus // ~0.30
+        let excessHeight = max(0, ball.height - coachHeightReach)
+
         let dx = ball.courtX - currentNX
         let dy = ball.courtY - currentNY
-        let dist = sqrt(dx * dx + dy * dy)
+        let dist = sqrt(dx * dx + dy * dy + excessHeight * excessHeight)
 
         // Guaranteed first return: use very generous hitbox
         let effectiveRadius = guaranteeNextHit ? 0.5 : hitboxRadius

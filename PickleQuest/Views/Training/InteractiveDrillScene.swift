@@ -973,7 +973,6 @@ final class InteractiveDrillScene: SKScene {
     private func checkPlayerHit() {
         guard ballSim.isActive && !ballSim.lastHitByPlayer else { return }
         guard ballSim.bounceCount < 2 else { return }
-        guard ballSim.height < 0.20 else { return }
 
         let positioningStat = CGFloat(playerStats.stat(.positioning))
         let hitboxRadius = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
@@ -981,9 +980,16 @@ final class InteractiveDrillScene: SKScene {
         // Pre-bounce: don't reach forward — wait for ball to arrive at player's Y
         if ballSim.bounceCount == 0 && ballSim.courtY > playerNY { return }
 
+        // 3D hitbox: height reach based on athleticism
+        let speedStat = CGFloat(playerStats.stat(.speed))
+        let reflexesStat = CGFloat(playerStats.stat(.reflexes))
+        let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
+        let heightReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus
+        let excessHeight = max(0, ballSim.height - heightReach)
+
         let dx = ballSim.courtX - playerNX
         let dy = ballSim.courtY - playerNY
-        let dist = sqrt(dx * dx + dy * dy)
+        let dist = sqrt(dx * dx + dy * dy + excessHeight * excessHeight)
 
         guard dist <= hitboxRadius else { return }
 
@@ -1045,7 +1051,6 @@ final class InteractiveDrillScene: SKScene {
     private func checkCoachHit() {
         guard ballSim.isActive && ballSim.lastHitByPlayer else { return }
         guard ballSim.bounceCount < 2 else { return }
-        guard ballSim.height < 0.20 else { return }
 
         if coachAI.shouldSwing(ball: ballSim) {
             let shot = coachAI.generateShot(ball: ballSim)

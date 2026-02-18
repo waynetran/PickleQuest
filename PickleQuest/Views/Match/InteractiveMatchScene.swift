@@ -132,6 +132,10 @@ final class InteractiveMatchScene: SKScene {
     private var playerMoveSpeed: CGFloat = 0.6
     private var lastUpdateTime: TimeInterval = 0
     private var previousBallNY: CGFloat = 0.5
+    // Previous frame ball position for swept collision detection
+    private var prevBallX: CGFloat = 0.5
+    private var prevBallY: CGFloat = 0.5
+    private var prevBallHeight: CGFloat = 0.0
 
     // Rally pressure (cumulative difficulty during a rally)
     private var rallyPressure: CGFloat = 0
@@ -698,6 +702,9 @@ final class InteractiveMatchScene: SKScene {
         stamina = min(P.maxStamina, stamina + 10)
         npcAI.recoverBetweenPoints()
 
+        // Reset NPC state for new point (clears shot count, pattern memory, kitchen approach)
+        npcAI.reset(npcScore: npcScore, isServing: servingSide == .opponent)
+
         // Position players for serve
         if servingSide == .player {
             let evenScore = playerScore % 2 == 0
@@ -1240,6 +1247,10 @@ final class InteractiveMatchScene: SKScene {
             movePlayer(dt: dt)
             let prevBounces = ballSim.bounceCount
             previousBallNY = ballSim.courtY
+            // Store previous ball position for swept collision detection
+            prevBallX = ballSim.courtX
+            prevBallY = ballSim.courtY
+            prevBallHeight = ballSim.height
             ballSim.update(dt: dt)
             // Record first bounce position using sub-frame interpolation
             if ballSim.didBounceThisFrame && prevBounces == 0 {
@@ -1377,22 +1388,69 @@ final class InteractiveMatchScene: SKScene {
         }
     }
 
+    // MARK: - Swept Collision
+
+    /// Find the minimum 3D distance from the ball's path segment (prev→curr) to a target point.
+    /// Uses closest-point-on-segment in 2D, then evaluates interpolated height at that point.
+    /// Prevents fast balls from tunneling through the hitbox between frames.
+    private func sweptBallDistance(
+        prevX: CGFloat, prevY: CGFloat, prevH: CGFloat,
+        currX: CGFloat, currY: CGFloat, currH: CGFloat,
+        targetX: CGFloat, targetY: CGFloat,
+        heightReach: CGFloat
+    ) -> CGFloat {
+        let segDX = currX - prevX
+        let segDY = currY - prevY
+        let segLenSq = segDX * segDX + segDY * segDY
+
+        let t: CGFloat
+        if segLenSq < 0.000001 {
+            // Ball barely moved — use current position
+            t = 1.0
+        } else {
+            // Project target onto segment: t = dot(target-prev, seg) / |seg|²
+            let toTargetX = targetX - prevX
+            let toTargetY = targetY - prevY
+            t = max(0, min(1, (toTargetX * segDX + toTargetY * segDY) / segLenSq))
+        }
+
+        // Interpolate ball position at closest parameter
+        let closestX = prevX + t * segDX
+        let closestY = prevY + t * segDY
+        let closestH = prevH + t * (currH - prevH)
+
+        let dx = closestX - targetX
+        let dy = closestY - targetY
+        let excessHeight = max(0, closestH - heightReach)
+        return sqrt(dx * dx + dy * dy + excessHeight * excessHeight)
+    }
+
     // MARK: - Hit Detection
 
     private func checkPlayerHit() {
         guard ballSim.isActive && !ballSim.lastHitByPlayer else { return }
         guard ballSim.bounceCount < 2 else { return }
-        guard ballSim.height < 0.20 else { return }
 
         let positioningStat = CGFloat(playerStats.stat(.positioning))
         let hitboxRadius = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
 
         // Pre-bounce: don't reach forward — wait for ball to arrive at player's Y
-        if ballSim.bounceCount == 0 && ballSim.courtY > playerNY { return }
+        // For swept check: allow if ball was above player last frame but is at/below now
+        if ballSim.bounceCount == 0 && ballSim.courtY > playerNY && prevBallY > playerNY { return }
 
-        let dx = ballSim.courtX - playerNX
-        let dy = ballSim.courtY - playerNY
-        let dist = sqrt(dx * dx + dy * dy)
+        // 3D hitbox: height reach based on athleticism (speed + reflexes)
+        let speedStat = CGFloat(playerStats.stat(.speed))
+        let reflexesStat = CGFloat(playerStats.stat(.reflexes))
+        let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
+        let heightReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus
+
+        // Swept collision: find closest point on ball's path segment to player
+        // This prevents fast balls from tunneling through the hitbox between frames
+        let dist = sweptBallDistance(
+            prevX: prevBallX, prevY: prevBallY, prevH: prevBallHeight,
+            currX: ballSim.courtX, currY: ballSim.courtY, currH: ballSim.height,
+            targetX: playerNX, targetY: playerNY, heightReach: heightReach
+        )
         guard dist <= hitboxRadius else { return }
 
         // --- Forced error: player whiff on hard incoming shots ---
@@ -1401,11 +1459,14 @@ final class InteractiveMatchScene: SKScene {
         let speedFrac = max(0, min(1, (ballSpeed - P.baseShotSpeed) / (maxSpeed - P.baseShotSpeed)))
         let spinPressure = min(abs(ballSim.spinCurve) / P.spinCurveFactor, 1.0)
         let stretchFrac = min(dist / hitboxRadius, 1.0)
-        let shotDifficulty = speedFrac * PB.forcedErrorSpeedWeight
+        // Speed is only dangerous when combined with stretch — a fast ball straight at you
+        // is easy to return; a fast ball at arm's length is hard. Discount speed when stretch
+        // is low: at stretch=0 speed contributes only 20% of its weight.
+        let stretchMultiplier = 0.2 + stretchFrac * 0.8
+        let shotDifficulty = speedFrac * PB.forcedErrorSpeedWeight * stretchMultiplier
             + spinPressure * PB.forcedErrorSpinWeight
             + stretchFrac * PB.forcedErrorStretchWeight
 
-        let reflexesStat = CGFloat(playerStats.stat(.reflexes))
         let consistencyStat_fe = CGFloat(playerStats.stat(.consistency))
         let defenseStat = CGFloat(playerStats.stat(.defense))
         let avgDefense = (reflexesStat + consistencyStat_fe + defenseStat) / 3.0 / 99.0
@@ -1427,7 +1488,7 @@ final class InteractiveMatchScene: SKScene {
         if CGFloat.random(in: 0...1) < forcedErrorRate {
             // Ball passes through — player whiffs
             playerErrors += 1
-            showIndicator("Whiff!", color: .systemRed)
+            showIndicator("Too good!", color: .systemRed)
             return // ball continues past player, will double-bounce or go out
         }
 

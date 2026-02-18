@@ -7,7 +7,7 @@ struct HeadlessMatchSimulatorTests {
 
     /// Match completes cleanly: no infinite loops, valid scores, bounded rally count.
     @Test func matchCompletesCleanly() {
-        let npc = NPC.practiceOpponent(dupr: 4.0)
+        let npc = NPC.headlessOpponent(dupr: 4.0)
         let playerStats = StatProfileLoader.shared.toPlayerStats(dupr: 4.0)
         let sim = HeadlessMatchSimulator(npc: npc, playerStats: playerStats, playerDUPR: 4.0)
         let result = sim.simulateMatch()
@@ -37,7 +37,7 @@ struct HeadlessMatchSimulatorTests {
         // Strong player (5.5) vs weak NPC (3.0)
         var strongWins = 0
         for _ in 0..<matchCount {
-            let npc = NPC.practiceOpponent(dupr: 3.0)
+            let npc = NPC.headlessOpponent(dupr: 3.0)
             let playerStats = StatProfileLoader.shared.toPlayerStats(dupr: 5.5)
             let sim = HeadlessMatchSimulator(npc: npc, playerStats: playerStats, playerDUPR: 5.5)
             let result = sim.simulateMatch()
@@ -47,7 +47,7 @@ struct HeadlessMatchSimulatorTests {
         // Weak player (2.5) vs strong NPC (5.5)
         var weakWins = 0
         for _ in 0..<matchCount {
-            let npc = NPC.practiceOpponent(dupr: 5.5)
+            let npc = NPC.headlessOpponent(dupr: 5.5)
             let playerStats = StatProfileLoader.shared.toPlayerStats(dupr: 2.5)
             let sim = HeadlessMatchSimulator(npc: npc, playerStats: playerStats, playerDUPR: 2.5)
             let result = sim.simulateMatch()
@@ -63,16 +63,99 @@ struct HeadlessMatchSimulatorTests {
                 "Strong player should win majority: \(strongWinRate)")
     }
 
+    /// Diagnostic: print detailed stats per DUPR matchup to understand balance.
+    @Test func diagnosticBalance() {
+        let matchCount = 200
+        let duprPairs: [(Double, Double)] = [
+            (3.0, 3.0), (4.0, 4.0), (5.0, 5.0),
+            (5.5, 3.0), (2.5, 5.5)
+        ]
+
+        for (pDUPR, nDUPR) in duprPairs {
+            // Verify stats are identical at equal DUPR
+            if pDUPR == nDUPR {
+                let ps = StatProfileLoader.shared.toPlayerStats(dupr: pDUPR)
+                let npc = NPC.headlessOpponent(dupr: nDUPR)
+                let ns = npc.stats
+                print("Stats at DUPR \(pDUPR): P=[con=\(ps.consistency) foc=\(ps.focus) ref=\(ps.reflexes) acc=\(ps.accuracy) pos=\(ps.positioning) spd=\(ps.speed)] N=[con=\(ns.consistency) foc=\(ns.focus) ref=\(ns.reflexes) acc=\(ns.accuracy) pos=\(ns.positioning) spd=\(ns.speed)]")
+            }
+            var pWins = 0
+            var totalPScore = 0
+            var totalNScore = 0
+            var totalPErrors = 0
+            var totalNErrors = 0
+            var totalRally = 0.0
+            var totalPAces = 0
+            var totalPWinners = 0
+            var totalNAces = 0
+            var totalNWinners = 0
+            // Diagnostic error source breakdown
+            var totalPShouldMake = 0
+            var totalNShouldMake = 0
+            var totalPNet = 0
+            var totalNNet = 0
+            var totalPOut = 0
+            var totalNOut = 0
+            var totalPPhysicsOut = 0
+            var totalNPhysicsOut = 0
+            var totalPOutLong = 0
+            var totalNOutLong = 0
+            var totalPOutWide = 0
+            var totalNOutWide = 0
+
+            for _ in 0..<matchCount {
+                let npc = NPC.headlessOpponent(dupr: nDUPR)
+                let playerStats = StatProfileLoader.shared.toPlayerStats(dupr: pDUPR)
+                let sim = HeadlessMatchSimulator(npc: npc, playerStats: playerStats, playerDUPR: pDUPR)
+                let result = sim.simulateMatch()
+                if result.winnerSide == .player { pWins += 1 }
+                totalPScore += result.playerScore
+                totalNScore += result.opponentScore
+                totalPErrors += result.playerErrors
+                totalNErrors += result.npcErrors
+                totalRally += result.avgRallyLength
+                totalPAces += result.playerAces
+                totalPWinners += result.playerWinners
+                totalNAces += result.npcAces
+                totalNWinners += result.npcWinners
+                totalPShouldMake += result.playerErrorsFromShouldMake
+                totalNShouldMake += result.npcErrorsFromShouldMake
+                totalPNet += result.playerNetErrors
+                totalNNet += result.npcNetErrors
+                totalPOut += result.playerOutErrors
+                totalNOut += result.npcOutErrors
+                totalPPhysicsOut += result.playerPhysicsOut
+                totalNPhysicsOut += result.npcPhysicsOut
+                totalPOutLong += result.playerOutLong
+                totalNOutLong += result.npcOutLong
+                totalPOutWide += result.playerOutWide
+                totalNOutWide += result.npcOutWide
+            }
+
+            let n = Double(matchCount)
+            let f = { (v: Int) in String(format: "%.1f", Double(v)/n) }
+            let fp = { (v: Int) in String(format: "%.1f", Double(v)/n*100) }
+            print("""
+                P\(pDUPR) vs N\(nDUPR): WR=\(fp(pWins))% Score=\(f(totalPScore))-\(f(totalNScore)) Rally=\(String(format: "%.1f", totalRally/n))
+                  Errors:  P=\(f(totalPErrors)) N=\(f(totalNErrors))
+                  ShouldMake: P=\(f(totalPShouldMake)) N=\(f(totalNShouldMake))
+                  Net:     P=\(f(totalPNet)) N=\(f(totalNNet))
+                  Out(total): P=\(f(totalPOut)) N=\(f(totalNOut))
+                  Physics(L/W): P=\(f(totalPOutLong))/\(f(totalPOutWide)) N=\(f(totalNOutLong))/\(f(totalNOutWide))
+                  Aces:    P=\(f(totalPAces)) N=\(f(totalNAces))
+                  Winners: P=\(f(totalPWinners)) N=\(f(totalNWinners))
+                """)
+        }
+    }
+
     /// Average rally length should be bounded reasonably.
-    /// Note: rallies are shorter than real pickleball because the NPC has a +20 stat boost
-    /// (designed to compensate for human joystick advantage in the interactive game).
-    /// The simulated player lacks that advantage, creating an effective ~1.5 DUPR gap.
+    /// In headless mode, NPC stat boost is disabled so both sides play on equal footing.
     @Test func rallyLengthIsReasonable() {
         let matchCount = 50
         var totalAvgRally = 0.0
 
         for _ in 0..<matchCount {
-            let npc = NPC.practiceOpponent(dupr: 4.0)
+            let npc = NPC.headlessOpponent(dupr: 4.0)
             let playerStats = StatProfileLoader.shared.toPlayerStats(dupr: 4.0)
             let sim = HeadlessMatchSimulator(npc: npc, playerStats: playerStats, playerDUPR: 4.0)
             let result = sim.simulateMatch()

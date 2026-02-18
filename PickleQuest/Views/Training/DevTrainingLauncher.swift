@@ -10,6 +10,8 @@ struct DevTrainingLauncher: View {
     @State private var showLevelPicker = false
     @State private var showPracticeMatch = false
     @State private var practiceMatchNPC: NPC?
+    @State private var showHeadlessRunner = false
+    @State private var showMatchComparison = false
 
     var body: some View {
         ZStack {
@@ -38,7 +40,31 @@ struct DevTrainingLauncher: View {
                     npcAppearance: .defaultOpponent,
                     isRated: false,
                     wagerAmount: 0
-                ) { _ in
+                ) { result in
+                    if let npc = practiceMatchNPC {
+                        Task {
+                            let entry = DevMatchLogEntry(
+                                id: UUID(),
+                                date: Date(),
+                                source: .interactive,
+                                playerDUPR: appState.player.duprRating,
+                                opponentDUPR: npc.duprRating,
+                                playerScore: result.finalScore.playerPoints,
+                                opponentScore: result.finalScore.opponentPoints,
+                                didPlayerWin: result.didPlayerWin,
+                                totalPoints: result.totalPoints,
+                                avgRallyLength: result.playerStats.averageRallyLength,
+                                playerAces: result.playerStats.aces,
+                                playerWinners: result.playerStats.winners,
+                                playerErrors: result.playerStats.unforcedErrors,
+                                opponentAces: result.opponentStats.aces,
+                                opponentWinners: result.opponentStats.winners,
+                                opponentErrors: result.opponentStats.unforcedErrors,
+                                matchDurationSeconds: result.duration
+                            )
+                            await DevMatchLogStore.shared.append(entry)
+                        }
+                    }
                     showPracticeMatch = false
                     practiceMatchNPC = nil
                 }
@@ -75,6 +101,30 @@ struct DevTrainingLauncher: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal, 40)
 
+                    // Headless Validation button
+                    Button("Headless Validation") {
+                        showHeadlessRunner = true
+                    }
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(.purple)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 40)
+
+                    // Match Data button
+                    Button("Match Data") {
+                        showMatchComparison = true
+                    }
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(.teal)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 40)
+
                     Spacer().frame(height: 20)
 
                     Button("Exit to Normal App") {
@@ -92,6 +142,12 @@ struct DevTrainingLauncher: View {
         }
         .sheet(isPresented: $showLevelPicker) {
             practiceMatchLevelPicker
+        }
+        .sheet(isPresented: $showHeadlessRunner) {
+            DevHeadlessRunnerView()
+        }
+        .sheet(isPresented: $showMatchComparison) {
+            DevMatchComparisonView()
         }
     }
 

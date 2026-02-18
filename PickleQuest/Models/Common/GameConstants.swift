@@ -352,6 +352,12 @@ enum GameConstants {
         static let npcBaseHitboxRadius: CGFloat = 0.18
         static let npcHitboxBonus: CGFloat = 0.06        // bonus from max(reflexes, positioning)
 
+        // Height reach — replaces the old hard height gate (0.20).
+        // Balls within reach are hittable; excess height adds to 3D distance.
+        // Athleticism = avg(speed, reflexes) / 99. Higher DUPR = more athletic = higher reach.
+        static let baseHeightReach: CGFloat = 0.05       // minimum reach (low-stat players struggle with high balls)
+        static let maxHeightReachBonus: CGFloat = 0.30   // stat 99 adds 0.30 → total 0.35
+
         /// Flat stat boost for NPCs in interactive matches.
         /// Compensates for human joystick advantage (perfect positioning intelligence).
         /// A 3.5 DUPR NPC (~stat 32) becomes effective stat ~52, playing like a ~4.2.

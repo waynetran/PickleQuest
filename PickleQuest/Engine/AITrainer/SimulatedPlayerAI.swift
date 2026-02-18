@@ -189,22 +189,104 @@ final class SimulatedPlayerAI {
 
     // MARK: - Hit Detection
 
-    /// Check if ball is within player's hitbox and hittable.
+    /// Check if ball is within player's hitbox and hittable (3D distance with stat-gated height reach).
     func canHit(ball: DrillBallSimulation) -> Bool {
         guard ball.isActive, !ball.lastHitByPlayer else { return false }
         guard ball.bounceCount < 2 else { return false }
-        guard ball.height < 0.20 else { return false }
 
         // Pre-bounce: don't reach forward
         if ball.bounceCount == 0 && ball.courtY > currentNY { return false }
 
+        // 3D hitbox: height reach based on athleticism (speed + reflexes)
+        let speedStat = CGFloat(stats.stat(.speed))
+        let reflexesStat = CGFloat(stats.stat(.reflexes))
+        let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
+        let heightReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus
+        let excessHeight = max(0, ball.height - heightReach)
+
         let dx = ball.courtX - currentNX
         let dy = ball.courtY - currentNY
-        let dist = sqrt(dx * dx + dy * dy)
+        let dist = sqrt(dx * dx + dy * dy + excessHeight * excessHeight)
         return dist <= hitboxRadius
     }
 
-    // MARK: - Forced Error (mirrors InteractiveMatchScene checkPlayerHit)
+    // MARK: - Symmetric Error (headless mode — mirrors MatchAI.shouldMakeError exactly)
+
+    /// Symmetric error check for headless mode. Uses the same formula as NPC's `shouldMakeError`
+    /// so both sides have identical error resolution mechanics.
+    func shouldMakeError(ball: DrillBallSimulation, npcDUPR: Double) -> Bool {
+        let P = GameConstants.DrillPhysics.self
+        let S = GameConstants.NPCStrategy.self
+
+        let consistencyStat = CGFloat(stats.stat(.consistency))
+        let focusStat = CGFloat(stats.stat(.focus))
+        let reflexesStat = CGFloat(stats.stat(.reflexes))
+        let avgStat = (consistencyStat + focusStat + reflexesStat) / 3.0
+        let statFraction = avgStat / 99.0
+
+        let baseError: CGFloat = P.npcBaseErrorRate * (1.0 - statFraction)
+
+        // Stretch: compute early so speed discount can use it
+        let dx = ball.courtX - currentNX
+        let dy = ball.courtY - currentNY
+        let dist = sqrt(dx * dx + dy * dy)
+        let stretchFraction = min(dist / hitboxRadius, 1.0)
+
+        let ballSpeed = sqrt(ball.vx * ball.vx + ball.vy * ball.vy)
+        let maxBallSpeed = P.baseShotSpeed + 2.0 * (P.maxShotSpeed - P.baseShotSpeed)
+        let speedFraction = max(0, min(1, (ballSpeed - P.baseShotSpeed) / (maxBallSpeed - P.baseShotSpeed)))
+        let spinPressure = min(abs(ball.spinCurve) + abs(ball.topspinFactor) * 0.5, 1.0)
+        // Speed is only dangerous at reach — a fast ball straight at you is easy to return
+        let stretchMultiplier = 0.2 + stretchFraction * 0.8
+        let shotDifficulty = min(1.0, speedFraction * 0.8 * stretchMultiplier + spinPressure * 0.3)
+
+        let pressureError: CGFloat = shotDifficulty * P.npcPowerErrorScale * (1.0 - statFraction)
+        var errorRate = max(shotDifficulty * P.npcMinPowerErrorFloor, baseError + pressureError)
+
+        let staminaPct = stamina / P.maxStamina
+        if staminaPct < 0.30 {
+            let fatiguePenalty = 1.0 + (1.0 - staminaPct / 0.30)
+            errorRate *= fatiguePenalty
+        }
+
+        if stretchFraction > 0.6 {
+            errorRate *= 1.0 + (stretchFraction - 0.6) * 1.5
+        }
+
+        // DUPR gap scaling (symmetric with NPC)
+        let duprGap = dupr - npcDUPR
+        if duprGap > 0 {
+            // Player is stronger — error reduction
+            let multiplier = max(S.duprErrorFloor, CGFloat(exp(-Double(duprGap) * Double(S.duprErrorDecayRate))))
+            errorRate *= multiplier
+        } else if duprGap < 0 {
+            // Player is weaker — error increase
+            let multiplier = min(S.duprErrorCeiling, CGFloat(exp(Double(abs(duprGap)) * Double(S.duprErrorGrowthRate))))
+            errorRate *= multiplier
+        }
+
+        return CGFloat.random(in: 0...1) < errorRate
+    }
+
+    /// Return a context-aware error type based on the last shot modes attempted.
+    func errorType(for modes: DrillShotCalculator.ShotMode) -> NPCErrorType {
+        let roll = CGFloat.random(in: 0...1)
+        if modes.contains(.power) {
+            return roll < 0.6 ? .long : .wide
+        }
+        if modes.contains(.reset) || modes.contains(.slice) {
+            return roll < 0.7 ? .net : .wide
+        }
+        if modes.contains(.angled) {
+            return roll < 0.6 ? .wide : .net
+        }
+        // Default: even split
+        if roll < 0.4 { return .net }
+        if roll < 0.7 { return .long }
+        return .wide
+    }
+
+    // MARK: - Forced Error (interactive mode — mirrors InteractiveMatchScene checkPlayerHit)
 
     func shouldCommitForcedError(ball: DrillBallSimulation, npcDUPR: Double) -> Bool {
         let ballSpeed = sqrt(ball.vx * ball.vx + ball.vy * ball.vy)
@@ -235,22 +317,40 @@ final class SimulatedPlayerAI {
         let pressureOverflow = max(0, rallyPressure - pressureThreshold)
         let pressureBonus = pressureOverflow * NPCS.pressureErrorScale
 
-        // DUPR gap amplifier
+        // DUPR gap amplifier (when NPC is stronger)
         let duprGapForPlayer = max(0, npcDUPR - dupr)
         let gapAmplifier = 1.0 + CGFloat(duprGapForPlayer) * NPCS.duprForcedErrorAmplifier
         forcedErrorRate = (forcedErrorRate + pressureBonus) * gapAmplifier
+
+        // DUPR gap reduction (when player is stronger — weaker NPC shots are easier to return)
+        let duprAdvantage = max(0, dupr - npcDUPR)
+        if duprAdvantage > 0 {
+            let reduction = max(CGFloat(NPCS.duprErrorFloor),
+                                CGFloat(exp(-Double(duprAdvantage) * Double(NPCS.duprErrorGrowthRate))))
+            forcedErrorRate *= reduction
+        }
 
         return CGFloat.random(in: 0...1) < forcedErrorRate
     }
 
     // MARK: - Net Fault
 
-    func shouldCommitNetFault() -> Bool {
+    func shouldCommitNetFault(npcDUPR: Double) -> Bool {
         let accuracyStat = CGFloat(stats.stat(.accuracy))
         let consistencyStat = CGFloat(stats.stat(.consistency))
         let focusStat = CGFloat(stats.stat(.focus))
         let avgControl = (accuracyStat + consistencyStat + focusStat) / 3.0
-        let netFaultRate = PB.netFaultBaseRate * pow(1.0 - avgControl / 99.0, 1.5)
+        var netFaultRate = PB.netFaultBaseRate * pow(1.0 - avgControl / 99.0, 1.5)
+
+        // DUPR gap reduction: stronger players make fewer net faults vs weaker opponents
+        let NPCS = GameConstants.NPCStrategy.self
+        let duprAdvantage = max(0, dupr - npcDUPR)
+        if duprAdvantage > 0 {
+            let reduction = max(CGFloat(NPCS.duprErrorFloor),
+                                CGFloat(exp(-Double(duprAdvantage) * Double(NPCS.duprErrorGrowthRate))))
+            netFaultRate *= reduction
+        }
+
         return CGFloat.random(in: 0...1) < netFaultRate
     }
 
@@ -297,11 +397,12 @@ final class SimulatedPlayerAI {
         shotCountThisPoint += 1
         let staminaFraction = stamina / P.maxStamina
 
+        // Symmetric with NPC drain (MatchAI uses 5/3 for power/focus)
         if modes.contains(.power) {
-            stamina = max(0, stamina - P.maxStamina * 0.20)
+            stamina = max(0, stamina - 5)
         }
         if modes.contains(.focus) {
-            stamina = max(0, stamina - P.maxStamina * 0.10)
+            stamina = max(0, stamina - 3)
         }
 
         return DrillShotCalculator.calculatePlayerShot(
@@ -321,7 +422,7 @@ final class SimulatedPlayerAI {
 
         if CGFloat.random(in: 0...1) < shotModeCompetence * 0.5 {
             modes.insert(.power)
-            stamina = max(0, stamina - P.maxStamina * 0.20)
+            stamina = max(0, stamina - 5)
         }
         if CGFloat.random(in: 0...1) < shotModeCompetence * 0.3 {
             modes.insert(Bool.random() ? .topspin : .slice)
@@ -341,7 +442,11 @@ final class SimulatedPlayerAI {
     // MARK: - Reset
 
     func recoverBetweenPoints() {
-        stamina = min(P.maxStamina, stamina + 10)
+        // Symmetric with NPC recovery (MatchAI uses 8 + staminaStat/99 * 12)
+        let staminaStat = CGFloat(stats.stat(.stamina))
+        let baseRecovery: CGFloat = 8
+        let staminaBonus = (staminaStat / 99.0) * 12
+        stamina = min(P.maxStamina, stamina + baseRecovery + staminaBonus)
     }
 
     func reset(isServing: Bool, playerScore: Int, npcScore: Int) {
