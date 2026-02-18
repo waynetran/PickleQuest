@@ -1040,6 +1040,33 @@ Match end → MatchResult → existing processResult() pipeline
 - `Engine/AITrainer/TrainingReport.swift` — added `HeadlessInteractiveEntry`, `headlessInteractiveTable` field, report formatting
 - `Engine/AITrainer/TrainingSession.swift` — added `evaluateHeadlessInteractive()` validation pass
 
+### Headless Balance Fixes + Dev Training Dashboard
+
+**Commit**: `09eb009`
+
+#### Balance fixes
+- **Symmetric error types**: `MatchAI.errorType()` in headless mode now uses identical probability distributions as `SimulatedPlayerAI.errorType()` — eliminates error-type bias where NPC had different net/long/wide splits
+- **Shared serve execution**: refactored player and NPC serves into a single `executeServe()` method ensuring identical fault check, scatter, arc, and topspin logic
+- **Symmetric stamina**: player AI stamina drain (5/3 for power/focus) and recovery (8 + staminaStat/99 * 12) now match NPC values exactly
+- **3D hitbox with stat-gated height reach**: replaced hard `height < 0.20` gate with `baseHeightReach + athleticism * maxHeightReachBonus` — athleticism = avg(speed, reflexes)/99; applied to all hit detection (drill, interactive, headless)
+- **Far-side shot mirroring**: `DrillShotCalculator` now correctly mirrors reset shot targets and scatter clamps for far-side (NPC) shooters
+- **Player DUPR gap scaling**: SimulatedPlayerAI forced errors and net faults now scale with DUPR gap (stronger player makes fewer errors vs weaker opponent, and vice versa)
+- **Swept collision detection**: interactive match uses closest-point-on-segment for ball path to prevent fast balls tunneling through hitbox between frames
+- **Speed-stretch interaction**: forced error speed component discounted when stretch is low (a fast ball straight at you is easy; a fast ball at arm's length is hard)
+
+#### Results
+- Equal DUPR win rates: **51.5%** at 3.0, **48.5%** at 4.0, **49.0%** at 5.0 (was 46.5%/57.5%/70.5%)
+- Cross-DUPR: P5.5 vs N3.0 = 100%, P2.5 vs N5.5 = 0%
+- Aces symmetric: P=6.4 N=6.4 at DUPR 5.0
+- Diagnostic tracking: directional out errors (long vs wide), physics-based out errors
+
+#### Dev training dashboard
+- `DevMatchLogEntry` model and `DevMatchLogStore` actor for JSON-persisted match data
+- `DevTrainingMatchViewModel` with headless runner (runs matches at DUPR [2.0-7.0]) and comparison logic
+- `DevHeadlessRunnerView` — run headless validation with progress bar and results table
+- `DevMatchComparisonView` — side-by-side real vs headless match statistics per DUPR level
+- Practice match result capture in `DevTrainingLauncher` — interactive results now logged for comparison
+
 ---
 
 ## Milestone 7c: Persistence Polish, Cloud Prep, Multiplayer Prep (Planned)
