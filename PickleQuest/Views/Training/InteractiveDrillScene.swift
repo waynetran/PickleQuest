@@ -22,7 +22,7 @@ final class InteractiveDrillScene: SKScene {
     private var joystickOrigin: CGPoint = .zero
     private var joystickDirection: CGVector = .zero
     private var joystickMagnitude: CGFloat = 0
-    private let joystickBaseRadius: CGFloat = 70
+    private let joystickBaseRadius: CGFloat = 50
     private let joystickKnobRadius: CGFloat = 30
 
     // Swipe-to-serve state
@@ -922,26 +922,19 @@ final class InteractiveDrillScene: SKScene {
             return
         }
 
-        // Base speed from normal magnitude (capped at 1.0)
-        let normalMag = min(joystickMagnitude, 1.0)
-        var speed = playerMoveSpeed * normalMag
+        // Speed scales linearly from 0 to full (base + sprint) based on distance from center
+        let mag = min(joystickMagnitude, 1.0)
+        let maxSpeed = playerMoveSpeed * (1.0 + P.maxSprintSpeedBoost)
+        var speed = maxSpeed * mag
 
-        // Sprint zone: magnitude > 1.0
-        // Below 10% stamina: no sprinting. Below 50%: half sprint speed.
+        // Sprint zone: outer 40% of circle (magnitude > 0.6) drains stamina
         let staminaPct = stamina / P.maxStamina
-        let canSprint = joystickMagnitude > 1.0 && staminaPct > 0.10
-        let isSprinting = canSprint
+        let isSprinting = mag > 0.6 && staminaPct > 0.10
         if isSprinting {
-            let sprintFraction = min((joystickMagnitude - 1.0) / 0.5, 1.0)
-            var sprintBonus = sprintFraction * P.maxSprintSpeedBoost * playerMoveSpeed
-            if staminaPct < 0.50 {
-                sprintBonus *= 0.5  // half sprint speed when below 50% stamina
-            }
-            speed += sprintBonus
-            stamina = max(0, stamina - P.sprintDrainRate * dt)
+            if staminaPct < 0.50 { speed *= 0.75 }
+            stamina = max(0, stamina - P.sprintDrainRate * mag * dt)
             timeSinceLastSprint = 0
         } else {
-            // Not sprinting — recover after delay
             timeSinceLastSprint += dt
             if timeSinceLastSprint >= P.staminaRecoveryDelay {
                 stamina = min(P.maxStamina, stamina + P.staminaRecoveryRate * dt)

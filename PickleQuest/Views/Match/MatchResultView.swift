@@ -262,11 +262,6 @@ struct MatchResultView: View {
         }
         .onAppear {
             SoundManager.shared.playUI(result.didPlayerWin ? .matchWin : .matchLose)
-            if result.didPlayerWin {
-                HapticManager.shared.matchWon()
-            } else {
-                HapticManager.shared.matchLost()
-            }
         }
     }
 

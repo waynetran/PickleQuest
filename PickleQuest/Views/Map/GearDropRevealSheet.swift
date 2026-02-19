@@ -61,7 +61,6 @@ struct GearDropRevealSheet: View {
         .presentationDetents([.medium, .large])
         .onAppear {
             SoundManager.shared.playUI(.lootReveal)
-            HapticManager.shared.lootPickup()
         }
     }
 

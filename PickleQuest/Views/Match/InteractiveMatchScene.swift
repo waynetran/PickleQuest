@@ -44,7 +44,7 @@ final class InteractiveMatchScene: SKScene {
     private var joystickOrigin: CGPoint = .zero
     private var joystickDirection: CGVector = .zero
     private var joystickMagnitude: CGFloat = 0
-    private let joystickBaseRadius: CGFloat = 70
+    private let joystickBaseRadius: CGFloat = 50
     private let joystickKnobRadius: CGFloat = 30
 
     // Swipe-to-serve state
@@ -170,12 +170,17 @@ final class InteractiveMatchScene: SKScene {
     private let dinkPushDuration: CGFloat = 0.25
     private let dinkKitchenThreshold: CGFloat = 0.30
 
-    // Lateral lunge (fixed-distance sideways dash)
+    // Lateral lunge (swipe-triggered sideways dash, 3-frame animation)
     private var lungeTimer: CGFloat = 0
     private var lungeActive: Bool = false
     private var lungeDirection: CGFloat = 0       // +1 right, -1 left
-    private let lungeDuration: CGFloat = 0.15     // quick burst duration
-    private let lungeDistance: CGFloat = 0.125    // ~2.5 feet in NX (court = 20ft = 1.0 NX)
+    private var lungeDuration: CGFloat = 0.18     // 3 frames at 0.06s each (faster for athletic)
+    private var lungeDistance: CGFloat = 0.25     // stat-based: 1/4 court min, more for athletic
+    private let lungeCooldown: CGFloat = 0.4      // prevent rapid re-triggering
+    private var lungeCooldownTimer: CGFloat = 0
+    private var lastJoystickTouchPos: CGPoint?
+    private var joystickSwipeVelocityX: CGFloat = 0
+    private let lungeSwipeThreshold: CGFloat = 800 // points/sec horizontal velocity to trigger lunge
 
     // Movement guide arrows (court-painted directional hints)
     private var moveGuideBack: SKNode!
@@ -312,6 +317,10 @@ final class InteractiveMatchScene: SKScene {
         playerMoveSpeed = P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus
         // Sprint speed scales with athleticism: low stats = 50% boost, high stats = 150% boost
         playerSprintSpeed = 0.5 + athleticism * 1.0
+        // Lunge: 1/4 court base, up to ~40% court for max athletic players
+        lungeDistance = 0.25 + athleticism * 0.15
+        // Athletic players lunge faster (shorter duration = snappier)
+        lungeDuration = 0.18 - athleticism * 0.04 // 0.18s at min, 0.14s at max
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -919,6 +928,7 @@ final class InteractiveMatchScene: SKScene {
         lungeActive = false
         lungeTimer = 0
         lungeDirection = 0
+        lungeCooldownTimer = 0
         pendingPlayerShot = nil
         pendingNPCShot = nil
         pendingServeShot = nil
@@ -1394,6 +1404,8 @@ final class InteractiveMatchScene: SKScene {
             guard joystickTouch == nil else { continue }
             joystickTouch = touch
             joystickOrigin = pos
+            lastJoystickTouchPos = pos
+            joystickSwipeVelocityX = 0
             joystickBase.position = pos
             joystickKnob.position = pos
             joystickBase.alpha = 1
@@ -1423,6 +1435,29 @@ final class InteractiveMatchScene: SKScene {
         if dist > 1.0 {
             joystickDirection = CGVector(dx: dx / dist, dy: dy / dist)
         }
+
+        // Track horizontal swipe velocity for lunge detection
+        if let lastPos = lastJoystickTouchPos {
+            let frameDx = pos.x - lastPos.x
+            let frameDy = pos.y - lastPos.y
+            // Use a fixed 1/60s assumption for velocity (SpriteKit runs at 60fps)
+            joystickSwipeVelocityX = frameDx * 60
+            // Trigger lunge on fast horizontal swipe
+            if abs(joystickSwipeVelocityX) > lungeSwipeThreshold
+                && abs(frameDx) > abs(frameDy) * 2  // mainly horizontal
+                && !lungeActive && lungeCooldownTimer <= 0
+                && playerJumpPhase == .grounded
+                && phase == .playing {
+                lungeActive = true
+                lungeTimer = 0
+                lungeDirection = joystickSwipeVelocityX > 0 ? 1.0 : -1.0
+                lungeCooldownTimer = lungeCooldown
+                // Play 3-frame lunge animation
+                playerAnimator.playLunge(goingRight: lungeDirection > 0)
+                playerSpriteFlipped = lungeDirection < 0
+            }
+        }
+        lastJoystickTouchPos = pos
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -1459,6 +1494,8 @@ final class InteractiveMatchScene: SKScene {
         joystickTouch = nil
         joystickDirection = .zero
         joystickMagnitude = 0
+        lastJoystickTouchPos = nil
+        joystickSwipeVelocityX = 0
         joystickBase.position = joystickDefaultPosition
         joystickKnob.position = joystickDefaultPosition
         joystickBase.alpha = 0.4
@@ -1923,8 +1960,10 @@ final class InteractiveMatchScene: SKScene {
             return
         }
 
-        let normalMag = min(joystickMagnitude, 1.0)
-        var speed = playerMoveSpeed * normalMag
+        // Speed scales linearly from 0 to full (base + sprint) based on distance from center
+        let mag = min(joystickMagnitude, 1.0)
+        let maxSpeed = playerMoveSpeed * (1.0 + playerSprintSpeed)
+        var speed = maxSpeed * mag
 
         // Jump air mobility penalty
         if playerJumpPhase != .grounded {
@@ -1932,14 +1971,11 @@ final class InteractiveMatchScene: SKScene {
         }
 
         let staminaPct = stamina / P.maxStamina
-        let canSprint = joystickMagnitude > 1.0 && staminaPct > 0.10
-        let isSprinting = canSprint
+        // Sprint zone: outer 40% of circle (magnitude > 0.6) drains stamina
+        let isSprinting = mag > 0.6 && staminaPct > 0.10
         if isSprinting {
-            let sprintFraction = min((joystickMagnitude - 1.0) / 0.5, 1.0)
-            var sprintBonus = sprintFraction * playerSprintSpeed * playerMoveSpeed
-            if staminaPct < 0.50 { sprintBonus *= 0.5 }
-            speed += sprintBonus
-            stamina = max(0, stamina - P.sprintDrainRate * dt)
+            if staminaPct < 0.50 { speed *= 0.75 }
+            stamina = max(0, stamina - P.sprintDrainRate * mag * dt)
             timeSinceLastSprint = 0
         } else {
             timeSinceLastSprint += dt
@@ -1968,12 +2004,8 @@ final class InteractiveMatchScene: SKScene {
         let dy = joystickDirection.dy
         let isMainlyHorizontal = abs(dx) > abs(dy)
 
-        // Lateral lunge: sideways non-sprint triggers fixed-distance dash
-        if !isSprinting && isMainlyHorizontal && abs(dx) > 0.3 && !lungeActive && playerJumpPhase == .grounded {
-            lungeActive = true
-            lungeTimer = 0
-            lungeDirection = dx > 0 ? 1.0 : -1.0
-        }
+        // Lunge cooldown tick
+        if lungeCooldownTimer > 0 { lungeCooldownTimer -= dt }
 
         // Apply movement: lunge overrides horizontal, normal otherwise
         if lungeActive {
@@ -1994,7 +2026,7 @@ final class InteractiveMatchScene: SKScene {
         playerNX = max(0.0, min(1.0, playerNX))
         playerNY = max(-0.05, min(0.48 - P.playerPositioningOffset, playerNY))
 
-        if canChangeAnim {
+        if canChangeAnim && !lungeActive {
             if isSprinting {
                 if isMainlyHorizontal {
                     // Horizontal sprint: runSide (base = running right, flip for left)
