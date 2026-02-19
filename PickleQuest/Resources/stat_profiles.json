@@ -2,7 +2,7 @@
   "npcEquipOffset" : 3,
   "npcEquipSlope" : 4,
   "npcMoveSpeedScaleHigh" : 1,
-  "npcMoveSpeedScaleLow" : 0.55,
+  "npcMoveSpeedScaleLow" : 0.2,
   "offsets" : [
     10,
     10,

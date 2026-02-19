@@ -386,6 +386,14 @@ enum GameConstants {
         nonisolated(unsafe) static var npcMoveSpeedScaleLow: CGFloat = 0.20   // DUPR 2.0 speed multiplier
         nonisolated(unsafe) static var npcMoveSpeedScaleHigh: CGFloat = 1.0   // DUPR 8.0 speed multiplier
 
+        /// Compute NPC move speed scale from DUPR. Single source of truth — used by
+        /// MatchAI, SimulatedPlayerAI, and balance tests. HeadlessMatchSimulator can
+        /// override via SimulationParameters for training experiments.
+        static func npcMoveSpeedScale(dupr: Double) -> CGFloat {
+            let n = CGFloat(max(0, min(1, (dupr - 2.0) / 6.0)))
+            return npcMoveSpeedScaleLow + (npcMoveSpeedScaleHigh - npcMoveSpeedScaleLow) * n
+        }
+
         // MARK: NPC Stat Global Multipliers
         // Scale NPC effective stats by DUPR: DUPR 2.0 uses Low, DUPR 8.0 uses High.
         // Interpolated linearly. Applied after stat boost, before stats are used.

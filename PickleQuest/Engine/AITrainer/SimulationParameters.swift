@@ -110,7 +110,7 @@ struct SimulationParameters: Sendable, Codable {
         for i in 0..<SimulationParameters.statCount {
             starter[i] = max(1, min(40, starter[i]))
         }
-        let speedScaleLow = max(0.3, min(1.0, npcMoveSpeedScaleLow))
+        let speedScaleLow = max(0.10, min(1.0, npcMoveSpeedScaleLow))
         let speedScaleHigh = max(0.5, min(1.2, npcMoveSpeedScaleHigh))
         return SimulationParameters(
             slopes: s, offsets: o,

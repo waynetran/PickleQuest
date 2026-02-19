@@ -222,8 +222,9 @@ final class MatchAI {
             boost = P.npcStatBoost(forBaseStatAverage: CGFloat(npc.stats.average))
         }
         self.statBoost = boost
-        let speedStat = CGFloat(min(99, npc.stats.stat(.speed) + boost))
-        let scale = moveSpeedScale ?? StatProfileLoader.shared.moveSpeedScale(dupr: npc.duprRating)
+        let dupr = npc.duprRating
+        let speedStat = CGFloat(P.npcScaledStat(.speed, base: npc.stats.stat(.speed), boost: boost, dupr: dupr))
+        let scale = moveSpeedScale ?? P.npcMoveSpeedScale(dupr: dupr)
         self.moveSpeed = (P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus) * scale
         self.sprintSpeed = moveSpeed * (1.0 + P.maxSprintSpeedBoost)
 
@@ -233,8 +234,8 @@ final class MatchAI {
             self.baseHitboxRadius = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
         } else {
             // Interactive: larger hitbox compensates for human joystick advantage
-            let reflexesStat = CGFloat(min(99, npc.stats.stat(.reflexes) + boost))
-            let positioningStat = CGFloat(min(99, npc.stats.stat(.positioning) + boost))
+            let reflexesStat = CGFloat(P.npcScaledStat(.reflexes, base: npc.stats.stat(.reflexes), boost: boost, dupr: dupr))
+            let positioningStat = CGFloat(P.npcScaledStat(.positioning, base: npc.stats.stat(.positioning), boost: boost, dupr: dupr))
             let reachStat = max(reflexesStat, positioningStat)
             self.baseHitboxRadius = P.npcBaseHitboxRadius + (reachStat / 99.0) * P.npcHitboxBonus
         }

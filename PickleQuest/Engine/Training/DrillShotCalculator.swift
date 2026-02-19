@@ -326,9 +326,9 @@ enum DrillShotCalculator {
         if drillType == .dinkingDrill && modes.isEmpty {
             power = 0.15 + (powerStat / 99.0) * 0.20
         } else if drillType == .baselineRally && modes.isEmpty {
-            power = max(0.30, 0.15 + (powerStat / 99.0) * 0.85)
+            power = max(0.15, 0.15 + (powerStat / 99.0) * 0.85)
         } else {
-            power = max(0.30, 0.15 + (powerStat / 99.0) * 0.85)
+            power = max(0.15, 0.15 + (powerStat / 99.0) * 0.85)
             let heightBonus = min(ballHeight / 0.15, 1.0) * P.heightPowerBonus
             power += heightBonus
 

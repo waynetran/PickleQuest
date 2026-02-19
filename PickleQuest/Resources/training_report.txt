@@ -29,12 +29,12 @@ NPC Virtual Equipment Bonus by DUPR:
   DUPR 8.0: +7 per stat
 
 NPC Move Speed Scale by DUPR:
-  DUPR 2.0: 0.55x
-  DUPR 3.0: 0.62x
-  DUPR 4.0: 0.70x
-  DUPR 5.0: 0.78x
-  DUPR 6.0: 0.85x
-  DUPR 7.0: 0.93x
+  DUPR 2.0: 0.20x
+  DUPR 3.0: 0.33x
+  DUPR 4.0: 0.47x
+  DUPR 5.0: 0.60x
+  DUPR 6.0: 0.73x
+  DUPR 7.0: 0.87x
   DUPR 8.0: 1.00x
 
 NPC-vs-NPC Point Differentials (Higher - Lower):
@@ -70,8 +70,8 @@ Starter Balance (trained stats vs NPC at DUPR 2.0):
 
 Headless Interactive Validation (player vs NPC, same DUPR):
   DUPR   PointDiff   WinRate   AvgRally   Matches
-  2.0     -10.3       0.0%       2.6       50
-  3.0      -7.1       2.0%       3.4       50
-  4.0      -4.2      18.0%       4.2       50
-  5.0      -2.1      32.0%       4.3       50
-  6.0      +0.2      48.0%       4.3       50
+  2.0     +11.0     100.0%       0.1       50
+  3.0      -6.6       2.0%       4.2       50
+  4.0      -2.5      32.0%       4.9       50
+  5.0      -1.6      36.0%       4.6       50
+  6.0      +2.5      70.0%       4.4       50

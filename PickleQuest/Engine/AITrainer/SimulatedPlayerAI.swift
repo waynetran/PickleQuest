@@ -69,7 +69,7 @@ final class SimulatedPlayerAI {
 
         // Movement speed from raw stats, scaled by DUPR
         let speedStat = CGFloat(stats.stat(.speed))
-        let scale = moveSpeedScale ?? StatProfileLoader.shared.moveSpeedScale(dupr: dupr)
+        let scale = moveSpeedScale ?? P.npcMoveSpeedScale(dupr: dupr)
         self.moveSpeed = (P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus) * scale
         self.sprintSpeed = moveSpeed * (1.0 + P.maxSprintSpeedBoost)
 
