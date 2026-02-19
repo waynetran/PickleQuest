@@ -11,6 +11,7 @@ enum DrillShotCalculator {
         let shotType: ShotType
         var topspinFactor: CGFloat // -1 = backspin, 0 = flat, +1 = topspin
         var smashFactor: CGFloat = 0 // 0 = normal, 1 = full overhead smash
+        var isPutAway: Bool = false  // kitchen put-away: high ball near net → near-certain winner
     }
 
     enum ShotType: Sendable {
@@ -353,6 +354,20 @@ enum DrillShotCalculator {
             targetNY = max(0.55, min(0.95, baseNY))
         }
 
+        // --- Put-away detection: high ball at the kitchen → aggressive winner ---
+        // A put-away is a high, slow ball near the net that anyone can slam.
+        // Power + angle make it nearly unreturnable (~90% winner).
+        let isPutAway = distFromNet < P.kitchenVolleyRange
+            && effectiveHeight > P.smashHeightThreshold
+            && !modes.contains(.touch)
+        if isPutAway {
+            // Aim at the opponent's sideline for maximum angle
+            let sidelineNX: CGFloat = ballApproachFromLeft ? 0.10 : 0.90
+            targetNX = sidelineNX
+            // Target deep to push opponent back and wide
+            targetNY = CGFloat.random(in: 0.75...0.90)
+        }
+
         // --- Tactical placement: bias shot away from opponent ---
         if !modes.contains(.angled), let oppNX = opponentNX, placementFraction > 0 {
             if oppNX > 0.6 {
@@ -375,6 +390,11 @@ enum DrillShotCalculator {
         // Fatigue increases scatter: below 50% stamina, scatter grows up to 50% more
         if staminaFraction < 0.5 {
             scatter *= 1.0 + (1.0 - staminaFraction / 0.5) * 0.5
+        }
+
+        // Put-away: easy ball to place — reduce scatter significantly
+        if isPutAway {
+            scatter *= 0.3
         }
 
         // --- Apply mode modifiers ---
@@ -483,7 +503,8 @@ enum DrillShotCalculator {
             targetNY: targetNY,
             shotType: shotType,
             topspinFactor: topspinFactor,
-            smashFactor: smashFactor
+            smashFactor: smashFactor,
+            isPutAway: isPutAway
         )
     }
 

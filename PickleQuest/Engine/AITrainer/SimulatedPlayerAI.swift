@@ -279,6 +279,11 @@ final class SimulatedPlayerAI {
             errorRate *= multiplier
         }
 
+        // Put-away: kitchen slam with power + angle → ~90% error rate floor
+        if ball.isPutAway {
+            errorRate = max(errorRate, 0.90)
+        }
+
         return CGFloat.random(in: 0...1) < errorRate
     }
 

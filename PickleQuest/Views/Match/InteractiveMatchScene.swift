@@ -147,6 +147,7 @@ final class InteractiveMatchScene: SKScene {
         let spin: CGFloat
         let topspin: CGFloat
         let smashFactor: CGFloat
+        let isPutAway: Bool
         let isPlayer: Bool
         let targetNX: CGFloat
         let targetNY: CGFloat
@@ -2104,6 +2105,7 @@ final class InteractiveMatchScene: SKScene {
                     spin: shot.spin, topspin: shot.topspin
                 )
                 ballSim.smashFactor = shot.smashFactor
+                ballSim.isPutAway = shot.isPutAway
                 ballSim.lastHitByPlayer = true
                 previousBallNY = ballSim.courtY
                 checkedFirstBounce = false
@@ -2125,6 +2127,7 @@ final class InteractiveMatchScene: SKScene {
                     spin: shot.spin, topspin: shot.topspin
                 )
                 ballSim.smashFactor = shot.smashFactor
+                ballSim.isPutAway = shot.isPutAway
                 ballSim.lastHitByPlayer = false
                 previousBallNY = ballSim.courtY
                 checkedFirstBounce = false
@@ -2369,6 +2372,7 @@ final class InteractiveMatchScene: SKScene {
             spin: shot.spinCurve,
             topspin: shot.topspinFactor,
             smashFactor: shot.smashFactor,
+            isPutAway: shot.isPutAway,
             isPlayer: true,
             targetNX: shot.targetNX,
             targetNY: shot.targetNY,
@@ -2532,6 +2536,7 @@ final class InteractiveMatchScene: SKScene {
                 spin: shot.spinCurve,
                 topspin: shot.topspinFactor,
                 smashFactor: shot.smashFactor,
+                isPutAway: shot.isPutAway,
                 isPlayer: false,
                 targetNX: shot.targetNX,
                 targetNY: shot.targetNY,

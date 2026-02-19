@@ -28,6 +28,9 @@ final class DrillBallSimulation {
     /// Smash factor: 0 = normal shot, 1 = full overhead smash. Amplifies bounce height.
     var smashFactor: CGFloat = 0
 
+    /// Put-away flag: set when a kitchen volley is hit with high power + angle. NPC error ~90%.
+    var isPutAway: Bool = false
+
     /// Ball height at the moment it crossed the net (y=0.5). Used for smash/volley decisions
     /// since the ball descends between the net and the player's contact point.
     private(set) var heightAtNetCrossing: CGFloat = 0
@@ -125,6 +128,7 @@ final class DrillBallSimulation {
     func launch(from origin: CGPoint, toward target: CGPoint, power: CGFloat, arc: CGFloat, spin: CGFloat, topspin: CGFloat = 0) {
         skipNetCorrection = false
         smashFactor = 0
+        isPutAway = false
         heightAtNetCrossing = 0
         courtX = origin.x
         courtY = origin.y

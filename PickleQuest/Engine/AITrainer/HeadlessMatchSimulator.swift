@@ -477,6 +477,7 @@ final class HeadlessMatchSimulator {
             topspin: shot.topspinFactor
         )
         ballSim.smashFactor = shot.smashFactor
+        ballSim.isPutAway = shot.isPutAway
         ballSim.lastHitByPlayer = true
         previousBallNY = ballSim.courtY
         checkedFirstBounce = false
@@ -536,6 +537,7 @@ final class HeadlessMatchSimulator {
             topspin: shot.topspinFactor
         )
         ballSim.smashFactor = shot.smashFactor
+        ballSim.isPutAway = shot.isPutAway
         ballSim.lastHitByPlayer = false
         previousBallNY = ballSim.courtY
         checkedFirstBounce = false
