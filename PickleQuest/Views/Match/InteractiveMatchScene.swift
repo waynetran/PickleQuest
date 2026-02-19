@@ -2249,7 +2249,8 @@ final class InteractiveMatchScene: SKScene {
             ballHeightAtNet: ballSim.heightAtNetCrossing,
             courtNY: playerNY,
             modes: shotModes,
-            staminaFraction: staminaPct
+            staminaFraction: staminaPct,
+            shooterDUPR: player.duprRating
         )
 
         // Apply swipe direction override

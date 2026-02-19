@@ -175,7 +175,8 @@ enum DrillShotCalculator {
         modes: ShotMode = [],
         staminaFraction: CGFloat = 1.0,
         opponentNX: CGFloat? = nil,
-        placementFraction: CGFloat = 0
+        placementFraction: CGFloat = 0,
+        shooterDUPR: Double = 5.0
     ) -> ShotResult {
         let P = GameConstants.DrillPhysics.self
 
@@ -356,14 +357,22 @@ enum DrillShotCalculator {
 
         // --- Put-away detection: high ball at the kitchen → aggressive winner ---
         // A put-away is a high, slow ball near the net that anyone can slam.
-        // Power + angle make it nearly unreturnable (~90% winner).
+        // Lower DUPR: aim more toward center. Higher DUPR: wider angle but never near lines.
         let isPutAway = distFromNet < P.kitchenVolleyRange
             && effectiveHeight > P.smashHeightThreshold
             && !modes.contains(.touch)
         if isPutAway {
-            // Aim at the opponent's sideline for maximum angle
-            let sidelineNX: CGFloat = ballApproachFromLeft ? 0.10 : 0.90
-            targetNX = sidelineNX
+            // DUPR fraction: 0.0 at 2.0, 1.0 at 8.0
+            let duprFrac = CGFloat(max(0, min(1, (shooterDUPR - 2.0) / 6.0)))
+            // Low DUPR aims center-ish (0.30–0.70), high DUPR aims wider (0.15–0.85)
+            // Never near the lines (never below 0.15 or above 0.85)
+            let innerEdge: CGFloat = 0.30 + duprFrac * (-0.15)  // 0.30 → 0.15
+            let outerEdge: CGFloat = 0.70 + duprFrac * 0.15     // 0.70 → 0.85
+            if ballApproachFromLeft {
+                targetNX = CGFloat.random(in: outerEdge...max(outerEdge, 0.85))
+            } else {
+                targetNX = CGFloat.random(in: min(innerEdge, 0.15)...innerEdge)
+            }
             // Target deep to push opponent back and wide
             targetNY = CGFloat.random(in: 0.75...0.90)
             // Slam it — 2x power

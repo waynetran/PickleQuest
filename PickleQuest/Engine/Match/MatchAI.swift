@@ -649,9 +649,17 @@ final class MatchAI {
             errorRate *= multiplier
         }
 
-        // Put-away: kitchen slam with power + angle → ~90% error rate floor
+        // Put-away: kitchen slam — error rate scales with NPC DUPR.
+        // Below 4.5: can't handle full power put-aways, ~90% error floor.
+        // 4.5+: need placement away from NPC to get a winner. Stretch-based scaling.
         if ball.isPutAway {
-            errorRate = max(errorRate, 0.90)
+            if npcDUPR < 4.5 {
+                errorRate = max(errorRate, 0.90)
+            } else {
+                // Higher DUPR NPCs can return centered put-aways but struggle with wide ones
+                let putAwayFloor: CGFloat = 0.50 + stretchFraction * 0.40 // 0.50 centered → 0.90 at full reach
+                errorRate = max(errorRate, putAwayFloor)
+            }
         }
 
         return CGFloat.random(in: 0...1) < errorRate
@@ -837,7 +845,8 @@ final class MatchAI {
             modes: modes,
             staminaFraction: staminaFraction,
             opponentNX: oppNX,
-            placementFraction: placeFrac
+            placementFraction: placeFrac,
+            shooterDUPR: npcDUPR
         )
     }
 
