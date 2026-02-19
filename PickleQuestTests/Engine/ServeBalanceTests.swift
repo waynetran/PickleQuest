@@ -11,14 +11,14 @@ struct ServeBalanceTests {
     /// Target faults per match (each side serves ~10-12 times in a typical match)
     /// Interpolated linearly between anchor points.
     static let faultTargets: [(dupr: Double, faultsPerMatch: Double)] = [
-        (2.0, 2.5),   // beginners miss ~2.5 serves per match
-        (3.5, 1.5),
-        (5.0, 0.7),   // 5.0+ miss ~0.7 per match
-        (6.5, 0.4),
-        (8.0, 0.2),
+        (2.0, 1.1),   // beginners: ~10% fault rate → ~1.1 per match (long/wide, never kitchen)
+        (3.5, 0.6),
+        (5.0, 0.3),   // intermediate: rare faults
+        (6.5, 0.15),
+        (8.0, 0.05),  // pros: almost never fault
     ]
 
-    static let tolerance: Double = 0.3          // acceptable deviation from target
+    static let tolerance: Double = 0.25         // acceptable deviation from target
     static let servesPerTrial = 5000            // serves per DUPR level for stats
     static let avgServesPerMatch: Double = 11.0 // ~22 points, each side serves ~11
 
@@ -99,7 +99,16 @@ struct ServeBalanceTests {
 
             if isDoubleFault {
                 totalFaults += 1
-                dbgDoubleFault += 1
+                // Classify fault type (matches npcServe logic)
+                let hasSpin = modes.contains(.topspin) || modes.contains(.slice)
+                let kitchenFaultChance = hasSpin ? duprFrac * 0.4 : 0.0
+                if CGFloat.random(in: 0...1) < kitchenFaultChance {
+                    dbgKitchen += 1
+                } else if CGFloat.random(in: 0...1) < 0.6 {
+                    dbgOutY += 1  // long
+                } else {
+                    dbgOutX += 1  // wide
+                }
                 continue
             }
 
@@ -177,7 +186,7 @@ struct ServeBalanceTests {
         }
 
         if count >= 5000 {
-            print("    [DBG DUPR \(String(format: "%.1f", dupr))]: dblFault=\(dbgDoubleFault) kitchen=\(dbgKitchen) outX=\(dbgOutX) outY=\(dbgOutY) timeout=\(dbgTimeout) total=\(totalFaults)/\(count)")
+            print("    [DBG DUPR \(String(format: "%.1f", dupr))]: faults=\(dbgDoubleFault) (long=\(dbgOutY) wide=\(dbgOutX) kitchen=\(dbgKitchen)) physics: outX=\(dbgOutX) outY=\(dbgOutY) timeout=\(dbgTimeout) total=\(totalFaults)/\(count)")
         }
         return Double(totalFaults) / Double(count)
     }

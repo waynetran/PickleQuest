@@ -1150,19 +1150,36 @@ final class InteractiveMatchScene: SKScene {
         let faultRate = baseFaultRate + modePenalty
         let isDoubleFault = CGFloat.random(in: 0...1) < faultRate
 
-        // Target must clear the kitchen line (0.318) — land in service area
+        // Target: service box (past kitchen line 0.318) on receiver's side
         let evenScore = npcScore % 2 == 0
-        let targetNX: CGFloat = evenScore ? 0.25 : 0.75
-        let targetNY: CGFloat
+        var targetNX: CGFloat = evenScore ? 0.25 : 0.75
+        var targetNY: CGFloat
 
         if isDoubleFault {
-            // Fault: aim into kitchen or net
-            targetNY = CGFloat.random(in: 0.35...0.48)
-        } else {
-            // Low DUPR: aim safe and deep to avoid kitchen faults
-            // High DUPR: can push closer to kitchen for placement
+            // Faults: beginners miss long or wide; only skilled spin servers miss short (kitchen)
             let duprFrac = CGFloat(max(0, min(1, (npc.duprRating - 2.0) / 6.0)))
-            let S = GameConstants.NPCStrategy.self
+            let hasSpin = modes.contains(.topspin) || modes.contains(.slice)
+            let kitchenFaultChance = hasSpin ? duprFrac * 0.4 : 0.0  // max 40% of faults are kitchen, only with spin
+
+            if CGFloat.random(in: 0...1) < kitchenFaultChance {
+                // Kitchen fault: aggressive spin serve aimed short
+                targetNY = CGFloat.random(in: 0.35...0.48)
+            } else {
+                // Long or wide fault
+                let longVsWide = CGFloat.random(in: 0...1)
+                if longVsWide < 0.6 {
+                    // Long: past baseline
+                    targetNY = CGFloat.random(in: -0.15...(-0.03))
+                } else {
+                    // Wide: past sideline
+                    targetNY = CGFloat.random(in: S.npcServeTargetMinNY...0.20)
+                    let wideOffset: CGFloat = CGFloat.random(in: 0.08...0.18)
+                    targetNX = evenScore ? (0.25 - wideOffset) : (0.75 + wideOffset)
+                }
+            }
+        } else {
+            // Good serve: aim into the deep service box
+            let duprFrac = CGFloat(max(0, min(1, (npc.duprRating - 2.0) / 6.0)))
             let maxNY = S.npcServeTargetMaxNY_Low + duprFrac * (S.npcServeTargetMaxNY_High - S.npcServeTargetMaxNY_Low)
             targetNY = CGFloat.random(in: S.npcServeTargetMinNY...maxNY)
         }

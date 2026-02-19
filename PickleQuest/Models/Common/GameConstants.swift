@@ -424,10 +424,10 @@ enum GameConstants {
         /// Minimum error rate floor per unit of shot difficulty (even stat 99 NPCs)
         static let npcMinPowerErrorFloor: CGFloat = 0.01
         /// NPC serve fault rate at stat 1 (chance of double fault per serve)
-        static let npcBaseServeFaultRate: CGFloat = 0.2858
+        static let npcBaseServeFaultRate: CGFloat = 0.1344
         /// Exponent for stat→fault scaling: pow(1 - stat/99, exponent).
         /// Higher = steeper curve (more separation between beginner and advanced).
-        static let npcServeFaultStatExponent: CGFloat = 2.0
+        static let npcServeFaultStatExponent: CGFloat = 3.0
 
         /// Minimum serve power — ensures even beginners can physically reach the
         /// service box. At 0.42, the arc stays under the 0.85 cap for full-court serves.
@@ -516,13 +516,13 @@ enum GameConstants {
         // NPC serve targeting — how deep the serve lands on the opponent's side
         // Lower DUPR aims deeper (safer) to avoid kitchen faults; higher DUPR pushes closer
         static let npcServeTargetMinNY: CGFloat = 0.050         // deepest serve target (all DUPR)
-        static let npcServeTargetMaxNY_Low: CGFloat = 0.246     // max target NY at DUPR 2.0
+        static let npcServeTargetMaxNY_Low: CGFloat = 0.250     // max target NY at DUPR 2.0
         static let npcServeTargetMaxNY_High: CGFloat = 0.250    // max target NY at DUPR 8.0
 
         // Serve fault mode penalties — power/spin serves are harder to land
         // Raw penalty is reduced by aggressionControl (skilled NPCs manage the risk)
-        static let npcServePowerFaultPenalty: CGFloat = 0.20   // raw fault increase for power serves
-        static let npcServeSpinFaultPenalty: CGFloat = 0.12    // raw fault increase for spin serves
+        static let npcServePowerFaultPenalty: CGFloat = 0.08   // raw fault increase for power serves
+        static let npcServeSpinFaultPenalty: CGFloat = 0.05    // raw fault increase for spin serves
         static let npcServeControlExponent: CGFloat = 1.2      // how fast skill reduces mode fault risk
 
         // Shot quality modifiers (interactive match)
