@@ -534,11 +534,11 @@ final class InteractiveMatchScene: SKScene {
         node.zPosition = AC.ZPositions.courtLines + 1.5
         node.alpha = 0
 
-        // Large triangle arrow (perspective-squished to look flat on court)
+        // Triangle arrow (perspective-squished to look flat on court)
         let arrowPath = CGMutablePath()
-        arrowPath.move(to: CGPoint(x: 0, y: 30))     // tip
-        arrowPath.addLine(to: CGPoint(x: -22, y: -10))  // bottom-left
-        arrowPath.addLine(to: CGPoint(x: 22, y: -10))   // bottom-right
+        arrowPath.move(to: CGPoint(x: 0, y: 20))     // tip
+        arrowPath.addLine(to: CGPoint(x: -14, y: -6))  // bottom-left
+        arrowPath.addLine(to: CGPoint(x: 14, y: -6))   // bottom-right
         arrowPath.closeSubpath()
 
         let arrow = SKShapeNode(path: arrowPath)
@@ -1837,7 +1837,7 @@ final class InteractiveMatchScene: SKScene {
         let pNY = max(0.0, playerNY)
 
         if needBack {
-            let arrowNY = max(0.0, pNY - 0.12)
+            let arrowNY = max(0.0, pNY - 0.18)
             let pos = CourtRenderer.courtPoint(nx: playerNX, ny: arrowNY)
             let scale = CourtRenderer.perspectiveScale(ny: arrowNY)
             moveGuideBack.position = pos
@@ -1848,7 +1848,7 @@ final class InteractiveMatchScene: SKScene {
         }
 
         if needForward {
-            let arrowNY = min(0.48, pNY + 0.12)
+            let arrowNY = min(0.48, pNY + 0.18)
             let pos = CourtRenderer.courtPoint(nx: playerNX, ny: arrowNY)
             let scale = CourtRenderer.perspectiveScale(ny: arrowNY)
             moveGuideForward.position = pos
@@ -1859,7 +1859,7 @@ final class InteractiveMatchScene: SKScene {
         }
 
         if needLeft {
-            let arrowNX = max(0.05, playerNX - 0.14)
+            let arrowNX = max(0.05, playerNX - 0.20)
             let pos = CourtRenderer.courtPoint(nx: arrowNX, ny: pNY)
             let scale = CourtRenderer.perspectiveScale(ny: pNY)
             moveGuideLeft.position = pos
@@ -1870,7 +1870,7 @@ final class InteractiveMatchScene: SKScene {
         }
 
         if needRight {
-            let arrowNX = min(0.95, playerNX + 0.14)
+            let arrowNX = min(0.95, playerNX + 0.20)
             let pos = CourtRenderer.courtPoint(nx: arrowNX, ny: pNY)
             let scale = CourtRenderer.perspectiveScale(ny: pNY)
             moveGuideRight.position = pos
