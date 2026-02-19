@@ -364,19 +364,18 @@ enum DrillShotCalculator {
         if isPutAway {
             // DUPR fraction: 0.0 at 2.0, 1.0 at 8.0
             let duprFrac = CGFloat(max(0, min(1, (shooterDUPR - 2.0) / 6.0)))
-            // Low DUPR aims center-ish (0.30–0.70), high DUPR aims wider (0.15–0.85)
-            // Never near the lines (never below 0.15 or above 0.85)
-            let innerEdge: CGFloat = 0.30 + duprFrac * (-0.15)  // 0.30 → 0.15
-            let outerEdge: CGFloat = 0.70 + duprFrac * 0.15     // 0.70 → 0.85
+            // Conservative angles: low DUPR aims center (0.35–0.65), high DUPR slightly wider (0.25–0.75)
+            let innerEdge: CGFloat = 0.35 + duprFrac * (-0.10)  // 0.35 → 0.25
+            let outerEdge: CGFloat = 0.65 + duprFrac * 0.10     // 0.65 → 0.75
             if ballApproachFromLeft {
-                targetNX = CGFloat.random(in: outerEdge...max(outerEdge, 0.85))
+                targetNX = CGFloat.random(in: outerEdge...max(outerEdge, 0.75))
             } else {
-                targetNX = CGFloat.random(in: min(innerEdge, 0.15)...innerEdge)
+                targetNX = CGFloat.random(in: min(innerEdge, 0.25)...innerEdge)
             }
-            // Target deep to push opponent back and wide
+            // Target deep to push opponent back
             targetNY = CGFloat.random(in: 0.75...0.90)
-            // Slam it — 2x power
-            power *= 2.0
+            // Slam it — 1.8x power
+            power *= 1.8
         }
 
         // --- Tactical placement: bias shot away from opponent ---
