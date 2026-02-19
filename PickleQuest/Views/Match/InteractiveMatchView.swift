@@ -84,12 +84,13 @@ struct InteractiveMatchView: View {
         .task {
             guard scene == nil else { return }
 
-            // Show control hint for first non-tutorial match
+            let newScene = makeScene()
+            scene = newScene
+
+            // Show control hint for first non-tutorial match; begin after dismiss
             if player.matchHistory.isEmpty {
                 showControlHint = true
             } else {
-                let newScene = makeScene()
-                scene = newScene
                 newScene.beginMatch()
             }
         }
@@ -136,9 +137,7 @@ struct InteractiveMatchView: View {
 
                 Button {
                     showControlHint = false
-                    let newScene = makeScene()
-                    scene = newScene
-                    newScene.beginMatch()
+                    scene?.beginMatch()
                 } label: {
                     Text("Got it!")
                         .font(.headline)
