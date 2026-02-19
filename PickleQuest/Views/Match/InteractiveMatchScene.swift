@@ -2637,6 +2637,8 @@ final class InteractiveMatchScene: SKScene {
                     staminaPct: errDbg.staminaPct,
                     shotQuality: errDbg.shotQuality,
                     duprMultiplier: errDbg.duprMultiplier,
+                    isPutAway: errDbg.isPutAway,
+                    smashFactor: errDbg.smashFactor,
                     errorType: errType,
                     modes: npcAI.lastShotModes
                 )

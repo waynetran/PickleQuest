@@ -455,10 +455,10 @@ enum DrillShotCalculator {
             scatter *= (1.0 - focusReduction)
         }
 
-        // Smash put-away: 2x power when ball is high enough for a smash and touch is off
+        // Smash put-away: boosted power when ball is high enough for a smash and touch is off
         // Touch mode converts smashes/volleys into soft drops toward kitchen instead
         if ballHeight >= P.smashHeightThreshold && !modes.contains(.touch) {
-            power *= 2.0
+            power *= GameConstants.Smash.powerMultiplier
         }
 
         power = max(0.15, min(2.5, power))

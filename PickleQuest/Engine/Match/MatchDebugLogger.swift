@@ -259,6 +259,8 @@ final class MatchDebugLogger {
         staminaPct: CGFloat,
         shotQuality: CGFloat,
         duprMultiplier: CGFloat,
+        isPutAway: Bool,
+        smashFactor: CGFloat,
         errorType: NPCErrorType,
         modes: DrillShotCalculator.ShotMode
     ) {
@@ -272,6 +274,7 @@ final class MatchDebugLogger {
         print("""
         \(tag)   *** NPC ERROR *** type=\(errStr) modes=\(modesStr(modes))
         \(tag)     errorRate=\(f3(errorRate)) base=\(f3(baseError)) pressure=\(f3(pressureError))
+        \(tag)     isPutAway=\(isPutAway ? "T" : "F") smash=\(f3(smashFactor))
         \(tag)     shotDifficulty=\(f3(shotDifficulty)):
         \(tag)       speedFrac=\(f3(speedFrac)) × stretchMult=\(f3(stretchMultiplier)) (stretch=\(f3(stretchFrac)))
         \(tag)       spinPressure=\(f3(spinPressure))

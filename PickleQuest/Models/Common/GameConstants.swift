@@ -467,10 +467,23 @@ enum GameConstants {
         static let returnDUPRScale: CGFloat = 0.2452     // change per 1.0 DUPR
         static let returnFloor: CGFloat = 0.0          // min return rate
         static let returnCeiling: CGFloat = 0.65       // max return rate (put-aways are winners)
-        static let stretchPenalty: CGFloat = 0.1686      // stretch reduces return rate significantly
+        static let stretchPenalty: CGFloat = 0.1588      // stretch reduces return rate significantly
 
         // Accuracy: put-away scatter multiplier (lower = more accurate, put-aways are easy to place)
         static let scatterMultiplier: CGFloat = 0.30
+    }
+
+    // MARK: - Smash Balance
+    enum Smash {
+        // Smash return rate: less punishing than put-away (player is further from net)
+        static let baseReturnRate: CGFloat = 0.5626     // return chance at DUPR 4.0
+        static let returnDUPRScale: CGFloat = 0.2066    // change per 1.0 DUPR
+        static let returnFloor: CGFloat = 0.0         // min return rate
+        static let returnCeiling: CGFloat = 0.90      // max return rate (after stretch → effective ~80%)
+        static let stretchPenalty: CGFloat = 0.1704      // stretch reduces return rate
+
+        // Power: reduced from 2.0 to prevent wild/out-of-bounds shots
+        static let powerMultiplier: CGFloat = 1.5
     }
 
     // MARK: - NPC Strategy

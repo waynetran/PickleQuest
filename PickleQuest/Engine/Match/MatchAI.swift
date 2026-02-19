@@ -649,6 +649,16 @@ final class MatchAI {
             errorRate *= multiplier
         }
 
+        // Smash: high ball from any position → reduced return rate (less punishing than put-away)
+        if ball.smashFactor > 0 && !ball.isPutAway {
+            let SM = GameConstants.Smash.self
+            let rawReturn = SM.baseReturnRate + CGFloat(npcDUPR - 4.0) * SM.returnDUPRScale
+            let clampedReturn = max(SM.returnFloor, min(SM.returnCeiling, rawReturn))
+            let adjustedReturn = clampedReturn * (1.0 - stretchFraction * SM.stretchPenalty)
+            let smashErrorFloor = 1.0 - adjustedReturn * ball.smashFactor
+            errorRate = max(errorRate, smashErrorFloor)
+        }
+
         // Put-away: continuous DUPR-scaled return rate (replaces old 2-tier system)
         if ball.isPutAway {
             let PA = GameConstants.PutAway.self
@@ -674,6 +684,9 @@ final class MatchAI {
         let staminaPct: CGFloat
         let shotQuality: CGFloat
         let duprMultiplier: CGFloat
+        let isPutAway: Bool
+        let smashFactor: CGFloat
+        let finalErrorRate: CGFloat
     }
 
     /// Compute error debug info without rolling the dice (non-mutating snapshot).
@@ -722,11 +735,31 @@ final class MatchAI {
             duprMultiplier = min(S.duprErrorCeiling, CGFloat(exp(Double(abs(duprGap)) * Double(S.duprErrorGrowthRate))))
             errorRate *= duprMultiplier
         }
+        // Smash override (mirrors shouldMakeError)
+        if ball.smashFactor > 0 && !ball.isPutAway {
+            let SM = GameConstants.Smash.self
+            let rawReturn = SM.baseReturnRate + CGFloat(npcDUPR - 4.0) * SM.returnDUPRScale
+            let clampedReturn = max(SM.returnFloor, min(SM.returnCeiling, rawReturn))
+            let adjustedReturn = clampedReturn * (1.0 - stretchFraction * SM.stretchPenalty)
+            let smashErrorFloor = 1.0 - adjustedReturn * ball.smashFactor
+            errorRate = max(errorRate, smashErrorFloor)
+        }
+
+        // Put-away override (mirrors shouldMakeError)
+        if ball.isPutAway {
+            let PA = GameConstants.PutAway.self
+            let rawReturn = PA.baseReturnRate + CGFloat(npcDUPR - 4.0) * PA.returnDUPRScale
+            let clampedReturn = max(PA.returnFloor, min(PA.returnCeiling, rawReturn))
+            let adjustedReturn = clampedReturn * (1.0 - stretchFraction * PA.stretchPenalty)
+            errorRate = max(errorRate, 1.0 - adjustedReturn)
+        }
+
         return ErrorDebugInfo(
             errorRate: errorRate, baseError: baseError, pressureError: pressureError,
             shotDifficulty: shotDifficulty, speedFrac: speedFraction, spinPressure: spinPressure,
             stretchFrac: stretchFraction, stretchMultiplier: stretchMultiplier,
-            staminaPct: staminaPct, shotQuality: shotQuality, duprMultiplier: duprMultiplier
+            staminaPct: staminaPct, shotQuality: shotQuality, duprMultiplier: duprMultiplier,
+            isPutAway: ball.isPutAway, smashFactor: ball.smashFactor, finalErrorRate: errorRate
         )
     }
 

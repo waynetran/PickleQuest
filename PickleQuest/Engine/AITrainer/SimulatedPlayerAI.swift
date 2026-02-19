@@ -280,6 +280,16 @@ final class SimulatedPlayerAI {
             errorRate *= multiplier
         }
 
+        // Smash: high ball from any position → reduced return rate (symmetric with MatchAI)
+        if ball.smashFactor > 0 && !ball.isPutAway {
+            let SM = GameConstants.Smash.self
+            let rawReturn = SM.baseReturnRate + CGFloat(dupr - 4.0) * SM.returnDUPRScale
+            let clampedReturn = max(SM.returnFloor, min(SM.returnCeiling, rawReturn))
+            let adjustedReturn = clampedReturn * (1.0 - stretchFraction * SM.stretchPenalty)
+            let smashErrorFloor = 1.0 - adjustedReturn * ball.smashFactor
+            errorRate = max(errorRate, smashErrorFloor)
+        }
+
         // Put-away: continuous DUPR-scaled return rate (symmetric with MatchAI)
         if ball.isPutAway {
             let PA = GameConstants.PutAway.self
