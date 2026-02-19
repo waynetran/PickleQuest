@@ -96,7 +96,7 @@ final class SoundManager {
         case .paddleHit: return 0.05
         case .paddleHitSmash: return 0.05
         case .paddleHitDistant: return 0.03
-        case .ballBounce: return 0.05
+        case .ballBounce: return 0.01
         case .netThud: return 0.4
         case .whistle: return 0.5
         case .pointChime: return 0.6
@@ -104,8 +104,8 @@ final class SoundManager {
         case .matchLose: return 0.5
         case .serveWhoosh: return 0.05
         case .buttonClick: return 0.3
-        case .footstep: return 0.05
-        case .footstepSprint: return 0.05
+        case .footstep: return 0.01
+        case .footstepSprint: return 0.01
         case .lootReveal: return 0.6
         }
     }
