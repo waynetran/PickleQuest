@@ -619,6 +619,70 @@ enum GameConstants {
         static let lessonsToAcquire: Int = 5
     }
 
+    // MARK: - Pressure Shots (NPC deep + opponent at net)
+    enum PressureShots {
+        // --- Shot Selection (NPC deep NY>0.82, opponent at net NY<0.38) ---
+
+        // Drop shot selection rate: how often NPC chooses touch/drop under pressure
+        // 2.0→~12%, 3.5→~36%, 5.0→~58%, 6.5→~75%
+        static let dropSelectBase: CGFloat = 0.4400       // rate at DUPR 4.0
+        static let dropSelectSlope: CGFloat = 0.1400      // per DUPR
+        static let dropSelectFloor: CGFloat = 0.05
+        static let dropSelectCeiling: CGFloat = 0.80
+
+        // Lob selection rate: panic lobs decrease with skill
+        // 2.0→~25%, 3.5→~10%, 5.0→~5%, 6.5→~3%
+        static let lobSelectBase: CGFloat = 0.08        // rate at DUPR 4.0
+        static let lobSelectSlope: CGFloat = -0.04      // per DUPR (decreases)
+        static let lobSelectFloor: CGFloat = 0.02
+        static let lobSelectCeiling: CGFloat = 0.30
+
+        // Drive = 1 - drop - lob (remainder)
+
+        // --- Drop Shot Quality (% of attempted drops) ---
+
+        // Perfect drop: lands in kitchen, low, unattackable
+        // 2.0→~8%, 3.5→~35%, 5.0→~62%, 6.5→~85%
+        static let dropPerfectBase: CGFloat = 0.4500      // rate at DUPR 4.0
+        static let dropPerfectSlope: CGFloat = 0.1800     // per DUPR
+        static let dropPerfectFloor: CGFloat = 0.02
+        static let dropPerfectCeiling: CGFloat = 0.92
+
+        // Drop error: net or out (total whiff)
+        // 2.0→~50%, 3.5→~22%, 5.0→~10%, 6.5→~3%
+        static let dropErrorBase: CGFloat = 0.1800        // rate at DUPR 4.0
+        static let dropErrorSlope: CGFloat = -0.1000      // per DUPR (decreases)
+        static let dropErrorFloor: CGFloat = 0.02
+        static let dropErrorCeiling: CGFloat = 0.70
+
+        // Pop-up (attackable) = 1 - perfect - error (remainder)
+
+        // --- Drive Quality Under Pressure ---
+
+        // Clean drive: gets past net player or puts them in trouble
+        // 2.0→~15%, 3.5→~40%, 5.0→~65%, 6.5→~82%
+        static let driveCleanBase: CGFloat = 0.4935       // rate at DUPR 4.0
+        static let driveCleanSlope: CGFloat = 0.1500      // per DUPR
+        static let driveCleanFloor: CGFloat = 0.08
+        static let driveCleanCeiling: CGFloat = 0.88
+
+        // --- Kitchen Approach After Drop ---
+
+        // Probability NPC moves to kitchen line after making a successful drop
+        // 2.0→~12%, 3.5→~45%, 5.0→~80%, 6.5→~95%
+        static let kitchenApproachAfterDropBase: CGFloat = 0.5500   // rate at DUPR 4.0
+        static let kitchenApproachAfterDropSlope: CGFloat = 0.2000  // per DUPR
+        static let kitchenApproachAfterDropFloor: CGFloat = 0.02
+        static let kitchenApproachAfterDropCeiling: CGFloat = 0.98
+
+        // --- Pressure Detection Thresholds ---
+
+        // NPC is "deep" when further than this from the net
+        static let deepThresholdNY: CGFloat = 0.82      // NPC side: 0.82+ is deep
+        // Opponent is "at net" when closer than this to the net
+        static let opponentAtNetThresholdNY: CGFloat = 0.38  // Player side: <0.38 is at net
+    }
+
     // MARK: - XP
     enum XP {
         static let baseXPPerMatch: Int = 50

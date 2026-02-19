@@ -170,6 +170,7 @@ final class MatchAI {
 
     // Player position for tactical placement (updated by scene each frame)
     var playerPositionNX: CGFloat = 0.5
+    var playerPositionNY: CGFloat = 0.0
 
     // Rally pattern memory (tracks player's recent shot X positions)
     var playerShotHistory: [CGFloat] = []
@@ -445,8 +446,22 @@ final class MatchAI {
                 let recoveryStrength = strategy.aggressionControl
 
                 let recoveryNY: CGFloat
-                if lastShotWasTouch && roll(Double(strategy.kitchenApproach)) {
-                    recoveryNY = 0.69 // kitchen line
+                if lastShotWasTouch {
+                    // Pressure-specific kitchen approach: use DUPR-scaled rate
+                    let PS = GameConstants.PressureShots.self
+                    let pressureApproachRate = Self.pressureRate(
+                        dupr: npcDUPR, base: PS.kitchenApproachAfterDropBase,
+                        slope: PS.kitchenApproachAfterDropSlope,
+                        floor: PS.kitchenApproachAfterDropFloor,
+                        ceiling: PS.kitchenApproachAfterDropCeiling
+                    )
+                    // Use the better of: existing strategy or pressure-specific rate
+                    let approachChance = max(strategy.kitchenApproach, pressureApproachRate)
+                    if roll(Double(approachChance)) {
+                        recoveryNY = 0.69 // kitchen line
+                    } else {
+                        recoveryNY = startNY
+                    }
                 } else {
                     recoveryNY = startNY
                 }
@@ -666,6 +681,27 @@ final class MatchAI {
             let clampedReturn = max(PA.returnFloor, min(PA.returnCeiling, rawReturn))
             let adjustedReturn = clampedReturn * (1.0 - stretchFraction * PA.stretchPenalty)
             errorRate = max(errorRate, 1.0 - adjustedReturn)
+        }
+
+        // Pressure drop quality: when NPC is under pressure and chose touch/drop,
+        // apply DUPR-scaled drop error rate (net/out whiff)
+        if !isHeadless && lastShotModes.contains(.touch) {
+            let PS = GameConstants.PressureShots.self
+            let isUnderPressure = currentNY > PS.deepThresholdNY
+                && playerPositionNY < PS.opponentAtNetThresholdNY
+                && playerPositionNY > 0
+            if isUnderPressure {
+                let dropErrorRate = Self.pressureRate(
+                    dupr: npcDUPR, base: PS.dropErrorBase, slope: PS.dropErrorSlope,
+                    floor: PS.dropErrorFloor, ceiling: PS.dropErrorCeiling
+                )
+                // Stat modifier: higher touch stats reduce error
+                let avgTouchStat = CGFloat(npcStats.stat(.accuracy) + npcStats.stat(.consistency)
+                    + npcStats.stat(.focus) + npcStats.stat(.spin)) / 4.0
+                let statMod = avgTouchStat / 99.0
+                let adjustedDropError = dropErrorRate * (1.3 - 0.3 * statMod)
+                errorRate = max(errorRate, adjustedDropError)
+            }
         }
 
         return CGFloat.random(in: 0...1) < errorRate
@@ -997,6 +1033,15 @@ final class MatchAI {
             return selectShotModesHeadless(ball: ball)
         }
 
+        // Positional pressure: NPC deep + opponent at net → use pressure shot selection
+        let PS = GameConstants.PressureShots.self
+        let isUnderPressure = currentNY > PS.deepThresholdNY
+            && playerPositionNY < PS.opponentAtNetThresholdNY
+            && playerPositionNY > 0  // 0 means not tracked
+        if isUnderPressure {
+            return selectPressureShotModes(ball: ball)
+        }
+
         var modes: SM = []
         let staminaPct = stamina / P.maxStamina
 
@@ -1123,12 +1168,90 @@ final class MatchAI {
         return modes
     }
 
+    /// Pressure-aware shot selection when NPC is deep and opponent is at the net.
+    /// Uses PressureShots constants for DUPR-scaled drop/drive/lob selection.
+    private func selectPressureShotModes(ball: DrillBallSimulation) -> SM {
+        var modes: SM = []
+        let PS = GameConstants.PressureShots.self
+
+        let dropRate = Self.pressureRate(
+            dupr: npcDUPR, base: PS.dropSelectBase, slope: PS.dropSelectSlope,
+            floor: PS.dropSelectFloor, ceiling: PS.dropSelectCeiling
+        )
+        let lobRate = Self.pressureRate(
+            dupr: npcDUPR, base: PS.lobSelectBase, slope: PS.lobSelectSlope,
+            floor: PS.lobSelectFloor, ceiling: PS.lobSelectCeiling
+        )
+
+        let roll = CGFloat.random(in: 0...1)
+        if roll < dropRate {
+            // Drop shot: touch mode
+            modes.insert(.touch)
+            // Smart NPCs add slice for more control on drops
+            if self.roll(Double(strategy.aggressionControl * 0.5)) {
+                modes.insert(.slice)
+            }
+        } else if roll < dropRate + lobRate {
+            // Lob
+            modes.insert(.lob)
+        } else {
+            // Drive: power + topspin for aggressive passing shot
+            modes.insert(.power)
+            let boost = statBoost
+            let spinStat = CGFloat(min(99, npcStats.stat(.spin) + boost)) / 99.0
+            if self.roll(Double(spinStat * strategy.driveOnHighBall * 0.6)) {
+                modes.insert(.topspin)
+            }
+            // Angled cross-court drives
+            if self.roll(Double(strategy.placementAwareness * 0.5)) {
+                modes.insert(.angled)
+            }
+        }
+
+        return modes
+    }
+
+    /// Compute a DUPR-scaled rate: base + (dupr - 4.0) * slope, clamped.
+    private static func pressureRate(
+        dupr: Double, base: CGFloat, slope: CGFloat,
+        floor: CGFloat, ceiling: CGFloat
+    ) -> CGFloat {
+        let raw = base + CGFloat(dupr - 4.0) * slope
+        return max(floor, min(ceiling, raw))
+    }
+
     /// Symmetric skill-gated mode selection for headless mode.
     /// Mirrors SimulatedPlayerAI.selectShotModes so both sides have identical scatter behavior.
     private func selectShotModesHeadless(ball: DrillBallSimulation) -> SM {
         var modes: SM = []
         let staminaPct = stamina / P.maxStamina
         guard staminaPct > 0.10 else { return modes }
+
+        // Headless pressure detection: NPC deep + opponent at net
+        let PS = GameConstants.PressureShots.self
+        let isUnderPressure = currentNY > PS.deepThresholdNY
+            && playerPositionNY < PS.opponentAtNetThresholdNY
+            && playerPositionNY > 0
+        if isUnderPressure {
+            // Apply pressure shot selection with DUPR-scaled probabilities
+            let dropRate = Self.pressureRate(
+                dupr: npcDUPR, base: PS.dropSelectBase, slope: PS.dropSelectSlope,
+                floor: PS.dropSelectFloor, ceiling: PS.dropSelectCeiling
+            )
+            let lobRate = Self.pressureRate(
+                dupr: npcDUPR, base: PS.lobSelectBase, slope: PS.lobSelectSlope,
+                floor: PS.lobSelectFloor, ceiling: PS.lobSelectCeiling
+            )
+            let roll = CGFloat.random(in: 0...1)
+            if roll < dropRate {
+                modes.insert(.touch)
+            } else if roll < dropRate + lobRate {
+                modes.insert(.lob)
+            } else {
+                modes.insert(.power)
+            }
+            return modes
+        }
 
         // Skill competence: same formula as SimulatedPlayerAI (fraction²)
         let fraction = CGFloat(max(0, min(1, (npcDUPR - 2.0) / 6.0)))

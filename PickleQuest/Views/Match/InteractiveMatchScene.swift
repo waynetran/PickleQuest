@@ -1227,8 +1227,6 @@ final class InteractiveMatchScene: SKScene {
     }
 
     private func resolvePoint(_ result: PointResult, reason: String) {
-        run(SoundManager.shared.skAction(for: .pointChime))
-
         dbg.logPointEnd(
             result: result == .playerWon ? "PLAYER WON" : "NPC WON",
             reason: reason,
@@ -1359,7 +1357,6 @@ final class InteractiveMatchScene: SKScene {
             didPlayerWin = playerScore > npcScore
         }
 
-        run(SoundManager.shared.skAction(for: didPlayerWin ? .matchWin : .matchLose))
         if didPlayerWin {
         } else {
         }
@@ -1724,6 +1721,7 @@ final class InteractiveMatchScene: SKScene {
             }
 
             npcAI.playerPositionNX = playerNX
+            npcAI.playerPositionNY = playerNY
             npcAI.update(dt: dt, ball: ballSim)
             checkBallState()
             checkPlayerHit()

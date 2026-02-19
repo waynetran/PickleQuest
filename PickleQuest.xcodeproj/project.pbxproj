@@ -186,6 +186,7 @@
 		BD107C1E7156DC796543C80E /* MatchAnimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B97CA559D005D19373B923E /* MatchAnimator.swift */; };
 		BDC86FDAA4439CFE42A0F107 /* ball.png in Resources */ = {isa = PBXBuildFile; fileRef = CCDA3BA6ED33B0BCB7D1E92D /* ball.png */; };
 		BDD2FCFBF934B013A1FDE81F /* TutorialMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBB3E4E68CAE3058FA644C8C /* TutorialMatchView.swift */; };
+		BF2AD5A43CD9040CA2EE60F8 /* PressureDropShotBalanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E866D586502DBC34CB31E5E /* PressureDropShotBalanceTests.swift */; };
 		C043BA9B8317B6BC00C438D6 /* DUPRCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93674CFBCAE7C8A5EB63610 /* DUPRCalculatorTests.swift */; };
 		C08705F1D0310582FC066134 /* MockTournamentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3303CC062F93F337B9A93396 /* MockTournamentService.swift */; };
 		C27B3751FD2D84CBA255C3AE /* Coach.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBB7B2357F5CEBB6C3168A0 /* Coach.swift */; };
@@ -413,6 +414,7 @@
 		9CBE94C04C84B14084BB229C /* TutorialTip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialTip.swift; sourceTree = "<group>"; };
 		9D397036B916DEC1B19A645F /* MatchHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchHubView.swift; sourceTree = "<group>"; };
 		9D9C040E3A053E3DAC2DD0AC /* PickleQuestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickleQuestApp.swift; sourceTree = "<group>"; };
+		9E866D586502DBC34CB31E5E /* PressureDropShotBalanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PressureDropShotBalanceTests.swift; sourceTree = "<group>"; };
 		9F69B4AC575F890472955931 /* RarityBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RarityBadge.swift; sourceTree = "<group>"; };
 		9F80B1209767EBD9BA7EAC8D /* CourtService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtService.swift; sourceTree = "<group>"; };
 		A0A3F5F877F307464FDF9F72 /* CourtDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtDetailSheet.swift; sourceTree = "<group>"; };
@@ -604,6 +606,7 @@
 				11A1EFB540E81DAA2A2410A3 /* MatchCalibrationTests.swift */,
 				CB744DF042767593746C101B /* MatchEngineTests.swift */,
 				1B134E5A041B5743FC9C0BBC /* MomentumTrackerTests.swift */,
+				9E866D586502DBC34CB31E5E /* PressureDropShotBalanceTests.swift */,
 				C606D2A50B1E58C5C15B7DF4 /* PutAwayBalanceTests.swift */,
 				B7DDD9E0CCFBC51FA43D0DF5 /* ServeBalanceTests.swift */,
 				B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */,
@@ -1332,6 +1335,7 @@
 				3C270A588B8137A9C5C3B1CD /* MatchCalibrationTests.swift in Sources */,
 				21A8FEC6BE691264FAE691E7 /* MatchEngineTests.swift in Sources */,
 				72218CB4A65BD13B1CE5DDD9 /* MomentumTrackerTests.swift in Sources */,
+				BF2AD5A43CD9040CA2EE60F8 /* PressureDropShotBalanceTests.swift in Sources */,
 				811A951D279987932E6CECB5 /* PutAwayBalanceTests.swift in Sources */,
 				ABE78D5B9C6C4897A4AAD462 /* ServeBalanceTests.swift in Sources */,
 				DBE5F18AC6CBE4C42E7A712E /* StatCalculatorTests.swift in Sources */,
