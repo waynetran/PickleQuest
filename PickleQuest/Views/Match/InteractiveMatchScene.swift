@@ -1765,8 +1765,10 @@ final class InteractiveMatchScene: SKScene {
                 playerSpriteFlipped = lungeDirection < 0
             }
         case .jumping:
-            // Airborne — move sideways
-            let lungeSpeed = lungeDistance / lungeJumpDuration
+            // Airborne — move sideways (stamina < 10% → 1/3 distance)
+            let staminaPctLunge = stamina / P.maxStamina
+            let effectiveLungeDistance = staminaPctLunge <= 0.10 ? lungeDistance / 3.0 : lungeDistance
+            let lungeSpeed = effectiveLungeDistance / lungeJumpDuration
             playerNX += lungeDirection * lungeSpeed * dt
             playerNX = max(0.0, min(1.0, playerNX))
             if lungeTimer >= lungeJumpDuration {
@@ -3000,7 +3002,7 @@ final class InteractiveMatchScene: SKScene {
 
         // Stamina warning text
         if pct <= 0.10 {
-            staminaWarningLabel.text = "LOW STAMINA — Sprint locked"
+            staminaWarningLabel.text = "LOW STAMINA — Sprint locked • Lunge ⅓"
             staminaWarningLabel.fontColor = .systemRed
             staminaWarningLabel.alpha = CGFloat(0.5 + 0.5 * abs(sin(time * 8)))
         } else if pct <= 0.50 {
