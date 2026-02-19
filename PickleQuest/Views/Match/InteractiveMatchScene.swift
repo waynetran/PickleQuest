@@ -416,8 +416,6 @@ final class InteractiveMatchScene: SKScene {
         ballShadow.strokeColor = .clear
         ballShadow.zPosition = AC.ZPositions.ballShadow
         ballShadow.alpha = 0
-        ballTrail.alpha = 0
-        ballTrailHistory.removeAll()
         addChild(ballShadow)
 
         // Ball comet trail
@@ -1050,10 +1048,11 @@ final class InteractiveMatchScene: SKScene {
 
         // Compute physics-based arc for the actual serve distance (NPC at ~0.92 → target ~0.15)
         let serveDistNY = abs(npcAI.currentNY - targetNY)
+        let serveDistNX = abs(npcAI.currentNX - targetNX)
         let serveArc = DrillShotCalculator.arcToLandAt(
             distanceNY: serveDistNY,
-            power: shot.power,
-            arcMargin: 1.30 // extra margin for cross-court angle
+            distanceNX: serveDistNX,
+            power: shot.power
         )
 
         dbg.logNPCServe(
