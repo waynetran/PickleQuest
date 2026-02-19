@@ -517,10 +517,10 @@ final class InteractiveMatchScene: SKScene {
 
     private func buildHighBallIndicator() {
         // Movement guide arrows — court-painted perspective arrows in 4 directions
-        moveGuideBack = buildMoveGuideArrow(text: "GO BACK!", rotation: 0)
+        moveGuideBack = buildMoveGuideArrow(text: "GO BACK!", rotation: .pi)
         moveGuideLeft = buildMoveGuideArrow(text: "GO LEFT!", rotation: .pi / 2)
         moveGuideRight = buildMoveGuideArrow(text: "GO RIGHT!", rotation: -.pi / 2)
-        moveGuideForward = buildMoveGuideArrow(text: "MOVE UP!", rotation: .pi)
+        moveGuideForward = buildMoveGuideArrow(text: "MOVE UP!", rotation: 0)
         addChild(moveGuideBack)
         addChild(moveGuideLeft)
         addChild(moveGuideRight)
