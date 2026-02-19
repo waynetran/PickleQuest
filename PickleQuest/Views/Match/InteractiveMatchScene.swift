@@ -1174,8 +1174,8 @@ final class InteractiveMatchScene: SKScene {
         let S = GameConstants.NPCStrategy.self
 
         // NPC double fault chance — base rate from stats + mode penalties for power/spin
-        let consistencyStat = CGFloat(min(99, npc.stats.stat(.consistency) + npcBoost))
-        let accuracyStat = CGFloat(min(99, npc.stats.stat(.accuracy) + npcBoost))
+        let consistencyStat = CGFloat(P.npcScaledStat(.consistency, base: npc.stats.stat(.consistency), boost: npcBoost, dupr: npc.duprRating))
+        let accuracyStat = CGFloat(P.npcScaledStat(.accuracy, base: npc.stats.stat(.accuracy), boost: npcBoost, dupr: npc.duprRating))
         let serveStat = (consistencyStat + accuracyStat) / 2.0
         let baseFaultRate = P.npcBaseServeFaultRate * pow(1.0 - serveStat / 99.0, P.npcServeFaultStatExponent)
 

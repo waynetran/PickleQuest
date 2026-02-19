@@ -338,9 +338,7 @@ final class MatchAI {
         guard !isHeadless else { return false }
 
         // Athleticism gate
-        let speedStat = CGFloat(min(99, npcStats.stat(.speed) + statBoost))
-        let reflexesStat = CGFloat(min(99, npcStats.stat(.reflexes) + statBoost))
-        let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
+        let athleticism = (scaledStat(.speed) + scaledStat(.reflexes)) / 2.0 / 99.0
         guard athleticism >= P.npcJumpAthleticismThreshold else { return false }
 
         // Check if ball will be too high for standing reach
@@ -529,8 +527,8 @@ final class MatchAI {
 
     /// Predict where the ball will land and set as movement target.
     private func predictLanding(ball: DrillBallSimulation) {
-        // Scale lookahead with positioning stat (boosted) — better players read the ball earlier
-        let positioningStat = CGFloat(min(99, npcStats.stat(.positioning) + statBoost))
+        // Scale lookahead with positioning stat — better players read the ball earlier
+        let positioningStat = scaledStat(.positioning)
         let baseLookAhead: CGFloat = 0.6
         let statBonus: CGFloat = (positioningStat / 99.0) * 0.5
         let lookAhead = baseLookAhead + statBonus  // 0.6 to 1.1 seconds
@@ -579,9 +577,7 @@ final class MatchAI {
         if ball.bounceCount == 0 && ball.courtY < currentNY { return false }
 
         // 3D hitbox: height reach based on athleticism (speed + reflexes) + jump bonus
-        let speedStat = CGFloat(min(99, npcStats.stat(.speed) + statBoost))
-        let reflexesStat = CGFloat(min(99, npcStats.stat(.reflexes) + statBoost))
-        let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
+        let athleticism = (scaledStat(.speed) + scaledStat(.reflexes)) / 2.0 / 99.0
         let heightReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus + jumpHeightBonus
         let excessHeight = max(0, ball.height - heightReach)
 
@@ -597,10 +593,9 @@ final class MatchAI {
     /// Error rate factors in incoming ball speed + spin (shot difficulty), NPC stats,
     /// player shot quality, and DUPR gap.
     func shouldMakeError(ball: DrillBallSimulation) -> Bool {
-        let boost = statBoost
-        let consistencyStat = CGFloat(min(99, npcStats.stat(.consistency) + boost))
-        let focusStat = CGFloat(min(99, npcStats.stat(.focus) + boost))
-        let reflexesStat = CGFloat(min(99, npcStats.stat(.reflexes) + boost))
+        let consistencyStat = scaledStat(.consistency)
+        let focusStat = scaledStat(.focus)
+        let reflexesStat = scaledStat(.reflexes)
         let avgStat = (consistencyStat + focusStat + reflexesStat) / 3.0
         let statFraction = avgStat / 99.0
 
@@ -722,11 +717,10 @@ final class MatchAI {
 
     /// Compute error debug info without rolling the dice (non-mutating snapshot).
     func computeErrorDebugInfo(ball: DrillBallSimulation) -> ErrorDebugInfo {
-        let boost = statBoost
-        let consistencyStat = CGFloat(min(99, npcStats.stat(.consistency) + boost))
-        let focusStat = CGFloat(min(99, npcStats.stat(.focus) + boost))
-        let reflexesStat = CGFloat(min(99, npcStats.stat(.reflexes) + boost))
-        let avgStat = (consistencyStat + focusStat + reflexesStat) / 3.0
+        let consistencyDbg = scaledStat(.consistency)
+        let focusDbg = scaledStat(.focus)
+        let reflexesDbg = scaledStat(.reflexes)
+        let avgStat = (consistencyDbg + focusDbg + reflexesDbg) / 3.0
         let statFraction = avgStat / 99.0
         let baseError: CGFloat = P.npcBaseErrorRate * (1.0 - statFraction)
 
@@ -986,19 +980,29 @@ final class MatchAI {
     /// weak shots) actually matter.
     private var effectiveStats: PlayerStats {
         let boost = statBoost
+        let dupr = npcDUPR
+        func s(_ stat: StatType, _ base: Int) -> Int {
+            P.npcScaledStat(stat, base: base, boost: boost, dupr: dupr)
+        }
         return PlayerStats(
-            power: min(99, npcStats.power + boost),
-            accuracy: min(99, npcStats.accuracy + boost),
-            spin: min(99, npcStats.spin + boost),
-            speed: min(99, npcStats.speed + boost),
-            defense: min(99, npcStats.defense + boost),
-            reflexes: min(99, npcStats.reflexes + boost),
-            positioning: min(99, npcStats.positioning + boost),
-            clutch: min(99, npcStats.clutch + boost),
-            focus: min(99, npcStats.focus + boost),
-            stamina: min(99, npcStats.stamina + boost),
-            consistency: min(99, npcStats.consistency + boost)
+            power: s(.power, npcStats.power),
+            accuracy: s(.accuracy, npcStats.accuracy),
+            spin: s(.spin, npcStats.spin),
+            speed: s(.speed, npcStats.speed),
+            defense: s(.defense, npcStats.defense),
+            reflexes: s(.reflexes, npcStats.reflexes),
+            positioning: s(.positioning, npcStats.positioning),
+            clutch: s(.clutch, npcStats.clutch),
+            focus: s(.focus, npcStats.focus),
+            stamina: s(.stamina, npcStats.stamina),
+            consistency: s(.consistency, npcStats.consistency)
         )
+    }
+
+    /// Single scaled stat value (boosted + DUPR global multiplier).
+    /// Use for one-off stat lookups outside effectiveStats.
+    private func scaledStat(_ stat: StatType) -> CGFloat {
+        CGFloat(P.npcScaledStat(stat, base: npcStats.stat(stat), boost: statBoost, dupr: npcDUPR))
     }
 
     // MARK: - Situational Shot Assessment
@@ -1089,12 +1093,11 @@ final class MatchAI {
         // Dumb NPCs (low aggressionControl) stay aggressive even on hard balls → more errors via error model
         let aggression = (1.0 - difficulty) * (S.baseAggressionFloor + strategy.aggressionControl * S.baseAggressionFloor)
 
-        let boost = statBoost
-        let powerStat = CGFloat(min(99, npcStats.stat(.power) + boost)) / 99.0
-        let accuracyStat = CGFloat(min(99, npcStats.stat(.accuracy) + boost)) / 99.0
-        let spinStat = CGFloat(min(99, npcStats.stat(.spin) + boost)) / 99.0
-        let positioningStat = CGFloat(min(99, npcStats.stat(.positioning) + boost)) / 99.0
-        let focusStat = CGFloat(min(99, npcStats.stat(.focus) + boost)) / 99.0
+        let powerStat = scaledStat(.power) / 99.0
+        let accuracyStat = scaledStat(.accuracy) / 99.0
+        let spinStat = scaledStat(.spin) / 99.0
+        let positioningStat = scaledStat(.positioning) / 99.0
+        let focusStat = scaledStat(.focus) / 99.0
 
         // Power: drive high balls when aggression allows
         let powerChance = strategy.driveOnHighBall * powerStat * aggression
@@ -1207,8 +1210,7 @@ final class MatchAI {
         } else {
             // Drive: power + topspin for aggressive passing shot
             modes.insert(.power)
-            let boost = statBoost
-            let spinStat = CGFloat(min(99, npcStats.stat(.spin) + boost)) / 99.0
+            let spinStat = scaledStat(.spin) / 99.0
             if self.roll(Double(spinStat * strategy.driveOnHighBall * 0.6)) {
                 modes.insert(.topspin)
             }
@@ -1302,7 +1304,7 @@ final class MatchAI {
 
     /// Reset stamina between points (recovery scaled by stamina stat).
     func recoverBetweenPoints() {
-        let staminaStat = CGFloat(npcStats.stat(.stamina))
+        let staminaStat = scaledStat(.stamina)
         let baseRecovery: CGFloat = 8
         let staminaBonus = (staminaStat / 99.0) * 12  // stat 10 → +1.2, stat 85 → +10.3
         stamina = min(P.maxStamina, stamina + baseRecovery + staminaBonus)

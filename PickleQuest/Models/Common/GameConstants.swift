@@ -382,6 +382,64 @@ enum GameConstants {
         nonisolated(unsafe) static var baseMoveSpeed: CGFloat = 0.28
         nonisolated(unsafe) static var maxMoveSpeedBonus: CGFloat = 0.56
 
+        // NPC move speed DUPR scaling — interpolates from low (DUPR 2.0) to high (DUPR 8.0)
+        nonisolated(unsafe) static var npcMoveSpeedScaleLow: CGFloat = 0.20   // DUPR 2.0 speed multiplier
+        nonisolated(unsafe) static var npcMoveSpeedScaleHigh: CGFloat = 1.0   // DUPR 8.0 speed multiplier
+
+        // MARK: NPC Stat Global Multipliers
+        // Scale NPC effective stats by DUPR: DUPR 2.0 uses Low, DUPR 8.0 uses High.
+        // Interpolated linearly. Applied after stat boost, before stats are used.
+        // Search: "GlobalMultiplier" to find all per-stat multipliers.
+        nonisolated(unsafe) static var npcPowerGlobalMultiplierLow: CGFloat = 0.50
+        nonisolated(unsafe) static var npcPowerGlobalMultiplierHigh: CGFloat = 1.0
+        nonisolated(unsafe) static var npcAccuracyGlobalMultiplierLow: CGFloat = 0.50
+        nonisolated(unsafe) static var npcAccuracyGlobalMultiplierHigh: CGFloat = 1.0
+        nonisolated(unsafe) static var npcSpinGlobalMultiplierLow: CGFloat = 0.50
+        nonisolated(unsafe) static var npcSpinGlobalMultiplierHigh: CGFloat = 1.0
+        nonisolated(unsafe) static var npcSpeedGlobalMultiplierLow: CGFloat = 1.0   // speed already has npcMoveSpeedScale
+        nonisolated(unsafe) static var npcSpeedGlobalMultiplierHigh: CGFloat = 1.0
+        nonisolated(unsafe) static var npcDefenseGlobalMultiplierLow: CGFloat = 0.50
+        nonisolated(unsafe) static var npcDefenseGlobalMultiplierHigh: CGFloat = 1.0
+        nonisolated(unsafe) static var npcReflexesGlobalMultiplierLow: CGFloat = 0.50
+        nonisolated(unsafe) static var npcReflexesGlobalMultiplierHigh: CGFloat = 1.0
+        nonisolated(unsafe) static var npcPositioningGlobalMultiplierLow: CGFloat = 0.50
+        nonisolated(unsafe) static var npcPositioningGlobalMultiplierHigh: CGFloat = 1.0
+        nonisolated(unsafe) static var npcClutchGlobalMultiplierLow: CGFloat = 0.50
+        nonisolated(unsafe) static var npcClutchGlobalMultiplierHigh: CGFloat = 1.0
+        nonisolated(unsafe) static var npcFocusGlobalMultiplierLow: CGFloat = 0.50
+        nonisolated(unsafe) static var npcFocusGlobalMultiplierHigh: CGFloat = 1.0
+        nonisolated(unsafe) static var npcStaminaGlobalMultiplierLow: CGFloat = 0.50
+        nonisolated(unsafe) static var npcStaminaGlobalMultiplierHigh: CGFloat = 1.0
+        nonisolated(unsafe) static var npcConsistencyGlobalMultiplierLow: CGFloat = 0.50
+        nonisolated(unsafe) static var npcConsistencyGlobalMultiplierHigh: CGFloat = 1.0
+
+        /// Returns the DUPR-interpolated global multiplier for a given stat.
+        static func npcGlobalMultiplier(for stat: StatType, dupr: Double) -> CGFloat {
+            let frac = CGFloat(max(0, min(1, (dupr - 2.0) / 6.0)))
+            let (low, high): (CGFloat, CGFloat)
+            switch stat {
+            case .power:        (low, high) = (npcPowerGlobalMultiplierLow, npcPowerGlobalMultiplierHigh)
+            case .accuracy:     (low, high) = (npcAccuracyGlobalMultiplierLow, npcAccuracyGlobalMultiplierHigh)
+            case .spin:         (low, high) = (npcSpinGlobalMultiplierLow, npcSpinGlobalMultiplierHigh)
+            case .speed:        (low, high) = (npcSpeedGlobalMultiplierLow, npcSpeedGlobalMultiplierHigh)
+            case .defense:      (low, high) = (npcDefenseGlobalMultiplierLow, npcDefenseGlobalMultiplierHigh)
+            case .reflexes:     (low, high) = (npcReflexesGlobalMultiplierLow, npcReflexesGlobalMultiplierHigh)
+            case .positioning:  (low, high) = (npcPositioningGlobalMultiplierLow, npcPositioningGlobalMultiplierHigh)
+            case .clutch:       (low, high) = (npcClutchGlobalMultiplierLow, npcClutchGlobalMultiplierHigh)
+            case .focus:        (low, high) = (npcFocusGlobalMultiplierLow, npcFocusGlobalMultiplierHigh)
+            case .stamina:      (low, high) = (npcStaminaGlobalMultiplierLow, npcStaminaGlobalMultiplierHigh)
+            case .consistency:  (low, high) = (npcConsistencyGlobalMultiplierLow, npcConsistencyGlobalMultiplierHigh)
+            }
+            return low + frac * (high - low)
+        }
+
+        /// Apply global multipliers to a boosted stat value for a given NPC DUPR.
+        static func npcScaledStat(_ stat: StatType, base: Int, boost: Int, dupr: Double) -> Int {
+            let boosted = CGFloat(min(99, base + boost))
+            let mult = npcGlobalMultiplier(for: stat, dupr: dupr)
+            return min(99, Int((boosted * mult).rounded()))
+        }
+
         // Shot quality
         static let heightPowerBonus: CGFloat = 0.3        // bonus power for high ball (overhead smash)
 
