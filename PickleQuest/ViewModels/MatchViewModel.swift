@@ -252,6 +252,9 @@ final class MatchViewModel {
     private func runEngineStream(engine: MatchEngine, player: Player, opponent: NPC) async {
         let stream = await engine.simulate()
         for await event in stream {
+            // Stop processing if we switched away from simulation (e.g. to interactive mode)
+            guard matchState == .simulating else { break }
+
             let entry = MatchEventEntry(event: event, playerName: playerName)
             eventLog.append(entry)
 

@@ -380,10 +380,11 @@ enum DrillShotCalculator {
             } else {
                 targetNX = CGFloat.random(in: min(innerEdge, 0.25)...innerEdge)
             }
-            // Target deep to push opponent back
-            targetNY = CGFloat.random(in: 0.75...0.90)
-            // Controlled slam — 1.2x power (smash 2.0x stacks separately for high balls)
-            power *= 1.2
+            // Target mid-court — put-aways are aimed at feet, not deep
+            targetNY = CGFloat.random(in: 0.65...0.80)
+            // Put-away power is already boosted by height/kitchen bonuses above —
+            // cap it so kitchen put-aways don't fly off the court
+            power = min(power, 0.65 + duprFrac * 0.25)  // 0.65 at DUPR 2.0, 0.90 at DUPR 8.0
         }
 
         // --- Tactical placement: bias shot away from opponent ---
@@ -419,12 +420,15 @@ enum DrillShotCalculator {
 
         // Power mode: 2x ball speed at full stamina, scales down to regular at 0 stamina
         if modes.contains(.power) {
-            let regularPower = power
-            let fullPower = regularPower * (1.0 + powerStat / 99.0)
-            power = regularPower + (fullPower - regularPower) * staminaFraction
-            // Power adds extra scatter on top of base
-            let powerScatter = 0.06 * (1.0 - accuracyStat / 99.0)
-            scatter += powerScatter
+            if !isPutAway {
+                // Normal power shots get full boost + extra scatter
+                let regularPower = power
+                let fullPower = regularPower * (1.0 + powerStat / 99.0)
+                power = regularPower + (fullPower - regularPower) * staminaFraction
+                let powerScatter = 0.06 * (1.0 - accuracyStat / 99.0)
+                scatter += powerScatter
+            }
+            // Put-aways already have their own 1.2x power — don't double-boost
             targetNY = CGFloat.random(in: 0.80...0.92)
         }
 
@@ -455,9 +459,9 @@ enum DrillShotCalculator {
             scatter *= (1.0 - focusReduction)
         }
 
-        // Smash put-away: boosted power when ball is high enough for a smash and touch is off
-        // Touch mode converts smashes/volleys into soft drops toward kitchen instead
-        if ballHeight >= P.smashHeightThreshold && !modes.contains(.touch) {
+        // Smash: boosted power when ball is high enough and touch is off
+        // Skip for put-aways — they already have their own power scaling (1.2x + height bonus)
+        if ballHeight >= P.smashHeightThreshold && !modes.contains(.touch) && !isPutAway {
             power *= GameConstants.Smash.powerMultiplier
         }
 

@@ -1173,7 +1173,6 @@ final class InteractiveDrillScene: SKScene {
             let dist = sqrt(dx * dx + dy * dy)
 
             if dist <= P.coneHitRadius {
-                run(SoundManager.shared.skAction(for: .pointChime))
                 scorekeeper.onConeHit()
                 showCoachSpeech(coachPersonality.coneHitLine(), duration: 2.5)
                 // Flash cone green
@@ -1725,8 +1724,6 @@ final class InteractiveDrillScene: SKScene {
         ballTrailOuter.alpha = 0
         ballTrailInner.alpha = 0
         ballTrailHistory.removeAll()
-
-        run(SoundManager.shared.skAction(for: .matchWin))
 
         let result = scorekeeper.calculateResult()
         onComplete(result)

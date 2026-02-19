@@ -429,6 +429,10 @@ enum GameConstants {
         /// Higher = steeper curve (more separation between beginner and advanced).
         static let npcServeFaultStatExponent: CGFloat = 2.0
 
+        /// Minimum serve power — ensures even beginners can physically reach the
+        /// service box. At 0.42, the arc stays under the 0.85 cap for full-court serves.
+        static let serveMinPower: CGFloat = 0.42
+
         /// Maximum serve power — pickleball serves are underhand, significantly
         /// slower than rally drives. Controls ace rate: lower = fewer aces.
         /// At 0.45, serve speed ≈ 0.60 (vs rally max ~0.90). Tunable training param.

@@ -1167,17 +1167,17 @@ final class InteractiveMatchScene: SKScene {
             targetNY = CGFloat.random(in: S.npcServeTargetMinNY...maxNY)
         }
 
-        // Cap serve power — pickleball serves are underhand, much slower than rally drives
-        let servePower = min(P.servePowerCap, shot.power)
+        // Serve power: floor ensures even beginners can physically reach the service box,
+        // cap keeps it underhand-speed (slower than rally drives)
+        let servePower = max(P.serveMinPower, min(P.servePowerCap, shot.power))
 
-        // Compute physics-based arc for the actual serve distance (NPC at ~0.92 → target ~0.15)
+        // Compute physics-based arc for the actual serve distance
         let serveDistNY = abs(npcAI.currentNY - targetNY)
         let serveDistNX = abs(npcAI.currentNX - targetNX)
         let serveArc = DrillShotCalculator.arcToLandAt(
             distanceNY: serveDistNY,
             distanceNX: serveDistNX,
-            power: servePower,
-            topspinFactor: shot.topspinFactor
+            power: servePower
         )
 
         dbg.logNPCServe(
@@ -1197,7 +1197,6 @@ final class InteractiveMatchScene: SKScene {
         let launchOrigin = CGPoint(x: npcAI.currentNX, y: npcAI.currentNY)
         let launchTarget = CGPoint(x: targetNX, y: targetNY)
         let launchPower = servePower
-        let launchSpin = shot.spinCurve
         let serveAccuracy: CGFloat = isDoubleFault ? 0.0 : 0.8
 
         // Delay ball launch to mid-swing
@@ -1205,10 +1204,11 @@ final class InteractiveMatchScene: SKScene {
         let launch = SKAction.run { [weak self] in
             guard let self else { return }
             self.phase = .playing
+            // Serve launch: flat (no spin/topspin) — spin effects are modeled by stat-based fault rate
             self.ballSim.launch(
                 from: launchOrigin, toward: launchTarget,
                 power: launchPower, arc: serveArc,
-                spin: launchSpin
+                spin: 0
             )
             self.ballSim.lastHitByPlayer = false
             self.previousBallNY = self.ballSim.courtY

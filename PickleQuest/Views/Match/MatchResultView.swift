@@ -280,9 +280,6 @@ struct MatchResultView: View {
                 StatAllocationView(viewModel: vm)
             }
         }
-        .onAppear {
-            SoundManager.shared.playUI(result.didPlayerWin ? .matchWin : .matchLose)
-        }
     }
 
     @ViewBuilder

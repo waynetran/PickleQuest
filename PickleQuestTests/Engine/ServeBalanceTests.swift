@@ -52,8 +52,23 @@ struct ServeBalanceTests {
         let duprFrac = CGFloat(max(0, min(1, (dupr - 2.0) / 6.0)))
         let maxNY = serveMaxNY_Low + duprFrac * (serveMaxNY_High - serveMaxNY_Low)
 
-        // NPC serve origin (behind baseline)
-        let serveOriginNY: CGFloat = 0.92
+        // NPC serve origin (behind baseline — matches MatchAI.positionForServe)
+        let serveOriginNY: CGFloat = 1.0
+
+        // Boosted stats for shot calculation (matches MatchAI.effectiveStats)
+        let boostedStats = PlayerStats(
+            power: min(99, stats.power + boost),
+            accuracy: min(99, stats.accuracy + boost),
+            spin: min(99, stats.spin + boost),
+            speed: min(99, stats.speed + boost),
+            defense: min(99, stats.defense + boost),
+            reflexes: min(99, stats.reflexes + boost),
+            positioning: min(99, stats.positioning + boost),
+            clutch: min(99, stats.clutch + boost),
+            focus: min(99, stats.focus + boost),
+            stamina: min(99, stats.stamina + boost),
+            consistency: min(99, stats.consistency + boost)
+        )
 
         var totalFaults = 0
         var dbgDoubleFault = 0, dbgKitchen = 0, dbgOutX = 0, dbgOutY = 0, dbgTimeout = 0
@@ -88,24 +103,23 @@ struct ServeBalanceTests {
                 continue
             }
 
-            // Generate serve using DrillShotCalculator (same as MatchAI.generateServe)
+            // Generate serve using DrillShotCalculator (matches MatchAI.generateServe)
             var shot = DrillShotCalculator.calculatePlayerShot(
-                stats: stats,
+                stats: boostedStats,
                 ballApproachFromLeft: false,
                 drillType: .baselineRally,
                 ballHeight: 0.05,
                 courtNX: i % 2 == 0 ? 0.75 : 0.25,
                 courtNY: serveOriginNY,
                 modes: modes,
-                staminaFraction: 1.0,
-                shooterDUPR: dupr
+                staminaFraction: 1.0
             )
 
             // Power reduction for skilled NPCs (applied before arc — same as MatchAI.generateServe)
             shot.power *= (1.0 - strategy.aggressionControl * 0.45)
 
-            // Cap serve power — pickleball serves are underhand, much slower than rally drives
-            shot.power = min(P.servePowerCap, shot.power)
+            // Serve power: floor + cap (matches npcServe)
+            shot.power = max(P.serveMinPower, min(P.servePowerCap, shot.power))
 
             // Override target (same as InteractiveMatchScene.npcServe)
             let evenScore = i % 2 == 0
@@ -113,7 +127,7 @@ struct ServeBalanceTests {
             let targetNX: CGFloat = evenScore ? 0.25 : 0.75
             let targetNY = CGFloat.random(in: serveMinNY...maxNY)
 
-            // Physics-based arc (uses already-reduced power — matches game)
+            // Physics-based arc (matches InteractiveMatchScene.npcServe — flat, no spin)
             let serveDistNY = abs(serveOriginNY - targetNY)
             let serveDistNX = abs(originNX - targetNX)
             let serveArc = DrillShotCalculator.arcToLandAt(
@@ -124,15 +138,14 @@ struct ServeBalanceTests {
 
             let servePower = shot.power
 
-            // Launch ball flat (no spin/topspin — serve spin is modeled by stat-based fault rate)
+            // Flat serve launch — spin/topspin modeled by stat-based fault rate (matches npcServe)
             ballSim.reset()
             ballSim.launch(
                 from: CGPoint(x: originNX, y: serveOriginNY),
                 toward: CGPoint(x: targetNX, y: targetNY),
                 power: servePower,
                 arc: serveArc,
-                spin: 0,
-                topspin: 0
+                spin: 0
             )
 
             // Step physics until first bounce or timeout
