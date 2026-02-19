@@ -97,21 +97,6 @@ struct ServeBalanceTests {
             let faultRate = statFaultRate + modePenalty
             let isDoubleFault = CGFloat.random(in: 0...1) < faultRate
 
-            if isDoubleFault {
-                totalFaults += 1
-                // Classify fault type (matches npcServe logic)
-                let hasSpin = modes.contains(.topspin) || modes.contains(.slice)
-                let kitchenFaultChance = hasSpin ? duprFrac * 0.4 : 0.0
-                if CGFloat.random(in: 0...1) < kitchenFaultChance {
-                    dbgKitchen += 1
-                } else if CGFloat.random(in: 0...1) < 0.6 {
-                    dbgOutY += 1  // long
-                } else {
-                    dbgOutX += 1  // wide
-                }
-                continue
-            }
-
             // Generate serve using DrillShotCalculator (matches MatchAI.generateServe)
             var shot = DrillShotCalculator.calculatePlayerShot(
                 stats: boostedStats,
@@ -130,24 +115,50 @@ struct ServeBalanceTests {
             // Serve power: floor + cap (matches npcServe)
             shot.power = max(P.serveMinPower, min(P.servePowerCap, shot.power))
 
-            // Override target (same as InteractiveMatchScene.npcServe)
+            // Target selection (matches InteractiveMatchScene.npcServe exactly)
             let evenScore = i % 2 == 0
             let originNX: CGFloat = evenScore ? 0.75 : 0.25
-            let targetNX: CGFloat = evenScore ? 0.25 : 0.75
-            let targetNY = CGFloat.random(in: serveMinNY...maxNY)
+            var targetNX: CGFloat = evenScore ? 0.25 : 0.75
+            var targetNY: CGFloat
+            var faultPowerOverride: CGFloat? = nil
 
-            // Physics-based arc (matches InteractiveMatchScene.npcServe — flat, no spin)
+            if isDoubleFault {
+                dbgDoubleFault += 1
+                let hasSpin = modes.contains(.topspin) || modes.contains(.slice)
+                let kitchenFaultChance = hasSpin ? duprFrac * 0.4 : 0.0
+
+                if CGFloat.random(in: 0...1) < kitchenFaultChance {
+                    targetNY = CGFloat.random(in: 0.35...0.48)
+                } else {
+                    let longVsWide = CGFloat.random(in: 0...1)
+                    if longVsWide < 0.6 {
+                        // Long: NPC swings too hard
+                        targetNY = CGFloat.random(in: 0.05...0.15)
+                        faultPowerOverride = CGFloat.random(in: 0.55...0.70)
+                    } else {
+                        // Wide: NPC aims past sideline
+                        targetNY = CGFloat.random(in: serveMinNY...0.20)
+                        targetNX = evenScore
+                            ? CGFloat.random(in: -0.10...(-0.03))
+                            : CGFloat.random(in: 1.03...1.10)
+                    }
+                }
+            } else {
+                targetNY = CGFloat.random(in: serveMinNY...maxNY)
+            }
+
+            // Arc computed with normal power — fault power override creates overshoot
+            let normalServePower = max(P.serveMinPower, min(P.servePowerCap, shot.power))
+            let servePower = faultPowerOverride ?? normalServePower
+
             let serveDistNY = abs(serveOriginNY - targetNY)
             let serveDistNX = abs(originNX - targetNX)
             let serveArc = DrillShotCalculator.arcToLandAt(
                 distanceNY: serveDistNY,
                 distanceNX: serveDistNX,
-                power: shot.power
+                power: normalServePower
             )
 
-            let servePower = shot.power
-
-            // Flat serve launch — spin/topspin modeled by stat-based fault rate (matches npcServe)
             ballSim.reset()
             ballSim.launch(
                 from: CGPoint(x: originNX, y: serveOriginNY),
@@ -186,7 +197,7 @@ struct ServeBalanceTests {
         }
 
         if count >= 5000 {
-            print("    [DBG DUPR \(String(format: "%.1f", dupr))]: faults=\(dbgDoubleFault) (long=\(dbgOutY) wide=\(dbgOutX) kitchen=\(dbgKitchen)) physics: outX=\(dbgOutX) outY=\(dbgOutY) timeout=\(dbgTimeout) total=\(totalFaults)/\(count)")
+            print("    [DBG DUPR \(String(format: "%.1f", dupr))]: probFaults=\(dbgDoubleFault) physKitchen=\(dbgKitchen) physOutX=\(dbgOutX) physOutY=\(dbgOutY) timeout=\(dbgTimeout) total=\(totalFaults)/\(count)")
         }
         return Double(totalFaults) / Double(count)
     }

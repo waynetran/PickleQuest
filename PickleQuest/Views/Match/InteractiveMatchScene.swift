@@ -1155,26 +1155,30 @@ final class InteractiveMatchScene: SKScene {
         var targetNX: CGFloat = evenScore ? 0.25 : 0.75
         var targetNY: CGFloat
 
+        // Fault type determines target AND power override
+        var faultPowerOverride: CGFloat? = nil
+
         if isDoubleFault {
             // Faults: beginners miss long or wide; only skilled spin servers miss short (kitchen)
             let duprFrac = CGFloat(max(0, min(1, (npc.duprRating - 2.0) / 6.0)))
             let hasSpin = modes.contains(.topspin) || modes.contains(.slice)
-            let kitchenFaultChance = hasSpin ? duprFrac * 0.4 : 0.0  // max 40% of faults are kitchen, only with spin
+            let kitchenFaultChance = hasSpin ? duprFrac * 0.4 : 0.0
 
             if CGFloat.random(in: 0...1) < kitchenFaultChance {
                 // Kitchen fault: aggressive spin serve aimed short
                 targetNY = CGFloat.random(in: 0.35...0.48)
             } else {
-                // Long or wide fault
                 let longVsWide = CGFloat.random(in: 0...1)
                 if longVsWide < 0.6 {
-                    // Long: past baseline
-                    targetNY = CGFloat.random(in: -0.15...(-0.03))
+                    // Long: NPC swings too hard → ball sails past baseline
+                    targetNY = CGFloat.random(in: 0.05...0.15)
+                    faultPowerOverride = CGFloat.random(in: 0.55...0.70)
                 } else {
-                    // Wide: past sideline
-                    targetNY = CGFloat.random(in: S.npcServeTargetMinNY...0.20)
-                    let wideOffset: CGFloat = CGFloat.random(in: 0.08...0.18)
-                    targetNX = evenScore ? (0.25 - wideOffset) : (0.75 + wideOffset)
+                    // Wide: NPC aims poorly → ball goes past sideline
+                    targetNY = CGFloat.random(in: 0.05...0.20)
+                    targetNX = evenScore
+                        ? CGFloat.random(in: -0.10...(-0.03))
+                        : CGFloat.random(in: 1.03...1.10)
                 }
             }
         } else {
@@ -1184,17 +1188,17 @@ final class InteractiveMatchScene: SKScene {
             targetNY = CGFloat.random(in: S.npcServeTargetMinNY...maxNY)
         }
 
-        // Serve power: floor ensures even beginners can physically reach the service box,
-        // cap keeps it underhand-speed (slower than rally drives)
-        let servePower = max(P.serveMinPower, min(P.servePowerCap, shot.power))
+        // Arc is always computed with normal serve power so fault power override
+        // creates an intentional overshoot (ball sails long past baseline)
+        let normalServePower = max(P.serveMinPower, min(P.servePowerCap, shot.power))
+        let servePower = faultPowerOverride ?? normalServePower
 
-        // Compute physics-based arc for the actual serve distance
         let serveDistNY = abs(npcAI.currentNY - targetNY)
         let serveDistNX = abs(npcAI.currentNX - targetNX)
         let serveArc = DrillShotCalculator.arcToLandAt(
             distanceNY: serveDistNY,
             distanceNX: serveDistNX,
-            power: servePower
+            power: normalServePower
         )
 
         dbg.logNPCServe(

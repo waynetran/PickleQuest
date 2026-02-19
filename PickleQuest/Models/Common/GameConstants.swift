@@ -424,7 +424,7 @@ enum GameConstants {
         /// Minimum error rate floor per unit of shot difficulty (even stat 99 NPCs)
         static let npcMinPowerErrorFloor: CGFloat = 0.01
         /// NPC serve fault rate at stat 1 (chance of double fault per serve)
-        static let npcBaseServeFaultRate: CGFloat = 0.1344
+        static let npcBaseServeFaultRate: CGFloat = 0.2263
         /// Exponent for stat→fault scaling: pow(1 - stat/99, exponent).
         /// Higher = steeper curve (more separation between beginner and advanced).
         static let npcServeFaultStatExponent: CGFloat = 3.0
