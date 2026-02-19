@@ -50,8 +50,8 @@ final class MockMatchService: MatchService {
         let avgOpponentDUPR = (opponent1.duprRating + opponent2.duprRating) / 2.0
         let suprGap = avgOpponentDUPR - player.duprRating
 
-        let teamSynergy = TeamSynergy.calculate(p1: player.personality, p2: partner.personality)
-        let opponentSynergy = TeamSynergy.calculate(p1: opponent1.personality, p2: opponent2.personality)
+        let teamSynergy = TeamSynergy.calculate(p1: player.playerType, p2: partner.playerType)
+        let opponentSynergy = TeamSynergy.calculate(p1: opponent1.playerType, p2: opponent2.playerType)
 
         // Apply NPC virtual equipment bonus to all NPC participants
         let opp1Stats = boostedNPCStats(base: opponent1.stats, dupr: opponent1.duprRating)

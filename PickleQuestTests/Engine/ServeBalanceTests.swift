@@ -36,7 +36,7 @@ struct ServeBalanceTests {
         let params = StatProfileLoader.shared
         let stats = params.toNPCStats(dupr: dupr)
         let npc = NPC.practiceOpponent(dupr: dupr)
-        let strategy = NPCStrategyProfile.build(dupr: dupr, personality: npc.personality)
+        let strategy = NPCStrategyProfile.build(dupr: dupr, personality: npc.playerType)
         let P = GameConstants.DrillPhysics.self
         let S = GameConstants.NPCStrategy.self
 

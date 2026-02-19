@@ -17,9 +17,10 @@ struct LevelUpBanner: View {
                         .font(.subheadline.bold())
                         .foregroundStyle(.yellow)
 
-                    let totalPoints = rewards.reduce(0) { $0 + $1.statPointsGained }
+                    let totalStatPoints = rewards.reduce(0) { $0 + $1.statPointsGained }
+                    let totalSkillPoints = rewards.reduce(0) { $0 + $1.skillPointsGained }
                     let topLevel = rewards.last?.newLevel ?? 0
-                    Text("Lv.\(topLevel) — +\(totalPoints) stat points")
+                    Text("Lv.\(topLevel) — +\(totalStatPoints) stat pts, +\(totalSkillPoints) skill pt")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.8))
                 }

@@ -198,7 +198,7 @@ final class MatchViewModel {
         partnerAppearance = AppearanceGenerator.appearance(for: partner)
         opponent2Appearance = AppearanceGenerator.appearance(for: opponent2)
 
-        teamSynergy = TeamSynergy.calculate(p1: player.personality, p2: partner.personality)
+        teamSynergy = TeamSynergy.calculate(p1: player.playerType, p2: partner.playerType)
 
         let effectiveRated = effectiveIsRated(
             playerRating: player.duprRating,

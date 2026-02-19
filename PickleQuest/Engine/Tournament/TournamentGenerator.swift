@@ -72,7 +72,7 @@ enum TournamentGenerator {
             title: "Player",
             difficulty: .beginner, // not used for seeding
             stats: player.stats,
-            personality: player.personality,
+            playerType: player.playerType,
             dialogue: NPCDialogue(greeting: "", onWin: "", onLose: "", taunt: ""),
             portraitName: "player",
             rewardMultiplier: 1.0,
@@ -121,7 +121,7 @@ enum TournamentGenerator {
         var bestPartner: NPC?
         var bestSynergy = -Double.infinity
         for npc in pool {
-            let synergy = TeamSynergy.calculate(p1: player.personality, p2: npc.personality)
+            let synergy = TeamSynergy.calculate(p1: player.playerType, p2: npc.playerType)
             if synergy.multiplier > bestSynergy {
                 bestSynergy = synergy.multiplier
                 bestPartner = npc
@@ -143,7 +143,7 @@ enum TournamentGenerator {
             var bestIdx = 0
             var bestTeamSynergy = -Double.infinity
             for (idx, candidate) in remaining.enumerated() {
-                let syn = TeamSynergy.calculate(p1: anchor.personality, p2: candidate.personality)
+                let syn = TeamSynergy.calculate(p1: anchor.playerType, p2: candidate.playerType)
                 if syn.multiplier > bestTeamSynergy {
                     bestTeamSynergy = syn.multiplier
                     bestIdx = idx
@@ -160,7 +160,7 @@ enum TournamentGenerator {
             title: "Player",
             difficulty: .beginner,
             stats: player.stats,
-            personality: player.personality,
+            playerType: player.playerType,
             dialogue: NPCDialogue(greeting: "", onWin: "", onLose: "", taunt: ""),
             portraitName: "player",
             rewardMultiplier: 1.0,

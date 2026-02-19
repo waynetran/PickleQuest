@@ -1,6 +1,6 @@
 import Foundation
 
-extension NPCPersonality {
+extension PlayerType {
     var displayName: String {
         switch self {
         case .aggressive: return "Power Player"
@@ -48,6 +48,16 @@ extension NPCPersonality {
             return [.speed: 4, .reflexes: 3, .power: -3, .spin: -2, .clutch: -2]
         case .strategist:
             return [.accuracy: 4, .consistency: 3, .power: -3, .speed: -2, .spin: -2]
+        }
+    }
+
+    var exclusiveSkillPreview: [SkillID] {
+        switch self {
+        case .aggressive: return [.intimidate, .powerSurge, .smashMaster]
+        case .defensive: return [.ironWall, .counterPunch, .softHands]
+        case .allRounder: return [.quickStudy, .versatile, .momentumShift]
+        case .speedster: return [.erne, .sprintRecovery, .transitionBurst]
+        case .strategist: return [.patternRead, .shotDisguise, .angledMastery]
         }
     }
 }

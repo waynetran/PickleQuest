@@ -463,14 +463,14 @@ enum GameConstants {
     // MARK: - Put-Away Balance
     enum PutAway {
         // Return rate: continuous DUPR-scaled formula
-        static let baseReturnRate: CGFloat = 0.5955     // return chance at DUPR 4.0
-        static let returnDUPRScale: CGFloat = 0.3698    // change per 1.0 DUPR
-        static let returnFloor: CGFloat = 0.0         // min return rate
-        static let returnCeiling: CGFloat = 0.92      // max return rate
-        static let stretchPenalty: CGFloat = 0.0845      // stretch reduces return rate
+        static let baseReturnRate: CGFloat = 0.3561      // return chance at DUPR 4.0
+        static let returnDUPRScale: CGFloat = 0.2452     // change per 1.0 DUPR
+        static let returnFloor: CGFloat = 0.0          // min return rate
+        static let returnCeiling: CGFloat = 0.65       // max return rate (put-aways are winners)
+        static let stretchPenalty: CGFloat = 0.1686      // stretch reduces return rate significantly
 
-        // Accuracy: put-away scatter multiplier
-        static let scatterMultiplier: CGFloat = 2.0534  // lower = more accurate
+        // Accuracy: put-away scatter multiplier (lower = more accurate, put-aways are easy to place)
+        static let scatterMultiplier: CGFloat = 0.30
     }
 
     // MARK: - NPC Strategy
@@ -566,11 +566,12 @@ enum GameConstants {
     // MARK: - Gear Drops
     enum GearDrop {
         // Field drops
-        static let fieldSpawnIntervalMin: TimeInterval = 900   // 15 minutes minimum
-        static let fieldSpawnIntervalMax: TimeInterval = 1200  // 20 minutes maximum
+        static let fieldSpawnIntervalMin: TimeInterval = 1500  // 25 minutes minimum
+        static let fieldSpawnIntervalMax: TimeInterval = 2100  // 35 minutes maximum
         static let fieldDespawnTime: TimeInterval = 1800       // 30 minutes
-        static let maxActiveFieldDrops: Int = 3
+        static let maxActiveFieldDrops: Int = 2
         static let spawnRadius: Double = 300                   // meters
+        static let fieldDropMinSpacing: Double = 150           // meters — minimum distance between field drops
         static let pickupRadius: Double = 50                   // meters
         static let annotationVisibilityRadius: Double = 500    // meters — only show on map when nearby
 
@@ -596,6 +597,13 @@ enum GameConstants {
         // Fog stashes
         static let fogStashChancePerCell: Double = 0.02        // 2% per newly revealed cell
         static let remotenessRarityBoost: Double = 0.15        // max boost for isolated cells
+    }
+
+    // MARK: - Skills
+    enum Skills {
+        static let skillPointsPerLevel: Int = 1
+        static let maxSkillRank: Int = 5
+        static let lessonsToAcquire: Int = 5
     }
 
     // MARK: - XP

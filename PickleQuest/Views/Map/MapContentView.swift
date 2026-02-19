@@ -224,7 +224,7 @@ struct MapContentView: View {
                     courtPerk: mapVM.currentCourtPerk,
                     alphaNPC: mapVM.alphaNPC,
                     doublesAlphaNPC: nil, // Phase 6: doubles alpha
-                    playerPersonality: appState.player.personality,
+                    playerPersonality: appState.player.playerType,
                     coach: mapVM.coachAtSelectedCourt,
                     player: appState.player,
                     isRated: Bindable(matchVM).isRated,

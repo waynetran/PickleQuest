@@ -6,7 +6,7 @@ struct TeamSynergy: Sendable, Codable, Equatable {
 
     /// Calculate synergy between two personalities.
     /// Returns a multiplier (0.90-1.10) and a description of the team chemistry.
-    static func calculate(p1: NPCPersonality, p2: NPCPersonality) -> TeamSynergy {
+    static func calculate(p1: PlayerType, p2: PlayerType) -> TeamSynergy {
         let mult = synergyMatrix[key(p1, p2)] ?? 1.0
         let desc = synergyDescription(multiplier: mult)
         return TeamSynergy(multiplier: mult, description: desc)
@@ -15,7 +15,7 @@ struct TeamSynergy: Sendable, Codable, Equatable {
     // MARK: - Private
 
     /// Symmetric lookup: order-independent
-    private static func key(_ a: NPCPersonality, _ b: NPCPersonality) -> String {
+    private static func key(_ a: PlayerType, _ b: PlayerType) -> String {
         let sorted = [a.rawValue, b.rawValue].sorted()
         return "\(sorted[0])-\(sorted[1])"
     }
@@ -23,7 +23,7 @@ struct TeamSynergy: Sendable, Codable, Equatable {
     /// 5x5 symmetric synergy matrix
     private static let synergyMatrix: [String: Double] = {
         var m: [String: Double] = [:]
-        func set(_ a: NPCPersonality, _ b: NPCPersonality, _ val: Double) {
+        func set(_ a: PlayerType, _ b: PlayerType, _ val: Double) {
             m[key(a, b)] = val
         }
         // Same personality pairs

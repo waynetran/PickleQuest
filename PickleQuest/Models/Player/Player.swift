@@ -17,7 +17,10 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
     var discoveredCourtIDs: Set<UUID> = []
     var courtLadders: [CourtLadder] = []
     var courtPerks: [CourtPerk] = []
-    var personality: NPCPersonality = .allRounder
+    var playerType: PlayerType = .allRounder
+    var personality: Personality = .competitive
+    var skills: [PlayerSkill] = []
+    var skillLessonProgress: [SkillID: SkillLessonProgress] = [:]
     var coachingRecord: CoachingRecord = .empty
     var dailyChallengeState: DailyChallengeState? = nil
     var npcLossRecord: [UUID: Int] = [:] // NPC ID → consecutive player wins (for wager refusal)
@@ -29,7 +32,9 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
          repProfile: RepProfile = .starter, consumables: [Consumable] = [],
          energy: Double = GameConstants.PersistentEnergy.maxEnergy, lastMatchDate: Date? = nil,
          discoveredCourtIDs: Set<UUID> = [], courtLadders: [CourtLadder] = [],
-         courtPerks: [CourtPerk] = [], personality: NPCPersonality = .allRounder,
+         courtPerks: [CourtPerk] = [], playerType: PlayerType = .allRounder,
+         personality: Personality = .competitive,
+         skills: [PlayerSkill] = [], skillLessonProgress: [SkillID: SkillLessonProgress] = [:],
          coachingRecord: CoachingRecord = .empty, dailyChallengeState: DailyChallengeState? = nil,
          npcLossRecord: [UUID: Int] = [:], gearDropState: GearDropState? = nil) {
         self.id = id
@@ -48,7 +53,10 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
         self.discoveredCourtIDs = discoveredCourtIDs
         self.courtLadders = courtLadders
         self.courtPerks = courtPerks
+        self.playerType = playerType
         self.personality = personality
+        self.skills = skills
+        self.skillLessonProgress = skillLessonProgress
         self.coachingRecord = coachingRecord
         self.dailyChallengeState = dailyChallengeState
         self.npcLossRecord = npcLossRecord
@@ -111,6 +119,16 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
 
     // MARK: - Codable (backwards-compatible with older saves)
 
+    enum CodingKeys: String, CodingKey {
+        case id, name, stats, progression, equippedItems, wallet, duprProfile
+        case matchHistory, appearance, repProfile, consumables, energy, lastMatchDate
+        case discoveredCourtIDs, courtLadders, courtPerks
+        case playerType = "personality"
+        case personality = "dialogPersonality"
+        case skills, skillLessonProgress
+        case coachingRecord, dailyChallengeState, npcLossRecord, gearDropState
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
@@ -129,7 +147,10 @@ struct Player: Identifiable, Codable, Equatable, Sendable {
         discoveredCourtIDs = try c.decodeIfPresent(Set<UUID>.self, forKey: .discoveredCourtIDs) ?? []
         courtLadders = try c.decodeIfPresent([CourtLadder].self, forKey: .courtLadders) ?? []
         courtPerks = try c.decodeIfPresent([CourtPerk].self, forKey: .courtPerks) ?? []
-        personality = try c.decodeIfPresent(NPCPersonality.self, forKey: .personality) ?? .allRounder
+        playerType = try c.decodeIfPresent(PlayerType.self, forKey: .playerType) ?? .allRounder
+        personality = try c.decodeIfPresent(Personality.self, forKey: .personality) ?? .competitive
+        skills = try c.decodeIfPresent([PlayerSkill].self, forKey: .skills) ?? []
+        skillLessonProgress = try c.decodeIfPresent([SkillID: SkillLessonProgress].self, forKey: .skillLessonProgress) ?? [:]
         coachingRecord = try c.decodeIfPresent(CoachingRecord.self, forKey: .coachingRecord) ?? .empty
         dailyChallengeState = try c.decodeIfPresent(DailyChallengeState.self, forKey: .dailyChallengeState)
         npcLossRecord = try c.decodeIfPresent([UUID: Int].self, forKey: .npcLossRecord) ?? [:]

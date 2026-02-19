@@ -21,6 +21,9 @@ struct CharacterCreationView: View {
                     appearanceStep
                         .tag(CharacterCreationViewModel.CreationStep.appearance)
 
+                    playerTypeStep
+                        .tag(CharacterCreationViewModel.CreationStep.playerType)
+
                     personalityStep
                         .tag(CharacterCreationViewModel.CreationStep.personality)
                 }
@@ -182,16 +185,94 @@ struct CharacterCreationView: View {
         }
     }
 
+    // MARK: - Player Type Step
+
+    private var playerTypeStep: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                Text("Choose Your Player Type")
+                    .font(.title2.bold())
+                    .padding(.top)
+
+                ForEach(PlayerType.allCases, id: \.self) { type in
+                    playerTypeCard(type)
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+
+    private func playerTypeCard(_ type: PlayerType) -> some View {
+        let isSelected = type == viewModel.selectedPlayerType
+        return VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                Image(systemName: type.displayIcon)
+                    .font(.title2)
+                    .foregroundStyle(isSelected ? .white : .accentColor)
+                    .frame(width: 44, height: 44)
+                    .background(isSelected ? Color.accentColor : Color.accentColor.opacity(0.1))
+                    .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(type.displayName)
+                        .font(.headline)
+                    Text(type.displayDescription)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+
+            // Exclusive skills preview
+            if isSelected {
+                HStack(spacing: 8) {
+                    Text("Exclusive Skills:")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.secondary)
+                    ForEach(type.exclusiveSkillPreview, id: \.self) { skillID in
+                        if let def = SkillDefinition.definition(for: skillID) {
+                            Label(def.name, systemImage: def.icon)
+                                .font(.caption2)
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
+                }
+                .padding(.top, 8)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isSelected ? Color.accentColor.opacity(0.1) : Color(.systemGray6))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? Color.accentColor : .clear, lineWidth: 2)
+        )
+        .onTapGesture {
+            viewModel.selectedPlayerType = type
+        }
+    }
+
     // MARK: - Personality Step
 
     private var personalityStep: some View {
         ScrollView {
             VStack(spacing: 16) {
-                Text("Choose Your Playstyle")
+                Text("Choose Your Personality")
                     .font(.title2.bold())
                     .padding(.top)
 
-                ForEach(NPCPersonality.allCases, id: \.self) { personality in
+                Text("This affects your dialog style during matches")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                ForEach(Personality.allCases, id: \.self) { personality in
                     personalityCard(personality)
                 }
             }
@@ -199,7 +280,7 @@ struct CharacterCreationView: View {
         }
     }
 
-    private func personalityCard(_ personality: NPCPersonality) -> some View {
+    private func personalityCard(_ personality: Personality) -> some View {
         let isSelected = personality == viewModel.selectedPersonality
         return HStack(spacing: 12) {
             Image(systemName: personality.displayIcon)
@@ -216,6 +297,10 @@ struct CharacterCreationView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+                Text("\"\(personality.sampleQuote)\"")
+                    .font(.caption2)
+                    .foregroundStyle(Color.accentColor)
+                    .italic()
             }
             Spacer()
             if isSelected {
@@ -299,9 +384,3 @@ struct CharacterCreationView: View {
     }
 }
 
-// Make NPCPersonality CaseIterable for the personality picker
-extension NPCPersonality: CaseIterable {
-    static var allCases: [NPCPersonality] {
-        [.aggressive, .defensive, .allRounder, .speedster, .strategist]
-    }
-}

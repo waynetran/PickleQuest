@@ -19,7 +19,7 @@ enum HustlerNPCGenerator {
             defense: 26, reflexes: 28, positioning: 30,
             clutch: 32, focus: 30, stamina: 24, consistency: 28
         ),
-        personality: .strategist,
+        playerType: .strategist,
         dialogue: NPCDialogue(
             greeting: "Hey, looking for some action? I play for keeps.",
             onWin: "Pleasure doing business with you.",
@@ -45,7 +45,7 @@ enum HustlerNPCGenerator {
             defense: 34, reflexes: 36, positioning: 36,
             clutch: 40, focus: 36, stamina: 30, consistency: 34
         ),
-        personality: .allRounder,
+        playerType: .allRounder,
         dialogue: NPCDialogue(
             greeting: "You look like someone who can afford to lose.",
             onWin: "That's what happens when you play with the big dogs.",
@@ -71,7 +71,7 @@ enum HustlerNPCGenerator {
             defense: 38, reflexes: 40, positioning: 40,
             clutch: 44, focus: 40, stamina: 34, consistency: 38
         ),
-        personality: .aggressive,
+        playerType: .aggressive,
         dialogue: NPCDialogue(
             greeting: "Fresh meat. Let's see what you've got.",
             onWin: "Swim with sharks, get bitten.",

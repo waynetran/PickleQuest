@@ -14,7 +14,7 @@ enum AlphaNPCGenerator {
             title: "Court Alpha",
             difficulty: bumpedDifficulty,
             stats: scaledStats,
-            personality: .allRounder,
+            playerType: .allRounder,
             dialogue: alphaDialogue(courtName: court.name),
             portraitName: "alpha_boss",
             rewardMultiplier: GameConstants.CourtProgression.alphaRewardMultiplier

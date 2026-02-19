@@ -169,8 +169,8 @@ actor TournamentEngine {
         if matchType == .doubles, let npc1Partner = match.seed1.npc2, let npc2Partner = match.seed2.npc2 {
             // Doubles NPC match: seed1 team vs seed2 team
             // Use npc1 as "player" side, npc2 team as opponents
-            let teamSynergy = TeamSynergy.calculate(p1: match.seed1.npc1.personality, p2: npc1Partner.personality)
-            let opponentSynergy = TeamSynergy.calculate(p1: match.seed2.npc1.personality, p2: npc2Partner.personality)
+            let teamSynergy = TeamSynergy.calculate(p1: match.seed1.npc1.playerType, p2: npc1Partner.playerType)
+            let opponentSynergy = TeamSynergy.calculate(p1: match.seed2.npc1.playerType, p2: npc2Partner.playerType)
 
             engine = MatchEngine(
                 playerStats: match.seed1.npc1.stats,

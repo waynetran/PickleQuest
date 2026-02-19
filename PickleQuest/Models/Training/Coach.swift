@@ -136,11 +136,14 @@ struct CoachingRecord: Codable, Equatable, Sendable {
     var sessionsToday: [String: Date] // coachID string → last session date
     var statBoosts: [StatType: Int]   // stat → total coaching boosts applied
     var coachDailyEnergy: [String: CoachEnergyEntry] // coachID → energy for the day
+    var totalLessonsPerCoach: [String: Int] = [:] // coachID → cumulative lesson count
 
-    init(sessionsToday: [String: Date] = [:], statBoosts: [StatType: Int] = [:], coachDailyEnergy: [String: CoachEnergyEntry] = [:]) {
+    init(sessionsToday: [String: Date] = [:], statBoosts: [StatType: Int] = [:],
+         coachDailyEnergy: [String: CoachEnergyEntry] = [:], totalLessonsPerCoach: [String: Int] = [:]) {
         self.sessionsToday = sessionsToday
         self.statBoosts = statBoosts
         self.coachDailyEnergy = coachDailyEnergy
+        self.totalLessonsPerCoach = totalLessonsPerCoach
     }
 
     init(from decoder: Decoder) throws {
@@ -148,9 +151,10 @@ struct CoachingRecord: Codable, Equatable, Sendable {
         sessionsToday = try c.decodeIfPresent([String: Date].self, forKey: .sessionsToday) ?? [:]
         statBoosts = try c.decodeIfPresent([StatType: Int].self, forKey: .statBoosts) ?? [:]
         coachDailyEnergy = try c.decodeIfPresent([String: CoachEnergyEntry].self, forKey: .coachDailyEnergy) ?? [:]
+        totalLessonsPerCoach = try c.decodeIfPresent([String: Int].self, forKey: .totalLessonsPerCoach) ?? [:]
     }
 
-    static let empty = CoachingRecord(sessionsToday: [:], statBoosts: [:], coachDailyEnergy: [:])
+    static let empty = CoachingRecord(sessionsToday: [:], statBoosts: [:], coachDailyEnergy: [:], totalLessonsPerCoach: [:])
 
     /// Remaining energy for a coach today (100% if no sessions yet).
     func coachRemainingEnergy(coachID: UUID) -> Double {

@@ -11,7 +11,7 @@ struct CourtDetailSheet: View {
     let courtPerk: CourtPerk?
     let alphaNPC: NPC?
     let doublesAlphaNPC: NPC?
-    let playerPersonality: NPCPersonality
+    let playerPersonality: PlayerType
     let coach: Coach?
     let player: Player
     @Binding var isRated: Bool
@@ -534,10 +534,10 @@ struct CourtDetailSheet: View {
         while remaining.count >= 2 {
             let anchor = remaining.removeFirst()
             var bestIdx = 0
-            var bestSynergy = TeamSynergy.calculate(p1: anchor.personality, p2: remaining[0].personality)
+            var bestSynergy = TeamSynergy.calculate(p1: anchor.playerType, p2: remaining[0].playerType)
 
             for (idx, candidate) in remaining.enumerated().dropFirst() {
-                let syn = TeamSynergy.calculate(p1: anchor.personality, p2: candidate.personality)
+                let syn = TeamSynergy.calculate(p1: anchor.playerType, p2: candidate.playerType)
                 if syn.multiplier > bestSynergy.multiplier {
                     bestSynergy = syn
                     bestIdx = idx
@@ -642,7 +642,7 @@ struct CourtDetailSheet: View {
 
         var best: (String, TeamSynergy)?
         for npc in availablePartners {
-            let syn = TeamSynergy.calculate(p1: playerPersonality, p2: npc.personality)
+            let syn = TeamSynergy.calculate(p1: playerPersonality, p2: npc.playerType)
             if best == nil || syn.multiplier > (best?.1.multiplier ?? 0) {
                 best = (npc.name, syn)
             }

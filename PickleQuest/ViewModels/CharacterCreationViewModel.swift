@@ -6,12 +6,14 @@ final class CharacterCreationViewModel {
     var playerName: String = ""
     var selectedPreset: CharacterPreset = CharacterPreset.allPresets[0]
     var selectedSpriteSheet: String = "character1-Sheet"
-    var selectedPersonality: NPCPersonality = .allRounder
+    var selectedPlayerType: PlayerType = .allRounder
+    var selectedPersonality: Personality = .competitive
     var currentStep: CreationStep = .name
 
     enum CreationStep: Int, CaseIterable {
         case name
         case appearance
+        case playerType
         case personality
     }
 
@@ -31,6 +33,7 @@ final class CharacterCreationViewModel {
         switch currentStep {
         case .name: return isNameValid
         case .appearance: return true
+        case .playerType: return true
         case .personality: return true
         }
     }
@@ -57,10 +60,11 @@ final class CharacterCreationViewModel {
         var appearance = selectedPreset.appearance
         appearance.spriteSheet = selectedSpriteSheet
         player.appearance = appearance
+        player.playerType = selectedPlayerType
         player.personality = selectedPersonality
 
-        // Apply personality stat bias (keeps total equal)
-        for (stat, bias) in selectedPersonality.statBias {
+        // Apply player type stat bias (keeps total equal)
+        for (stat, bias) in selectedPlayerType.statBias {
             let current = player.stats.stat(stat)
             player.stats.setStat(stat, value: current + bias)
         }

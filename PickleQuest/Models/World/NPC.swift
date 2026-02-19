@@ -9,7 +9,7 @@ struct NPC: Identifiable, Codable, Equatable, Hashable, Sendable {
     let title: String // e.g., "Weekend Warrior", "Court Legend"
     let difficulty: NPCDifficulty
     let stats: PlayerStats
-    let personality: NPCPersonality
+    let playerType: PlayerType
     let dialogue: NPCDialogue
     let portraitName: String // asset catalog image name
     let rewardMultiplier: Double
@@ -17,6 +17,32 @@ struct NPC: Identifiable, Codable, Equatable, Hashable, Sendable {
     let isHustler: Bool
     let hiddenStats: Bool
     let baseWagerAmount: Int
+    var skills: [SkillID] = []
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, title, difficulty, stats
+        case playerType = "personality"
+        case dialogue, portraitName, rewardMultiplier, duprRating
+        case isHustler, hiddenStats, baseWagerAmount, skills
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        title = try c.decode(String.self, forKey: .title)
+        difficulty = try c.decode(NPCDifficulty.self, forKey: .difficulty)
+        stats = try c.decode(PlayerStats.self, forKey: .stats)
+        playerType = try c.decodeIfPresent(PlayerType.self, forKey: .playerType) ?? .allRounder
+        dialogue = try c.decode(NPCDialogue.self, forKey: .dialogue)
+        portraitName = try c.decode(String.self, forKey: .portraitName)
+        rewardMultiplier = try c.decode(Double.self, forKey: .rewardMultiplier)
+        duprRating = try c.decode(Double.self, forKey: .duprRating)
+        isHustler = try c.decodeIfPresent(Bool.self, forKey: .isHustler) ?? false
+        hiddenStats = try c.decodeIfPresent(Bool.self, forKey: .hiddenStats) ?? false
+        baseWagerAmount = try c.decodeIfPresent(Int.self, forKey: .baseWagerAmount) ?? 0
+        skills = try c.decodeIfPresent([SkillID].self, forKey: .skills) ?? []
+    }
 
     init(
         id: UUID,
@@ -24,21 +50,22 @@ struct NPC: Identifiable, Codable, Equatable, Hashable, Sendable {
         title: String,
         difficulty: NPCDifficulty,
         stats: PlayerStats,
-        personality: NPCPersonality,
+        playerType: PlayerType,
         dialogue: NPCDialogue,
         portraitName: String,
         rewardMultiplier: Double,
         duprRating: Double? = nil,
         isHustler: Bool = false,
         hiddenStats: Bool = false,
-        baseWagerAmount: Int = 0
+        baseWagerAmount: Int = 0,
+        skills: [SkillID] = []
     ) {
         self.id = id
         self.name = name
         self.title = title
         self.difficulty = difficulty
         self.stats = stats
-        self.personality = personality
+        self.playerType = playerType
         self.dialogue = dialogue
         self.portraitName = portraitName
         self.rewardMultiplier = rewardMultiplier
@@ -46,6 +73,7 @@ struct NPC: Identifiable, Codable, Equatable, Hashable, Sendable {
         self.isHustler = isHustler
         self.hiddenStats = hiddenStats
         self.baseWagerAmount = baseWagerAmount
+        self.skills = skills
     }
     /// Create a headless simulation opponent at a target DUPR rating.
     /// Uses bare stats (no equipment bonus, no variance) for symmetric balance testing.
@@ -65,7 +93,7 @@ struct NPC: Identifiable, Codable, Equatable, Hashable, Sendable {
             title: "DUPR \(String(format: "%.1f", dupr))",
             difficulty: difficulty,
             stats: stats,
-            personality: .allRounder,
+            playerType: .allRounder,
             dialogue: NPCDialogue(
                 greeting: "", onWin: "", onLose: "", taunt: ""
             ),
@@ -111,7 +139,7 @@ struct NPC: Identifiable, Codable, Equatable, Hashable, Sendable {
             title: "DUPR \(duprStr) Practice",
             difficulty: difficulty,
             stats: stats,
-            personality: .allRounder,
+            playerType: .allRounder,
             dialogue: NPCDialogue(
                 greeting: "Let's get some practice in!",
                 onWin: "Good game! Keep practicing!",
@@ -171,7 +199,7 @@ enum NPCDifficulty: String, Codable, CaseIterable, Sendable, Comparable {
     }
 }
 
-enum NPCPersonality: String, Codable, Sendable {
+enum PlayerType: String, Codable, CaseIterable, Sendable {
     case aggressive    // high power/spin, lower defense
     case defensive     // high defense/positioning, lower power
     case allRounder    // balanced stats

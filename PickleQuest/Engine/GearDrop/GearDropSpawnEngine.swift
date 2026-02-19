@@ -11,7 +11,7 @@ struct GearDropSpawnEngine: Sendable {
     /// Generate a random coordinate within `radius` meters of `center`.
     func randomCoordinate(around center: CLLocationCoordinate2D, radius: Double) -> CLLocationCoordinate2D {
         let angle = Double(rng.nextInt(in: 0...359)) * .pi / 180.0
-        let distance = Double(rng.nextInt(in: Int(radius * 0.3)...Int(radius))) // avoid spawning right on top of player
+        let distance = Double(rng.nextInt(in: Int(radius * 0.5)...Int(radius))) // spawn at least halfway out
         let latOffset = distance / 111_000.0 * cos(angle)
         let lngOffset = distance / (111_000.0 * cos(center.latitude * .pi / 180)) * sin(angle)
         return CLLocationCoordinate2D(

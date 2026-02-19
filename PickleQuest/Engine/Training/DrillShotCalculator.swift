@@ -4,6 +4,7 @@ enum DrillShotCalculator {
     struct ShotResult: Sendable {
         var power: CGFloat         // 0-1 speed magnitude
         var accuracy: CGFloat      // 0-1 deviation from target
+        var scatter: CGFloat       // raw scatter radius applied to target
         var spinCurve: CGFloat     // -1 to 1 lateral curve
         var arc: CGFloat           // 0-1 initial vertical velocity
         var targetNX: CGFloat      // target X in court space
@@ -101,6 +102,7 @@ enum DrillShotCalculator {
         return ShotResult(
             power: power,
             accuracy: 1.0 - deviation,
+            scatter: deviation,
             spinCurve: spinCurve,
             arc: arc,
             targetNX: targetNX,
@@ -232,6 +234,7 @@ enum DrillShotCalculator {
             return ShotResult(
                 power: touchPower,
                 accuracy: 1.0,
+                scatter: 0,
                 spinCurve: spinCurve,
                 arc: touchArc,
                 targetNX: targetNX,
@@ -301,6 +304,7 @@ enum DrillShotCalculator {
             return ShotResult(
                 power: lobPower,
                 accuracy: max(0, 1.0 - lobScatter * 5),
+                scatter: lobScatter,
                 spinCurve: spinCurve,
                 arc: lobArc,
                 targetNX: lobTargetNX,
@@ -378,8 +382,8 @@ enum DrillShotCalculator {
             }
             // Target deep to push opponent back
             targetNY = CGFloat.random(in: 0.75...0.90)
-            // Slam it — 1.8x power
-            power *= 1.8
+            // Controlled slam — 1.2x power (smash 2.0x stacks separately for high balls)
+            power *= 1.2
         }
 
         // --- Tactical placement: bias shot away from opponent ---
@@ -511,6 +515,7 @@ enum DrillShotCalculator {
         return ShotResult(
             power: power,
             accuracy: max(0, 1.0 - scatter * 5),
+            scatter: scatter,
             spinCurve: spinCurve,
             arc: arc,
             targetNX: targetNX,
@@ -591,6 +596,7 @@ enum DrillShotCalculator {
         return ShotResult(
             power: power,
             accuracy: 1.0 - maxDeviation,
+            scatter: maxDeviation,
             spinCurve: spinCurve,
             arc: arc,
             targetNX: max(0.05, min(0.95, targetNX + scatterX)),

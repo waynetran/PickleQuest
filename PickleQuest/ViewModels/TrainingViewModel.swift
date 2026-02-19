@@ -4,6 +4,7 @@ import Foundation
 @Observable
 final class TrainingViewModel {
     private let trainingService: TrainingService
+    private let skillService: SkillService
 
     let coach: Coach
     var trainingResult: TrainingResult?
@@ -12,9 +13,12 @@ final class TrainingViewModel {
     var animationComplete = false
     var interactiveDrillResult: InteractiveDrillResult?
     var showInteractiveDrill = false
+    var unlockedSkillName: String?
+    var unlockedSkillIcon: String?
 
-    init(trainingService: TrainingService, coach: Coach) {
+    init(trainingService: TrainingService, skillService: SkillService, coach: Coach) {
         self.trainingService = trainingService
+        self.skillService = skillService
         self.coach = coach
     }
 
@@ -85,14 +89,11 @@ final class TrainingViewModel {
         player.stats.setStat(stat, value: min(currentValue + result.statGainAmount, GameConstants.Stats.maxValue))
         player.coachingRecord.recordSession(coachID: coach.id, stat: stat, amount: result.statGainAmount)
 
-        // Award XP
-        player.progression.currentXP += result.xpEarned
-        while player.progression.currentXP >= GameConstants.XP.xpRequired(forLevel: player.progression.level + 1),
-              player.progression.level < GameConstants.Stats.maxLevel {
-            player.progression.currentXP -= GameConstants.XP.xpRequired(forLevel: player.progression.level + 1)
-            player.progression.level += 1
-            player.progression.availableStatPoints += GameConstants.Stats.statPointsPerLevel
-        }
+        // Award XP (use addXP for proper skill point granting)
+        _ = player.progression.addXP(result.xpEarned)
+
+        // Track skill lesson progress
+        progressSkillLesson(drillType: drillType, player: &player)
 
         trainingResult = result
         isSimulating = false
@@ -162,15 +163,67 @@ final class TrainingViewModel {
         player.stats.setStat(result.statGained, value: min(currentValue + result.statGainAmount, GameConstants.Stats.maxValue))
         player.coachingRecord.recordSession(coachID: coach.id, stat: result.statGained, amount: result.statGainAmount)
 
-        // Award XP + level-up loop
-        player.progression.currentXP += result.xpEarned
-        while player.progression.currentXP >= GameConstants.XP.xpRequired(forLevel: player.progression.level + 1),
-              player.progression.level < GameConstants.Stats.maxLevel {
-            player.progression.currentXP -= GameConstants.XP.xpRequired(forLevel: player.progression.level + 1)
-            player.progression.level += 1
-            player.progression.availableStatPoints += GameConstants.Stats.statPointsPerLevel
-        }
+        // Award XP (use addXP for proper skill point granting)
+        _ = player.progression.addXP(result.xpEarned)
+
+        // Track skill lesson progress
+        progressSkillLesson(drillType: coach.dailyDrillType, player: &player)
 
         interactiveDrillResult = result
+    }
+
+    // MARK: - Skill Lesson Progress
+
+    /// After a drill, increment lesson progress for the best matching unacquired skill.
+    private func progressSkillLesson(drillType: DrillType, player: inout Player) {
+        unlockedSkillName = nil
+        unlockedSkillIcon = nil
+
+        // Find unacquired skills that this drill teaches (matching player type)
+        let candidates = SkillDefinition.forPlayerType(player.playerType).filter { def in
+            def.teachingDrills.contains(drillType)
+                && !player.skills.contains(where: { $0.skillID == def.id })
+                && player.progression.level >= def.requiredLevel
+        }
+
+        guard let target = candidates.first else { return }
+
+        // Increment lesson progress
+        let coachKey = coach.id.uuidString
+        var progress = player.skillLessonProgress[target.id] ?? SkillLessonProgress(lessonsCompleted: 0, coachIDs: [])
+        progress.lessonsCompleted += 1
+        progress.coachIDs.insert(coachKey)
+        player.skillLessonProgress[target.id] = progress
+
+        // Track cumulative lessons per coach
+        player.coachingRecord.totalLessonsPerCoach[coachKey, default: 0] += 1
+
+        // If lessons complete, auto-acquire the skill
+        if progress.lessonsCompleted >= GameConstants.Skills.lessonsToAcquire {
+            skillService.acquireSkill(target.id, for: &player, via: .coaching)
+            player.skillLessonProgress.removeValue(forKey: target.id)
+            unlockedSkillName = target.name
+            unlockedSkillIcon = target.icon
+        }
+    }
+
+    /// The drill type teaching a specific skill for this coach's current specialty.
+    var currentTeachingSkill: SkillDefinition? {
+        let drillType = coach.dailyDrillType
+        // Find what skill this drill teaches (excluding already-acquired)
+        return nil // Populated dynamically based on player in the view
+    }
+
+    /// Get the skill this coach is currently teaching for a given player.
+    func teachingSkill(for player: Player) -> (skill: SkillDefinition, progress: SkillLessonProgress)? {
+        let drillType = coach.dailyDrillType
+        let candidates = SkillDefinition.forPlayerType(player.playerType).filter { def in
+            def.teachingDrills.contains(drillType)
+                && !player.skills.contains(where: { $0.skillID == def.id })
+                && player.progression.level >= def.requiredLevel
+        }
+        guard let target = candidates.first else { return nil }
+        let progress = player.skillLessonProgress[target.id] ?? SkillLessonProgress(lessonsCompleted: 0, coachIDs: [])
+        return (target, progress)
     }
 }

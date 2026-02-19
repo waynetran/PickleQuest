@@ -18,6 +18,7 @@ final class DependencyContainer: ObservableObject {
     let persistenceService: PersistenceService
     let locationManager: LocationManager
     let gearDropService: GearDropService
+    let skillService: SkillService
 
     init(
         modelContainer: ModelContainer,
@@ -34,7 +35,8 @@ final class DependencyContainer: ObservableObject {
         dailyChallengeService: DailyChallengeService? = nil,
         persistenceService: PersistenceService? = nil,
         locationManager: LocationManager? = nil,
-        gearDropService: GearDropService? = nil
+        gearDropService: GearDropService? = nil,
+        skillService: SkillService? = nil
     ) {
         let inventory = inventoryService ?? MockInventoryService()
         let npcs = npcService ?? MockNPCService()
@@ -52,5 +54,6 @@ final class DependencyContainer: ObservableObject {
         self.persistenceService = persistenceService ?? SwiftDataPersistenceService(modelContainer: modelContainer)
         self.locationManager = locationManager ?? LocationManager()
         self.gearDropService = gearDropService ?? MockGearDropService()
+        self.skillService = skillService ?? MockSkillService()
     }
 }

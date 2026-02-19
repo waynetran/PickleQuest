@@ -11,7 +11,7 @@ enum TutorialNPC {
             defense: 5, reflexes: 5, positioning: 5,
             clutch: 3, focus: 3, stamina: 5, consistency: 5
         ),
-        personality: .allRounder,
+        playerType: .allRounder,
         dialogue: NPCDialogue(
             greeting: "Welcome to the court! Let's see what you've got, rookie!",
             onWin: "Not bad for your first match! You've got potential!",

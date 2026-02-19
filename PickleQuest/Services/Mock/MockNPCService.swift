@@ -86,7 +86,7 @@ actor MockNPCService: NPCService {
                 defense: 12, reflexes: 10, positioning: 12,
                 clutch: 8, focus: 10, stamina: 15, consistency: 15
             ),
-            personality: .defensive,
+            playerType: .defensive,
             dialogue: NPCDialogue(
                 greeting: "Hey there! Want to hit some balls around?",
                 onWin: "Good game! I need more practice.",
@@ -106,7 +106,7 @@ actor MockNPCService: NPCService {
                 defense: 10, reflexes: 18, positioning: 8,
                 clutch: 10, focus: 8, stamina: 12, consistency: 10
             ),
-            personality: .speedster,
+            playerType: .speedster,
             dialogue: NPCDialogue(
                 greeting: "Catch me if you can!",
                 onWin: "Maybe I was too fast for ya!",
@@ -126,7 +126,7 @@ actor MockNPCService: NPCService {
                 defense: 10, reflexes: 12, positioning: 10,
                 clutch: 5, focus: 6, stamina: 14, consistency: 16
             ),
-            personality: .allRounder,
+            playerType: .allRounder,
             dialogue: NPCDialogue(
                 greeting: "Oh gosh, okay, I can do this... probably.",
                 onWin: "Wait, I won? I WON!",
@@ -146,7 +146,7 @@ actor MockNPCService: NPCService {
                 defense: 6, reflexes: 8, positioning: 6,
                 clutch: 12, focus: 6, stamina: 10, consistency: 5
             ),
-            personality: .aggressive,
+            playerType: .aggressive,
             dialogue: NPCDialogue(
                 greeting: "You ready for the big serve?",
                 onWin: "Nothing beats raw power, baby!",
@@ -166,7 +166,7 @@ actor MockNPCService: NPCService {
                 defense: 14, reflexes: 12, positioning: 10,
                 clutch: 10, focus: 10, stamina: 16, consistency: 12
             ),
-            personality: .allRounder,
+            playerType: .allRounder,
             dialogue: NPCDialogue(
                 greeting: "Just got my first paddle last week!",
                 onWin: "Beginner's luck, right?",
@@ -186,7 +186,7 @@ actor MockNPCService: NPCService {
                 defense: 14, reflexes: 10, positioning: 14,
                 clutch: 6, focus: 12, stamina: 12, consistency: 18
             ),
-            personality: .defensive,
+            playerType: .defensive,
             dialogue: NPCDialogue(
                 greeting: "I only have 30 minutes — let's play!",
                 onWin: "That was the best lunch break ever.",
@@ -206,7 +206,7 @@ actor MockNPCService: NPCService {
                 defense: 16, reflexes: 14, positioning: 12,
                 clutch: 8, focus: 14, stamina: 14, consistency: 14
             ),
-            personality: .strategist,
+            playerType: .strategist,
             dialogue: NPCDialogue(
                 greeting: "I only dink. That's my whole game.",
                 onWin: "See? Soft game wins!",
@@ -226,7 +226,7 @@ actor MockNPCService: NPCService {
                 defense: 16, reflexes: 10, positioning: 16,
                 clutch: 12, focus: 14, stamina: 18, consistency: 20
             ),
-            personality: .defensive,
+            playerType: .defensive,
             dialogue: NPCDialogue(
                 greeting: "I've been playing every morning for a month.",
                 onWin: "Experience counts for something!",
@@ -251,7 +251,7 @@ actor MockNPCService: NPCService {
                 defense: 22, reflexes: 18, positioning: 20,
                 clutch: 15, focus: 18, stamina: 20, consistency: 25
             ),
-            personality: .defensive,
+            playerType: .defensive,
             dialogue: NPCDialogue(
                 greeting: "I never miss. Ready to test that?",
                 onWin: "Every ball comes back. Every. Single. One.",
@@ -271,7 +271,7 @@ actor MockNPCService: NPCService {
                 defense: 10, reflexes: 12, positioning: 10,
                 clutch: 18, focus: 12, stamina: 15, consistency: 12
             ),
-            personality: .aggressive,
+            playerType: .aggressive,
             dialogue: NPCDialogue(
                 greeting: "Hope you're ready for some heat!",
                 onWin: "BOOM! That's the power of Pete!",
@@ -291,7 +291,7 @@ actor MockNPCService: NPCService {
                 defense: 15, reflexes: 16, positioning: 18,
                 clutch: 20, focus: 20, stamina: 18, consistency: 20
             ),
-            personality: .strategist,
+            playerType: .strategist,
             dialogue: NPCDialogue(
                 greeting: "Think you can read my shots? Good luck.",
                 onWin: "You never saw it coming, did you?",
@@ -311,7 +311,7 @@ actor MockNPCService: NPCService {
                 defense: 20, reflexes: 15, positioning: 22,
                 clutch: 14, focus: 16, stamina: 28, consistency: 24
             ),
-            personality: .defensive,
+            playerType: .defensive,
             dialogue: NPCDialogue(
                 greeting: "I can do this all day. Can you?",
                 onWin: "Outlasted ya. That's the game plan.",
@@ -331,7 +331,7 @@ actor MockNPCService: NPCService {
                 defense: 18, reflexes: 16, positioning: 16,
                 clutch: 16, focus: 18, stamina: 20, consistency: 18
             ),
-            personality: .strategist,
+            playerType: .strategist,
             dialogue: NPCDialogue(
                 greeting: "Hope you like spin, because that's all you're getting.",
                 onWin: "Sliced and diced.",
@@ -351,7 +351,7 @@ actor MockNPCService: NPCService {
                 defense: 16, reflexes: 18, positioning: 14,
                 clutch: 28, focus: 16, stamina: 16, consistency: 16
             ),
-            personality: .allRounder,
+            playerType: .allRounder,
             dialogue: NPCDialogue(
                 greeting: "Don't count me out until it's over.",
                 onWin: "I told you — never count me out!",
@@ -371,7 +371,7 @@ actor MockNPCService: NPCService {
                 defense: 22, reflexes: 20, positioning: 24,
                 clutch: 14, focus: 20, stamina: 18, consistency: 22
             ),
-            personality: .defensive,
+            playerType: .defensive,
             dialogue: NPCDialogue(
                 greeting: "I'm better with a partner, but let's go!",
                 onWin: "Great court coverage wins games.",
@@ -391,7 +391,7 @@ actor MockNPCService: NPCService {
                 defense: 20, reflexes: 14, positioning: 20,
                 clutch: 16, focus: 14, stamina: 22, consistency: 20
             ),
-            personality: .strategist,
+            playerType: .strategist,
             dialogue: NPCDialogue(
                 greeting: "Look up! That's where my shots go.",
                 onWin: "Sky-high winners all day.",
@@ -416,7 +416,7 @@ actor MockNPCService: NPCService {
                 defense: 25, reflexes: 22, positioning: 30,
                 clutch: 25, focus: 28, stamina: 22, consistency: 28
             ),
-            personality: .strategist,
+            playerType: .strategist,
             dialogue: NPCDialogue(
                 greeting: "I've already analyzed your weaknesses.",
                 onWin: "Calculated. As expected.",
@@ -436,7 +436,7 @@ actor MockNPCService: NPCService {
                 defense: 18, reflexes: 20, positioning: 18,
                 clutch: 28, focus: 22, stamina: 20, consistency: 22
             ),
-            personality: .aggressive,
+            playerType: .aggressive,
             dialogue: NPCDialogue(
                 greeting: "Hope you packed a helmet.",
                 onWin: "Another ace to add to my collection.",
@@ -456,7 +456,7 @@ actor MockNPCService: NPCService {
                 defense: 30, reflexes: 28, positioning: 32,
                 clutch: 22, focus: 30, stamina: 26, consistency: 30
             ),
-            personality: .defensive,
+            playerType: .defensive,
             dialogue: NPCDialogue(
                 greeting: "The court speaks. I listen.",
                 onWin: "Flow like water, strike like stone.",
@@ -476,7 +476,7 @@ actor MockNPCService: NPCService {
                 defense: 22, reflexes: 32, positioning: 20,
                 clutch: 24, focus: 20, stamina: 24, consistency: 22
             ),
-            personality: .speedster,
+            playerType: .speedster,
             dialogue: NPCDialogue(
                 greeting: "Blink and you'll miss the point.",
                 onWin: "Too quick for you? Don't feel bad.",
@@ -496,7 +496,7 @@ actor MockNPCService: NPCService {
                 defense: 20, reflexes: 30, positioning: 24,
                 clutch: 26, focus: 22, stamina: 22, consistency: 24
             ),
-            personality: .aggressive,
+            playerType: .aggressive,
             dialogue: NPCDialogue(
                 greeting: "I live at the net. Come find me there.",
                 onWin: "Net game too strong!",
@@ -516,7 +516,7 @@ actor MockNPCService: NPCService {
                 defense: 32, reflexes: 24, positioning: 28,
                 clutch: 22, focus: 28, stamina: 30, consistency: 32
             ),
-            personality: .defensive,
+            playerType: .defensive,
             dialogue: NPCDialogue(
                 greeting: "I'll wait for your mistake. I always do.",
                 onWin: "Patience is a virtue. And a winning strategy.",
@@ -536,7 +536,7 @@ actor MockNPCService: NPCService {
                 defense: 18, reflexes: 26, positioning: 20,
                 clutch: 30, focus: 20, stamina: 20, consistency: 22
             ),
-            personality: .aggressive,
+            playerType: .aggressive,
             dialogue: NPCDialogue(
                 greeting: "Let's make this exciting!",
                 onWin: "BANG! What a match!",
@@ -556,7 +556,7 @@ actor MockNPCService: NPCService {
                 defense: 26, reflexes: 28, positioning: 26,
                 clutch: 24, focus: 24, stamina: 26, consistency: 26
             ),
-            personality: .allRounder,
+            playerType: .allRounder,
             dialogue: NPCDialogue(
                 greeting: "...",
                 onWin: "*nods*",
@@ -581,7 +581,7 @@ actor MockNPCService: NPCService {
                 defense: 35, reflexes: 40, positioning: 35,
                 clutch: 38, focus: 35, stamina: 30, consistency: 35
             ),
-            personality: .allRounder,
+            playerType: .allRounder,
             dialogue: NPCDialogue(
                 greeting: "Few challengers make it this far. Impressive.",
                 onWin: "That was... closer than I expected.",
@@ -601,7 +601,7 @@ actor MockNPCService: NPCService {
                 defense: 42, reflexes: 38, positioning: 40,
                 clutch: 35, focus: 36, stamina: 38, consistency: 40
             ),
-            personality: .defensive,
+            playerType: .defensive,
             dialogue: NPCDialogue(
                 greeting: "Nothing gets past me. Nothing.",
                 onWin: "An impenetrable defense wins every time.",
@@ -621,7 +621,7 @@ actor MockNPCService: NPCService {
                 defense: 28, reflexes: 30, positioning: 25,
                 clutch: 38, focus: 30, stamina: 28, consistency: 30
             ),
-            personality: .aggressive,
+            playerType: .aggressive,
             dialogue: NPCDialogue(
                 greeting: "I don't do gentle. Ready?",
                 onWin: "SMASHED. Next challenger, please.",
@@ -641,7 +641,7 @@ actor MockNPCService: NPCService {
                 defense: 30, reflexes: 34, positioning: 36,
                 clutch: 36, focus: 38, stamina: 32, consistency: 38
             ),
-            personality: .strategist,
+            playerType: .strategist,
             dialogue: NPCDialogue(
                 greeting: "Every shot has a target. Every target gets hit.",
                 onWin: "Precision beats power. Always.",
@@ -661,7 +661,7 @@ actor MockNPCService: NPCService {
                 defense: 28, reflexes: 32, positioning: 28,
                 clutch: 40, focus: 30, stamina: 30, consistency: 28
             ),
-            personality: .aggressive,
+            playerType: .aggressive,
             dialogue: NPCDialogue(
                 greeting: "Storm's coming. Hope you're ready.",
                 onWin: "Thunderstruck!",
@@ -681,7 +681,7 @@ actor MockNPCService: NPCService {
                 defense: 36, reflexes: 36, positioning: 34,
                 clutch: 34, focus: 34, stamina: 34, consistency: 36
             ),
-            personality: .allRounder,
+            playerType: .allRounder,
             dialogue: NPCDialogue(
                 greeting: "Show me your best. I'll show it right back.",
                 onWin: "I just played your game, but better.",
@@ -701,7 +701,7 @@ actor MockNPCService: NPCService {
                 defense: 38, reflexes: 34, positioning: 42,
                 clutch: 38, focus: 40, stamina: 34, consistency: 38
             ),
-            personality: .strategist,
+            playerType: .strategist,
             dialogue: NPCDialogue(
                 greeting: "Forty years of pickleball. Think you can beat that?",
                 onWin: "Old dog, same tricks. They still work.",
@@ -726,7 +726,7 @@ actor MockNPCService: NPCService {
                 defense: 42, reflexes: 40, positioning: 50,
                 clutch: 45, focus: 48, stamina: 40, consistency: 48
             ),
-            personality: .strategist,
+            playerType: .strategist,
             dialogue: NPCDialogue(
                 greeting: "Ah, a student approaches. Let's see what you've learned.",
                 onWin: "The lesson today: experience trumps all.",
@@ -746,7 +746,7 @@ actor MockNPCService: NPCService {
                 defense: 40, reflexes: 48, positioning: 42,
                 clutch: 50, focus: 42, stamina: 38, consistency: 42
             ),
-            personality: .allRounder,
+            playerType: .allRounder,
             dialogue: NPCDialogue(
                 greeting: "...",
                 onWin: "Next.",
@@ -766,7 +766,7 @@ actor MockNPCService: NPCService {
                 defense: 44, reflexes: 46, positioning: 44,
                 clutch: 42, focus: 44, stamina: 42, consistency: 44
             ),
-            personality: .speedster,
+            playerType: .speedster,
             dialogue: NPCDialogue(
                 greeting: "You won't see me. But you'll feel the loss.",
                 onWin: "Gone before you knew what happened.",
@@ -786,7 +786,7 @@ actor MockNPCService: NPCService {
                 defense: 48, reflexes: 42, positioning: 48,
                 clutch: 48, focus: 46, stamina: 44, consistency: 50
             ),
-            personality: .defensive,
+            playerType: .defensive,
             dialogue: NPCDialogue(
                 greeting: "I've been playing since before you were born, sweetie.",
                 onWin: "Still got it.",
@@ -806,7 +806,7 @@ actor MockNPCService: NPCService {
                 defense: 38, reflexes: 44, positioning: 40,
                 clutch: 48, focus: 42, stamina: 40, consistency: 42
             ),
-            personality: .aggressive,
+            playerType: .aggressive,
             dialogue: NPCDialogue(
                 greeting: "One strike is all I need.",
                 onWin: "Lethal precision.",
@@ -826,7 +826,7 @@ actor MockNPCService: NPCService {
                 defense: 46, reflexes: 44, positioning: 50,
                 clutch: 46, focus: 48, stamina: 42, consistency: 46
             ),
-            personality: .strategist,
+            playerType: .strategist,
             dialogue: NPCDialogue(
                 greeting: "I already know how this ends.",
                 onWin: "As foreseen.",
@@ -846,7 +846,7 @@ actor MockNPCService: NPCService {
                 defense: 50, reflexes: 42, positioning: 46,
                 clutch: 44, focus: 44, stamina: 48, consistency: 48
             ),
-            personality: .defensive,
+            playerType: .defensive,
             dialogue: NPCDialogue(
                 greeting: "Mountains don't move. Neither do I.",
                 onWin: "Unstoppable force meets immovable object. I win.",

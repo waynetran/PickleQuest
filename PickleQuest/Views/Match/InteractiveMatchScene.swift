@@ -56,6 +56,23 @@ final class InteractiveMatchScene: SKScene {
     private var swipeTouchStart: CGPoint?
     private var swipeHintNode: SKSpriteNode?
 
+    // Player speech bubble (score announcements in rec games)
+    private var playerSpeechBubble: SKNode?
+
+    // Serve clock
+    private var serveClockTimer: CGFloat = 0
+    private let serveClockDuration: CGFloat = 10.0
+    private var serveClockActive: Bool = false
+
+    // Serve clock HUD nodes
+    private var serveClockNode: SKNode!
+    private var serveClockRingBg: SKShapeNode!
+    private var serveClockRingFill: SKShapeNode!
+    private var serveClockLabel: SKLabelNode!
+
+    // Post-match handshake
+    private var postMatchResult: MatchResult?
+
     // NPC serve-stall taunts → walkoff
     private var npcSpeechBubble: SKNode?
     private var playerServeStallTimer: CGFloat = 0
@@ -263,12 +280,18 @@ final class InteractiveMatchScene: SKScene {
     private var playerCurrentStreak: Int = 0
     private var totalRallyShots: Int = 0
 
+    // Per-point debug stats
+    private var lastHitScatter: CGFloat = 0
+    private var maxBallSpeedThisPoint: CGFloat = 0
+    private var lastShotPower: CGFloat = 0
+
     // Phases
     enum Phase {
         case waitingToStart
         case serving
         case playing
         case pointOver
+        case postMatch
         case matchOver
     }
     private(set) var phase: Phase = .waitingToStart
@@ -366,7 +389,7 @@ final class InteractiveMatchScene: SKScene {
     }
 
     func resignMatch() {
-        guard phase != .matchOver else { return }
+        guard phase != .matchOver && phase != .postMatch else { return }
         endMatch(wasResigned: true)
     }
 
@@ -474,6 +497,9 @@ final class InteractiveMatchScene: SKScene {
 
         // In-game feedback labels
         buildFeedbackLabels()
+
+        // Serve clock widget
+        buildServeClockWidget()
 
         // Initialize AI
         npcAI = MatchAI(npc: npc, playerDUPR: player.duprRating)
@@ -725,6 +751,82 @@ final class InteractiveMatchScene: SKScene {
         addChild(outcomeLabel)
     }
 
+    // MARK: - Serve Clock Widget
+
+    private func buildServeClockWidget() {
+        serveClockNode = SKNode()
+        serveClockNode.position = CGPoint(x: AC.sceneWidth - 52, y: 110)
+        serveClockNode.zPosition = AC.ZPositions.text + 6
+        serveClockNode.alpha = 0
+
+        // Background ring
+        let bgPath = CGMutablePath()
+        bgPath.addArc(center: .zero, radius: 22, startAngle: 0, endAngle: .pi * 2, clockwise: false)
+        serveClockRingBg = SKShapeNode(path: bgPath)
+        serveClockRingBg.strokeColor = UIColor(white: 0.4, alpha: 0.6)
+        serveClockRingBg.lineWidth = 5
+        serveClockRingBg.fillColor = UIColor(white: 0.1, alpha: 0.7)
+        serveClockNode.addChild(serveClockRingBg)
+
+        // Foreground depleting arc
+        serveClockRingFill = SKShapeNode()
+        serveClockRingFill.strokeColor = .systemGreen
+        serveClockRingFill.lineWidth = 5
+        serveClockRingFill.fillColor = .clear
+        serveClockRingFill.lineCap = .round
+        serveClockNode.addChild(serveClockRingFill)
+
+        // Center label
+        serveClockLabel = SKLabelNode(text: "10")
+        serveClockLabel.fontName = "AvenirNext-Heavy"
+        serveClockLabel.fontSize = 16
+        serveClockLabel.fontColor = .white
+        serveClockLabel.verticalAlignmentMode = .center
+        serveClockLabel.horizontalAlignmentMode = .center
+        serveClockNode.addChild(serveClockLabel)
+
+        addChild(serveClockNode)
+    }
+
+    private func updateServeClockWidget() {
+        guard serveClockActive else {
+            serveClockNode.alpha = 0
+            return
+        }
+        serveClockNode.alpha = 1
+
+        let fraction = max(0, serveClockTimer / serveClockDuration)
+        let seconds = Int(ceil(serveClockTimer))
+        serveClockLabel.text = "\(max(0, seconds))"
+
+        // Arc: starts at 12 o'clock (-.pi/2), sweeps clockwise
+        let startAngle: CGFloat = -.pi / 2
+        let endAngle = startAngle - fraction * .pi * 2
+        let arcPath = CGMutablePath()
+        arcPath.addArc(center: .zero, radius: 22, startAngle: startAngle, endAngle: endAngle, clockwise: true)
+        serveClockRingFill.path = arcPath
+
+        // Color: green >5s, yellow ≤5s, red ≤3s
+        if serveClockTimer > 5 {
+            serveClockRingFill.strokeColor = .systemGreen
+            serveClockLabel.fontColor = .white
+        } else if serveClockTimer > 3 {
+            serveClockRingFill.strokeColor = .systemYellow
+            serveClockLabel.fontColor = .systemYellow
+        } else {
+            serveClockRingFill.strokeColor = .systemRed
+            serveClockLabel.fontColor = .systemRed
+        }
+
+        // Pulse effect at ≤3s
+        if serveClockTimer <= 3 {
+            let pulse = 1.0 + 0.12 * sin(serveClockTimer * .pi * 4)
+            serveClockNode.setScale(pulse)
+        } else {
+            serveClockNode.setScale(1.0)
+        }
+    }
+
     // MARK: - Swipe Hint
 
     private func buildSwipeHint() {
@@ -847,6 +949,9 @@ final class InteractiveMatchScene: SKScene {
 
     private func startNextPoint() {
         rallyLength = 0
+        lastHitScatter = 0
+        maxBallSpeedThisPoint = 0
+        lastShotPower = 0
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
@@ -857,8 +962,11 @@ final class InteractiveMatchScene: SKScene {
         clearShotMarkers()
         hideDebugPanel()
         hideNPCSpeech()
+        hidePlayerSpeech()
         playerServeStallTimer = 0
         serveStallTauntIndex = 0
+        serveClockTimer = serveClockDuration
+        serveClockActive = false
         nextSnarkyTime = CGFloat.random(in: 5...10)
         nextPaceTime = 20
         npcIsPacing = false
@@ -906,6 +1014,8 @@ final class InteractiveMatchScene: SKScene {
             npcAI.positionForReceive(playerScore: playerScore)
             phase = .serving
             showSwipeHint()
+            serveClockActive = true
+            if !isRated { showPlayerSpeech(serveScoreText()) }
         } else {
             let evenScore = npcScore % 2 == 0
             npcAI.positionForServe(npcScore: npcScore)
@@ -915,6 +1025,7 @@ final class InteractiveMatchScene: SKScene {
             playerNY = 0.08
             phase = .serving
             servePauseTimer = IM.servePauseDuration
+            if !isRated { showNPCSpeech(serveScoreText()) }
         }
 
         syncAllPositions()
@@ -941,8 +1052,11 @@ final class InteractiveMatchScene: SKScene {
 
         guard dy > 0, distance >= P.serveSwipeMinDistance else { return }
 
+        serveClockActive = false
+        serveClockNode.alpha = 0
         hideSwipeHint()
         hideNPCSpeech()
+        hidePlayerSpeech()
         playerServeStallTimer = 0
         serveStallTauntIndex = 0
 
@@ -1172,6 +1286,9 @@ final class InteractiveMatchScene: SKScene {
             let serverStr = prevServer == .player ? "You" : npc.name
             let sideOut = prevServer != servingSide ? " → SIDE OUT" : ""
             let bounceZone = firstBounceZoneLabel()
+            let scatterStr = String(format: "%.3f", lastHitScatter)
+            let maxSpeedStr = String(format: "%.2f", maxBallSpeedThisPoint)
+            let powerStr = String(format: "%.2f", lastShotPower)
             let debugText = """
             Pt #\(totalPointsPlayed): \(whoWon)
             Reason: \(reason)
@@ -1179,6 +1296,7 @@ final class InteractiveMatchScene: SKScene {
             Ball: (\(ballX), \(ballY)) h=\(ballH) vy=\(ballVY)
             Bounces: \(bounces) LastHit: \(hitByPlayer ? "Player" : "NPC")
             1st Bounce: \(bounceZone)
+            Scatter: \(scatterStr) MaxSpd: \(maxSpeedStr) Power: \(powerStr)
             ActiveTime: \(activeT)s
             Server: \(serverStr)\(sideOut)
             Score: You \(playerScore) — \(npcScore) \(npc.name)
@@ -1322,7 +1440,11 @@ final class InteractiveMatchScene: SKScene {
             isDoubles: false
         )
 
-        onComplete(result)
+        if wasResigned {
+            onComplete(result)
+        } else {
+            playPostMatchAnimation(result: result)
+        }
     }
 
     // MARK: - Touch Handling
@@ -1465,60 +1587,59 @@ final class InteractiveMatchScene: SKScene {
 
     // MARK: - Swipe Shot Determination
 
-    // Swipe velocity thresholds (points/sec)
-    private let powerSwipeThreshold: CGFloat = 400
-    private let touchSwipeThreshold: CGFloat = 50
-    private let lobSwipeThreshold: CGFloat = 200
+    // Power boost scaling
     private let maxSwipePowerBoost: CGFloat = 0.5
-    private let maxSwipeSpeed: CGFloat = 800    // pts/sec for max power boost
-    private let maxLobSwipeSpeed: CGFloat = 600 // pts/sec for max lob arc
 
     /// Determine shot modes from joystick state at the moment of contact.
     private func determineShotMode() -> DrillShotCalculator.ShotMode {
-        // Joystick released → neutral touch/dink
+        // Joystick released → touch/dink (target chosen by calculator based on stats)
         guard joystickTouch != nil else { return [.touch] }
 
-        let vy = joystickSwipeVelocity.dy  // positive = upward on screen
-        let speed = sqrt(joystickSwipeVelocity.dx * joystickSwipeVelocity.dx
-                       + joystickSwipeVelocity.dy * joystickSwipeVelocity.dy)
-
-        if vy > powerSwipeThreshold {
-            // Fast upward swipe → power drive
+        if joystickMagnitude > 1.0 {
+            // Past the circle → power shot
             return [.power]
-        } else if vy < -lobSwipeThreshold {
-            // Downward swipe → lob
-            return [.lob]
-        } else if speed < touchSwipeThreshold {
-            // Barely moving → touch with direction
-            return [.touch]
         } else {
-            // Moderate movement → touch with directional control
-            return [.touch]
+            // Within the circle → regular directional shot
+            return []
         }
     }
 
-    /// Horizontal swipe direction mapped to target NX override.
-    /// Returns nil when joystick is released (let calculator choose).
-    private func swipeDirectionNX() -> CGFloat? {
+    /// Joystick direction mapped to target (NX, NY) on the opponent's court.
+    /// Returns nil when joystick is released (let calculator choose by stats).
+    /// dx is capped so the shot cone always aims forward, not sideways.
+    private func joystickAimTarget() -> (nx: CGFloat, ny: CGFloat)? {
         guard joystickTouch != nil else { return nil }
-        // joystickDirection.dx ranges from -1 to +1
-        return 0.5 + joystickDirection.dx * 0.35
+
+        let dx = joystickDirection.dx  // -1 to +1
+        let dy = joystickDirection.dy  // positive = up (toward opponent court)
+
+        // Cap horizontal spread: abs(dx) can't exceed abs(dy) so shots aim forward
+        let cappedDX: CGFloat
+        if abs(dy) > 0.01 {
+            cappedDX = max(-abs(dy), min(abs(dy), dx))
+        } else {
+            // Joystick barely moved vertically — minimal horizontal aim
+            cappedDX = dx * 0.3
+        }
+
+        // NX: center ± horizontal aim (0.15 to 0.85 range)
+        let nx = 0.5 + cappedDX * 0.35
+
+        // NY: joystick dy maps depth — up = deeper, neutral = mid-court
+        // dy ranges roughly 0 to 1 when pushing up; map to 0.65 (short) to 0.92 (deep)
+        let dyUp = max(0, dy)  // only forward direction matters for depth
+        let ny = 0.65 + dyUp * 0.27
+
+        return (nx: nx, ny: ny)
     }
 
-    /// Extra power boost from swipe velocity for power shots.
-    private func swipePowerBoost() -> CGFloat {
-        let speed = sqrt(joystickSwipeVelocity.dx * joystickSwipeVelocity.dx
-                       + joystickSwipeVelocity.dy * joystickSwipeVelocity.dy)
-        let swipeFraction = min(speed / maxSwipeSpeed, 1.0)
+    /// Power boost when joystick is past the circle edge.
+    /// Scales with how far past the boundary (1.0 = edge, 1.5 = max).
+    private func joystickPowerBoost() -> CGFloat {
+        guard joystickMagnitude > 1.0 else { return 0 }
+        let excessFraction = min((joystickMagnitude - 1.0) / 0.5, 1.0)
         let powerStat = CGFloat(playerStats.stat(.power))
-        return swipeFraction * maxSwipePowerBoost * (powerStat / 99.0)
-    }
-
-    /// Extra arc from downward swipe velocity for lob shots.
-    private func swipeLobArcBoost() -> CGFloat {
-        let downSpeed = abs(min(joystickSwipeVelocity.dy, 0))
-        let lobFraction = min(downSpeed / maxLobSwipeSpeed, 1.0)
-        return lobFraction * 0.3
+        return excessFraction * maxSwipePowerBoost * (powerStat / 99.0)
     }
 
     /// Flash shot type label below the player on hit.
@@ -1628,6 +1749,21 @@ final class InteractiveMatchScene: SKScene {
                     npcServe()
                 }
             }
+            // Serve clock countdown (player serving only)
+            if serveClockActive {
+                serveClockTimer -= dt
+                if serveClockTimer <= 0 {
+                    serveClockTimer = 0
+                    serveClockActive = false
+                    updateServeClockWidget()
+                    showIndicator("Time!", color: .systemRed, duration: 1.5)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                        self?.endMatch(wasResigned: true)
+                    }
+                }
+            }
+            updateServeClockWidget()
+
             // NPC taunts when player stalls on serve → walkoff after ~5 min
             if servingSide == .player && !npcIsWalkingOff {
                 playerServeStallTimer += dt
@@ -2111,6 +2247,9 @@ final class InteractiveMatchScene: SKScene {
                 ballNode.alpha = 1
                 ballShadow.alpha = 1
                 showShotMarkers(targetNX: shot.targetNX, targetNY: shot.targetNY, accuracy: shot.accuracy)
+                lastShotPower = shot.power
+                let speed = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
+                maxBallSpeedThisPoint = max(maxBallSpeedThisPoint, speed)
                 pendingPlayerShot = nil
             } else {
                 pendingPlayerShot = shot
@@ -2133,6 +2272,9 @@ final class InteractiveMatchScene: SKScene {
                 ballNode.alpha = 1
                 ballShadow.alpha = 1
                 showShotMarkers(targetNX: shot.targetNX, targetNY: shot.targetNY, accuracy: shot.accuracy)
+                lastShotPower = shot.power
+                let speed = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
+                maxBallSpeedThisPoint = max(maxBallSpeedThisPoint, speed)
                 pendingNPCShot = nil
             } else {
                 pendingNPCShot = shot
@@ -2156,6 +2298,9 @@ final class InteractiveMatchScene: SKScene {
                 ballNode.alpha = 1
                 ballShadow.alpha = 1
                 showShotMarkers(targetNX: serve.target.x, targetNY: serve.target.y, accuracy: serve.accuracy)
+                lastShotPower = serve.power
+                let speed = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
+                maxBallSpeedThisPoint = max(maxBallSpeedThisPoint, speed)
                 pendingServeShot = nil
             } else {
                 pendingServeShot = serve
@@ -2301,19 +2446,17 @@ final class InteractiveMatchScene: SKScene {
             shooterDUPR: player.duprRating
         )
 
-        // Apply swipe direction override
-        if let directionNX = swipeDirectionNX() {
-            shot.targetNX = max(0.15, min(0.85, directionNX))
+        lastHitScatter = shot.scatter
+
+        // Apply joystick aim direction (only when touching joystick)
+        if let aim = joystickAimTarget() {
+            shot.targetNX = max(0.15, min(0.85, aim.nx))
+            shot.targetNY = max(0.55, min(0.95, aim.ny))
         }
 
-        // Apply power boost from swipe velocity
+        // Apply power boost from joystick distance past circle edge
         if shotModes.contains(.power) {
-            shot.power = min(shot.power + swipePowerBoost(), 2.5)
-        }
-
-        // Apply lob arc boost from downward swipe velocity
-        if shotModes.contains(.lob) {
-            shot.arc += swipeLobArcBoost()
+            shot.power = min(shot.power + joystickPowerBoost(), 2.5)
         }
 
         // --- Net fault: low-stat players hit into the net ---
@@ -2332,9 +2475,7 @@ final class InteractiveMatchScene: SKScene {
         // Flash shot type label
         if shotModes.contains(.power) {
             showShotTypeFlash("POWER!", color: .systemRed)
-        } else if shotModes.contains(.lob) {
-            showShotTypeFlash("LOB", color: .systemIndigo)
-        } else {
+        } else if shotModes.contains(.touch) {
             showShotTypeFlash("TOUCH", color: .systemTeal)
         }
 
@@ -2524,6 +2665,7 @@ final class InteractiveMatchScene: SKScene {
 
             rallyLength += 1
             let shot = npcAI.generateShot(ball: ballSim)
+            lastHitScatter = shot.scatter
 
             dbg.logNPCHit(
                 modes: npcAI.lastShotModes,
@@ -3121,6 +3263,71 @@ final class InteractiveMatchScene: SKScene {
         npcSpeechBubble = nil
     }
 
+    // MARK: - Player Speech Bubble
+
+    private func showPlayerSpeech(_ text: String) {
+        hidePlayerSpeech()
+
+        let bubble = SKNode()
+        bubble.zPosition = AC.ZPositions.text + 5
+
+        let label = SKLabelNode(text: text)
+        label.fontName = "AvenirNext-DemiBold"
+        label.fontSize = 10
+        label.fontColor = .white
+        label.numberOfLines = 0
+        label.preferredMaxLayoutWidth = 140
+        label.verticalAlignmentMode = .center
+        label.horizontalAlignmentMode = .center
+
+        let textSize = label.frame
+        let padX: CGFloat = 10
+        let padY: CGFloat = 6
+        let bgRect = CGRect(
+            x: textSize.minX - padX,
+            y: textSize.minY - padY,
+            width: textSize.width + padX * 2,
+            height: textSize.height + padY * 2
+        )
+        let bg = SKShapeNode(rect: bgRect, cornerRadius: 8)
+        bg.fillColor = UIColor(white: 0.15, alpha: 0.85)
+        bg.strokeColor = UIColor(white: 0.5, alpha: 0.4)
+        bg.lineWidth = 1
+
+        bubble.addChild(bg)
+        bubble.addChild(label)
+
+        // Position above the near player sprite
+        let playerScreenPos = CourtRenderer.courtPoint(nx: playerNX, ny: playerNY)
+        bubble.position = CGPoint(x: playerScreenPos.x, y: playerScreenPos.y + 120)
+
+        bubble.alpha = 0
+        addChild(bubble)
+
+        bubble.run(.sequence([
+            .fadeIn(withDuration: 0.2),
+            .wait(forDuration: 2.5),
+            .fadeOut(withDuration: 0.4),
+            .removeFromParent()
+        ]))
+
+        playerSpeechBubble = bubble
+    }
+
+    private func hidePlayerSpeech() {
+        playerSpeechBubble?.removeAllActions()
+        playerSpeechBubble?.removeFromParent()
+        playerSpeechBubble = nil
+    }
+
+    private func serveScoreText() -> String {
+        if servingSide == .player {
+            return "\(playerScore)-\(npcScore)!"
+        } else {
+            return "\(npcScore)-\(playerScore)!"
+        }
+    }
+
     // MARK: - NPC Frustration Pacing
 
     private func npcFrustrationPace() {
@@ -3161,6 +3368,195 @@ final class InteractiveMatchScene: SKScene {
         ])
 
         npcNode.run(pace, withKey: "frustrationPace")
+    }
+
+    // MARK: - Post-Match Handshake
+
+    private static let postMatchQuips: [PlayerType: (win: [String], loss: [String])] = [
+        .aggressive: (
+            win: [
+                "Better luck next time 😏",
+                "Too easy 💪",
+                "You couldn't handle\nthe heat 🔥",
+                "That's how it's done.\nTake notes.",
+                "Maybe stick to\nbadminton? 😂",
+            ],
+            loss: [
+                "Alright, you got me...\nthis time 😤",
+                "Don't get used to it.",
+                "Lucky shots.\nWon't happen again.",
+                "I was going easy\non you... obviously 🙄",
+                "Rematch. NOW.",
+            ]
+        ),
+        .defensive: (
+            win: [
+                "Honestly didn't think\nI'd pull that off 😅",
+                "Wow, that was close!\nGreat match.",
+                "I just tried to keep\nthe ball in play 🤷",
+                "Patience pays off\nI guess!",
+            ],
+            loss: [
+                "You earned that one.\nSeriously.",
+                "I gave it everything.\nYou were just better today.",
+                "Can't win 'em all!\nNice playing 🤝",
+                "Your shots were\ntoo good today.",
+            ]
+        ),
+        .allRounder: (
+            win: [
+                "That was a blast!\nRematch soon? 🏓",
+                "Great game!\nYou pushed me hard.",
+                "Love a good battle.\nThanks for that! 🙌",
+                "That rally though!\nSo fun.",
+            ],
+            loss: [
+                "You were on fire!\nI couldn't keep up 🔥",
+                "Amazing game.\nYou deserved that W!",
+                "I had fun even though\nI lost! Great match 🎉",
+                "You played awesome.\nI'll get you next time!",
+            ]
+        ),
+        .speedster: (
+            win: [
+                "LETS GOOO! 🏃💨",
+                "Speed kills, baby! ⚡",
+                "Catch me if you can!\nOh wait, you couldn't 😂",
+                "Zoom zoom! That was\na workout! 💪",
+                "*victory lap* 🏃‍♂️🏃‍♂️🏃‍♂️",
+            ],
+            loss: [
+                "Okay that was fun\neven though I lost 😂",
+                "You slowed me down!\nHow?? 🤔",
+                "I ran out of gas...\nGG though! 🏃💀",
+                "Faster next time.\nWatch out! ⚡",
+            ]
+        ),
+        .strategist: (
+            win: [
+                "The math was\nin my favor today 🤓",
+                "Calculated.\nEvery. Single. Point.",
+                "My game plan\nworked perfectly 📋",
+                "I had you figured out\nby point three 🧠",
+            ],
+            loss: [
+                "I need to recalculate\nmy approach... 📊",
+                "You broke my system.\nImpressive. 🤔",
+                "Back to the drawing\nboard... literally 📝",
+                "My analysis didn't\naccount for... you.",
+            ]
+        ),
+    ]
+
+    private func showPostMatchBubble(above node: SKSpriteNode, text: String, duration: TimeInterval = 2.5) {
+        let bubble = SKNode()
+        bubble.zPosition = AC.ZPositions.text + 8
+
+        let label = SKLabelNode(text: text)
+        label.fontName = "AvenirNext-DemiBold"
+        label.fontSize = 10
+        label.fontColor = .white
+        label.numberOfLines = 0
+        label.preferredMaxLayoutWidth = 140
+        label.verticalAlignmentMode = .center
+        label.horizontalAlignmentMode = .center
+
+        let textSize = label.frame
+        let padX: CGFloat = 10
+        let padY: CGFloat = 6
+        let bgRect = CGRect(
+            x: textSize.minX - padX,
+            y: textSize.minY - padY,
+            width: textSize.width + padX * 2,
+            height: textSize.height + padY * 2
+        )
+        let bg = SKShapeNode(rect: bgRect, cornerRadius: 8)
+        bg.fillColor = UIColor(white: 0.15, alpha: 0.85)
+        bg.strokeColor = UIColor(white: 0.5, alpha: 0.4)
+        bg.lineWidth = 1
+
+        bubble.addChild(bg)
+        bubble.addChild(label)
+
+        bubble.position = CGPoint(x: node.position.x, y: node.position.y + 60)
+        bubble.alpha = 0
+        addChild(bubble)
+
+        bubble.run(.sequence([
+            .fadeIn(withDuration: 0.2),
+            .wait(forDuration: duration),
+            .fadeOut(withDuration: 0.4),
+            .removeFromParent()
+        ]))
+    }
+
+    private func playPostMatchAnimation(result: MatchResult) {
+        phase = .postMatch
+        hideSwipeHint()
+        hideNPCSpeech()
+        hidePlayerSpeech()
+        serveClockActive = false
+        serveClockNode.alpha = 0
+
+        // Net meet positions (both walk to center near net)
+        let playerMeetPos = CourtRenderer.courtPoint(nx: 0.5, ny: 0.42)
+        let npcMeetPos = CourtRenderer.courtPoint(nx: 0.5, ny: 0.58)
+
+        // Scale for meet positions
+        let playerMeetScale = AC.Sprites.nearPlayerScale * CourtRenderer.perspectiveScale(ny: 0.42)
+        let npcMeetScale = AC.Sprites.farPlayerScale * CourtRenderer.perspectiveScale(ny: 0.58)
+
+        // Start walk animations
+        playerAnimator.play(.runFront)  // near player walks toward net (away from camera)
+        npcAnimator.play(.runFront)     // far player walks toward net (toward camera)
+
+        let walkDuration: TimeInterval = 1.5
+
+        // Player walks to net
+        playerNode.run(.group([
+            .move(to: playerMeetPos, duration: walkDuration),
+            .scale(to: playerMeetScale, duration: walkDuration)
+        ]))
+
+        // NPC walks to net
+        npcNode.run(.group([
+            .move(to: npcMeetPos, duration: walkDuration),
+            .scale(to: npcMeetScale, duration: walkDuration)
+        ]))
+
+        // Get personality quip
+        let personality = npc.playerType
+        let didNPCWin = !result.didPlayerWin
+        let quipPool = Self.postMatchQuips[personality] ?? Self.postMatchQuips[.allRounder]!
+        let quip = (didNPCWin ? quipPool.win : quipPool.loss).randomElement() ?? "Good game!"
+
+        // Timeline using sequence of waits + run blocks
+        let playerName = player.name.components(separatedBy: " ").first ?? player.name
+        run(.sequence([
+            // 1.5s — both arrive, switch to idle
+            .wait(forDuration: walkDuration),
+            .run { [weak self] in
+                self?.playerAnimator.play(.idle(isNear: true))
+                self?.npcAnimator.play(.idle(isNear: false))
+            },
+            // 1.8s — NPC says "Good game, [name]!"
+            .wait(forDuration: 0.3),
+            .run { [weak self] in
+                guard let self else { return }
+                self.showPostMatchBubble(above: self.npcNode, text: "Good game, \(playerName)!", duration: 1.8)
+            },
+            // 3.8s — NPC personality quip
+            .wait(forDuration: 2.0),
+            .run { [weak self] in
+                guard let self else { return }
+                self.showPostMatchBubble(above: self.npcNode, text: quip, duration: 2.0)
+            },
+            // 6.3s — deliver result to SwiftUI
+            .wait(forDuration: 2.5),
+            .run { [weak self] in
+                self?.onComplete(result)
+            }
+        ]))
     }
 
     // MARK: - NPC Walkoff

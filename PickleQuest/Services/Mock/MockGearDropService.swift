@@ -73,33 +73,35 @@ actor MockGearDropService: GearDropService {
             return []
         }
 
-        // Spawn 1-2 field drops, snapped to safe walkable locations
-        let count = Int.random(in: 1...2)
-        var newDrops: [GearDrop] = []
+        // Spawn 1 field drop, snapped to a safe walkable location
+        let candidate = spawnEngine.randomCoordinate(
+            around: coordinate,
+            radius: GameConstants.GearDrop.spawnRadius
+        )
+        guard let safeCoord = await snapToSafeCoordinate(
+            candidate: candidate,
+            from: coordinate
+        ) else { return [] }
 
-        for _ in 0..<count {
-            let candidate = spawnEngine.randomCoordinate(
-                around: coordinate,
-                radius: GameConstants.GearDrop.spawnRadius
-            )
-            guard let safeCoord = await snapToSafeCoordinate(
-                candidate: candidate,
-                from: coordinate
-            ) else { continue }
-
-            let rarity = spawnEngine.rollRarity()
-            let drop = GearDrop(
-                type: .field,
-                latitude: safeCoord.latitude,
-                longitude: safeCoord.longitude,
-                rarity: rarity,
-                expiresAt: Date().addingTimeInterval(GameConstants.GearDrop.fieldDespawnTime)
-            )
-            newDrops.append(drop)
-            activeDrops.append(drop)
+        // Enforce minimum spacing from existing field drops
+        let minSpacing = GameConstants.GearDrop.fieldDropMinSpacing
+        let safeLocation = CLLocation(latitude: safeCoord.latitude, longitude: safeCoord.longitude)
+        let tooClose = currentFieldDrops.contains { existing in
+            CLLocation(latitude: existing.latitude, longitude: existing.longitude)
+                .distance(from: safeLocation) < minSpacing
         }
+        if tooClose { return [] }
 
-        return newDrops
+        let rarity = spawnEngine.rollRarity()
+        let drop = GearDrop(
+            type: .field,
+            latitude: safeCoord.latitude,
+            longitude: safeCoord.longitude,
+            rarity: rarity,
+            expiresAt: Date().addingTimeInterval(GameConstants.GearDrop.fieldDespawnTime)
+        )
+        activeDrops.append(drop)
+        return [drop]
     }
 
     // MARK: - Court Caches

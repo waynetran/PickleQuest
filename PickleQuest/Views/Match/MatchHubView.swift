@@ -70,7 +70,7 @@ struct MatchHubView: View {
             case .selectingPartner:
                 PartnerPickerView(
                     availableNPCs: partnerCandidates(mapVM: mapVM, matchVM: matchVM),
-                    playerPersonality: appState.player.personality,
+                    playerPersonality: appState.player.playerType,
                     opponent1: matchVM.selectedNPC,
                     opponent2: matchVM.opponentPartner,
                     onSelect: { partner in

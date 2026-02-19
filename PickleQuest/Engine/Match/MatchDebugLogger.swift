@@ -33,7 +33,7 @@ final class MatchDebugLogger {
         \(tag) MATCH START: \(player.name) vs \(npc.name)
         \(tag) ═══════════════════════════════════════════════
         \(tag) Player DUPR: \(String(format: "%.2f", player.duprRating))
-        \(tag) NPC DUPR:    \(String(format: "%.2f", npc.duprRating)) (\(npc.difficulty.rawValue), \(npc.personality.rawValue))
+        \(tag) NPC DUPR:    \(String(format: "%.2f", npc.duprRating)) (\(npc.difficulty.rawValue), \(npc.playerType.rawValue))
         \(tag) NPC stat boost: +\(boost)
         \(tag) ───────────────────────────────────────────────
         \(tag) PLAYER STATS (used in match):

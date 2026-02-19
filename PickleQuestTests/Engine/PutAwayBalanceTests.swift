@@ -9,31 +9,17 @@ struct PutAwayBalanceTests {
     // MARK: - Return Rate Targets
 
     /// Target return rates for same-DUPR put-away scenarios.
-    /// Lower DUPR = can't handle power put-aways, higher DUPR = reflexes save them.
+    /// Put-aways are meant to be winners — even skilled players shouldn't return most of them.
     static let returnTargets: [(dupr: Double, returnRate: Double)] = [
         (2.0, 0.00),   // beginners can't return put-aways
-        (3.0, 0.20),   // novices get a few back
-        (4.0, 0.50),   // intermediate returns half
-        (5.0, 0.80),   // advanced returns most
-        (6.0, 0.90),   // expert returns almost all
+        (3.0, 0.10),   // novices rarely get one back
+        (4.0, 0.30),   // intermediate returns some
+        (5.0, 0.50),   // advanced returns half
+        (6.0, 0.60),   // expert returns more but put-aways still win
     ]
 
     static let returnTolerance: Double = 0.06
     static let trialsPerDUPR = 3000
-
-    // MARK: - Accuracy Targets
-
-    /// Target in-bounds % for put-away shots at each DUPR level.
-    static let accuracyTargets: [(dupr: Double, inBoundsRate: Double)] = [
-        (2.0, 0.60),   // beginners spray put-aways everywhere
-        (3.0, 0.75),   // novices land most
-        (4.0, 0.88),   // intermediate precise
-        (5.0, 0.96),   // advanced laser
-        (6.0, 0.99),   // expert near-perfect
-    ]
-
-    static let accuracyTolerance: Double = 0.04
-    static let accuracyTrialsPerDUPR = 3000
 
     // MARK: - Simulate Return Rate
 
@@ -114,61 +100,6 @@ struct PutAwayBalanceTests {
         }
 
         return Double(returns) / Double(count)
-    }
-
-    // MARK: - Simulate Accuracy
-
-    /// Simulate put-away accuracy at a given DUPR: generate put-away targeting with
-    /// parameterized scatter and check if the scattered target lands in the opponent's court.
-    /// This tests scatter accuracy directly without ball physics (the arc/power are consistent
-    /// in the actual game, so the scatter multiplier IS the tunable for in-bounds rate).
-    static func simulatePutAwayAccuracy(
-        dupr: Double,
-        count: Int,
-        scatterMultiplier: CGFloat
-    ) -> Double {
-        let stats = StatProfileLoader.shared.toNPCStats(dupr: dupr)
-
-        let accuracyStat = CGFloat(stats.stat(.accuracy))
-        let consistencyStat = CGFloat(stats.stat(.consistency))
-        let focusStat = CGFloat(stats.stat(.focus))
-
-        var inBounds = 0
-
-        for _ in 0..<count {
-            // --- Replicate put-away targeting (same as calculatePlayerShot) ---
-            let duprFrac = CGFloat(max(0, min(1, (dupr - 2.0) / 6.0)))
-            let innerEdge: CGFloat = 0.35 + duprFrac * (-0.10)
-            let outerEdge: CGFloat = 0.65 + duprFrac * 0.10
-            let ballApproachFromLeft = Bool.random()
-            var targetNX: CGFloat
-            if ballApproachFromLeft {
-                targetNX = CGFloat.random(in: outerEdge...max(outerEdge, 0.75))
-            } else {
-                targetNX = CGFloat.random(in: min(innerEdge, 0.25)...innerEdge)
-            }
-            // Put-away targets deep in opponent's court
-            let targetNY = CGFloat.random(in: 0.75...0.90)
-
-            // Compute scatter with parameterized multiplier
-            let avgControl = (accuracyStat + consistencyStat + focusStat) / 3.0
-            var scatter = GameConstants.PlayerBalance.baseScatter * (1.0 - avgControl / 99.0)
-            scatter *= scatterMultiplier
-
-            let scatterX = CGFloat.random(in: -scatter...scatter)
-            let scatterY = CGFloat.random(in: -scatter...scatter)
-
-            // Scattered target (matches calculatePlayerShot's soft clamping)
-            let finalNX = targetNX + scatterX
-            let finalNY = targetNY + scatterY
-
-            // In-bounds: must land on opponent's court half (y > 0.5) and within sidelines
-            if finalNX >= 0 && finalNX <= 1.0 && finalNY > 0.5 && finalNY <= 1.0 {
-                inBounds += 1
-            }
-        }
-
-        return Double(inBounds) / Double(count)
     }
 
     // MARK: - Feedback Loop: Return Rates
@@ -307,100 +238,41 @@ struct PutAwayBalanceTests {
         #expect(allPassed, "All DUPR put-away return rates should be within tolerance of targets")
     }
 
-    // MARK: - Feedback Loop: Accuracy
+    // MARK: - Scatter Validation
 
-    @Test func tunePutAwayAccuracy() {
-        let maxIterations = 20
+    /// Validate that put-away scatter keeps shots in-bounds for reasonable players.
+    /// Put-aways are easy balls to place — scatter should be LOW (multiplier < 1.0).
+    @Test func validatePutAwayScatter() {
+        let scatterMultiplier = GameConstants.PutAway.scatterMultiplier
+        print("Put-Away Scatter Validation")
+        print("===========================")
+        print("scatterMultiplier = \(scatterMultiplier)")
 
-        // Start from a higher value than the stored constant — put-aways need MORE scatter
-        // than normal shots since they're aggressive slams. Low-DUPR players spray wildly.
-        var scatterMultiplier: CGFloat = 2.0
+        // Scatter multiplier should be < 1.0 (put-aways are easier to place than normal shots)
+        #expect(scatterMultiplier < 1.0, "Put-away scatter multiplier should be < 1.0 (easier to place)")
+        #expect(scatterMultiplier > 0.05, "Put-away scatter multiplier should be > 0.05 (not zero)")
 
-        var bestScatter = scatterMultiplier
-        var bestTotalError: Double = .infinity
+        // Validate that DUPR 4.0+ players land 90%+ of put-aways in-bounds
+        for dupr in [4.0, 5.0, 6.0] {
+            let stats = StatProfileLoader.shared.toNPCStats(dupr: dupr)
+            let avgControl = (CGFloat(stats.stat(.accuracy)) + CGFloat(stats.stat(.consistency)) + CGFloat(stats.stat(.focus))) / 3.0
+            let scatter = GameConstants.PlayerBalance.baseScatter * (1.0 - avgControl / 99.0) * scatterMultiplier
 
-        print("Put-Away Accuracy Tuning")
-        print("========================")
-        print("Targets: \(Self.accuracyTargets.map { "DUPR \($0.dupr): \(Int($0.inBoundsRate * 100))%" }.joined(separator: ", "))")
-        print("")
-
-        for iteration in 1...maxIterations {
-            var results: [(dupr: Double, measured: Double, target: Double)] = []
-            var totalError: Double = 0
-
-            for (dupr, target) in Self.accuracyTargets {
-                let rate = Self.simulatePutAwayAccuracy(
-                    dupr: dupr,
-                    count: Self.accuracyTrialsPerDUPR,
-                    scatterMultiplier: scatterMultiplier
-                )
-                let diff = rate - target
-                totalError += diff * diff
-                results.append((dupr, rate, target))
+            var inBounds = 0
+            let count = 5000
+            for _ in 0..<count {
+                let targetNX = CGFloat.random(in: 0.25...0.75)
+                let targetNY = CGFloat.random(in: 0.75...0.90)
+                let finalNX = targetNX + CGFloat.random(in: -scatter...scatter)
+                let finalNY = targetNY + CGFloat.random(in: -scatter...scatter)
+                if finalNX >= 0 && finalNX <= 1.0 && finalNY > 0.5 && finalNY <= 1.0 {
+                    inBounds += 1
+                }
             }
-
-            let rmse = sqrt(totalError / Double(Self.accuracyTargets.count))
-
-            print("Iteration \(iteration): scatterMultiplier=\(String(format: "%.4f", scatterMultiplier))")
-            for r in results {
-                let status = Swift.abs(r.measured - r.target) <= Self.accuracyTolerance ? "OK" : "MISS"
-                print("  DUPR \(String(format: "%.1f", r.dupr)): \(String(format: "%.1f%%", r.measured * 100)) (target: \(String(format: "%.0f%%", r.target * 100))) [\(status)]")
-            }
-            print("  RMSE: \(String(format: "%.4f", rmse))")
-
-            if totalError < bestTotalError {
-                bestTotalError = totalError
-                bestScatter = scatterMultiplier
-            }
-
-            let allGood = results.allSatisfy { Swift.abs($0.measured - $0.target) <= Self.accuracyTolerance }
-            if allGood {
-                print("\nAll DUPR levels within tolerance after \(iteration) iterations!")
-                break
-            }
-
-            // Weighted error: 70% low-DUPR (hardest to tune), 30% high-DUPR
-            let lowResults = results.filter { $0.dupr <= 3.0 }
-            let highResults = results.filter { $0.dupr >= 5.0 }
-            let lowAvgError = lowResults.map { $0.measured - $0.target }.reduce(0, +) / Double(max(1, lowResults.count))
-            let highAvgError = highResults.map { $0.measured - $0.target }.reduce(0, +) / Double(max(1, highResults.count))
-            let weightedError = lowAvgError * 0.7 + highAvgError * 0.3
-
-            let lr: CGFloat = 1.0
-            // Positive error = too many in-bounds → increase scatter (higher multiplier = more scatter)
-            scatterMultiplier += CGFloat(weightedError) * lr * 1.5
-            scatterMultiplier = max(0.05, min(10.0, scatterMultiplier))
-
-            print("")
+            let rate = Double(inBounds) / Double(count)
+            print("  DUPR \(dupr): \(String(format: "%.1f%%", rate * 100)) in-bounds (scatter=\(String(format: "%.4f", scatter)))")
+            #expect(rate > 0.90, "DUPR \(dupr) should land 90%+ of put-aways in-bounds")
         }
-
-        scatterMultiplier = bestScatter
-
-        // Final verification with more samples
-        print("\n--- Final Verification (10k trials per DUPR) ---")
-        var allPassed = true
-        for (dupr, target) in Self.accuracyTargets {
-            let rate = Self.simulatePutAwayAccuracy(
-                dupr: dupr,
-                count: 10_000,
-                scatterMultiplier: scatterMultiplier
-            )
-            let status = Swift.abs(rate - target) <= Self.accuracyTolerance ? "PASS" : "FAIL"
-            if Swift.abs(rate - target) > Self.accuracyTolerance { allPassed = false }
-            print("  DUPR \(String(format: "%.1f", dupr)): \(String(format: "%.1f%%", rate * 100)) (target: \(String(format: "%.0f%%", target * 100))) [\(status)]")
-        }
-
-        print("\nOptimal accuracy constant:")
-        print("  scatterMultiplier = \(String(format: "%.4f", scatterMultiplier))")
-
-        if allPassed {
-            writeAccuracyConstant(scatterMultiplier: scatterMultiplier)
-            print("\nAccuracy constant written to GameConstants.swift")
-        } else {
-            print("\nWARNING: Not all targets met — constants NOT written. Review and re-run.")
-        }
-
-        #expect(allPassed, "All DUPR put-away accuracy rates should be within tolerance of targets")
     }
 
     // MARK: - Write Constants
@@ -421,16 +293,6 @@ struct PutAwayBalanceTests {
         replace(in: &source,
                 #"static let stretchPenalty: CGFloat = [\d.]+"#,
                 with: "static let stretchPenalty: CGFloat = \(String(format: "%.4f", stretchPenalty))")
-
-        writeGameConstants(source)
-    }
-
-    private func writeAccuracyConstant(scatterMultiplier: CGFloat) {
-        guard var source = readGameConstants() else { return }
-
-        replace(in: &source,
-                #"static let scatterMultiplier: CGFloat = [\d.]+"#,
-                with: "static let scatterMultiplier: CGFloat = \(String(format: "%.4f", scatterMultiplier))")
 
         writeGameConstants(source)
     }

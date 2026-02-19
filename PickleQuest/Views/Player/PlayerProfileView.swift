@@ -168,6 +168,43 @@ struct PlayerProfileView: View {
                     .background(.regularMaterial)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
 
+                    // Skill Tree
+                    NavigationLink {
+                        SkillTreeView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "sparkles")
+                                .font(.title2)
+                                .foregroundStyle(.purple)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Skill Tree")
+                                    .font(.headline)
+                                    .foregroundStyle(.primary)
+                                let acquired = appState.player.skills.count
+                                let available = SkillDefinition.forPlayerType(appState.player.playerType).count
+                                Text("\(acquired)/\(available) skills")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if appState.player.progression.availableSkillPoints > 0 {
+                                Text("\(appState.player.progression.availableSkillPoints)")
+                                    .font(.caption.bold())
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(.purple.opacity(0.2))
+                                    .foregroundStyle(.purple)
+                                    .clipShape(Capsule())
+                            }
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding()
+                        .background(.regularMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
                     // Equipment Summary
                     if let vm = viewModel {
                         VStack(alignment: .leading, spacing: 12) {

@@ -28,7 +28,7 @@ struct NPCStrategyProfile: Sendable {
 
     /// Build a strategy profile from DUPR rating and personality.
     /// Uses piecewise linear interpolation across DUPR tiers, then applies personality multipliers.
-    static func build(dupr: Double, personality: NPCPersonality) -> NPCStrategyProfile {
+    static func build(dupr: Double, personality: PlayerType) -> NPCStrategyProfile {
         // Piecewise linear interpolation helper: maps dupr to value across breakpoints
         func lerp(dupr: Double, breakpoints: [(dupr: Double, value: CGFloat)]) -> CGFloat {
             guard let first = breakpoints.first, let last = breakpoints.last else { return 0 }
@@ -196,7 +196,7 @@ final class MatchAI {
         self.npcDUPR = npc.duprRating
         self.playerDUPR = playerDUPR
         self.isHeadless = headless
-        self.strategy = NPCStrategyProfile.build(dupr: npc.duprRating, personality: npc.personality)
+        self.strategy = NPCStrategyProfile.build(dupr: npc.duprRating, personality: npc.playerType)
 
         // In headless mode, skip stat boost — SimulatedPlayerAI already models human imperfection
         // via reaction delay, positioning noise, and smaller hitbox.

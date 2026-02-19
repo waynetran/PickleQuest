@@ -40,6 +40,7 @@ struct TrainingDrillView: View {
                 if viewModel == nil {
                     viewModel = TrainingViewModel(
                         trainingService: container.trainingService,
+                        skillService: container.skillService,
                         coach: coach
                     )
                 }

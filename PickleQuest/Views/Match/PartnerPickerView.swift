@@ -2,7 +2,7 @@ import SwiftUI
 
 struct PartnerPickerView: View {
     let availableNPCs: [NPC]
-    let playerPersonality: NPCPersonality
+    let playerPersonality: PlayerType
     let opponent1: NPC?
     let opponent2: NPC?
     let onSelect: (NPC) -> Void
@@ -50,8 +50,8 @@ struct PartnerPickerView: View {
                 } else {
                     // Sort by synergy (best first)
                     let sorted = availableNPCs.sorted { npc1, npc2 in
-                        let syn1 = TeamSynergy.calculate(p1: playerPersonality, p2: npc1.personality)
-                        let syn2 = TeamSynergy.calculate(p1: playerPersonality, p2: npc2.personality)
+                        let syn1 = TeamSynergy.calculate(p1: playerPersonality, p2: npc1.playerType)
+                        let syn2 = TeamSynergy.calculate(p1: playerPersonality, p2: npc2.playerType)
                         return syn1.multiplier > syn2.multiplier
                     }
 
@@ -70,7 +70,7 @@ struct PartnerPickerView: View {
     }
 
     private func partnerCard(npc: NPC) -> some View {
-        let synergy = TeamSynergy.calculate(p1: playerPersonality, p2: npc.personality)
+        let synergy = TeamSynergy.calculate(p1: playerPersonality, p2: npc.playerType)
 
         return Button {
             onSelect(npc)
@@ -97,7 +97,7 @@ struct PartnerPickerView: View {
                         Text("SUPR \(String(format: "%.2f", npc.duprRating))")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                        Text(npc.personality.rawValue.capitalized)
+                        Text(npc.playerType.rawValue.capitalized)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }

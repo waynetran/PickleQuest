@@ -663,7 +663,7 @@ Profile → "Switch Player" → save current → [.playerChooser]
 - `Views/Onboarding/TutorialPostMatchView.swift` — post-tutorial explainers
 - `ViewModels/CharacterCreationViewModel.swift` — creation state
 - `ViewModels/TutorialViewModel.swift` — tutorial phases + tips
-- `Extensions/NPCPersonality+Display.swift` — personality display metadata
+- `Extensions/PlayerType+Display.swift` — personality display metadata
 
 ### Modified files (7)
 - `App/PickleQuestApp.swift` — ModelContainer, RootView, scenePhase auto-save
