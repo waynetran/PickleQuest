@@ -11,6 +11,11 @@ final class InteractiveDrillScene: SKScene {
     private var coachNode: SKSpriteNode!
     private var ballNode: SKSpriteNode!
     private var ballShadow: SKShapeNode!
+    private var ballTrailOuter: SKShapeNode!  // red/orange fire edge
+    private var ballTrailInner: SKShapeNode!  // yellow/orange core
+    private var ballTrailHistory: [CGPoint] = []
+    private let ballTrailMaxLength: CGFloat = AC.sceneWidth * 0.5
+    private let ballTrailMaxPoints: Int = 20
     private var playerAnimator: SpriteSheetAnimator!
     private var coachAnimator: SpriteSheetAnimator!
     private var ballTextures: [SKTexture] = []
@@ -233,6 +238,19 @@ final class InteractiveDrillScene: SKScene {
         ballShadow.zPosition = AC.ZPositions.ballShadow
         ballShadow.alpha = 0
         addChild(ballShadow)
+
+        // Ball comet trail (two layers: outer fire edge + inner glow core)
+        ballTrailOuter = SKShapeNode()
+        ballTrailOuter.strokeColor = .clear
+        ballTrailOuter.zPosition = AC.ZPositions.ball - 0.2
+        ballTrailOuter.alpha = 0
+        addChild(ballTrailOuter)
+
+        ballTrailInner = SKShapeNode()
+        ballTrailInner.strokeColor = .clear
+        ballTrailInner.zPosition = AC.ZPositions.ball - 0.1
+        ballTrailInner.alpha = 0
+        addChild(ballTrailInner)
 
         // Joystick (visible at default position, centers on touch)
         joystickBase = SKShapeNode(circleOfRadius: joystickBaseRadius)
@@ -1042,6 +1060,9 @@ final class InteractiveDrillScene: SKScene {
             ballSim.reset()
             ballNode.alpha = 0
             ballShadow.alpha = 0
+            ballTrailOuter.alpha = 0
+            ballTrailInner.alpha = 0
+            ballTrailHistory.removeAll()
             scorekeeper.onRallyEnd()
             scorekeeper.onRoundAttempted()
             showIndicator("Rally!", color: .systemGreen, duration: 0.8)
@@ -1259,6 +1280,9 @@ final class InteractiveDrillScene: SKScene {
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
+        ballTrailOuter.alpha = 0
+        ballTrailInner.alpha = 0
+        ballTrailHistory.removeAll()
 
         // Determine if the player won the point
         let playerWon: Bool
@@ -1400,7 +1424,12 @@ final class InteractiveDrillScene: SKScene {
     }
 
     private func syncBallPosition() {
-        guard ballSim.isActive else { return }
+        guard ballSim.isActive else {
+            ballTrailOuter.alpha = 0
+            ballTrailInner.alpha = 0
+            ballTrailHistory.removeAll()
+            return
+        }
 
         let ballScreenPos = ballSim.screenPosition()
         ballNode.position = ballScreenPos
@@ -1416,6 +1445,121 @@ final class InteractiveDrillScene: SKScene {
         ballShadow.setScale(shadowScale)
 
         ballNode.zPosition = AC.ZPositions.ball - CGFloat(ballSim.courtY) * 0.1
+
+        // Update comet trail
+        updateBallTrail(ballScreenPos: ballScreenPos, pScale: pScale)
+    }
+
+    private func updateBallTrail(ballScreenPos: CGPoint, pScale: CGFloat) {
+        ballTrailHistory.append(ballScreenPos)
+
+        if ballTrailHistory.count > ballTrailMaxPoints {
+            ballTrailHistory.removeFirst(ballTrailHistory.count - ballTrailMaxPoints)
+        }
+
+        // Trim by max length
+        var totalDist: CGFloat = 0
+        var trimIndex = ballTrailHistory.count
+        for i in stride(from: ballTrailHistory.count - 1, through: 1, by: -1) {
+            let dx = ballTrailHistory[i].x - ballTrailHistory[i - 1].x
+            let dy = ballTrailHistory[i].y - ballTrailHistory[i - 1].y
+            totalDist += sqrt(dx * dx + dy * dy)
+            if totalDist > ballTrailMaxLength {
+                trimIndex = i
+                break
+            }
+        }
+        if trimIndex > 0 && trimIndex < ballTrailHistory.count {
+            ballTrailHistory.removeFirst(trimIndex)
+        }
+
+        guard ballTrailHistory.count >= 2 else {
+            ballTrailOuter.alpha = 0
+            ballTrailInner.alpha = 0
+            return
+        }
+
+        // Ball speed → fire intensity
+        let ballSpeed = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
+        let maxSpeed = P.baseShotSpeed + 2.0 * (P.maxShotSpeed - P.baseShotSpeed)
+        let fireIntensity = min(ballSpeed / maxSpeed, 1.0)
+
+        let headHalfWidth = AC.Sprites.ballSize * pScale * 0.25
+        let count = ballTrailHistory.count
+
+        let outerPath = buildTrailPath(halfWidth: headHalfWidth, count: count)
+        let innerPath = buildTrailPath(halfWidth: headHalfWidth * 0.55, count: count)
+
+        // Outer: yellow → red
+        let outerG: CGFloat = 0.85 - fireIntensity * 0.65
+        let outerAlpha: CGFloat = 0.3 + fireIntensity * 0.25
+        ballTrailOuter.fillColor = UIColor(red: 1.0, green: outerG, blue: 0.1 * (1.0 - fireIntensity), alpha: outerAlpha)
+        ballTrailOuter.path = outerPath
+        ballTrailOuter.alpha = 1
+        ballTrailOuter.zPosition = AC.ZPositions.ball - 0.2 - CGFloat(ballSim.courtY) * 0.1
+
+        // Inner: yellow → orange
+        let innerG: CGFloat = 0.92 - fireIntensity * 0.42
+        let innerAlpha: CGFloat = 0.45 + fireIntensity * 0.25
+        ballTrailInner.fillColor = UIColor(red: 1.0, green: innerG, blue: 0.2 * (1.0 - fireIntensity), alpha: innerAlpha)
+        ballTrailInner.path = innerPath
+        ballTrailInner.alpha = 1
+        ballTrailInner.zPosition = AC.ZPositions.ball - 0.1 - CGFloat(ballSim.courtY) * 0.1
+    }
+
+    private func buildTrailPath(halfWidth: CGFloat, count: Int) -> CGPath {
+        var topEdge: [CGPoint] = []
+        var bottomEdge: [CGPoint] = []
+
+        for i in 0..<count {
+            let p = ballTrailHistory[i]
+            let t = CGFloat(i) / CGFloat(count - 1)
+            let taper = pow(sin(t * .pi / 2), 0.7)
+            let halfW = halfWidth * taper
+
+            let next = i < count - 1 ? ballTrailHistory[i + 1] : p
+            let prev = i > 0 ? ballTrailHistory[i - 1] : p
+            let dx = next.x - prev.x
+            let dy = next.y - prev.y
+            let len = sqrt(dx * dx + dy * dy)
+
+            let nx: CGFloat, ny: CGFloat
+            if len > 0.01 {
+                nx = -dy / len
+                ny = dx / len
+            } else {
+                nx = 0
+                ny = 1
+            }
+
+            topEdge.append(CGPoint(x: p.x + nx * halfW, y: p.y + ny * halfW))
+            bottomEdge.append(CGPoint(x: p.x - nx * halfW, y: p.y - ny * halfW))
+        }
+
+        let path = CGMutablePath()
+        path.move(to: topEdge[0])
+        for i in 1..<topEdge.count {
+            path.addLine(to: topEdge[i])
+        }
+
+        // Rounded cap at the head
+        let headTop = topEdge[topEdge.count - 1]
+        let headBot = bottomEdge[bottomEdge.count - 1]
+        let headCenter = CGPoint(x: (headTop.x + headBot.x) / 2,
+                                 y: (headTop.y + headBot.y) / 2)
+        let capRadius = sqrt(pow(headTop.x - headCenter.x, 2) + pow(headTop.y - headCenter.y, 2))
+        if capRadius > 0.5 {
+            let angleTop = atan2(headTop.y - headCenter.y, headTop.x - headCenter.x)
+            let angleBot = atan2(headBot.y - headCenter.y, headBot.x - headCenter.x)
+            path.addArc(center: headCenter, radius: capRadius,
+                        startAngle: angleTop, endAngle: angleBot, clockwise: true)
+        }
+
+        for i in stride(from: bottomEdge.count - 1, through: 0, by: -1) {
+            path.addLine(to: bottomEdge[i])
+        }
+        path.closeSubpath()
+        return path
     }
 
     private func syncAllPositions() {
@@ -1563,6 +1707,9 @@ final class InteractiveDrillScene: SKScene {
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
+        ballTrailOuter.alpha = 0
+        ballTrailInner.alpha = 0
+        ballTrailHistory.removeAll()
 
         run(SoundManager.shared.skAction(for: .matchWin))
 
