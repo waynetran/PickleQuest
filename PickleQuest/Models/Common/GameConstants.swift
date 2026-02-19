@@ -353,9 +353,9 @@ enum GameConstants {
 
         // Pressure hitbox shrink — cumulative per kitchen shot while opponent is deep.
         // Each shot from the kitchen player while NPC stays back shrinks NPC hitbox further.
-        static var pressureShrinkPerShot: CGFloat = 0.18        // hitbox multiplier lost per pressure shot
-        static var pressureHitboxMinMultiplier: CGFloat = 0.40  // floor — can't shrink below 40%
-        static var pressureTouchResistMax: CGFloat = 0.60       // accuracy stat 99 resists 60% of shrink
+        nonisolated(unsafe) static var pressureShrinkPerShot: CGFloat = 0.18        // hitbox multiplier lost per pressure shot
+        nonisolated(unsafe) static var pressureHitboxMinMultiplier: CGFloat = 0.40  // floor — can't shrink below 40%
+        nonisolated(unsafe) static var pressureTouchResistMax: CGFloat = 0.60       // accuracy stat 99 resists 60% of shrink
         static let pressurePlayerKitchenNY: CGFloat = 0.38      // player Y threshold to be "at kitchen"
         static let pressureNPCDeepNY: CGFloat = 0.72            // NPC Y threshold to be "deep/back"
 
@@ -379,8 +379,8 @@ enum GameConstants {
         }
 
         // Player movement (court units per second)
-        static let baseMoveSpeed: CGFloat = 0.4
-        static let maxMoveSpeedBonus: CGFloat = 0.8
+        static let baseMoveSpeed: CGFloat = 0.36
+        static let maxMoveSpeedBonus: CGFloat = 0.72
 
         // Shot quality
         static let heightPowerBonus: CGFloat = 0.3        // bonus power for high ball (overhead smash)
@@ -433,7 +433,7 @@ enum GameConstants {
         /// Minimum error rate floor per unit of shot difficulty (even stat 99 NPCs)
         static let npcMinPowerErrorFloor: CGFloat = 0.01
         /// NPC serve fault rate at stat 1 (chance of double fault per serve)
-        static let npcBaseServeFaultRate: CGFloat = 0.2263
+        static let npcBaseServeFaultRate: CGFloat = 0.2409
         /// Exponent for stat→fault scaling: pow(1 - stat/99, exponent).
         /// Higher = steeper curve (more separation between beginner and advanced).
         static let npcServeFaultStatExponent: CGFloat = 3.0
