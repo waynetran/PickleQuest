@@ -652,34 +652,36 @@ final class InteractiveMatchScene: SKScene {
     }
 
     private func buildHitboxRings() {
+        let hitboxZ = AC.ZPositions.nearPlayer + 1  // draw over player sprites
+
         // Player hitbox: inner (direct hit) + outer (edge/stretch zone)
         playerHitboxRing = SKShapeNode(circleOfRadius: 1)
-        playerHitboxRing.strokeColor = UIColor.systemCyan.withAlphaComponent(0.5)
-        playerHitboxRing.fillColor = UIColor.systemCyan.withAlphaComponent(0.10)
-        playerHitboxRing.lineWidth = 1.5
-        playerHitboxRing.zPosition = AC.ZPositions.courtLines + 0.5
+        playerHitboxRing.strokeColor = UIColor.systemCyan.withAlphaComponent(0.7)
+        playerHitboxRing.fillColor = UIColor.systemCyan.withAlphaComponent(0.15)
+        playerHitboxRing.lineWidth = 2.0
+        playerHitboxRing.zPosition = hitboxZ
         addChild(playerHitboxRing)
 
         playerHitboxEdge = SKShapeNode(circleOfRadius: 1)
-        playerHitboxEdge.strokeColor = UIColor.systemCyan.withAlphaComponent(0.25)
+        playerHitboxEdge.strokeColor = UIColor.systemCyan.withAlphaComponent(0.35)
         playerHitboxEdge.fillColor = .clear
-        playerHitboxEdge.lineWidth = 1.0
-        playerHitboxEdge.zPosition = AC.ZPositions.courtLines + 0.5
+        playerHitboxEdge.lineWidth = 1.5
+        playerHitboxEdge.zPosition = hitboxZ
         addChild(playerHitboxEdge)
 
         // NPC hitbox: inner (direct hit) + outer (edge/stretch zone)
         npcHitboxRing = SKShapeNode(circleOfRadius: 1)
-        npcHitboxRing.strokeColor = UIColor.systemRed.withAlphaComponent(0.5)
-        npcHitboxRing.fillColor = UIColor.systemRed.withAlphaComponent(0.10)
-        npcHitboxRing.lineWidth = 1.5
-        npcHitboxRing.zPosition = AC.ZPositions.courtLines + 0.5
+        npcHitboxRing.strokeColor = UIColor.systemRed.withAlphaComponent(0.7)
+        npcHitboxRing.fillColor = UIColor.systemRed.withAlphaComponent(0.15)
+        npcHitboxRing.lineWidth = 2.0
+        npcHitboxRing.zPosition = hitboxZ
         addChild(npcHitboxRing)
 
         npcHitboxEdge = SKShapeNode(circleOfRadius: 1)
-        npcHitboxEdge.strokeColor = UIColor.systemRed.withAlphaComponent(0.25)
+        npcHitboxEdge.strokeColor = UIColor.systemRed.withAlphaComponent(0.35)
         npcHitboxEdge.fillColor = .clear
-        npcHitboxEdge.lineWidth = 1.0
-        npcHitboxEdge.zPosition = AC.ZPositions.courtLines + 0.5
+        npcHitboxEdge.lineWidth = 1.5
+        npcHitboxEdge.zPosition = hitboxZ
         addChild(npcHitboxEdge)
     }
 
@@ -3235,11 +3237,11 @@ final class InteractiveMatchScene: SKScene {
         let pressureCount = npcAI.pressureShotCount
         if pressureCount > 0 {
             let intensity = min(1.0, CGFloat(pressureCount) * 0.35)
-            npcHitboxRing.strokeColor = UIColor.systemOrange.withAlphaComponent(0.40 + intensity * 0.30)
-            npcHitboxRing.fillColor = UIColor.systemOrange.withAlphaComponent(0.08 + intensity * 0.10)
+            npcHitboxRing.strokeColor = UIColor.systemOrange.withAlphaComponent(0.5 + intensity * 0.3)
+            npcHitboxRing.fillColor = UIColor.systemOrange.withAlphaComponent(0.10 + intensity * 0.12)
         } else {
-            npcHitboxRing.strokeColor = UIColor.systemRed.withAlphaComponent(0.5)
-            npcHitboxRing.fillColor = UIColor.systemRed.withAlphaComponent(0.10)
+            npcHitboxRing.strokeColor = UIColor.systemRed.withAlphaComponent(0.7)
+            npcHitboxRing.fillColor = UIColor.systemRed.withAlphaComponent(0.15)
         }
     }
 
