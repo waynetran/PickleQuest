@@ -27,6 +27,7 @@
 | 10c | Equipment Power Budget & Trait System | **Complete** |
 | 10d | Headless Interactive Match Simulator | **Complete** |
 | 11 | MVP Polish: Sound, Stats, Notifications, Tutorial, Theme | **Complete** |
+| 12 | Skill Tree, Player Types & Personality System | **Complete** |
 | 7c | Persistence Polish, Cloud Prep, Multiplayer Prep | Planned |
 
 ---
@@ -1248,6 +1249,62 @@ High-DUPR NPCs (6.5-8.0) were serving with rally-level power, creating flat arcs
 - `npcServeTargetMinNY`: 0.050
 - `npcServeTargetMaxNY_Low`: 0.246
 - `npcServeTargetMaxNY_High`: 0.250
+
+---
+
+## Milestone 12: Skill Tree, Player Types & Personality System
+
+### What was built
+- **Player Types** (renamed from NPCPersonality): aggressive, defensive, allRounder, speedster, strategist — with exclusive skill trees per type
+- **Personality System** (NEW): 6 dialog personalities (awkward, serious, funny, dramatic, flirty, competitive) for both players and NPCs, with context-specific dialog tables
+- **Skill Tree**: 23 skills (8 shared + 3 exclusive per type), acquired via coaching lessons (5 lessons) or NPC defeats, leveled with skill points (1 per level-up, max rank 5)
+- **Character Creation**: expanded to 4 steps — Name → Appearance → Player Type → Personality
+- **Skill Service**: protocol + mock implementation for skill acquisition, upgrades, and point spending
+- **Coach Integration**: drills track lesson progress toward skill acquisition, UI shows which skill the coach teaches, SkillUnlockedBanner on acquisition
+- **NPC Integration**: NPCs assigned skills based on playerType + difficulty, defeating NPCs can teach their skills, skill badges shown on NPC picker and court detail
+- **Personality Dialog**: NPC post-match quips use dialog personality (deterministic from ID), player personality reactions ~30% during matches
+- **Skill Point Economy**: 49 level-ups × 1 skill point = 49 points available, 11 skills × 5 ranks = 55 max → forces meaningful choices
+
+### Sub-Milestones
+| Sub | Description | Status |
+|-----|------------|--------|
+| A | Data Models & Rename NPCPersonality → PlayerType | Complete |
+| B | Character Creation (4 steps) | Complete |
+| C | Skill Service & Skill Tree UI | Complete |
+| D | Coach Integration (Lessons → Skill Acquisition) | Complete |
+| E | NPC Integration (Defeats → Skill Acquisition) | Complete |
+| F | Personality Dialog System | Complete |
+| G | Match Engine Integration (skills affect gameplay) | Deferred |
+
+### New files (12)
+- `Models/Skills/SkillDefinition.swift` — SkillID enum (23 cases) + SkillDefinition registry
+- `Models/Skills/PlayerSkill.swift` — PlayerSkill, SkillAcquisitionSource, SkillLessonProgress
+- `Models/Player/Personality.swift` — 6-case dialog personality enum
+- `Models/Player/PersonalityDialog.swift` — Dialog tables (Personality × Context → lines)
+- `Extensions/Personality+Display.swift` — Display properties for personality
+- `Extensions/PlayerType+Display.swift` — Renamed from NPCPersonality+Display.swift
+- `Services/Protocols/SkillService.swift` — Skill service protocol
+- `Services/Mock/MockSkillService.swift` — Mock implementation
+- `ViewModels/SkillTreeViewModel.swift` — Skill tree view model
+- `Views/Player/SkillTreeView.swift` — Full skill tree UI with rank dots, lesson progress
+- `Views/Components/SkillUnlockedBanner.swift` — Celebratory banner
+
+### Modified files (25+)
+- `NPC.swift` — renamed NPCPersonality→PlayerType, added skills field, Codable migration
+- `Player.swift` — renamed personality→playerType, added new personality/skills/skillLessonProgress fields
+- `PlayerProgression.swift` — added availableSkillPoints, skill point on level-up
+- `GameConstants.swift` — added Skills section
+- `Coach.swift` — added totalLessonsPerCoach to CoachingRecord
+- `DependencyContainer.swift` — added skillService
+- `CharacterCreationViewModel.swift` / `CharacterCreationView.swift` — 4-step creation flow
+- `TrainingViewModel.swift` / `TrainingDrillView.swift` — skill lesson tracking + teaching UI
+- `MatchViewModel.swift` / `MockMatchService.swift` — post-match skill acquisition
+- `MatchResultView.swift` — acquired skill display
+- `NPCPickerView.swift` / `CourtDetailSheet.swift` — NPC skill badges
+- `InteractiveMatchScene.swift` — personality dialog system
+- `AlphaNPCGenerator.swift` / `HustlerNPCGenerator.swift` / `MockNPCService.swift` — NPC skill generation
+- `PlayerProfileView.swift` / `LevelUpBanner.swift` — skill points UI
+- 18+ files bulk-renamed NPCPersonality→PlayerType
 
 ---
 
