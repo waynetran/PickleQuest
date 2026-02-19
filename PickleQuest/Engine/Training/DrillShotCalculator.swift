@@ -138,9 +138,12 @@ enum DrillShotCalculator {
         distanceNX: CGFloat = 0,
         power: CGFloat,
         initialHeight: CGFloat = 0.05,
-        arcMargin: CGFloat = 1.0 // ensureNetClearance() handles net safety
+        arcMargin: CGFloat = 1.0, // ensureNetClearance() handles net safety
+        topspinFactor: CGFloat = 0 // topspin adds downward pull, slice adds lift
     ) -> CGFloat {
         let P = GameConstants.DrillPhysics.self
+        // Topspin adds 0.6 * topspinFactor per second of downward acceleration in the ball sim
+        let effectiveGravity = P.gravity + topspinFactor * 0.6
         let speed = P.baseShotSpeed + power * (P.maxShotSpeed - P.baseShotSpeed)
         guard speed > 0.01, distanceNY > 0.01 else { return 0.3 }
 
@@ -150,12 +153,13 @@ enum DrillShotCalculator {
 
         // Solve for vz so that h(t) = 0 at travelTime:
         // 0 = h0 + vz*t - 0.5*g*t²  →  vz = (0.5*g*t² - h0) / t
-        let vzNeeded = (0.5 * P.gravity * travelTime * travelTime - initialHeight) / travelTime
+        let vzNeeded = (0.5 * effectiveGravity * travelTime * travelTime - initialHeight) / travelTime
 
         // Convert vz to arc: launch() does vz = arc * speed * 2.0
         let arc = vzNeeded / (speed * 2.0)
-        // Cap arc to prevent absurdly floaty trajectories at low power
-        return min(0.85, max(0.08, arc * arcMargin))
+        // Cap arc to prevent absurdly floaty trajectories (higher cap for topspin serves)
+        let maxArc: CGFloat = topspinFactor > 0 ? 1.2 : 0.85
+        return min(maxArc, max(0.08, arc * arcMargin))
     }
 
     /// Generate a shot for the player.

@@ -58,11 +58,14 @@ final class InteractiveDrillScene: SKScene {
     // Cone targets (return of serve)
     private var coneNodes: [SKShapeNode] = []
 
-    // Shot mode toggle buttons (5 modes)
-    private var activeShotModes: DrillShotCalculator.ShotMode = []
-    private var shotModeButtons: [SKNode] = []
-    private var shotModeBgs: [SKShapeNode] = []
-    private var shotModeTouch: UITouch?
+    // Joystick swipe velocity tracking (for shot intent)
+    private var joystickSwipeVelocity: CGVector = .zero  // points/sec
+    private var prevTouchPos: CGPoint = .zero
+    private var prevTouchTimestamp: TimeInterval = 0
+
+    // Shot type flash label (shows "POWER!", "TOUCH", "LOB" on hit)
+    private var shotTypeLabel: SKLabelNode!
+    private var shotTypeLabelTimer: CGFloat = 0
 
     // Stamina
     private var stamina: CGFloat = GameConstants.DrillPhysics.maxStamina
@@ -271,9 +274,9 @@ final class InteractiveDrillScene: SKScene {
         joystickKnob.alpha = 0.4
         addChild(joystickKnob)
 
-        // Shot intensity buttons (right side, only for joystick drills)
+        // Shot type flash label (joystick drills)
         if drillConfig.inputMode == .joystick {
-            buildShotButtons()
+            buildShotTypeLabel()
         }
 
         // Cone targets (return of serve only)
@@ -323,95 +326,84 @@ final class InteractiveDrillScene: SKScene {
         }
     }
 
-    private func buildShotButtons() {
-        typealias SM = DrillShotCalculator.ShotMode
-
-        let buttonWidth: CGFloat = 70
-        let buttonHeight: CGFloat = 36
-        let cornerRadius: CGFloat = 10
-        let gap: CGFloat = 8
-        let buttonX = AC.sceneWidth - 51
-
-        let defs: [(name: String, color: UIColor, mode: SM)] = [
-            ("Power", .systemRed, .power),
-            ("Touch", .systemTeal, .touch),
-            ("Slice", .systemPurple, .slice),
-            ("Topspin", .systemGreen, .topspin),
-            ("Angled", .systemOrange, .angled),
-            ("Focus", .systemYellow, .focus),
-        ]
-
-        // Vertically center 6 buttons around y=350
-        let totalHeight = CGFloat(defs.count) * buttonHeight + CGFloat(defs.count - 1) * gap
-        let startY = 350 - totalHeight / 2 + buttonHeight / 2
-
-        for (i, def) in defs.enumerated() {
-            let btn = SKNode()
-            let y = startY + CGFloat(i) * (buttonHeight + gap)
-            btn.position = CGPoint(x: buttonX, y: y)
-            btn.zPosition = 20
-            btn.name = "shotMode_\(i)"
-
-            let bg = SKShapeNode(rect: CGRect(
-                x: -buttonWidth / 2, y: -buttonHeight / 2,
-                width: buttonWidth, height: buttonHeight
-            ), cornerRadius: cornerRadius)
-            bg.fillColor = def.color.withAlphaComponent(0.35)
-            bg.strokeColor = def.color.withAlphaComponent(0.6)
-            bg.lineWidth = 1.5
-            btn.addChild(bg)
-
-            let label = SKLabelNode(text: def.name)
-            label.fontName = "AvenirNext-Bold"
-            label.fontSize = def.name.count > 6 ? 12 : 14
-            label.fontColor = .white
-            label.verticalAlignmentMode = .center
-            label.horizontalAlignmentMode = .center
-            btn.addChild(label)
-
-            addChild(btn)
-            shotModeButtons.append(btn)
-            shotModeBgs.append(bg)
-        }
+    private func buildShotTypeLabel() {
+        shotTypeLabel = SKLabelNode(text: "")
+        shotTypeLabel.fontName = "AvenirNext-Heavy"
+        shotTypeLabel.fontSize = 14
+        shotTypeLabel.fontColor = .white
+        shotTypeLabel.horizontalAlignmentMode = .center
+        shotTypeLabel.verticalAlignmentMode = .top
+        shotTypeLabel.zPosition = AC.ZPositions.text + 2
+        shotTypeLabel.alpha = 0
+        addChild(shotTypeLabel)
     }
 
-    private func toggleShotMode(at index: Int) {
-        typealias SM = DrillShotCalculator.ShotMode
-        let modes: [SM] = [.power, .touch, .slice, .topspin, .angled, .focus]
-        guard index < modes.count else { return }
+    // MARK: - Swipe Shot Determination
 
-        let mode = modes[index]
+    private let powerSwipeThreshold: CGFloat = 400
+    private let touchSwipeThreshold: CGFloat = 50
+    private let lobSwipeThreshold: CGFloat = 200
+    private let maxSwipePowerBoost: CGFloat = 0.5
+    private let maxSwipeSpeed: CGFloat = 800    // pts/sec for max power boost
+    private let maxLobSwipeSpeed: CGFloat = 600 // pts/sec for max lob arc
 
-        if activeShotModes.contains(mode) {
-            activeShotModes.remove(mode)
+    /// Determine shot modes from joystick state at the moment of contact.
+    private func determineShotMode() -> DrillShotCalculator.ShotMode {
+        // Joystick released → neutral touch/dink
+        guard joystickTouch != nil else { return [.touch] }
+
+        let vy = joystickSwipeVelocity.dy  // positive = upward on screen
+        let speed = sqrt(joystickSwipeVelocity.dx * joystickSwipeVelocity.dx
+                       + joystickSwipeVelocity.dy * joystickSwipeVelocity.dy)
+
+        if vy > powerSwipeThreshold {
+            return [.power]
+        } else if vy < -lobSwipeThreshold {
+            return [.lob]
+        } else if speed < touchSwipeThreshold {
+            return [.touch]
         } else {
-            // Power/Touch mutually exclusive; Topspin/Slice mutually exclusive
-            if mode == .power {
-                activeShotModes.remove(.touch)
-            } else if mode == .touch {
-                activeShotModes.remove(.power)
-            } else if mode == .topspin {
-                activeShotModes.remove(.slice)
-            } else if mode == .slice {
-                activeShotModes.remove(.topspin)
-            }
-            activeShotModes.insert(mode)
+            return [.touch]
         }
-        updateShotButtonVisuals()
     }
 
-    private func updateShotButtonVisuals() {
-        typealias SM = DrillShotCalculator.ShotMode
-        let modes: [SM] = [.power, .touch, .slice, .topspin, .angled, .focus]
-        let colors: [UIColor] = [.systemRed, .systemTeal, .systemPurple, .systemGreen, .systemOrange, .systemYellow]
+    /// Horizontal swipe direction mapped to target NX override.
+    private func swipeDirectionNX() -> CGFloat? {
+        guard joystickTouch != nil else { return nil }
+        return 0.5 + joystickDirection.dx * 0.35
+    }
 
-        for (i, bg) in shotModeBgs.enumerated() {
-            guard i < modes.count else { break }
-            let isActive = activeShotModes.contains(modes[i])
-            bg.fillColor = colors[i].withAlphaComponent(isActive ? 0.85 : 0.35)
-            bg.strokeColor = colors[i].withAlphaComponent(isActive ? 1.0 : 0.6)
-            bg.lineWidth = isActive ? 3.0 : 1.5
-        }
+    /// Extra power boost from swipe velocity for power shots.
+    private func swipePowerBoost() -> CGFloat {
+        let speed = sqrt(joystickSwipeVelocity.dx * joystickSwipeVelocity.dx
+                       + joystickSwipeVelocity.dy * joystickSwipeVelocity.dy)
+        let swipeFraction = min(speed / maxSwipeSpeed, 1.0)
+        let powerStat = CGFloat(playerStats.stat(.power))
+        return swipeFraction * maxSwipePowerBoost * (powerStat / 99.0)
+    }
+
+    /// Extra arc from downward swipe velocity for lob shots.
+    private func swipeLobArcBoost() -> CGFloat {
+        let downSpeed = abs(min(joystickSwipeVelocity.dy, 0))
+        let lobFraction = min(downSpeed / maxLobSwipeSpeed, 1.0)
+        return lobFraction * 0.3
+    }
+
+    /// Flash shot type label below the player on hit.
+    private func showShotTypeFlash(_ text: String, color: UIColor) {
+        shotTypeLabel.text = text
+        shotTypeLabel.fontColor = color
+        shotTypeLabel.alpha = 1.0
+        shotTypeLabel.setScale(1.0)
+        shotTypeLabelTimer = 0.7
+
+        shotTypeLabel.removeAllActions()
+        shotTypeLabel.run(.sequence([
+            .scale(to: 1.3, duration: 0.15),
+            .scale(to: 1.0, duration: 0.15),
+            .wait(forDuration: 0.1),
+            .fadeOut(withDuration: 0.3)
+        ]))
     }
 
     private func hitTestButton(_ node: SKNode?, at pos: CGPoint, size: CGSize = CGSize(width: 70, height: 36)) -> Bool {
@@ -711,25 +703,14 @@ final class InteractiveDrillScene: SKScene {
 
             guard phase == .playing || phase == .feedPause else { return }
 
-            // Check shot mode buttons first
-            if drillConfig.inputMode == .joystick {
-                var hitButton = false
-                for (i, btn) in shotModeButtons.enumerated() {
-                    if hitTestButton(btn, at: pos) {
-                        shotModeTouch = touch
-                        toggleShotMode(at: i)
-                        hitButton = true
-                        break
-                    }
-                }
-                if hitButton { continue }
-            }
-
-            // Otherwise start joystick
+            // Start joystick
             guard joystickTouch == nil else { continue }
 
             joystickTouch = touch
             joystickOrigin = pos
+            prevTouchPos = pos
+            prevTouchTimestamp = CACurrentMediaTime()
+            joystickSwipeVelocity = .zero
 
             // Move joystick to touch point, full alpha
             joystickBase.position = pos
@@ -743,6 +724,22 @@ final class InteractiveDrillScene: SKScene {
         guard let activeTouch = joystickTouch, touches.contains(activeTouch) else { return }
 
         let pos = activeTouch.location(in: self)
+
+        // Compute swipe velocity with exponential smoothing
+        let now = CACurrentMediaTime()
+        let dt = now - prevTouchTimestamp
+        if dt > 0.001 {
+            let rawVX = (pos.x - prevTouchPos.x) / CGFloat(dt)
+            let rawVY = (pos.y - prevTouchPos.y) / CGFloat(dt)
+            let smoothing: CGFloat = 0.3
+            joystickSwipeVelocity = CGVector(
+                dx: joystickSwipeVelocity.dx * (1 - smoothing) + rawVX * smoothing,
+                dy: joystickSwipeVelocity.dy * (1 - smoothing) + rawVY * smoothing
+            )
+        }
+        prevTouchPos = pos
+        prevTouchTimestamp = now
+
         let dx = pos.x - joystickOrigin.x
         let dy = pos.y - joystickOrigin.y
         let dist = sqrt(dx * dx + dy * dy)
@@ -776,10 +773,6 @@ final class InteractiveDrillScene: SKScene {
                 return
             }
 
-            if touch === shotModeTouch {
-                shotModeTouch = nil
-                continue
-            }
             if touch === joystickTouch {
                 resetJoystick()
                 continue
@@ -791,7 +784,6 @@ final class InteractiveDrillScene: SKScene {
         swipeTouchStart = nil
         swipeTouchStartTime = nil
         for touch in touches {
-            if touch === shotModeTouch { shotModeTouch = nil }
             if touch === joystickTouch { resetJoystick() }
         }
     }
@@ -802,6 +794,7 @@ final class InteractiveDrillScene: SKScene {
         joystickTouch = nil
         joystickDirection = .zero
         joystickMagnitude = 0
+        joystickSwipeVelocity = .zero
         // Snap back to default position at 40% alpha
         joystickBase.position = joystickDefaultPosition
         joystickKnob.position = joystickDefaultPosition
@@ -959,11 +952,6 @@ final class InteractiveDrillScene: SKScene {
             }
         }
 
-        // Focus mode drains stamina passively (~2.5/sec = lasts 3-5 points)
-        if activeShotModes.contains(.focus) {
-            stamina = max(0, stamina - P.sprintDrainRate * 0.1 * dt)
-        }
-
         // Joystick visual: turn red when sprinting
         if isSprinting {
             joystickBase.strokeColor = UIColor.systemRed.withAlphaComponent(0.8)
@@ -1073,22 +1061,57 @@ final class InteractiveDrillScene: SKScene {
             return
         }
 
+        // Determine shot mode from joystick swipe state
+        var shotModes = determineShotMode()
+
+        // Auto-upgrade to power at the kitchen when ball is high (put-away opportunity)
+        let distFromNet = abs(0.5 - playerNY)
+        if distFromNet < P.kitchenVolleyRange
+            && ballSim.height > P.smashHeightThreshold
+            && shotModes.contains(.touch) {
+            shotModes = [.power]
+        }
+
         // Power mode: drain 20% of max stamina per shot (5 shots to empty)
-        if activeShotModes.contains(.power) {
+        if shotModes.contains(.power) {
             stamina = max(0, stamina - P.maxStamina * 0.20)
         }
 
         let ballFromLeft = ballSim.courtX < playerNX
         let staminaPct = stamina / P.maxStamina
-        let shot = DrillShotCalculator.calculatePlayerShot(
+        var shot = DrillShotCalculator.calculatePlayerShot(
             stats: playerStats,
             ballApproachFromLeft: ballFromLeft,
             drillType: drill.type,
             ballHeight: ballSim.height,
             courtNY: playerNY,
-            modes: activeShotModes,
+            modes: shotModes,
             staminaFraction: staminaPct
         )
+
+        // Apply swipe direction override
+        if let directionNX = swipeDirectionNX() {
+            shot.targetNX = max(0.15, min(0.85, directionNX))
+        }
+
+        // Apply power boost from swipe velocity
+        if shotModes.contains(.power) {
+            shot.power = min(shot.power + swipePowerBoost(), 2.5)
+        }
+
+        // Apply lob arc boost from downward swipe velocity
+        if shotModes.contains(.lob) {
+            shot.arc += swipeLobArcBoost()
+        }
+
+        // Flash shot type label
+        if shotModes.contains(.power) {
+            showShotTypeFlash("POWER!", color: .systemRed)
+        } else if shotModes.contains(.lob) {
+            showShotTypeFlash("LOB", color: .systemIndigo)
+        } else {
+            showShotTypeFlash("TOUCH", color: .systemTeal)
+        }
 
         let animState: CharacterAnimationState = shot.shotType == .forehand
             ? .forehand(isNear: true) : .backhand(isNear: true)
@@ -1412,6 +1435,9 @@ final class InteractiveDrillScene: SKScene {
         } else {
             playerNode.colorBlendFactor = 0
         }
+
+        // Shot type label follows player (below feet)
+        shotTypeLabel?.position = CGPoint(x: screenPos.x, y: screenPos.y - 25 * pScale)
     }
 
     private func syncCoachPosition() {
@@ -1674,24 +1700,13 @@ final class InteractiveDrillScene: SKScene {
             hudStaminaBarBg.alpha = 1.0
         }
 
-        // Warning text and auto-disable
+        // Warning text
         if pct <= 0.10 {
-            hudStaminaWarning.text = "LOW STAMINA — Power/Focus OFF • Sprint locked"
+            hudStaminaWarning.text = "LOW STAMINA — Sprint locked"
             hudStaminaWarning.fontColor = .systemRed
             hudStaminaWarning.alpha = CGFloat(0.5 + 0.5 * abs(sin(time * 8)))
-
-            // Auto-disable stamina-draining modes
-            if activeShotModes.contains(.power) || activeShotModes.contains(.focus) {
-                activeShotModes.remove(.power)
-                activeShotModes.remove(.focus)
-                updateShotButtonVisuals()
-            }
         } else if pct <= 0.50 {
-            var warnings: [String] = []
-            if activeShotModes.contains(.power) { warnings.append("Power reduced") }
-            if activeShotModes.contains(.focus) { warnings.append("Focus reduced") }
-            warnings.append("Sprint halved")
-            hudStaminaWarning.text = warnings.joined(separator: " • ")
+            hudStaminaWarning.text = "Sprint halved"
             hudStaminaWarning.fontColor = .systemYellow
             hudStaminaWarning.alpha = 1.0
         } else {

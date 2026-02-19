@@ -424,7 +424,10 @@ enum GameConstants {
         /// Minimum error rate floor per unit of shot difficulty (even stat 99 NPCs)
         static let npcMinPowerErrorFloor: CGFloat = 0.01
         /// NPC serve fault rate at stat 1 (chance of double fault per serve)
-        static let npcBaseServeFaultRate: CGFloat = 0.12
+        static let npcBaseServeFaultRate: CGFloat = 0.2858
+        /// Exponent for stat→fault scaling: pow(1 - stat/99, exponent).
+        /// Higher = steeper curve (more separation between beginner and advanced).
+        static let npcServeFaultStatExponent: CGFloat = 2.0
 
         /// Maximum serve power — pickleball serves are underhand, significantly
         /// slower than rally drives. Controls ace rate: lower = fewer aces.
@@ -479,6 +482,12 @@ enum GameConstants {
 
         // Difficulty threshold for "hard shot" reset trigger
         static let hardShotDifficultyThreshold: CGFloat = 0.6
+
+        // NPC serve targeting — how deep the serve lands on the opponent's side
+        // Lower DUPR aims deeper (safer) to avoid kitchen faults; higher DUPR pushes closer
+        static let npcServeTargetMinNY: CGFloat = 0.050         // deepest serve target (all DUPR)
+        static let npcServeTargetMaxNY_Low: CGFloat = 0.246     // max target NY at DUPR 2.0
+        static let npcServeTargetMaxNY_High: CGFloat = 0.250    // max target NY at DUPR 8.0
 
         // Serve fault mode penalties — power/spin serves are harder to land
         // Raw penalty is reduced by aggressionControl (skilled NPCs manage the risk)

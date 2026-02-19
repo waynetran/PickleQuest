@@ -1019,7 +1019,7 @@ final class InteractiveMatchScene: SKScene {
         let consistencyStat = CGFloat(min(99, npc.stats.stat(.consistency) + npcBoost))
         let accuracyStat = CGFloat(min(99, npc.stats.stat(.accuracy) + npcBoost))
         let serveStat = (consistencyStat + accuracyStat) / 2.0
-        let baseFaultRate = P.npcBaseServeFaultRate * (1.0 - serveStat / 99.0)
+        let baseFaultRate = P.npcBaseServeFaultRate * pow(1.0 - serveStat / 99.0, P.npcServeFaultStatExponent)
 
         // Power/spin modes increase fault risk — skilled NPCs manage it better
         let modes = npcAI.lastServeModes
@@ -1053,20 +1053,23 @@ final class InteractiveMatchScene: SKScene {
             targetNY = CGFloat.random(in: S.npcServeTargetMinNY...maxNY)
         }
 
+        // Cap serve power — pickleball serves are underhand, much slower than rally drives
+        let servePower = min(P.servePowerCap, shot.power)
+
         // Compute physics-based arc for the actual serve distance (NPC at ~0.92 → target ~0.15)
         let serveDistNY = abs(npcAI.currentNY - targetNY)
         let serveDistNX = abs(npcAI.currentNX - targetNX)
         let serveArc = DrillShotCalculator.arcToLandAt(
             distanceNY: serveDistNY,
             distanceNX: serveDistNX,
-            power: shot.power,
+            power: servePower,
             topspinFactor: shot.topspinFactor
         )
 
         dbg.logNPCServe(
             originNX: npcAI.currentNX, originNY: npcAI.currentNY,
             targetNX: targetNX, targetNY: targetNY,
-            power: shot.power, arc: serveArc,
+            power: servePower, arc: serveArc,
             faultRate: faultRate, isDoubleFault: isDoubleFault,
             modes: npcAI.lastServeModes,
             stamina: npcAI.stamina
@@ -1079,7 +1082,7 @@ final class InteractiveMatchScene: SKScene {
 
         let launchOrigin = CGPoint(x: npcAI.currentNX, y: npcAI.currentNY)
         let launchTarget = CGPoint(x: targetNX, y: targetNY)
-        let launchPower = shot.power
+        let launchPower = servePower
         let launchSpin = shot.spinCurve
         let serveAccuracy: CGFloat = isDoubleFault ? 0.0 : 0.8
 
