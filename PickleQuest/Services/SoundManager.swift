@@ -25,7 +25,6 @@ final class SoundManager {
     var isMuted: Bool = false
     private(set) var isReady: Bool = false
 
-    private var skActions: [SoundID: SKAction] = [:]
     private var uiPlayers: [SoundID: AVAudioPlayer] = [:]
 
     private init() {
@@ -41,13 +40,10 @@ final class SoundManager {
             }
 
             // Preload all sound files off main thread
-            var actions: [SoundID: SKAction] = [:]
             var players: [SoundID: AVAudioPlayer] = [:]
 
             for id in SoundID.allCases {
                 if let url = Bundle.main.url(forResource: id.rawValue, withExtension: "caf") {
-                    actions[id] = SKAction.playSoundFileNamed(url.lastPathComponent, waitForCompletion: false)
-
                     do {
                         let player = try AVAudioPlayer(contentsOf: url)
                         player.prepareToPlay()
@@ -66,22 +62,26 @@ final class SoundManager {
             }
 
             #if DEBUG
-            print("[SoundManager] Loaded \(players.count)/\(SoundID.allCases.count) UI sounds, \(actions.count)/\(SoundID.allCases.count) SK actions")
+            print("[SoundManager] Loaded \(players.count)/\(SoundID.allCases.count) sounds")
             #endif
 
             // Publish results back to main actor
             await MainActor.run {
-                self.skActions = actions
                 self.uiPlayers = players
                 self.isReady = true
             }
         }
     }
 
-    // SpriteKit: returns cached SKAction (no-op if not yet loaded)
+    // SpriteKit: returns SKAction that plays via pre-warmed AVAudioPlayer
+    // (avoids SKAction.playSoundFileNamed which lazily decodes audio on first play)
     func skAction(for id: SoundID) -> SKAction {
         guard !isMuted else { return SKAction.run {} }
-        return skActions[id] ?? SKAction.run {}
+        return SKAction.run {
+            MainActor.assumeIsolated {
+                SoundManager.shared.playUI(id)
+            }
+        }
     }
 
     // SwiftUI: plays via pre-warmed AVAudioPlayer
@@ -93,19 +93,19 @@ final class SoundManager {
 
     private nonisolated static func volumeFor(_ id: SoundID) -> Float {
         switch id {
-        case .paddleHit: return 0.6
-        case .paddleHitSmash: return 0.8
-        case .paddleHitDistant: return 0.3
+        case .paddleHit: return 0.2
+        case .paddleHitSmash: return 0.2
+        case .paddleHitDistant: return 0.1
         case .ballBounce: return 0.5
         case .netThud: return 0.4
         case .whistle: return 0.5
         case .pointChime: return 0.6
         case .matchWin: return 0.7
         case .matchLose: return 0.5
-        case .serveWhoosh: return 0.4
+        case .serveWhoosh: return 0.2
         case .buttonClick: return 0.3
-        case .footstep: return 0.15
-        case .footstepSprint: return 0.25
+        case .footstep: return 0.2
+        case .footstepSprint: return 0.2
         case .lootReveal: return 0.6
         }
     }
