@@ -14,6 +14,10 @@ final class InteractiveMatchScene: SKScene {
     private var npcNode: SKSpriteNode!
     private var ballNode: SKSpriteNode!
     private var ballShadow: SKShapeNode!
+    private var ballTrail: SKShapeNode!
+    private var ballTrailHistory: [CGPoint] = []
+    private let ballTrailMaxLength: CGFloat = AC.sceneWidth * 0.5  // half court width
+    private let ballTrailMaxPoints: Int = 20
     private var playerAnimator: SpriteSheetAnimator!
     private var npcAnimator: SpriteSheetAnimator!
 
@@ -412,7 +416,17 @@ final class InteractiveMatchScene: SKScene {
         ballShadow.strokeColor = .clear
         ballShadow.zPosition = AC.ZPositions.ballShadow
         ballShadow.alpha = 0
+        ballTrail.alpha = 0
+        ballTrailHistory.removeAll()
         addChild(ballShadow)
+
+        // Ball comet trail
+        ballTrail = SKShapeNode()
+        ballTrail.strokeColor = .clear
+        ballTrail.fillColor = UIColor.systemYellow.withAlphaComponent(0.5)
+        ballTrail.zPosition = AC.ZPositions.ball - 0.1  // just behind the ball
+        ballTrail.alpha = 0
+        addChild(ballTrail)
 
         // Joystick
         joystickBase = SKShapeNode(circleOfRadius: joystickBaseRadius)
@@ -832,6 +846,8 @@ final class InteractiveMatchScene: SKScene {
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
+        ballTrail.alpha = 0
+        ballTrailHistory.removeAll()
         checkedFirstBounce = false
         clearShotMarkers()
         hideDebugPanel()
@@ -1024,11 +1040,12 @@ final class InteractiveMatchScene: SKScene {
             // Fault: aim into kitchen or net
             targetNY = CGFloat.random(in: 0.35...0.48)
         } else {
-            // Low DUPR: aim safe and deep (0.05-0.18) to avoid kitchen faults
-            // High DUPR: can push closer to kitchen (0.05-0.25) for placement
+            // Low DUPR: aim safe and deep to avoid kitchen faults
+            // High DUPR: can push closer to kitchen for placement
             let duprFrac = CGFloat(max(0, min(1, (npc.duprRating - 2.0) / 6.0)))
-            let maxNY: CGFloat = 0.18 + duprFrac * 0.07  // 0.18 at 2.0, 0.25 at 8.0
-            targetNY = CGFloat.random(in: 0.05...maxNY)
+            let S = GameConstants.NPCStrategy.self
+            let maxNY = S.npcServeTargetMaxNY_Low + duprFrac * (S.npcServeTargetMaxNY_High - S.npcServeTargetMaxNY_Low)
+            targetNY = CGFloat.random(in: S.npcServeTargetMinNY...maxNY)
         }
 
         // Compute physics-based arc for the actual serve distance (NPC at ~0.92 → target ~0.15)
@@ -1106,6 +1123,8 @@ final class InteractiveMatchScene: SKScene {
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
+        ballTrail.alpha = 0
+        ballTrailHistory.removeAll()
         totalPointsPlayed += 1
 
         // Update rally stats
@@ -1189,6 +1208,8 @@ final class InteractiveMatchScene: SKScene {
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
+        ballTrail.alpha = 0
+        ballTrailHistory.removeAll()
 
         let didPlayerWin: Bool
         if wasResigned {
@@ -2357,6 +2378,8 @@ final class InteractiveMatchScene: SKScene {
         ballSim.isActive = false
         ballNode.alpha = 0
         ballShadow.alpha = 0
+        ballTrail.alpha = 0
+        ballTrailHistory.removeAll()
 
         // Push player shot X to NPC pattern memory (keep last 5)
         npcAI.playerShotHistory.append(shot.targetNX)
@@ -2527,6 +2550,8 @@ final class InteractiveMatchScene: SKScene {
             ballSim.isActive = false
             ballNode.alpha = 0
             ballShadow.alpha = 0
+        ballTrail.alpha = 0
+        ballTrailHistory.removeAll()
 
             // Defer ball launch to mid-swing
             pendingNPCShot = PendingShot(
@@ -2761,7 +2786,11 @@ final class InteractiveMatchScene: SKScene {
     }
 
     private func syncBallPosition() {
-        guard ballSim.isActive else { return }
+        guard ballSim.isActive else {
+            ballTrail.alpha = 0
+            ballTrailHistory.removeAll()
+            return
+        }
 
         let ballScreenPos = ballSim.screenPosition()
         ballNode.position = ballScreenPos
@@ -2777,6 +2806,88 @@ final class InteractiveMatchScene: SKScene {
         ballShadow.setScale(shadowScale)
 
         ballNode.zPosition = AC.ZPositions.ball - CGFloat(ballSim.courtY) * 0.1
+
+        // Update comet trail
+        updateBallTrail(ballScreenPos: ballScreenPos, pScale: pScale)
+    }
+
+    private func updateBallTrail(ballScreenPos: CGPoint, pScale: CGFloat) {
+        // Add current position to history
+        ballTrailHistory.append(ballScreenPos)
+
+        // Trim by max points
+        if ballTrailHistory.count > ballTrailMaxPoints {
+            ballTrailHistory.removeFirst(ballTrailHistory.count - ballTrailMaxPoints)
+        }
+
+        // Trim by max length — walk backward from head, remove points beyond max distance
+        var totalDist: CGFloat = 0
+        var trimIndex = ballTrailHistory.count
+        for i in stride(from: ballTrailHistory.count - 1, through: 1, by: -1) {
+            let dx = ballTrailHistory[i].x - ballTrailHistory[i - 1].x
+            let dy = ballTrailHistory[i].y - ballTrailHistory[i - 1].y
+            totalDist += sqrt(dx * dx + dy * dy)
+            if totalDist > ballTrailMaxLength {
+                trimIndex = i
+                break
+            }
+        }
+        if trimIndex > 0 && trimIndex < ballTrailHistory.count {
+            ballTrailHistory.removeFirst(trimIndex)
+        }
+
+        guard ballTrailHistory.count >= 2 else {
+            ballTrail.alpha = 0
+            return
+        }
+
+        // Build tapered path: for each segment, compute perpendicular offsets
+        // Width tapers from ballRadius at head (last point) to 0 at tail (first point)
+        let headWidth = AC.Sprites.ballSize * pScale * 0.4  // half-width at ball
+        let count = ballTrailHistory.count
+
+        var topEdge: [CGPoint] = []
+        var bottomEdge: [CGPoint] = []
+
+        for i in 0..<count {
+            let p = ballTrailHistory[i]
+            let t = CGFloat(i) / CGFloat(count - 1)  // 0 at tail, 1 at head
+            let halfW = headWidth * t * t  // quadratic taper for sharper tail
+
+            // Direction perpendicular to trail at this point
+            let next = i < count - 1 ? ballTrailHistory[i + 1] : p
+            let prev = i > 0 ? ballTrailHistory[i - 1] : p
+            let dx = next.x - prev.x
+            let dy = next.y - prev.y
+            let len = sqrt(dx * dx + dy * dy)
+
+            let nx: CGFloat, ny: CGFloat
+            if len > 0.01 {
+                nx = -dy / len  // perpendicular
+                ny = dx / len
+            } else {
+                nx = 0
+                ny = 1
+            }
+
+            topEdge.append(CGPoint(x: p.x + nx * halfW, y: p.y + ny * halfW))
+            bottomEdge.append(CGPoint(x: p.x - nx * halfW, y: p.y - ny * halfW))
+        }
+
+        // Build closed path: top edge forward, bottom edge backward
+        let path = CGMutablePath()
+        path.move(to: topEdge[0])
+        for i in 1..<topEdge.count {
+            path.addLine(to: topEdge[i])
+        }
+        for i in stride(from: bottomEdge.count - 1, through: 0, by: -1) {
+            path.addLine(to: bottomEdge[i])
+        }
+        path.closeSubpath()
+
+        ballTrail.path = path
+        ballTrail.alpha = 1
+        ballTrail.zPosition = AC.ZPositions.ball - 0.1 - CGFloat(ballSim.courtY) * 0.1
     }
 
     private func syncAllPositions() {
@@ -2993,6 +3104,8 @@ final class InteractiveMatchScene: SKScene {
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
+        ballTrail.alpha = 0
+        ballTrailHistory.removeAll()
         hideSwipeHint()
         hideNPCSpeech()
 
