@@ -14,7 +14,8 @@ final class InteractiveMatchScene: SKScene {
     private var npcNode: SKSpriteNode!
     private var ballNode: SKSpriteNode!
     private var ballShadow: SKShapeNode!
-    private var ballTrail: SKShapeNode!
+    private var ballTrailOuter: SKShapeNode!  // red/orange fire edge
+    private var ballTrailInner: SKShapeNode!  // yellow/orange core
     private var ballTrailHistory: [CGPoint] = []
     private let ballTrailMaxLength: CGFloat = AC.sceneWidth * 0.5  // half court width
     private let ballTrailMaxPoints: Int = 20
@@ -418,13 +419,18 @@ final class InteractiveMatchScene: SKScene {
         ballShadow.alpha = 0
         addChild(ballShadow)
 
-        // Ball comet trail
-        ballTrail = SKShapeNode()
-        ballTrail.strokeColor = .clear
-        ballTrail.fillColor = UIColor.systemYellow.withAlphaComponent(0.5)
-        ballTrail.zPosition = AC.ZPositions.ball - 0.1  // just behind the ball
-        ballTrail.alpha = 0
-        addChild(ballTrail)
+        // Ball comet trail (two layers: outer fire edge + inner glow core)
+        ballTrailOuter = SKShapeNode()
+        ballTrailOuter.strokeColor = .clear
+        ballTrailOuter.zPosition = AC.ZPositions.ball - 0.2
+        ballTrailOuter.alpha = 0
+        addChild(ballTrailOuter)
+
+        ballTrailInner = SKShapeNode()
+        ballTrailInner.strokeColor = .clear
+        ballTrailInner.zPosition = AC.ZPositions.ball - 0.1
+        ballTrailInner.alpha = 0
+        addChild(ballTrailInner)
 
         // Joystick
         joystickBase = SKShapeNode(circleOfRadius: joystickBaseRadius)
@@ -844,7 +850,8 @@ final class InteractiveMatchScene: SKScene {
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
-        ballTrail.alpha = 0
+        ballTrailOuter.alpha = 0
+        ballTrailInner.alpha = 0
         ballTrailHistory.removeAll()
         checkedFirstBounce = false
         clearShotMarkers()
@@ -1052,7 +1059,8 @@ final class InteractiveMatchScene: SKScene {
         let serveArc = DrillShotCalculator.arcToLandAt(
             distanceNY: serveDistNY,
             distanceNX: serveDistNX,
-            power: shot.power
+            power: shot.power,
+            topspinFactor: shot.topspinFactor
         )
 
         dbg.logNPCServe(
@@ -1122,7 +1130,8 @@ final class InteractiveMatchScene: SKScene {
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
-        ballTrail.alpha = 0
+        ballTrailOuter.alpha = 0
+        ballTrailInner.alpha = 0
         ballTrailHistory.removeAll()
         totalPointsPlayed += 1
 
@@ -1207,7 +1216,8 @@ final class InteractiveMatchScene: SKScene {
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
-        ballTrail.alpha = 0
+        ballTrailOuter.alpha = 0
+        ballTrailInner.alpha = 0
         ballTrailHistory.removeAll()
 
         let didPlayerWin: Bool
@@ -2377,7 +2387,8 @@ final class InteractiveMatchScene: SKScene {
         ballSim.isActive = false
         ballNode.alpha = 0
         ballShadow.alpha = 0
-        ballTrail.alpha = 0
+        ballTrailOuter.alpha = 0
+        ballTrailInner.alpha = 0
         ballTrailHistory.removeAll()
 
         // Push player shot X to NPC pattern memory (keep last 5)
@@ -2549,7 +2560,8 @@ final class InteractiveMatchScene: SKScene {
             ballSim.isActive = false
             ballNode.alpha = 0
             ballShadow.alpha = 0
-        ballTrail.alpha = 0
+        ballTrailOuter.alpha = 0
+        ballTrailInner.alpha = 0
         ballTrailHistory.removeAll()
 
             // Defer ball launch to mid-swing
@@ -2786,7 +2798,8 @@ final class InteractiveMatchScene: SKScene {
 
     private func syncBallPosition() {
         guard ballSim.isActive else {
-            ballTrail.alpha = 0
+            ballTrailOuter.alpha = 0
+            ballTrailInner.alpha = 0
             ballTrailHistory.removeAll()
             return
         }
@@ -2836,22 +2849,61 @@ final class InteractiveMatchScene: SKScene {
         }
 
         guard ballTrailHistory.count >= 2 else {
-            ballTrail.alpha = 0
+            ballTrailOuter.alpha = 0
+            ballTrailInner.alpha = 0
             return
         }
 
-        // Build tapered path: for each segment, compute perpendicular offsets
-        // Width tapers from ballRadius at head (last point) to 0 at tail (first point)
-        let headWidth = AC.Sprites.ballSize * pScale * 0.4  // half-width at ball
+        // Ball speed → fire intensity (0 = gentle yellow, 1 = fiery red/orange)
+        let ballSpeed = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
+        let maxSpeed = P.baseShotSpeed + 2.0 * (P.maxShotSpeed - P.baseShotSpeed)
+        let fireIntensity = min(ballSpeed / maxSpeed, 1.0)
+
+        // Head half-width matches rendered ball radius
+        let headHalfWidth = AC.Sprites.ballSize * pScale * 0.5
         let count = ballTrailHistory.count
 
+        // Build tapered trail shape with convex (teardrop) profile
+        // Outer trail is full width, inner trail is 55% width
+        let outerPath = buildTrailPath(halfWidth: headHalfWidth, count: count)
+        let innerPath = buildTrailPath(halfWidth: headHalfWidth * 0.55, count: count)
+
+        // Color based on speed: slow = yellow, fast = red edges / orange core
+        // Outer layer: yellow → red
+        let outerR: CGFloat = 1.0
+        let outerG: CGFloat = 0.85 - fireIntensity * 0.65  // 0.85 → 0.20
+        let outerB: CGFloat = 0.1 * (1.0 - fireIntensity)
+        let outerAlpha: CGFloat = 0.3 + fireIntensity * 0.25
+        ballTrailOuter.fillColor = UIColor(red: outerR, green: outerG, blue: outerB, alpha: outerAlpha)
+        ballTrailOuter.path = outerPath
+        ballTrailOuter.alpha = 1
+        ballTrailOuter.zPosition = AC.ZPositions.ball - 0.2 - CGFloat(ballSim.courtY) * 0.1
+
+        // Inner layer: yellow → bright orange
+        let innerR: CGFloat = 1.0
+        let innerG: CGFloat = 0.92 - fireIntensity * 0.42  // 0.92 → 0.50
+        let innerB: CGFloat = 0.2 * (1.0 - fireIntensity)
+        let innerAlpha: CGFloat = 0.45 + fireIntensity * 0.25
+        ballTrailInner.fillColor = UIColor(red: innerR, green: innerG, blue: innerB, alpha: innerAlpha)
+        ballTrailInner.path = innerPath
+        ballTrailInner.alpha = 1
+        ballTrailInner.zPosition = AC.ZPositions.ball - 0.1 - CGFloat(ballSim.courtY) * 0.1
+    }
+
+    /// Build a closed convex (teardrop) trail path from the position history.
+    /// `halfWidth` is the half-width at the head (ball end). Tapers to a point at the tail.
+    private func buildTrailPath(halfWidth: CGFloat, count: Int) -> CGPath {
         var topEdge: [CGPoint] = []
         var bottomEdge: [CGPoint] = []
 
         for i in 0..<count {
             let p = ballTrailHistory[i]
             let t = CGFloat(i) / CGFloat(count - 1)  // 0 at tail, 1 at head
-            let halfW = headWidth * t * t  // quadratic taper for sharper tail
+
+            // Convex teardrop taper: bulges wide near head, then converges sharply to a point
+            // sin(t * π/2) stays wide longer then drops; pow(..., 0.7) adds extra convexity
+            let taper = pow(sin(t * .pi / 2), 0.7)
+            let halfW = halfWidth * taper
 
             // Direction perpendicular to trail at this point
             let next = i < count - 1 ? ballTrailHistory[i + 1] : p
@@ -2883,10 +2935,7 @@ final class InteractiveMatchScene: SKScene {
             path.addLine(to: bottomEdge[i])
         }
         path.closeSubpath()
-
-        ballTrail.path = path
-        ballTrail.alpha = 1
-        ballTrail.zPosition = AC.ZPositions.ball - 0.1 - CGFloat(ballSim.courtY) * 0.1
+        return path
     }
 
     private func syncAllPositions() {
@@ -3103,7 +3152,8 @@ final class InteractiveMatchScene: SKScene {
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
-        ballTrail.alpha = 0
+        ballTrailOuter.alpha = 0
+        ballTrailInner.alpha = 0
         ballTrailHistory.removeAll()
         hideSwipeHint()
         hideNPCSpeech()
