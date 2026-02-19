@@ -2859,8 +2859,8 @@ final class InteractiveMatchScene: SKScene {
         let maxSpeed = P.baseShotSpeed + 2.0 * (P.maxShotSpeed - P.baseShotSpeed)
         let fireIntensity = min(ballSpeed / maxSpeed, 1.0)
 
-        // Head half-width matches rendered ball radius
-        let headHalfWidth = AC.Sprites.ballSize * pScale * 0.5
+        // Head half-width = half the ball radius
+        let headHalfWidth = AC.Sprites.ballSize * pScale * 0.25
         let count = ballTrailHistory.count
 
         // Build tapered trail shape with convex (teardrop) profile
@@ -2925,12 +2925,28 @@ final class InteractiveMatchScene: SKScene {
             bottomEdge.append(CGPoint(x: p.x - nx * halfW, y: p.y - ny * halfW))
         }
 
-        // Build closed path: top edge forward, bottom edge backward
+        // Build closed path: top edge forward, semicircle cap at head, bottom edge backward
         let path = CGMutablePath()
         path.move(to: topEdge[0])
         for i in 1..<topEdge.count {
             path.addLine(to: topEdge[i])
         }
+
+        // Rounded cap at the head: semicircle from topEdge.last to bottomEdge.last
+        let headTop = topEdge[topEdge.count - 1]
+        let headBot = bottomEdge[bottomEdge.count - 1]
+        let headCenter = CGPoint(x: (headTop.x + headBot.x) / 2,
+                                 y: (headTop.y + headBot.y) / 2)
+        let capRadius = sqrt(pow(headTop.x - headCenter.x, 2) + pow(headTop.y - headCenter.y, 2))
+        if capRadius > 0.5 {
+            // Compute the angle from center to top and bottom edges
+            let angleTop = atan2(headTop.y - headCenter.y, headTop.x - headCenter.x)
+            let angleBot = atan2(headBot.y - headCenter.y, headBot.x - headCenter.x)
+            // Arc from top edge around the front to bottom edge (clockwise)
+            path.addArc(center: headCenter, radius: capRadius,
+                        startAngle: angleTop, endAngle: angleBot, clockwise: true)
+        }
+
         for i in stride(from: bottomEdge.count - 1, through: 0, by: -1) {
             path.addLine(to: bottomEdge[i])
         }
