@@ -6,8 +6,10 @@ final class InteractiveDrillScene: SKScene {
     private typealias AC = MatchAnimationConstants
     private typealias P = GameConstants.DrillPhysics
 
+    // Player controller (shared physics, joystick, hitbox)
+    private var controller: InteractivePlayerController!
+
     // Sprites
-    private var playerNode: SKSpriteNode!
     private var coachNode: SKSpriteNode!
     private var ballNode: SKSpriteNode!
     private var ballShadow: SKShapeNode!
@@ -16,19 +18,8 @@ final class InteractiveDrillScene: SKScene {
     private var ballTrailHistory: [CGPoint] = []
     private let ballTrailMaxLength: CGFloat = AC.sceneWidth * 0.5
     private let ballTrailMaxPoints: Int = 20
-    private var playerAnimator: SpriteSheetAnimator!
     private var coachAnimator: SpriteSheetAnimator!
     private var ballTextures: [SKTexture] = []
-
-    // Joystick
-    private var joystickBase: SKShapeNode!
-    private var joystickKnob: SKShapeNode!
-    private var joystickTouch: UITouch?
-    private var joystickOrigin: CGPoint = .zero
-    private var joystickDirection: CGVector = .zero
-    private var joystickMagnitude: CGFloat = 0
-    private let joystickBaseRadius: CGFloat = 50
-    private let joystickKnobRadius: CGFloat = 30
 
     // Swipe-to-serve state
     private var swipeTouchStart: CGPoint?
@@ -58,27 +49,9 @@ final class InteractiveDrillScene: SKScene {
     // Cone targets (return of serve)
     private var coneNodes: [SKShapeNode] = []
 
-    // Joystick swipe velocity tracking (for shot intent)
-    private var joystickSwipeVelocity: CGVector = .zero  // points/sec
-    private var prevTouchPos: CGPoint = .zero
-    private var prevTouchTimestamp: TimeInterval = 0
-
     // Shot type flash label (shows "POWER!", "TOUCH", "LOB" on hit)
     private var shotTypeLabel: SKLabelNode!
     private var shotTypeLabelTimer: CGFloat = 0
-
-    // Stamina
-    private var stamina: CGFloat = GameConstants.DrillPhysics.maxStamina
-    private var timeSinceLastSprint: CGFloat = 10 // start recovered
-
-    // Footstep sound cadence
-    private var footstepTimer: CGFloat = 0
-    private let footstepInterval: CGFloat = 0.28
-    private let footstepSprintInterval: CGFloat = 0.18
-
-    // Shot animation lock (prevents movePlayer from overwriting swing animations)
-    private var playerShotAnimTimer: CGFloat = 0
-    private let shotAnimDuration: CGFloat = 0.40
 
     // Swipe hint (serve mode)
     private var swipeHintNode: SKSpriteNode?
@@ -98,12 +71,6 @@ final class InteractiveDrillScene: SKScene {
     private let coachLevel: Int
     private let coachPersonality: CoachPersonality
 
-    // Player position in court space
-    private var playerNX: CGFloat = 0.5
-    private var playerNY: CGFloat = 0.1
-
-    // Movement
-    private var playerMoveSpeed: CGFloat = 0.6
     private var lastUpdateTime: TimeInterval = 0
     private var previousBallNY: CGFloat = 0.5
 
@@ -161,9 +128,22 @@ final class InteractiveDrillScene: SKScene {
         self.anchorPoint = CGPoint(x: 0, y: 0)
         self.backgroundColor = UIColor(hex: "#2C3E50")
 
-        // Calculate player move speed from stats
-        let speedStat = CGFloat(playerStats.stat(.speed))
-        playerMoveSpeed = P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus
+        // Create shared player controller
+        controller = InteractivePlayerController(
+            playerStats: playerStats,
+            appearance: appearance,
+            startNX: drillConfig.playerStartNX,
+            startNY: drillConfig.playerStartNY,
+            config: PlayerControllerConfig(
+                minNX: drillConfig.playerMinNX,
+                maxNX: drillConfig.playerMaxNX,
+                minNY: drillConfig.playerMinNY,
+                maxNY: drillConfig.playerMaxNY,
+                jumpEnabled: true,
+                lungeEnabled: true,
+                hitboxRingsVisible: true
+            )
+        )
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -196,13 +176,9 @@ final class InteractiveDrillScene: SKScene {
         let court = CourtRenderer.buildCourt()
         addChild(court)
 
-        // Player sprite (near side)
-        let (pNode, pTextures) = SpriteFactory.makeCharacterNode(appearance: appearance, isNearPlayer: true)
-        playerNode = pNode
-        playerNode.setScale(AC.Sprites.nearPlayerScale)
-        playerNode.zPosition = AC.ZPositions.nearPlayer
-        addChild(playerNode)
-        playerAnimator = SpriteSheetAnimator(node: playerNode, textures: pTextures, isNear: true)
+        // Player sprite + joystick + hitbox rings via shared controller
+        controller.buildNodes(parent: self, appearance: appearance)
+        controller.parentScene = self
 
         // Coach sprite (far side)
         let (cNode, cTextures) = SpriteFactory.makeCharacterNode(appearance: coachAppearance, isNearPlayer: false)
@@ -255,25 +231,6 @@ final class InteractiveDrillScene: SKScene {
         ballTrailInner.alpha = 0
         addChild(ballTrailInner)
 
-        // Joystick (visible at default position, centers on touch)
-        joystickBase = SKShapeNode(circleOfRadius: joystickBaseRadius)
-        joystickBase.fillColor = UIColor(white: 0.15, alpha: 0.5)
-        joystickBase.strokeColor = UIColor(white: 0.6, alpha: 0.3)
-        joystickBase.lineWidth = 2
-        joystickBase.zPosition = 15
-        joystickBase.position = joystickDefaultPosition
-        joystickBase.alpha = 0.4
-        addChild(joystickBase)
-
-        joystickKnob = SKShapeNode(circleOfRadius: joystickKnobRadius)
-        joystickKnob.fillColor = UIColor(white: 0.8, alpha: 0.6)
-        joystickKnob.strokeColor = UIColor(white: 1.0, alpha: 0.4)
-        joystickKnob.lineWidth = 1.5
-        joystickKnob.zPosition = 16
-        joystickKnob.position = joystickDefaultPosition
-        joystickKnob.alpha = 0.4
-        addChild(joystickKnob)
-
         // Shot type flash label (joystick drills)
         if drillConfig.inputMode == .joystick {
             buildShotTypeLabel()
@@ -285,9 +242,7 @@ final class InteractiveDrillScene: SKScene {
         }
 
         // Initialize positions
-        playerNX = drillConfig.playerStartNX
-        playerNY = drillConfig.playerStartNY
-        syncPlayerPosition()
+        controller.syncPositions()
 
         // Coach AI
         coachAI = DrillCoachAI(config: drillConfig, coachLevel: coachLevel, playerStatAverage: playerStats.average)
@@ -350,11 +305,11 @@ final class InteractiveDrillScene: SKScene {
     /// Determine shot modes from joystick state at the moment of contact.
     private func determineShotMode() -> DrillShotCalculator.ShotMode {
         // Joystick released → neutral touch/dink
-        guard joystickTouch != nil else { return [.touch] }
+        guard controller.joystickTouch != nil else { return [.touch] }
 
-        let vy = joystickSwipeVelocity.dy  // positive = upward on screen
-        let speed = sqrt(joystickSwipeVelocity.dx * joystickSwipeVelocity.dx
-                       + joystickSwipeVelocity.dy * joystickSwipeVelocity.dy)
+        let vy = controller.joystickSwipeVelocity.dy  // positive = upward on screen
+        let speed = sqrt(controller.joystickSwipeVelocity.dx * controller.joystickSwipeVelocity.dx
+                       + controller.joystickSwipeVelocity.dy * controller.joystickSwipeVelocity.dy)
 
         if vy > powerSwipeThreshold {
             return [.power]
@@ -369,14 +324,14 @@ final class InteractiveDrillScene: SKScene {
 
     /// Horizontal swipe direction mapped to target NX override.
     private func swipeDirectionNX() -> CGFloat? {
-        guard joystickTouch != nil else { return nil }
-        return 0.5 + joystickDirection.dx * 0.35
+        guard controller.joystickTouch != nil else { return nil }
+        return 0.5 + controller.joystickDirection.dx * 0.35
     }
 
     /// Extra power boost from swipe velocity for power shots.
     private func swipePowerBoost() -> CGFloat {
-        let speed = sqrt(joystickSwipeVelocity.dx * joystickSwipeVelocity.dx
-                       + joystickSwipeVelocity.dy * joystickSwipeVelocity.dy)
+        let speed = sqrt(controller.joystickSwipeVelocity.dx * controller.joystickSwipeVelocity.dx
+                       + controller.joystickSwipeVelocity.dy * controller.joystickSwipeVelocity.dy)
         let swipeFraction = min(speed / maxSwipeSpeed, 1.0)
         let powerStat = CGFloat(playerStats.stat(.power))
         return swipeFraction * maxSwipePowerBoost * (powerStat / 99.0)
@@ -384,7 +339,7 @@ final class InteractiveDrillScene: SKScene {
 
     /// Extra arc from downward swipe velocity for lob shots.
     private func swipeLobArcBoost() -> CGFloat {
-        let downSpeed = abs(min(joystickSwipeVelocity.dy, 0))
+        let downSpeed = abs(min(controller.joystickSwipeVelocity.dy, 0))
         let lobFraction = min(downSpeed / maxLobSwipeSpeed, 1.0)
         return lobFraction * 0.3
     }
@@ -524,9 +479,9 @@ final class InteractiveDrillScene: SKScene {
         guard let hint = swipeHintNode else { return }
         hint.removeAllActions()
 
-        let playerScreenPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
+        let playerScreenPos = CourtRenderer.courtPoint(nx: controller.playerNX, ny: max(0, controller.playerNY))
         // Crosscourt direction: if player is on right (nx > 0.5), swipe toward left
-        let crosscourtDX: CGFloat = playerNX > 0.5 ? -60 : 60
+        let crosscourtDX: CGFloat = controller.playerNX > 0.5 ? -60 : 60
         let startX = playerScreenPos.x
         let startY = playerScreenPos.y + 30
         let endX = startX + crosscourtDX
@@ -546,7 +501,7 @@ final class InteractiveDrillScene: SKScene {
             ]),
             .run { [weak hint, weak self] in
                 guard let hint, let self else { return }
-                let pos = CourtRenderer.courtPoint(nx: self.playerNX, ny: max(0, self.playerNY))
+                let pos = CourtRenderer.courtPoint(nx: self.controller.playerNX, ny: max(0, self.controller.playerNY))
                 hint.position = CGPoint(x: pos.x, y: pos.y + 30)
             },
             .wait(forDuration: 0.15)
@@ -702,64 +657,15 @@ final class InteractiveDrillScene: SKScene {
             }
 
             guard phase == .playing || phase == .feedPause else { return }
-
-            // Start joystick
-            guard joystickTouch == nil else { continue }
-
-            joystickTouch = touch
-            joystickOrigin = pos
-            prevTouchPos = pos
-            prevTouchTimestamp = CACurrentMediaTime()
-            joystickSwipeVelocity = .zero
-
-            // Move joystick to touch point, full alpha
-            joystickBase.position = pos
-            joystickKnob.position = pos
-            joystickBase.alpha = 1
-            joystickKnob.alpha = 1
+            controller.handleJoystickBegan(touch: touch, location: pos)
         }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let activeTouch = joystickTouch, touches.contains(activeTouch) else { return }
-
+        guard let activeTouch = controller.joystickTouch,
+              touches.contains(activeTouch) else { return }
         let pos = activeTouch.location(in: self)
-
-        // Compute swipe velocity with exponential smoothing
-        let now = CACurrentMediaTime()
-        let dt = now - prevTouchTimestamp
-        if dt > 0.001 {
-            let rawVX = (pos.x - prevTouchPos.x) / CGFloat(dt)
-            let rawVY = (pos.y - prevTouchPos.y) / CGFloat(dt)
-            let smoothing: CGFloat = 0.3
-            joystickSwipeVelocity = CGVector(
-                dx: joystickSwipeVelocity.dx * (1 - smoothing) + rawVX * smoothing,
-                dy: joystickSwipeVelocity.dy * (1 - smoothing) + rawVY * smoothing
-            )
-        }
-        prevTouchPos = pos
-        prevTouchTimestamp = now
-
-        let dx = pos.x - joystickOrigin.x
-        let dy = pos.y - joystickOrigin.y
-        let dist = sqrt(dx * dx + dy * dy)
-
-        // Knob visual clamped to 1.5x base radius
-        let maxVisualDist = joystickBaseRadius * 1.5
-        if dist <= maxVisualDist {
-            joystickKnob.position = pos
-        } else {
-            joystickKnob.position = CGPoint(
-                x: joystickOrigin.x + (dx / dist) * maxVisualDist,
-                y: joystickOrigin.y + (dy / dist) * maxVisualDist
-            )
-        }
-
-        // Magnitude can exceed 1.0 (sprint zone up to 1.5)
-        joystickMagnitude = min(dist / joystickBaseRadius, 1.5)
-        if dist > 1.0 {
-            joystickDirection = CGVector(dx: dx / dist, dy: dy / dist)
-        }
+        controller.handleJoystickMoved(touch: activeTouch, location: pos)
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -773,8 +679,8 @@ final class InteractiveDrillScene: SKScene {
                 return
             }
 
-            if touch === joystickTouch {
-                resetJoystick()
+            if touch === controller.joystickTouch {
+                controller.handleJoystickEnded(touch: touch)
                 continue
             }
         }
@@ -784,22 +690,10 @@ final class InteractiveDrillScene: SKScene {
         swipeTouchStart = nil
         swipeTouchStartTime = nil
         for touch in touches {
-            if touch === joystickTouch { resetJoystick() }
+            if touch === controller.joystickTouch {
+                controller.handleJoystickEnded(touch: touch)
+            }
         }
-    }
-
-    private let joystickDefaultPosition = CGPoint(x: MatchAnimationConstants.sceneWidth / 2, y: 100)
-
-    private func resetJoystick() {
-        joystickTouch = nil
-        joystickDirection = .zero
-        joystickMagnitude = 0
-        joystickSwipeVelocity = .zero
-        // Snap back to default position at 40% alpha
-        joystickBase.position = joystickDefaultPosition
-        joystickKnob.position = joystickDefaultPosition
-        joystickBase.alpha = 0.4
-        joystickKnob.alpha = 0.4
     }
 
     // MARK: - Serve Swipe Handling
@@ -818,8 +712,8 @@ final class InteractiveDrillScene: SKScene {
         // Check if we need to switch sides after serve 5
         if serveCount == 6 && !hasSwitchedSides {
             hasSwitchedSides = true
-            playerNX = 0.35
-            playerNY = -0.03
+            controller.playerNX = 0.35
+            controller.playerNY = -0.03
             syncPlayerPosition()
             showIndicator("Switch Sides!", color: .cyan, duration: 0.6)
         }
@@ -854,7 +748,7 @@ final class InteractiveDrillScene: SKScene {
         // Launch ball from player position
         phase = .playing
         ballSim.launch(
-            from: CGPoint(x: playerNX, y: max(0, playerNY)),
+            from: CGPoint(x: controller.playerNX, y: max(0, controller.playerNY)),
             toward: CGPoint(x: targetNX, y: targetNY),
             power: servePower,
             arc: serveArc,
@@ -866,7 +760,7 @@ final class InteractiveDrillScene: SKScene {
         ballShadow.alpha = 1
 
         // Play serve animation
-        playerAnimator.play(.forehand(isNear: true))
+        controller.playerAnimator.play(.forehand(isNear: true))
 
         scorekeeper.onBallFed()
     }
@@ -885,22 +779,26 @@ final class InteractiveDrillScene: SKScene {
         lastUpdateTime = currentTime
 
         if phase == .playing {
+            controller.isPlayable = true
+            controller.updateJump(dt: dt)
             if drillConfig.inputMode == .joystick {
-                movePlayer(dt: dt)
+                controller.movePlayer(dt: dt)
             }
+            controller.storeBallPosition(courtX: ballSim.courtX, courtY: ballSim.courtY, height: ballSim.height)
+            controller.currentBallX = ballSim.courtX
+            controller.isBallActive = ballSim.isActive
             previousBallNY = ballSim.courtY
             ballSim.update(dt: dt)
             coachAI.update(dt: dt, ball: ballSim)
             checkPlayerHit()
             checkCoachHit()
             checkBallState()
-            if playerShotAnimTimer > 0 { playerShotAnimTimer = max(0, playerShotAnimTimer - dt) }
             syncAllPositions()
             updateHUD()
         } else if phase == .feedPause {
             feedPauseTimer -= dt
             if drillConfig.inputMode == .joystick {
-                movePlayer(dt: dt)
+                controller.movePlayer(dt: dt)
             }
             syncAllPositions()
             if feedPauseTimer <= 0 {
@@ -917,98 +815,7 @@ final class InteractiveDrillScene: SKScene {
         }
     }
 
-    // MARK: - Player Movement
-
-    private func movePlayer(dt: CGFloat) {
-        let canChangeAnim = playerShotAnimTimer <= 0
-
-        guard joystickMagnitude > 0.1 else {
-            if canChangeAnim { playerAnimator.play(.idle(isNear: true)) }
-            footstepTimer = 0
-            // Recover stamina when standing still
-            timeSinceLastSprint += dt
-            if timeSinceLastSprint >= P.staminaRecoveryDelay {
-                stamina = min(P.maxStamina, stamina + P.staminaRecoveryRate * dt)
-            }
-            return
-        }
-
-        // Speed scales linearly from 0 to full (base + sprint) based on distance from center
-        let mag = min(joystickMagnitude, 1.0)
-        let maxSpeed = playerMoveSpeed * (1.0 + P.maxSprintSpeedBoost)
-        var speed = maxSpeed * mag
-
-        // Sprint zone: outer 40% of circle (magnitude > 0.6) drains stamina
-        let staminaPct = stamina / P.maxStamina
-        let isSprinting = mag > 0.6 && staminaPct > 0.10
-        if isSprinting {
-            if staminaPct < 0.50 { speed *= 0.75 }
-            stamina = max(0, stamina - P.sprintDrainRate * mag * dt)
-            timeSinceLastSprint = 0
-        } else {
-            timeSinceLastSprint += dt
-            if timeSinceLastSprint >= P.staminaRecoveryDelay {
-                stamina = min(P.maxStamina, stamina + P.staminaRecoveryRate * dt)
-            }
-        }
-
-        // Joystick visual: turn red when sprinting
-        if isSprinting {
-            joystickBase.strokeColor = UIColor.systemRed.withAlphaComponent(0.8)
-            joystickBase.fillColor = UIColor.systemRed.withAlphaComponent(0.2)
-            joystickKnob.fillColor = UIColor.systemRed.withAlphaComponent(0.7)
-        } else if joystickTouch != nil {
-            joystickBase.strokeColor = UIColor(white: 0.6, alpha: 0.3)
-            joystickBase.fillColor = UIColor(white: 0.15, alpha: 0.5)
-            joystickKnob.fillColor = UIColor(white: 0.8, alpha: 0.6)
-        }
-
-        playerNX += joystickDirection.dx * speed * dt
-        playerNY += joystickDirection.dy * speed * dt
-
-        // Clamp to movable range — player can go right up to the kitchen line
-        playerNX = max(drillConfig.playerMinNX, min(drillConfig.playerMaxNX, playerNX))
-        playerNY = max(drillConfig.playerMinNY, min(drillConfig.playerMaxNY, playerNY))
-
-        // Walk animation: direction-aware sprint vs shuffle
-        // Only change animation if no shot animation is playing
-        if canChangeAnim {
-            let dx = joystickDirection.dx
-            let dy = joystickDirection.dy
-            let isMainlyHorizontal = abs(dx) > abs(dy)
-
-            if isSprinting {
-                if isMainlyHorizontal {
-                    playerAnimator.play(.runSide)
-                    let xMag = abs(playerNode.xScale)
-                    playerNode.xScale = dx < 0 ? -xMag : xMag  // base = right, flip for left
-                } else if dy > 0 {
-                    playerAnimator.play(.run(isNear: true))
-                    let xMag = abs(playerNode.xScale)
-                    playerNode.xScale = xMag
-                } else {
-                    playerAnimator.play(.shuffle(isNear: true))
-                    let xMag = abs(playerNode.xScale)
-                    playerNode.xScale = xMag
-                }
-            } else {
-                playerAnimator.play(.shuffle(isNear: true))
-                if abs(dx) > 0.3 {
-                    let xMag = abs(playerNode.xScale)
-                    playerNode.xScale = dx < 0 ? -xMag : xMag  // flip when shuffling left
-                }
-            }
-        }
-
-        // Footstep sounds on cadence timer
-        footstepTimer += dt
-        let interval = isSprinting ? footstepSprintInterval : footstepInterval
-        if footstepTimer >= interval {
-            footstepTimer = 0
-            let soundID: SoundManager.SoundID = isSprinting ? .footstepSprint : .footstep
-            run(SoundManager.shared.skAction(for: soundID))
-        }
-    }
+    private let shotAnimDuration: CGFloat = 0.40
 
     // MARK: - Hit Detection
 
@@ -1016,24 +823,14 @@ final class InteractiveDrillScene: SKScene {
         guard ballSim.isActive && !ballSim.lastHitByPlayer else { return }
         guard ballSim.bounceCount < 2 else { return }
 
-        let positioningStat = CGFloat(playerStats.stat(.positioning))
-        let hitboxRadius = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
-
         // Pre-bounce: don't reach forward — wait for ball to arrive at player's Y
-        if ballSim.bounceCount == 0 && ballSim.courtY > playerNY { return }
+        if ballSim.bounceCount == 0 && ballSim.courtY > controller.playerNY { return }
 
-        // 3D hitbox: height reach based on athleticism
-        let speedStat = CGFloat(playerStats.stat(.speed))
-        let reflexesStat = CGFloat(playerStats.stat(.reflexes))
-        let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
-        let heightReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus
-        let excessHeight = max(0, ballSim.height - heightReach)
-
-        let dx = ballSim.courtX - playerNX
-        let dy = ballSim.courtY - playerNY
-        let dist = sqrt(dx * dx + dy * dy + excessHeight * excessHeight)
-
-        guard dist <= hitboxRadius else { return }
+        // Swept collision via controller (anti-tunneling)
+        let dist = controller.checkHitDistance(
+            ballX: ballSim.courtX, ballY: ballSim.courtY, ballHeight: ballSim.height
+        )
+        guard dist <= controller.hitboxRadius else { return }
 
         scorekeeper.onSuccessfulReturn()
 
@@ -1065,7 +862,7 @@ final class InteractiveDrillScene: SKScene {
         var shotModes = determineShotMode()
 
         // Auto-upgrade to power at the kitchen when ball is high (put-away opportunity)
-        let distFromNet = abs(0.5 - playerNY)
+        let distFromNet = abs(0.5 - controller.playerNY)
         if distFromNet < P.kitchenVolleyRange
             && ballSim.height > P.smashHeightThreshold
             && shotModes.contains(.touch) {
@@ -1074,17 +871,17 @@ final class InteractiveDrillScene: SKScene {
 
         // Power mode: drain 20% of max stamina per shot (5 shots to empty)
         if shotModes.contains(.power) {
-            stamina = max(0, stamina - P.maxStamina * 0.20)
+            controller.stamina = max(0, controller.stamina - P.maxStamina * 0.20)
         }
 
-        let ballFromLeft = ballSim.courtX < playerNX
-        let staminaPct = stamina / P.maxStamina
+        let ballFromLeft = ballSim.courtX < controller.playerNX
+        let staminaPct = controller.stamina / P.maxStamina
         var shot = DrillShotCalculator.calculatePlayerShot(
             stats: playerStats,
             ballApproachFromLeft: ballFromLeft,
             drillType: drill.type,
             ballHeight: ballSim.height,
-            courtNY: playerNY,
+            courtNY: controller.playerNY,
             modes: shotModes,
             staminaFraction: staminaPct
         )
@@ -1115,13 +912,13 @@ final class InteractiveDrillScene: SKScene {
 
         let animState: CharacterAnimationState = shot.shotType == .forehand
             ? .forehand(isNear: true) : .backhand(isNear: true)
-        playerAnimator.play(animState)
-        playerShotAnimTimer = shotAnimDuration
+        controller.playerAnimator.play(animState)
+        controller.playerShotAnimTimer = shotAnimDuration
 
         run(SoundManager.shared.skAction(for: .paddleHit))
 
         ballSim.launch(
-            from: CGPoint(x: playerNX, y: playerNY),
+            from: CGPoint(x: controller.playerNX, y: controller.playerNY),
             toward: CGPoint(x: shot.targetNX, y: shot.targetNY),
             power: shot.power,
             arc: shot.arc,
@@ -1416,26 +1213,11 @@ final class InteractiveDrillScene: SKScene {
     // MARK: - Position Syncing
 
     private func syncPlayerPosition() {
-        let screenPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
-        playerNode.position = screenPos
-
-        let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, playerNY)))
-        playerNode.setScale(AC.Sprites.nearPlayerScale * pScale)
-        playerNode.zPosition = AC.ZPositions.nearPlayer - CGFloat(playerNY) * 0.1
-
-        // Gradually tint red when sprinting and losing stamina
-        let staminaPct = stamina / P.maxStamina
-        let isSprinting = joystickMagnitude > 1.0 && stamina > 0
-        if isSprinting || staminaPct < 1.0 {
-            let redAmount = 1.0 - staminaPct // 0 = full stamina (white), 1 = empty (red)
-            let tint = UIColor(red: 1.0, green: 1.0 - redAmount * 0.6, blue: 1.0 - redAmount * 0.7, alpha: 1.0)
-            playerNode.color = tint
-            playerNode.colorBlendFactor = redAmount * 0.5
-        } else {
-            playerNode.colorBlendFactor = 0
-        }
+        controller.syncPositions()
 
         // Shot type label follows player (below feet)
+        let screenPos = CourtRenderer.courtPoint(nx: controller.playerNX, ny: max(0, controller.playerNY))
+        let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, controller.playerNY)))
         shotTypeLabel?.position = CGPoint(x: screenPos.x, y: screenPos.y - 25 * pScale)
     }
 
@@ -1667,8 +1449,8 @@ final class InteractiveDrillScene: SKScene {
     }
 
     private func updateStaminaBar() {
-        let pct = stamina / P.maxStamina
-        hudStaminaValue.text = "\(Int(stamina))%"
+        let pct = controller.stamina / P.maxStamina
+        hudStaminaValue.text = "\(Int(controller.stamina))%"
         let w = max(1, hudBarWidthCurrent * pct)
         hudStaminaBarFill.path = UIBezierPath(
             roundedRect: CGRect(x: 0, y: -hudBarHeight / 2, width: w, height: hudBarHeight),
@@ -1717,7 +1499,7 @@ final class InteractiveDrillScene: SKScene {
 
     private func endDrill() {
         phase = .finished
-        resetJoystick()
+        controller.resetJoystick()
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0

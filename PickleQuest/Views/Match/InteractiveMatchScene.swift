@@ -8,9 +8,12 @@ final class InteractiveMatchScene: SKScene {
     private typealias IM = GameConstants.InteractiveMatch
     private typealias PB = GameConstants.PlayerBalance
 
+    // MARK: - Player Controller
+
+    private var controller: InteractivePlayerController!
+
     // MARK: - Sprites
 
-    private var playerNode: SKSpriteNode!
     private var npcNode: SKSpriteNode!
     private var ballNode: SKSpriteNode!
     private var ballShadow: SKShapeNode!
@@ -19,7 +22,6 @@ final class InteractiveMatchScene: SKScene {
     private var ballTrailHistory: [CGPoint] = []
     private let ballTrailMaxLength: CGFloat = AC.sceneWidth * 0.5  // half court width
     private let ballTrailMaxPoints: Int = 20
-    private var playerAnimator: SpriteSheetAnimator!
     private var npcAnimator: SpriteSheetAnimator!
 
     // NPC boss bar
@@ -37,9 +39,7 @@ final class InteractiveMatchScene: SKScene {
     private var shotTypeLabel: SKLabelNode!
     private var shotTypeLabelTimer: CGFloat = 0
 
-    // Hitbox visualization (subtle ground circles)
-    private var playerHitboxRing: SKShapeNode!
-    private var playerHitboxEdge: SKShapeNode!
+    // Hitbox visualization (subtle ground circles — NPC only; player rings are in controller)
     private var npcHitboxRing: SKShapeNode!
     private var npcHitboxEdge: SKShapeNode!
 
@@ -48,15 +48,7 @@ final class InteractiveMatchScene: SKScene {
     private var debugTextLabel: SKLabelNode!
     private var debugDoneButton: SKLabelNode!
 
-    // Joystick
-    private var joystickBase: SKShapeNode!
-    private var joystickKnob: SKShapeNode!
-    private var joystickTouch: UITouch?
-    private var joystickOrigin: CGPoint = .zero
-    private var joystickDirection: CGVector = .zero
-    private var joystickMagnitude: CGFloat = 0
-    private let joystickBaseRadius: CGFloat = 50
-    private let joystickKnobRadius: CGFloat = 30
+    // (Joystick state is in controller)
 
     // Swipe-to-serve state
     private var swipeTouchStart: CGPoint?
@@ -134,28 +126,15 @@ final class InteractiveMatchScene: SKScene {
         "*angry paddle waving*",
     ]
 
-    // Joystick swipe velocity tracking (for shot intent)
-    private var joystickSwipeVelocity: CGVector = .zero  // points/sec
-    private var prevTouchPos: CGPoint = .zero
-    private var prevTouchTimestamp: TimeInterval = 0
+    // (Joystick swipe velocity is in controller)
 
     // Jump button
     private var jumpButton: SKNode!
     private var jumpButtonBg: SKShapeNode!
     private var jumpButtonLabel: SKLabelNode!
 
-    // Jump state (player)
-    private var playerJumpPhase: JumpPhase = .grounded
-    private var playerJumpTimer: CGFloat = 0
-    private var playerJumpCooldownTimer: CGFloat = 0
-    private var playerJumpHeightBonus: CGFloat = 0
-
-    // Sprite flipping for directional animations
-    private var playerSpriteFlipped: Bool = false
+    // (Jump state, player sprite flipping, and player shot anim timer are in controller)
     private var npcSpriteFlipped: Bool = false
-
-    // Shot animation lock — prevents movePlayer() from overwriting one-shot animations
-    private var playerShotAnimTimer: CGFloat = 0
     private var npcShotAnimTimer: CGFloat = 0
     private let shotAnimDuration: CGFloat = 0.40  // lock duration for shot animations
 
@@ -198,17 +177,7 @@ final class InteractiveMatchScene: SKScene {
     private let dinkPushDuration: CGFloat = 0.25
     private let dinkKitchenThreshold: CGFloat = 0.30
 
-    // Lateral lunge: load (crouch) → jump → land (recovery)
-    enum LungePhase { case none, loading, jumping, landing }
-    private var lungePhase: LungePhase = .none
-    private var lungeTimer: CGFloat = 0
-    private var lungeDirection: CGFloat = 0          // +1 right, -1 left
-    private let lungeLoadDuration: CGFloat = 0.08    // crouch/load before jump
-    private let lungeJumpDuration: CGFloat = 0.18    // airborne phase
-    private let lungeLandDuration: CGFloat = 0.08    // can't move after landing (same as load)
-    private let lungeDistance: CGFloat = 0.50         // half court width
-    private let lungeJumpPeak: CGFloat = 10.0         // hop height in points
-    private var prevJoystickMagnitude: CGFloat = 0   // for boundary-crossing detection
+    // (Lunge state is in controller)
 
     // Movement guide arrows (court-painted directional hints)
     private var moveGuideBack: SKNode!
@@ -221,14 +190,7 @@ final class InteractiveMatchScene: SKScene {
     private var playerSplitStepPlayed: Bool = false
     private var npcSplitStepPlayed: Bool = false
 
-    // Stamina
-    private var stamina: CGFloat = P.maxStamina
-    private var timeSinceLastSprint: CGFloat = 10
-
-    // Footstep sound cadence
-    private var footstepTimer: CGFloat = 0
-    private let footstepInterval: CGFloat = 0.28
-    private let footstepSprintInterval: CGFloat = 0.18
+    // (Stamina and footstep state are in controller)
 
     // Score callback (SwiftUI scoreboard replaces SpriteKit HUD)
     var onScoreUpdate: ((Int, Int, MatchSide) -> Void)?
@@ -255,17 +217,9 @@ final class InteractiveMatchScene: SKScene {
     private var npcAI: MatchAI!
     private let playerStats: PlayerStats
 
-    // Player position in court space
-    private var playerNX: CGFloat = 0.5
-    private var playerNY: CGFloat = 0.08
-    private var playerMoveSpeed: CGFloat = 0.6
-    private var playerSprintSpeed: CGFloat = 1.0 // stat-based sprint multiplier
+    // (Player position, movement speeds, and swept collision state are in controller)
     private var lastUpdateTime: TimeInterval = 0
     private var previousBallNY: CGFloat = 0.5
-    // Previous frame ball position for swept collision detection
-    private var prevBallX: CGFloat = 0.5
-    private var prevBallY: CGFloat = 0.5
-    private var prevBallHeight: CGFloat = 0.0
 
     // Match scoring (side-out singles)
     private var playerScore: Int = 0
@@ -346,12 +300,16 @@ final class InteractiveMatchScene: SKScene {
         self.anchorPoint = CGPoint(x: 0, y: 0)
         self.backgroundColor = UIColor(hex: "#2C3E50")
 
-        let speedStat = CGFloat(playerStats.stat(.speed))
-        let reflexesStat = CGFloat(playerStats.stat(.reflexes))
-        let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
-        playerMoveSpeed = P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus
-        // Sprint speed scales with athleticism: low stats = 50% boost, high stats = 150% boost
-        playerSprintSpeed = 0.5 + athleticism * 1.0
+        self.controller = InteractivePlayerController(
+            playerStats: playerStats,
+            appearance: player.appearance,
+            startNX: 0.5, startNY: 0.08,
+            config: PlayerControllerConfig(
+                minNX: 0.0, maxNX: 1.0,
+                minNY: -0.05, maxNY: 0.48 - P.playerPositioningOffset,
+                jumpEnabled: true, lungeEnabled: true, hitboxRingsVisible: true
+            )
+        )
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -412,13 +370,8 @@ final class InteractiveMatchScene: SKScene {
         shotMarkersNode.zPosition = AC.ZPositions.courtLines + 0.5
         addChild(shotMarkersNode)
 
-        // Player sprite (near side)
-        let (pNode, pTextures) = SpriteFactory.makeCharacterNode(appearance: player.appearance, isNearPlayer: true)
-        playerNode = pNode
-        playerNode.setScale(AC.Sprites.nearPlayerScale)
-        playerNode.zPosition = AC.ZPositions.nearPlayer
-        addChild(playerNode)
-        playerAnimator = SpriteSheetAnimator(node: playerNode, textures: pTextures, isNear: true)
+        // Player sprite + joystick + hitbox rings (via controller)
+        controller.buildNodes(parent: self, appearance: player.appearance)
 
         // NPC sprite (far side)
         let (nNode, nTextures) = SpriteFactory.makeCharacterNode(appearance: npcAppearance, isNearPlayer: false)
@@ -462,25 +415,6 @@ final class InteractiveMatchScene: SKScene {
         ballTrailInner.alpha = 0
         addChild(ballTrailInner)
 
-        // Joystick
-        joystickBase = SKShapeNode(circleOfRadius: joystickBaseRadius)
-        joystickBase.fillColor = UIColor(white: 0.15, alpha: 0.5)
-        joystickBase.strokeColor = UIColor(white: 0.6, alpha: 0.3)
-        joystickBase.lineWidth = 2
-        joystickBase.zPosition = 15
-        joystickBase.position = joystickDefaultPosition
-        joystickBase.alpha = 0.4
-        addChild(joystickBase)
-
-        joystickKnob = SKShapeNode(circleOfRadius: joystickKnobRadius)
-        joystickKnob.fillColor = UIColor(white: 0.8, alpha: 0.6)
-        joystickKnob.strokeColor = UIColor(white: 1.0, alpha: 0.4)
-        joystickKnob.lineWidth = 1.5
-        joystickKnob.zPosition = 16
-        joystickKnob.position = joystickDefaultPosition
-        joystickKnob.alpha = 0.4
-        addChild(joystickKnob)
-
         // Shot type flash label
         buildShotTypeLabel()
 
@@ -515,8 +449,8 @@ final class InteractiveMatchScene: SKScene {
         npcAI = MatchAI(npc: npc, playerDUPR: player.duprRating)
 
         // Set positions
-        playerNX = 0.5
-        playerNY = 0.08
+        controller.playerNX = 0.5
+        controller.playerNY = 0.08
         syncAllPositions()
     }
 
@@ -654,20 +588,7 @@ final class InteractiveMatchScene: SKScene {
     private func buildHitboxRings() {
         let hitboxZ = AC.ZPositions.nearPlayer + 1  // draw over player sprites
 
-        // Player hitbox: inner (direct hit) + outer (edge/stretch zone)
-        playerHitboxRing = SKShapeNode(circleOfRadius: 1)
-        playerHitboxRing.strokeColor = UIColor.systemCyan.withAlphaComponent(0.7)
-        playerHitboxRing.fillColor = UIColor.systemCyan.withAlphaComponent(0.15)
-        playerHitboxRing.lineWidth = 2.0
-        playerHitboxRing.zPosition = hitboxZ
-        addChild(playerHitboxRing)
-
-        playerHitboxEdge = SKShapeNode(circleOfRadius: 1)
-        playerHitboxEdge.strokeColor = UIColor.systemCyan.withAlphaComponent(0.35)
-        playerHitboxEdge.fillColor = .clear
-        playerHitboxEdge.lineWidth = 1.5
-        playerHitboxEdge.zPosition = hitboxZ
-        addChild(playerHitboxEdge)
+        // Player hitbox rings are built by controller.buildNodes()
 
         // NPC hitbox: inner (direct hit) + outer (edge/stretch zone)
         npcHitboxRing = SKShapeNode(circleOfRadius: 1)
@@ -899,9 +820,9 @@ final class InteractiveMatchScene: SKScene {
         guard let hint = swipeHintNode else { return }
         hint.removeAllActions()
 
-        let playerScreenPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
+        let playerScreenPos = CourtRenderer.courtPoint(nx: controller.playerNX, ny: max(0, controller.playerNY))
         // Crosscourt direction: if player is on right (nx > 0.5), swipe toward left and vice versa
-        let crosscourtDX: CGFloat = playerNX > 0.5 ? -60 : 60
+        let crosscourtDX: CGFloat = controller.playerNX > 0.5 ? -60 : 60
         let startX = playerScreenPos.x
         let startY = playerScreenPos.y + 30
         let endX = startX + crosscourtDX
@@ -923,8 +844,8 @@ final class InteractiveMatchScene: SKScene {
             ]),
             .run { [weak hint, weak self] in
                 guard let hint, let self else { return }
-                let pos = CourtRenderer.courtPoint(nx: self.playerNX, ny: max(0, self.playerNY))
-                let dx: CGFloat = self.playerNX > 0.5 ? -60 : 60
+                let pos = CourtRenderer.courtPoint(nx: self.controller.playerNX, ny: max(0, self.controller.playerNY))
+                let dx: CGFloat = self.controller.playerNX > 0.5 ? -60 : 60
                 hint.position = CGPoint(x: pos.x, y: pos.y + 30)
                 // Recompute end for next cycle (stored via closure)
                 _ = dx  // suppress unused warning
@@ -1016,35 +937,23 @@ final class InteractiveMatchScene: SKScene {
         npcIsPacing = false
         npcNode?.removeAction(forKey: "frustrationPace")
 
-        // Reset jump state
-        playerJumpPhase = .grounded
-        playerJumpTimer = 0
-        playerJumpCooldownTimer = 0
-        playerJumpHeightBonus = 0
-        playerSpriteFlipped = false
+        // Reset player controller state
+        let staminaStat = CGFloat(playerStats.stat(.stamina))
+        let staminaRecovery: CGFloat = 20 + (staminaStat / 99.0) * 15
         npcSpriteFlipped = false
         playerDinkPushTimer = 0
         npcDinkPushTimer = 0
         playerSplitStepPlayed = false
         npcSplitStepPlayed = false
-        playerShotAnimTimer = 0
         npcShotAnimTimer = 0
-        lungePhase = .none
-        lungeTimer = 0
-        lungeDirection = 0
         pendingPlayerShot = nil
         pendingNPCShot = nil
         pendingServeShot = nil
-        joystickSwipeVelocity = .zero
         shotTypeLabelTimer = 0
         shotTypeLabel?.alpha = 0
         hideAllMoveGuides()
         wasLobbed = false
 
-        // Recover stamina between points (scaled by stamina stat)
-        let staminaStat = CGFloat(playerStats.stat(.stamina))
-        let staminaRecovery: CGFloat = 20 + (staminaStat / 99.0) * 15
-        stamina = min(P.maxStamina, stamina + staminaRecovery)
         npcAI.recoverBetweenPoints()
 
         // Reset NPC state for new point (clears shot count, pattern memory, kitchen approach)
@@ -1053,8 +962,7 @@ final class InteractiveMatchScene: SKScene {
         // Position players for serve
         if servingSide == .player {
             let evenScore = playerScore % 2 == 0
-            playerNX = evenScore ? 0.75 : 0.25
-            playerNY = 0.08
+            controller.resetForNewPoint(startNX: evenScore ? 0.75 : 0.25, startNY: 0.08, staminaRecovery: staminaRecovery)
             npcAI.positionForReceive(playerScore: playerScore)
             phase = .serving
             showSwipeHint()
@@ -1065,8 +973,7 @@ final class InteractiveMatchScene: SKScene {
             npcAI.positionForServe(npcScore: npcScore)
             // Receiver cross-court from server
             let serverRight = evenScore
-            playerNX = serverRight ? 0.25 : 0.75
-            playerNY = 0.08
+            controller.resetForNewPoint(startNX: serverRight ? 0.25 : 0.75, startNY: 0.08, staminaRecovery: staminaRecovery)
             phase = .serving
             servePauseTimer = IM.servePauseDuration
             if !isRated { showNPCSpeech(serveScoreText()) }
@@ -1080,9 +987,9 @@ final class InteractiveMatchScene: SKScene {
             servingSide: servingSide,
             playerScore: playerScore,
             npcScore: npcScore,
-            playerNX: playerNX,
-            playerNY: playerNY,
-            playerStamina: stamina,
+            playerNX: controller.playerNX,
+            playerNY: controller.playerNY,
+            playerStamina: controller.stamina,
             npcNX: npcAI.currentNX,
             npcNY: npcAI.currentNY,
             npcStamina: npcAI.stamina
@@ -1129,7 +1036,7 @@ final class InteractiveMatchScene: SKScene {
         let servePower = max(0.30, (0.10 + min(rawPowerFactor, 1.3) * 0.75) * powerMultiplier)
 
         // Physics-based arc: compute exact arc to land at target distance
-        let serveDistNY = abs(targetNY - max(0, playerNY))
+        let serveDistNY = abs(targetNY - max(0, controller.playerNY))
         let serveArc = DrillShotCalculator.arcToLandAt(
             distanceNY: serveDistNY,
             power: servePower,
@@ -1138,24 +1045,24 @@ final class InteractiveMatchScene: SKScene {
 
         // Drain stamina for power serve
         let serveModes: DrillShotCalculator.ShotMode = isPowerServe ? [.power] : []
-        if isPowerServe { stamina = max(0, stamina - P.maxStamina * P.powerShotStaminaDrain) }
+        if isPowerServe { controller.stamina = max(0, controller.stamina - P.maxStamina * P.powerShotStaminaDrain) }
 
         dbg.logPlayerServe(
-            originNX: playerNX, originNY: max(0, playerNY),
+            originNX: controller.playerNX, originNY: max(0, controller.playerNY),
             targetNX: targetNX, targetNY: targetNY,
             power: servePower, arc: serveArc,
             scatter: scatter, modes: serveModes,
-            stamina: stamina
+            stamina: controller.stamina
         )
 
         // Play forehand swing animation immediately — ball launches at mid-swing
-        playerAnimator.play(.forehand(isNear: true))
-        playerShotAnimTimer = shotAnimDuration
-        playerSpriteFlipped = false
+        controller.playerAnimator.play(.forehand(isNear: true))
+        controller.playerShotAnimTimer = shotAnimDuration
+        controller.playerSpriteFlipped = false
 
         let serveAccuracy = 1.0 - scatter * 3
         pendingServeShot = PendingServe(
-            origin: CGPoint(x: playerNX, y: max(0, playerNY)),
+            origin: CGPoint(x: controller.playerNX, y: max(0, controller.playerNY)),
             target: CGPoint(x: targetNX, y: targetNY),
             power: servePower,
             arc: serveArc,
@@ -1407,7 +1314,7 @@ final class InteractiveMatchScene: SKScene {
 
     private func endMatch(wasResigned: Bool) {
         phase = .matchOver
-        resetJoystick()
+        controller.resetJoystick()
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
@@ -1489,7 +1396,7 @@ final class InteractiveMatchScene: SKScene {
                 longestRally: longestRally,
                 averageRallyLength: averageRally,
                 longestStreak: playerLongestStreak,
-                finalEnergy: Double(stamina)
+                finalEnergy: Double(controller.stamina)
             ),
             opponentStats: MatchPlayerStats(
                 aces: npcAces,
@@ -1542,7 +1449,7 @@ final class InteractiveMatchScene: SKScene {
 
             // Check jump button
             if phase == .playing, let jb = jumpButton, hitTestButton(jb, at: pos, size: CGSize(width: 56, height: 56)) {
-                initiatePlayerJump()
+                controller.initiateJump()
                 continue
             }
 
@@ -1552,73 +1459,15 @@ final class InteractiveMatchScene: SKScene {
                 return
             }
 
-            // Joystick
-            guard joystickTouch == nil else { continue }
-            joystickTouch = touch
-            joystickOrigin = pos
-            prevJoystickMagnitude = 0
-            prevTouchPos = pos
-            prevTouchTimestamp = CACurrentMediaTime()
-            joystickSwipeVelocity = .zero
-            joystickBase.position = pos
-            joystickKnob.position = pos
-            joystickBase.alpha = 1
-            joystickKnob.alpha = 1
+            // Joystick (delegated to controller)
+            controller.handleJoystickBegan(touch: touch, location: pos)
         }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let activeTouch = joystickTouch, touches.contains(activeTouch) else { return }
-
+        guard let activeTouch = controller.joystickTouch, touches.contains(activeTouch) else { return }
         let pos = activeTouch.location(in: self)
-
-        // Compute swipe velocity with exponential smoothing
-        let now = CACurrentMediaTime()
-        let dt = now - prevTouchTimestamp
-        if dt > 0.001 {
-            let rawVX = (pos.x - prevTouchPos.x) / CGFloat(dt)
-            let rawVY = (pos.y - prevTouchPos.y) / CGFloat(dt)
-            let smoothing: CGFloat = 0.3  // blend factor (0 = all old, 1 = all new)
-            joystickSwipeVelocity = CGVector(
-                dx: joystickSwipeVelocity.dx * (1 - smoothing) + rawVX * smoothing,
-                dy: joystickSwipeVelocity.dy * (1 - smoothing) + rawVY * smoothing
-            )
-        }
-        prevTouchPos = pos
-        prevTouchTimestamp = now
-
-        let dx = pos.x - joystickOrigin.x
-        let dy = pos.y - joystickOrigin.y
-        let dist = sqrt(dx * dx + dy * dy)
-
-        let maxVisualDist = joystickBaseRadius * 1.5
-        if dist <= maxVisualDist {
-            joystickKnob.position = pos
-        } else {
-            joystickKnob.position = CGPoint(
-                x: joystickOrigin.x + (dx / dist) * maxVisualDist,
-                y: joystickOrigin.y + (dy / dist) * maxVisualDist
-            )
-        }
-
-        joystickMagnitude = min(dist / joystickBaseRadius, 1.5)
-        if dist > 1.0 {
-            joystickDirection = CGVector(dx: dx / dist, dy: dy / dist)
-        }
-
-        // Lunge trigger: joystick crosses boundary while mainly horizontal
-        let prevMag = prevJoystickMagnitude
-        prevJoystickMagnitude = joystickMagnitude
-        if prevMag < 1.0 && joystickMagnitude >= 1.0
-            && abs(dx) > abs(dy) * 1.5  // mainly horizontal
-            && lungePhase == .none
-            && playerJumpPhase == .grounded
-            && phase == .playing {
-            lungePhase = .loading
-            lungeTimer = 0
-            lungeDirection = dx > 0 ? 1.0 : -1.0
-            playerSpriteFlipped = lungeDirection < 0
-        }
+        controller.handleJoystickMoved(touch: activeTouch, location: pos)
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -1630,8 +1479,7 @@ final class InteractiveMatchScene: SKScene {
                 return
             }
 
-            if touch === joystickTouch {
-                resetJoystick()
+            if controller.handleJoystickEnded(touch: touch) {
                 continue
             }
         }
@@ -1640,22 +1488,8 @@ final class InteractiveMatchScene: SKScene {
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         swipeTouchStart = nil
         for touch in touches {
-            if touch === joystickTouch { resetJoystick() }
+            controller.handleJoystickEnded(touch: touch)
         }
-    }
-
-    private let joystickDefaultPosition = CGPoint(x: MatchAnimationConstants.sceneWidth / 2, y: 100)
-
-    private func resetJoystick() {
-        joystickTouch = nil
-        joystickDirection = .zero
-        joystickMagnitude = 0
-        prevJoystickMagnitude = 0
-        joystickSwipeVelocity = .zero
-        joystickBase.position = joystickDefaultPosition
-        joystickKnob.position = joystickDefaultPosition
-        joystickBase.alpha = 0.4
-        joystickKnob.alpha = 0.4
     }
 
     // MARK: - Swipe Shot Determination
@@ -1666,9 +1500,9 @@ final class InteractiveMatchScene: SKScene {
     /// Determine shot modes from joystick state at the moment of contact.
     private func determineShotMode() -> DrillShotCalculator.ShotMode {
         // Joystick released → touch/dink (target chosen by calculator based on stats)
-        guard joystickTouch != nil else { return [.touch] }
+        guard controller.joystickTouch != nil else { return [.touch] }
 
-        if joystickMagnitude > 1.0 {
+        if controller.joystickMagnitude > 1.0 {
             // Past the circle → power shot
             return [.power]
         } else {
@@ -1681,10 +1515,10 @@ final class InteractiveMatchScene: SKScene {
     /// Returns nil when joystick is released (let calculator choose by stats).
     /// dx is capped so the shot cone always aims forward, not sideways.
     private func joystickAimTarget() -> (nx: CGFloat, ny: CGFloat)? {
-        guard joystickTouch != nil else { return nil }
+        guard controller.joystickTouch != nil else { return nil }
 
-        let dx = joystickDirection.dx  // -1 to +1
-        let dy = joystickDirection.dy  // positive = up (toward opponent court)
+        let dx = controller.joystickDirection.dx  // -1 to +1
+        let dy = controller.joystickDirection.dy  // positive = up (toward opponent court)
 
         // Cap horizontal spread: abs(dx) can't exceed abs(dy) so shots aim forward
         let cappedDX: CGFloat
@@ -1709,8 +1543,8 @@ final class InteractiveMatchScene: SKScene {
     /// Power boost when joystick is past the circle edge.
     /// Scales with how far past the boundary (1.0 = edge, 1.5 = max).
     private func joystickPowerBoost() -> CGFloat {
-        guard joystickMagnitude > 1.0 else { return 0 }
-        let excessFraction = min((joystickMagnitude - 1.0) / 0.5, 1.0)
+        guard controller.joystickMagnitude > 1.0 else { return 0 }
+        let excessFraction = min((controller.joystickMagnitude - 1.0) / 0.5, 1.0)
         let powerStat = CGFloat(playerStats.stat(.power))
         return excessFraction * maxSwipePowerBoost * (powerStat / 99.0)
     }
@@ -1755,14 +1589,14 @@ final class InteractiveMatchScene: SKScene {
 
         switch phase {
         case .playing:
-            updatePlayerJump(dt: dt)
-            movePlayer(dt: dt)
+            controller.updateJump(dt: dt)
+            controller.movePlayer(dt: dt)
             let prevBounces = ballSim.bounceCount
             previousBallNY = ballSim.courtY
             // Store previous ball position for swept collision detection
-            prevBallX = ballSim.courtX
-            prevBallY = ballSim.courtY
-            prevBallHeight = ballSim.height
+            controller.prevBallX = ballSim.courtX
+            controller.prevBallY = ballSim.courtY
+            controller.prevBallHeight = ballSim.height
             ballSim.update(dt: dt)
             // Record first bounce position using sub-frame interpolation
             if ballSim.didBounceThisFrame && prevBounces == 0 {
@@ -1771,13 +1605,13 @@ final class InteractiveMatchScene: SKScene {
                 showLandingSpot(courtX: firstBounceCourtX, courtY: firstBounceCourtY)
             }
             // Log when ball crosses player's Y line (NPC shots heading toward player)
-            if !ballSim.lastHitByPlayer && prevBallY > playerNY && ballSim.courtY <= playerNY {
-                let xDist = abs(ballSim.courtX - playerNX)
+            if !ballSim.lastHitByPlayer && controller.prevBallY > controller.playerNY && ballSim.courtY <= controller.playerNY {
+                let xDist = abs(ballSim.courtX - controller.playerNX)
                 let positioningStat = CGFloat(playerStats.stat(.positioning))
                 let hitbox = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
                 dbg.logBallAtPlayerY(
                     ballX: ballSim.courtX, ballY: ballSim.courtY, ballHeight: ballSim.height,
-                    playerNX: playerNX, playerNY: playerNY,
+                    playerNX: controller.playerNX, playerNY: controller.playerNY,
                     xDistance: xDist,
                     hitboxRadius: hitbox,
                     wouldBeInHitbox: xDist <= hitbox,
@@ -1785,8 +1619,8 @@ final class InteractiveMatchScene: SKScene {
                 )
             }
 
-            npcAI.playerPositionNX = playerNX
-            npcAI.playerPositionNY = playerNY
+            npcAI.playerPositionNX = controller.playerNX
+            npcAI.playerPositionNY = controller.playerNY
             updateNPCPressureHitbox()
             npcAI.update(dt: dt, ball: ballSim)
             checkBallState()
@@ -1794,7 +1628,7 @@ final class InteractiveMatchScene: SKScene {
             checkNPCHit()
 
             // Shot animation lock timers (prevent movePlayer from overwriting swing animations)
-            if playerShotAnimTimer > 0 { playerShotAnimTimer = max(0, playerShotAnimTimer - dt) }
+            if controller.playerShotAnimTimer > 0 { controller.playerShotAnimTimer = max(0, controller.playerShotAnimTimer - dt) }
             if npcShotAnimTimer > 0 { npcShotAnimTimer = max(0, npcShotAnimTimer - dt) }
 
             // Pending shot timers — launch ball at mid-swing
@@ -1813,7 +1647,7 @@ final class InteractiveMatchScene: SKScene {
             updateSplitSteps()
 
         case .serving:
-            movePlayer(dt: dt)
+            controller.movePlayer(dt: dt)
             tickPendingServe(dt: dt)
             syncAllPositions()
             syncHitboxRings()
@@ -1887,132 +1721,7 @@ final class InteractiveMatchScene: SKScene {
         }
     }
 
-    // MARK: - Player Jump
-
-    private func initiatePlayerJump() {
-        guard playerJumpPhase == .grounded else { return }
-        guard playerJumpCooldownTimer <= 0 else { return }
-        guard stamina >= P.jumpMinStamina else { return }
-        stamina -= P.jumpStaminaCost
-        playerJumpPhase = .rising
-        playerJumpTimer = 0
-    }
-
-    private func updatePlayerJump(dt: CGFloat) {
-        // Cooldown
-        if playerJumpCooldownTimer > 0 {
-            playerJumpCooldownTimer = max(0, playerJumpCooldownTimer - dt)
-        }
-
-        guard playerJumpPhase != .grounded else {
-            playerJumpHeightBonus = 0
-            return
-        }
-
-        playerJumpTimer += dt
-        let totalDuration = P.jumpDuration
-        let riseEnd = totalDuration * P.jumpRiseFraction
-        let hangEnd = riseEnd + totalDuration * P.jumpHangFraction
-
-        switch playerJumpPhase {
-        case .rising:
-            let riseFraction = min(playerJumpTimer / riseEnd, 1.0)
-            playerJumpHeightBonus = P.jumpHeightReachBonus * riseFraction
-            if playerJumpTimer >= riseEnd {
-                playerJumpPhase = .hanging
-            }
-        case .hanging:
-            playerJumpHeightBonus = P.jumpHeightReachBonus
-            if playerJumpTimer >= hangEnd {
-                playerJumpPhase = .falling
-            }
-        case .falling:
-            let fallStart = hangEnd
-            let fallDuration = totalDuration * P.jumpFallFraction
-            let fallFraction = min((playerJumpTimer - fallStart) / fallDuration, 1.0)
-            playerJumpHeightBonus = P.jumpHeightReachBonus * (1.0 - fallFraction)
-            if playerJumpTimer >= totalDuration {
-                playerJumpPhase = .grounded
-                playerJumpHeightBonus = 0
-                playerJumpCooldownTimer = P.jumpCooldown
-            }
-        case .grounded:
-            break
-        }
-    }
-
-    /// Sprite Y-offset for player jump visual. Sine arc: 0 → peak → 0.
-    private var playerJumpSpriteYOffset: CGFloat {
-        guard playerJumpPhase != .grounded else { return 0 }
-        let fraction = min(playerJumpTimer / P.jumpDuration, 1.0)
-        return sin(fraction * .pi) * P.jumpSpriteYOffset
-    }
-
-    /// Lunge Y-offset: crouch down during load, hop up during jump, back to 0 on land.
-    private var lungeSpriteYOffset: CGFloat {
-        switch lungePhase {
-        case .none:
-            return 0
-        case .loading:
-            // Crouch down: dip below baseline
-            let fraction = min(lungeTimer / lungeLoadDuration, 1.0)
-            return -3.0 * fraction
-        case .jumping:
-            // Sine arc hop: start from slight crouch, peak at lungeJumpPeak
-            let fraction = min(lungeTimer / lungeJumpDuration, 1.0)
-            return sin(fraction * .pi) * lungeJumpPeak - 3.0 * (1.0 - fraction)
-        case .landing:
-            // Settle back to ground
-            let fraction = min(lungeTimer / lungeLandDuration, 1.0)
-            return -2.0 * (1.0 - fraction)
-        }
-    }
-
-    private func tickLunge(dt: CGFloat) {
-        lungeTimer += dt
-        switch lungePhase {
-        case .loading:
-            // Crouching — show idle (bent knees visual via Y offset)
-            playerAnimator.play(.idle(isNear: true))
-            if lungeTimer >= lungeLoadDuration {
-                lungePhase = .jumping
-                lungeTimer = 0
-                playerAnimator.play(.shuffle(isNear: true))
-                playerSpriteFlipped = lungeDirection < 0
-            }
-        case .jumping:
-            // Airborne — move sideways (stamina < 10% → 1/3 distance)
-            let staminaPctLunge = stamina / P.maxStamina
-            let effectiveLungeDistance = staminaPctLunge <= 0.10 ? lungeDistance / 3.0 : lungeDistance
-            let lungeSpeed = effectiveLungeDistance / lungeJumpDuration
-            playerNX += lungeDirection * lungeSpeed * dt
-            playerNX = max(0.0, min(1.0, playerNX))
-
-            // Stop at ball's X so we don't overshoot
-            let ballX = ballSim.courtX
-            let overshoot = lungeDirection > 0
-                ? playerNX > ballX
-                : playerNX < ballX
-            if overshoot && ballSim.isActive {
-                playerNX = ballX
-            }
-
-            let reachedBall = overshoot && ballSim.isActive
-            if reachedBall || lungeTimer >= lungeJumpDuration {
-                lungePhase = .landing
-                lungeTimer = 0
-                playerAnimator.play(.idle(isNear: true))
-            }
-        case .landing:
-            // Frozen on landing
-            if lungeTimer >= lungeLandDuration {
-                lungePhase = .none
-                lungeTimer = 0
-            }
-        case .none:
-            break
-        }
-    }
+    // (Player jump, lunge, and associated methods are in controller)
 
     // MARK: - Movement Guide
 
@@ -2051,8 +1760,8 @@ final class InteractiveMatchScene: SKScene {
         guard landNY < 0.55 else { hideAllMoveGuides(); return }
 
         // How far player needs to move to reach landing spot
-        let needDX = landNX - playerNX   // positive = need to go right
-        let needDY = landNY - playerNY   // negative = need to go back (lower Y)
+        let needDX = landNX - controller.playerNX   // positive = need to go right
+        let needDY = landNY - controller.playerNY   // negative = need to go back (lower Y)
 
         // Threshold: only show if player needs to move a meaningful distance
         let lateralThreshold: CGFloat = 0.12
@@ -2072,7 +1781,7 @@ final class InteractiveMatchScene: SKScene {
         // Auto-jump for high balls within jump reach
         let ballSpeedY = abs(ballSim.vy)
         if ballSpeedY > 0.01 {
-            let timeToPlayerY = abs(ballSim.courtY - playerNY) / ballSpeedY
+            let timeToPlayerY = abs(ballSim.courtY - controller.playerNY) / ballSpeedY
             let heightAtPlayer = ballSim.height + ballSim.vz * timeToPlayerY
                 - 0.5 * g * timeToPlayerY * timeToPlayerY
             let speedStat = CGFloat(playerStats.stat(.speed))
@@ -2083,7 +1792,7 @@ final class InteractiveMatchScene: SKScene {
 
             if heightAtPlayer > standingReach && heightAtPlayer <= jumpReach && timeToPlayerY < 0.4
                 && ballSim.bounceCount == 0 {
-                initiatePlayerJump()
+                controller.initiateJump()
             }
             // Mark as lob if unreachable even with jump
             if heightAtPlayer > jumpReach {
@@ -2097,11 +1806,11 @@ final class InteractiveMatchScene: SKScene {
         let pulse = (0.4 + urgency * 0.6) * (0.6 + 0.4 * abs(sin(CGFloat(CACurrentMediaTime()) * pulseSpeed)))
 
         // Position each arrow on the court relative to the player
-        let pNY = max(0.0, playerNY)
+        let pNY = max(0.0, controller.playerNY)
 
         if needBack {
             let arrowNY = max(0.0, pNY - 0.18)
-            let pos = CourtRenderer.courtPoint(nx: playerNX, ny: arrowNY)
+            let pos = CourtRenderer.courtPoint(nx: controller.playerNX, ny: arrowNY)
             let scale = CourtRenderer.perspectiveScale(ny: arrowNY)
             moveGuideBack.position = pos
             moveGuideBack.setScale(scale)
@@ -2112,7 +1821,7 @@ final class InteractiveMatchScene: SKScene {
 
         if needForward {
             let arrowNY = min(0.48, pNY + 0.18)
-            let pos = CourtRenderer.courtPoint(nx: playerNX, ny: arrowNY)
+            let pos = CourtRenderer.courtPoint(nx: controller.playerNX, ny: arrowNY)
             let scale = CourtRenderer.perspectiveScale(ny: arrowNY)
             moveGuideForward.position = pos
             moveGuideForward.setScale(scale)
@@ -2122,7 +1831,7 @@ final class InteractiveMatchScene: SKScene {
         }
 
         if needLeft {
-            let arrowNX = max(0.05, playerNX - 0.20)
+            let arrowNX = max(0.05, controller.playerNX - 0.20)
             let pos = CourtRenderer.courtPoint(nx: arrowNX, ny: pNY)
             let scale = CourtRenderer.perspectiveScale(ny: pNY)
             moveGuideLeft.position = pos
@@ -2133,7 +1842,7 @@ final class InteractiveMatchScene: SKScene {
         }
 
         if needRight {
-            let arrowNX = min(0.95, playerNX + 0.20)
+            let arrowNX = min(0.95, controller.playerNX + 0.20)
             let pos = CourtRenderer.courtPoint(nx: arrowNX, ny: pNY)
             let scale = CourtRenderer.perspectiveScale(ny: pNY)
             moveGuideRight.position = pos
@@ -2145,9 +1854,9 @@ final class InteractiveMatchScene: SKScene {
     }
 
     private func updateJumpButtonVisual() {
-        let canJump = playerJumpPhase == .grounded
-            && playerJumpCooldownTimer <= 0
-            && stamina >= P.jumpMinStamina
+        let canJump = controller.jumpPhase == .grounded
+            && controller.jumpCooldownTimer <= 0
+            && controller.stamina >= P.jumpMinStamina
         jumpButtonBg.fillColor = canJump
             ? UIColor.systemCyan.withAlphaComponent(0.35)
             : UIColor.gray.withAlphaComponent(0.2)
@@ -2157,7 +1866,7 @@ final class InteractiveMatchScene: SKScene {
         jumpButtonLabel.fontColor = canJump ? .white : UIColor.white.withAlphaComponent(0.3)
 
         // Flash when airborne
-        if playerJumpPhase != .grounded {
+        if controller.jumpPhase != .grounded {
             jumpButtonBg.fillColor = UIColor.systemCyan.withAlphaComponent(0.7)
             jumpButtonBg.strokeColor = UIColor.systemCyan
         }
@@ -2183,9 +1892,9 @@ final class InteractiveMatchScene: SKScene {
                     let distToNPC = abs(ballSim.courtY - npcAI.currentNY)
                     let timeToContact = distToNPC / ballSpeed
                     // Only play split step if player is standing still and not in shot animation
-                    if timeToContact <= leadTime && timeToContact > 0 && joystickMagnitude < 0.1 && playerShotAnimTimer <= 0 {
-                        playerAnimator.playSplitStep()
-                        playerSpriteFlipped = false
+                    if timeToContact <= leadTime && timeToContact > 0 && controller.joystickMagnitude < 0.1 && controller.playerShotAnimTimer <= 0 {
+                        controller.playerAnimator.playSplitStep()
+                        controller.playerSpriteFlipped = false
                         playerSplitStepPlayed = true
                     }
                 }
@@ -2198,7 +1907,7 @@ final class InteractiveMatchScene: SKScene {
             if !npcSplitStepPlayed {
                 let ballSpeed = abs(ballSim.vy)
                 if ballSpeed > 0.01 {
-                    let distToPlayer = abs(ballSim.courtY - playerNY)
+                    let distToPlayer = abs(ballSim.courtY - controller.playerNY)
                     let timeToContact = distToPlayer / ballSpeed
                     if timeToContact <= leadTime && timeToContact > 0 && npcShotAnimTimer <= 0 {
                         npcAnimator.playSplitStep()
@@ -2210,110 +1919,7 @@ final class InteractiveMatchScene: SKScene {
         }
     }
 
-    // MARK: - Player Movement
-
-    private func movePlayer(dt: CGFloat) {
-        let canChangeAnim = playerShotAnimTimer <= 0
-
-        // Tick active lunge regardless of joystick state
-        if lungePhase != .none {
-            tickLunge(dt: dt)
-            return
-        }
-
-        guard joystickMagnitude > 0.1 else {
-            if canChangeAnim { playerAnimator.play(.idle(isNear: true)) }
-            footstepTimer = 0
-            timeSinceLastSprint += dt
-            if timeSinceLastSprint >= P.staminaRecoveryDelay {
-                stamina = min(P.maxStamina, stamina + P.staminaRecoveryRate * dt)
-            }
-            return
-        }
-
-        // Speed scales linearly from 0 to full (base + sprint) based on distance from center
-        let mag = min(joystickMagnitude, 1.0)
-        let maxSpeed = playerMoveSpeed * (1.0 + playerSprintSpeed)
-        var speed = maxSpeed * mag
-
-        // Jump air mobility penalty
-        if playerJumpPhase != .grounded {
-            speed *= P.jumpAirMobilityFactor
-        }
-
-        let staminaPct = stamina / P.maxStamina
-        // Sprint zone: outer 40% of circle (magnitude > 0.6) drains stamina
-        let isSprinting = mag > 0.6 && staminaPct > 0.10
-        if isSprinting {
-            if staminaPct < 0.50 { speed *= 0.75 }
-            stamina = max(0, stamina - P.sprintDrainRate * mag * dt)
-            timeSinceLastSprint = 0
-        } else {
-            timeSinceLastSprint += dt
-            if timeSinceLastSprint >= P.staminaRecoveryDelay {
-                stamina = min(P.maxStamina, stamina + P.staminaRecoveryRate * dt)
-            }
-        }
-
-        // Joystick sprint visual
-        if isSprinting {
-            joystickBase.strokeColor = UIColor.systemRed.withAlphaComponent(0.8)
-            joystickBase.fillColor = UIColor.systemRed.withAlphaComponent(0.2)
-            joystickKnob.fillColor = UIColor.systemRed.withAlphaComponent(0.7)
-        } else if joystickTouch != nil {
-            joystickBase.strokeColor = UIColor(white: 0.6, alpha: 0.3)
-            joystickBase.fillColor = UIColor(white: 0.15, alpha: 0.5)
-            joystickKnob.fillColor = UIColor(white: 0.8, alpha: 0.6)
-        }
-
-        // Movement animation: direction-aware sprint vs shuffle
-        let dx = joystickDirection.dx
-        let dy = joystickDirection.dy
-        let isMainlyHorizontal = abs(dx) > abs(dy)
-
-        // Normal movement (lunge is handled by tickLunge above)
-        playerNX += joystickDirection.dx * speed * dt
-        playerNY += joystickDirection.dy * speed * dt
-
-        // Clamp: player can move anywhere on their side + up to kitchen line
-        playerNX = max(0.0, min(1.0, playerNX))
-        playerNY = max(-0.05, min(0.48 - P.playerPositioningOffset, playerNY))
-
-        if canChangeAnim && lungePhase == .none {
-            if isSprinting {
-                if isMainlyHorizontal {
-                    // Horizontal sprint: runSide (base = running right, flip for left)
-                    playerAnimator.play(.runSide)
-                    playerSpriteFlipped = dx < 0
-                } else if dy > 0 {
-                    // Forward sprint (toward net): run forward
-                    playerAnimator.play(.run(isNear: true))
-                    playerSpriteFlipped = false
-                } else {
-                    // Backward sprint: fast shuffle (don't turn around)
-                    playerAnimator.play(.shuffle(isNear: true))
-                    playerSpriteFlipped = false
-                }
-            } else {
-                // Non-sprint: shuffle in all directions
-                playerAnimator.play(.shuffle(isNear: true))
-                if abs(dx) > 0.3 {
-                    playerSpriteFlipped = dx < 0 // flip when shuffling left
-                } else {
-                    playerSpriteFlipped = false
-                }
-            }
-        }
-
-        // Footstep sounds on cadence timer
-        footstepTimer += dt
-        let interval = isSprinting ? footstepSprintInterval : footstepInterval
-        if footstepTimer >= interval {
-            footstepTimer = 0
-            let soundID: SoundManager.SoundID = isSprinting ? .footstepSprint : .footstep
-            run(SoundManager.shared.skAction(for: soundID))
-        }
-    }
+    // (movePlayer is in controller)
 
     // MARK: - Pending Shot Timing
 
@@ -2396,42 +2002,7 @@ final class InteractiveMatchScene: SKScene {
         }
     }
 
-    // MARK: - Swept Collision
-
-    /// Find the minimum 3D distance from the ball's path segment (prev→curr) to a target point.
-    /// Uses closest-point-on-segment in 2D, then evaluates interpolated height at that point.
-    /// Prevents fast balls from tunneling through the hitbox between frames.
-    private func sweptBallDistance(
-        prevX: CGFloat, prevY: CGFloat, prevH: CGFloat,
-        currX: CGFloat, currY: CGFloat, currH: CGFloat,
-        targetX: CGFloat, targetY: CGFloat,
-        heightReach: CGFloat
-    ) -> CGFloat {
-        let segDX = currX - prevX
-        let segDY = currY - prevY
-        let segLenSq = segDX * segDX + segDY * segDY
-
-        let t: CGFloat
-        if segLenSq < 0.000001 {
-            // Ball barely moved — use current position
-            t = 1.0
-        } else {
-            // Project target onto segment: t = dot(target-prev, seg) / |seg|²
-            let toTargetX = targetX - prevX
-            let toTargetY = targetY - prevY
-            t = max(0, min(1, (toTargetX * segDX + toTargetY * segDY) / segLenSq))
-        }
-
-        // Interpolate ball position at closest parameter
-        let closestX = prevX + t * segDX
-        let closestY = prevY + t * segDY
-        let closestH = prevH + t * (currH - prevH)
-
-        let dx = closestX - targetX
-        let dy = closestY - targetY
-        let excessHeight = max(0, closestH - heightReach)
-        return sqrt(dx * dx + dy * dy + excessHeight * excessHeight)
-    }
+    // (sweptBallDistance is in controller)
 
     // MARK: - Hit Detection
 
@@ -2439,32 +2010,24 @@ final class InteractiveMatchScene: SKScene {
         guard ballSim.isActive && !ballSim.lastHitByPlayer else { return }
         guard ballSim.bounceCount < 2 else { return }
 
-        let positioningStat = CGFloat(playerStats.stat(.positioning))
-        let hitboxRadius = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
+        let hitboxRadius = controller.hitboxRadius
 
         // Two-bounce rule: during serve return (rally 0) and 3rd shot (rally 1),
         // the ball MUST bounce before being hit. Instead of penalizing a "volley fault",
         // simply ignore the ball — the player's avatar auto-moves and can't avoid it.
         if rallyLength < 2 && ballSim.bounceCount == 0 { return }
 
-        // 3D hitbox: height reach based on athleticism (speed + reflexes) + jump bonus
-        let speedStat = CGFloat(playerStats.stat(.speed))
-        let reflexesStat = CGFloat(playerStats.stat(.reflexes))
-        let athleticism = (speedStat + reflexesStat) / 2.0 / 99.0
-        let heightReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus + playerJumpHeightBonus
+        let heightReach = controller.heightReach + controller.jumpHeightBonus
         let excessHeight_dbg = max(0, ballSim.height - heightReach)
 
-        // Swept collision: find closest point on ball's path segment to player
-        // This prevents fast balls from tunneling through the hitbox between frames
-        let dist = sweptBallDistance(
-            prevX: prevBallX, prevY: prevBallY, prevH: prevBallHeight,
-            currX: ballSim.courtX, currY: ballSim.courtY, currH: ballSim.height,
-            targetX: playerNX, targetY: playerNY, heightReach: heightReach
+        // Swept collision via controller (anti-tunneling)
+        let dist = controller.checkHitDistance(
+            ballX: ballSim.courtX, ballY: ballSim.courtY, ballHeight: ballSim.height
         )
 
         // Also compute simple 2D distance for logging
-        let dx_dbg = ballSim.courtX - playerNX
-        let dy_dbg = ballSim.courtY - playerNY
+        let dx_dbg = ballSim.courtX - controller.playerNX
+        let dy_dbg = ballSim.courtY - controller.playerNY
         let dist2D_dbg = sqrt(dx_dbg * dx_dbg + dy_dbg * dy_dbg)
 
         let ballSpeed_dbg = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
@@ -2476,7 +2039,7 @@ final class InteractiveMatchScene: SKScene {
                 ballVX: ballSim.vx, ballVY: ballSim.vy, ballVZ: ballSim.vz,
                 ballSpeed: ballSpeed_dbg, ballSpin: ballSim.spinCurve, ballTopspin: ballSim.topspinFactor,
                 bounceCount: ballSim.bounceCount,
-                playerNX: playerNX, playerNY: playerNY,
+                playerNX: controller.playerNX, playerNY: controller.playerNY,
                 hitboxRadius: hitboxRadius,
                 dist2D: dist2D_dbg,
                 dist3D: dist,
@@ -2495,7 +2058,7 @@ final class InteractiveMatchScene: SKScene {
 
         // Auto-upgrade to power at the kitchen when ball is high (put-away opportunity)
         // Touch mode blocks the put-away/smash logic in the calculator, so force power
-        let distFromNet = abs(0.5 - playerNY)
+        let distFromNet = abs(0.5 - controller.playerNY)
         if distFromNet < P.kitchenVolleyRange
             && ballSim.height > P.smashHeightThreshold
             && shotModes.contains(.touch) {
@@ -2504,11 +2067,11 @@ final class InteractiveMatchScene: SKScene {
 
         // Power mode stamina drain
         if shotModes.contains(.power) {
-            stamina = max(0, stamina - P.maxStamina * P.powerShotStaminaDrain)
+            controller.stamina = max(0, controller.stamina - P.maxStamina * P.powerShotStaminaDrain)
         }
 
-        let ballFromLeft = ballSim.courtX < playerNX
-        let staminaPct = stamina / P.maxStamina
+        let ballFromLeft = ballSim.courtX < controller.playerNX
+        let staminaPct = controller.stamina / P.maxStamina
 
         // Save shot context for NPC shot quality assessment
         npcAI.lastPlayerShotModes = shotModes
@@ -2517,8 +2080,9 @@ final class InteractiveMatchScene: SKScene {
         let pBallSpeed = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
         let pMaxSpeed = P.baseShotSpeed + 2.0 * (P.maxShotSpeed - P.baseShotSpeed)
         let pSpeedFrac = max(0, min(1, (pBallSpeed - P.baseShotSpeed) / (pMaxSpeed - P.baseShotSpeed)))
-        let pDist = sqrt((ballSim.courtX - playerNX) * (ballSim.courtX - playerNX)
-                       + (ballSim.courtY - playerNY) * (ballSim.courtY - playerNY))
+        let pDX = ballSim.courtX - controller.playerNX
+        let pDY = ballSim.courtY - controller.playerNY
+        let pDist = sqrt(pDX * pDX + pDY * pDY)
         let pStretch = min(pDist / hitboxRadius, 1.0)
         npcAI.lastPlayerHitDifficulty = pSpeedFrac * 0.5 + pStretch * 0.5
 
@@ -2528,7 +2092,7 @@ final class InteractiveMatchScene: SKScene {
             drillType: .baselineRally,
             ballHeight: ballSim.height,
             ballHeightAtNet: ballSim.heightAtNetCrossing,
-            courtNY: playerNY,
+            courtNY: controller.playerNY,
             modes: shotModes,
             staminaFraction: staminaPct,
             shooterDUPR: player.duprRating
@@ -2569,7 +2133,7 @@ final class InteractiveMatchScene: SKScene {
 
         dbg.logPlayerHit(
             modes: shotModes,
-            stamina: stamina,
+            stamina: controller.stamina,
             targetNX: shot.targetNX,
             targetNY: shot.targetNY,
             power: shot.power,
@@ -2586,8 +2150,8 @@ final class InteractiveMatchScene: SKScene {
         // - Dink: at kitchen without power — push motion
         // - Normal: forehand/backhand swing
         let animState: CharacterAnimationState
-        let isVolley = ballSim.bounceCount == 0 && playerJumpPhase == .grounded
-        if (playerJumpPhase != .grounded || shot.smashFactor > 0) && !shotModes.contains(.touch) {
+        let isVolley = ballSim.bounceCount == 0 && controller.jumpPhase == .grounded
+        if (controller.jumpPhase != .grounded || shot.smashFactor > 0) && !shotModes.contains(.touch) {
             animState = .smash(isNear: true)
         } else if isVolley && shotModes.contains(.touch) {
             // Touch volley: soft dink push (no swing animation)
@@ -2597,7 +2161,7 @@ final class InteractiveMatchScene: SKScene {
             // Volley: show swing animation (forehand/backhand)
             animState = shot.shotType == .forehand
                 ? .forehand(isNear: true) : .backhand(isNear: true)
-        } else if playerNY > dinkKitchenThreshold && !shotModes.contains(.power) {
+        } else if controller.playerNY > dinkKitchenThreshold && !shotModes.contains(.power) {
             // Dink at kitchen: use run animation + push motion
             animState = .run(isNear: true)
             playerDinkPushTimer = dinkPushDuration
@@ -2605,12 +2169,12 @@ final class InteractiveMatchScene: SKScene {
             animState = shot.shotType == .forehand
                 ? .forehand(isNear: true) : .backhand(isNear: true)
         }
-        playerAnimator.play(animState)
-        playerShotAnimTimer = shotAnimDuration
-        playerSpriteFlipped = false
+        controller.playerAnimator.play(animState)
+        controller.playerShotAnimTimer = shotAnimDuration
+        controller.playerSpriteFlipped = false
 
         // Sound + haptic
-        let isSmashShot = (playerJumpPhase != .grounded || shot.smashFactor > 0) && !shotModes.contains(.touch)
+        let isSmashShot = (controller.jumpPhase != .grounded || shot.smashFactor > 0) && !shotModes.contains(.touch)
         if isSmashShot {
             run(SoundManager.shared.skAction(for: .paddleHitSmash))
         } else {
@@ -2632,13 +2196,13 @@ final class InteractiveMatchScene: SKScene {
         }
 
         // Accumulate pressure: player at kitchen hitting while NPC is deep
-        if playerNY >= P.pressurePlayerKitchenNY && npcAI.currentNY >= P.pressureNPCDeepNY {
+        if controller.playerNY >= P.pressurePlayerKitchenNY && npcAI.currentNY >= P.pressureNPCDeepNY {
             npcAI.pressureShotCount += 1
         }
 
         // Defer ball launch to mid-swing
         pendingPlayerShot = PendingShot(
-            origin: CGPoint(x: playerNX, y: playerNY),
+            origin: CGPoint(x: controller.playerNX, y: controller.playerNY),
             target: CGPoint(x: shot.targetNX, y: shot.targetNY),
             power: shot.power,
             arc: shot.arc,
@@ -2961,51 +2525,12 @@ final class InteractiveMatchScene: SKScene {
 
     // MARK: - Position Syncing
 
-    private func syncPlayerPosition() {
-        let screenPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
-        let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, playerNY)))
-
-        // Jump Y-offset
-        let jumpOffset = playerJumpSpriteYOffset * pScale
-
-        // Lunge hop Y-offset
-        let lungeOffset = lungeSpriteYOffset * pScale
-
-        // Dink push Y-offset (toward net = positive screen Y for player)
-        var dinkPushOffset: CGFloat = 0
-        if playerDinkPushTimer > 0 {
-            let progress = 1.0 - playerDinkPushTimer / dinkPushDuration
-            dinkPushOffset = sin(progress * .pi) * 8.0 * pScale
-        }
-        playerNode.position = CGPoint(x: screenPos.x, y: screenPos.y + jumpOffset + lungeOffset + dinkPushOffset)
-
-        // Squash/stretch during jump + sprite flipping
-        let baseScale = AC.Sprites.nearPlayerScale * pScale
-        if playerJumpPhase != .grounded {
-            let fraction = min(playerJumpTimer / P.jumpDuration, 1.0)
-            let sinVal = sin(fraction * .pi)
-            // Rising: narrow + tall. Landing: wide + short (squash).
-            let xMag = baseScale * (1.0 - sinVal * 0.12)
-            let yScale = baseScale * (1.0 + sinVal * 0.15)
-            playerNode.xScale = playerSpriteFlipped ? -xMag : xMag
-            playerNode.yScale = yScale
-        } else {
-            playerNode.xScale = playerSpriteFlipped ? -baseScale : baseScale
-            playerNode.yScale = baseScale
-        }
-        playerNode.zPosition = AC.ZPositions.nearPlayer - CGFloat(playerNY) * 0.1
-
-        // Stamina tint
-        let staminaPct = stamina / P.maxStamina
-        let isSprinting = joystickMagnitude > 1.0 && stamina > 0
-        if isSprinting || staminaPct < 1.0 {
-            let redAmount = 1.0 - staminaPct
-            let tint = UIColor(red: 1.0, green: 1.0 - redAmount * 0.6, blue: 1.0 - redAmount * 0.7, alpha: 1.0)
-            playerNode.color = tint
-            playerNode.colorBlendFactor = redAmount * 0.5
-        } else {
-            playerNode.colorBlendFactor = 0
-        }
+    // syncPlayerPosition is now handled by controller.syncPositions(additionalYOffset:)
+    private func dinkPushYOffset() -> CGFloat {
+        guard playerDinkPushTimer > 0 else { return 0 }
+        let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, controller.playerNY)))
+        let progress = 1.0 - playerDinkPushTimer / dinkPushDuration
+        return sin(progress * .pi) * 8.0 * pScale
     }
 
     private func syncNPCPosition() {
@@ -3197,30 +2722,7 @@ final class InteractiveMatchScene: SKScene {
     }
 
     private func syncHitboxRings() {
-        // Convert court-space hitbox radius to screen-space ellipse using perspective
-        let positioningStat = CGFloat(playerStats.stat(.positioning))
-        let playerHitbox = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
-
-        // Player rings
-        let pPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
-        let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, playerNY)))
-        let pWidth = CourtRenderer.interpolatedWidth(ny: pow(max(0, min(1, playerNY)), MatchAnimationConstants.Court.perspectiveExponent))
-        let pScreenRadius = playerHitbox * pWidth * 0.5
-        let pEdgeRadius = pScreenRadius * 1.5  // edge zone = 1.5x hitbox
-
-        playerHitboxRing.position = pPos
-        playerHitboxRing.setScale(1.0)
-        playerHitboxRing.path = CGPath(ellipseIn: CGRect(
-            x: -pScreenRadius, y: -pScreenRadius * pScale,
-            width: pScreenRadius * 2, height: pScreenRadius * pScale * 2
-        ), transform: nil)
-
-        playerHitboxEdge.position = pPos
-        playerHitboxEdge.setScale(1.0)
-        playerHitboxEdge.path = CGPath(ellipseIn: CGRect(
-            x: -pEdgeRadius, y: -pEdgeRadius * pScale,
-            width: pEdgeRadius * 2, height: pEdgeRadius * pScale * 2
-        ), transform: nil)
+        // Player hitbox rings are synced by controller.syncPositions()
 
         // NPC rings (use effective hitboxRadius which includes pressure)
         let npcEffectiveHitbox = npcAI.hitboxRadius
@@ -3257,19 +2759,19 @@ final class InteractiveMatchScene: SKScene {
     }
 
     private func syncAllPositions() {
-        syncPlayerPosition()
+        controller.syncPositions(additionalYOffset: dinkPushYOffset())
         syncNPCPosition()
         syncBallPosition()
     }
 
     private func updatePlayerStaminaBar() {
         // Position above player sprite
-        let screenPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
-        let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, playerNY)))
+        let screenPos = CourtRenderer.courtPoint(nx: controller.playerNX, ny: max(0, controller.playerNY))
+        let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, controller.playerNY)))
         playerStaminaBar.position = CGPoint(x: screenPos.x, y: screenPos.y + 30 * pScale + 15)
 
         // Update fill
-        let pct = stamina / P.maxStamina
+        let pct = controller.stamina / P.maxStamina
         let barWidth: CGFloat = 50
         let barHeight: CGFloat = 5
         let w = max(1, barWidth * pct)
@@ -3461,7 +2963,7 @@ final class InteractiveMatchScene: SKScene {
         bubble.addChild(label)
 
         // Position above the near player sprite
-        let playerScreenPos = CourtRenderer.courtPoint(nx: playerNX, ny: playerNY)
+        let playerScreenPos = CourtRenderer.courtPoint(nx: controller.playerNX, ny: controller.playerNY)
         bubble.position = CGPoint(x: playerScreenPos.x, y: playerScreenPos.y + 120)
 
         bubble.alpha = 0
@@ -3596,13 +3098,13 @@ final class InteractiveMatchScene: SKScene {
         let npcMeetScale = AC.Sprites.farPlayerScale * CourtRenderer.perspectiveScale(ny: 0.58)
 
         // Start walk animations
-        playerAnimator.play(.runFront)  // near player walks toward net (away from camera)
+        controller.playerAnimator.play(.runFront)  // near player walks toward net (away from camera)
         npcAnimator.play(.runFront)     // far player walks toward net (toward camera)
 
         let walkDuration: TimeInterval = 1.5
 
         // Player walks to net
-        playerNode.run(.group([
+        controller.playerNode.run(.group([
             .move(to: playerMeetPos, duration: walkDuration),
             .scale(to: playerMeetScale, duration: walkDuration)
         ]))
@@ -3624,7 +3126,7 @@ final class InteractiveMatchScene: SKScene {
             // 1.5s — both arrive, switch to idle
             .wait(forDuration: walkDuration),
             .run { [weak self] in
-                self?.playerAnimator.play(.idle(isNear: true))
+                self?.controller.playerAnimator.play(.idle(isNear: true))
                 self?.npcAnimator.play(.idle(isNear: false))
             },
             // 1.8s — NPC says "Good game, [name]!"
@@ -3653,7 +3155,7 @@ final class InteractiveMatchScene: SKScene {
         guard !npcIsWalkingOff, phase != .matchOver else { return }
         npcIsWalkingOff = true
         phase = .matchOver // prevent further play
-        resetJoystick()
+        controller.resetJoystick()
         ballSim.reset()
         ballNode.alpha = 0
         ballShadow.alpha = 0
@@ -3755,7 +3257,7 @@ final class InteractiveMatchScene: SKScene {
                 longestRally: longestRally,
                 averageRallyLength: averageRally,
                 longestStreak: playerLongestStreak,
-                finalEnergy: Double(stamina)
+                finalEnergy: Double(controller.stamina)
             ),
             opponentStats: MatchPlayerStats(
                 aces: npcAces,
