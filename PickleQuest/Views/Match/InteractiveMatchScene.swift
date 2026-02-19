@@ -1855,7 +1855,8 @@ final class InteractiveMatchScene: SKScene {
             let standingReach = P.baseHeightReach + athleticism * P.maxHeightReachBonus
             let jumpReach = standingReach + P.jumpHeightReachBonus
 
-            if heightAtPlayer > standingReach && heightAtPlayer <= jumpReach && timeToPlayerY < 0.4 {
+            if heightAtPlayer > standingReach && heightAtPlayer <= jumpReach && timeToPlayerY < 0.4
+                && ballSim.bounceCount == 0 {
                 initiatePlayerJump()
             }
             // Mark as lob if unreachable even with jump
