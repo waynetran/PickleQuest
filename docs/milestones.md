@@ -1217,6 +1217,40 @@ Replaced the 7-button shot mode toggle system with an intuitive joystick-based s
 
 ---
 
+## Post-Milestone: NPC Serve Balance Calibration
+
+**Commit**: `4e68d23`
+
+### Problem
+High-DUPR NPCs (6.5-8.0) were serving with rally-level power, creating flat arcs that `ensureNetClearance()` boosted too high, causing serves to overshoot out of bounds. Low-DUPR NPCs didn't fault enough — linear stat→fault scaling couldn't separate beginner vs advanced players.
+
+### What was built
+- **ServeBalanceTests.swift**: automated feedback loop that simulates 5000 serves per DUPR level (2.0, 3.0, 3.5, 5.0, 6.5, 8.0), measures fault rates, and iteratively tunes `baseFaultRate` / `targetMaxNY` constants until all levels converge within tolerance. Writes optimized constants back to GameConstants.swift via regex replacement.
+
+### Fixes
+- **servePowerCap in InteractiveMatchScene**: `npcServe()` now applies `min(P.servePowerCap, shot.power)` — was already applied in HeadlessMatchSimulator but missing from interactive mode
+- **Exponential stat→fault scaling**: `pow(1 - serveStat/99, exponent)` with exponent=2.0 replaces linear `(1 - serveStat/99)` — steeper curve for low-stat players
+- **DrillShotCalculator topspinFactor**: `arcToLandAt` uses `effectiveGravity = P.gravity + topspinFactor * 0.6` for accurate arc calculation with topspin
+
+### Calibrated fault targets (faults per match)
+| DUPR | Target | Actual | Status |
+|------|--------|--------|--------|
+| 2.0 | 2.5 | 2.20 | PASS |
+| 3.0 | 1.8 | 1.77 | PASS |
+| 3.5 | 1.5 | 1.57 | PASS |
+| 5.0 | 0.7 | 0.73 | PASS |
+| 6.5 | 0.4 | 0.33 | PASS |
+| 8.0 | 0.2 | 0.22 | PASS |
+
+### Optimized constants
+- `npcBaseServeFaultRate`: 0.2858
+- `npcServeFaultStatExponent`: 2.0
+- `npcServeTargetMinNY`: 0.050
+- `npcServeTargetMaxNY_Low`: 0.246
+- `npcServeTargetMaxNY_High`: 0.250
+
+---
+
 ## Milestone 7c: Persistence Polish, Cloud Prep, Multiplayer Prep (Planned)
 
 ### Goals
