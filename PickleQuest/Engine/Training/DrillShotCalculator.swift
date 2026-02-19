@@ -408,7 +408,7 @@ enum DrillShotCalculator {
 
         // Put-away: easy ball to place — reduce scatter significantly
         if isPutAway {
-            scatter *= 0.3
+            scatter *= GameConstants.PutAway.scatterMultiplier
         }
 
         // --- Apply mode modifiers ---

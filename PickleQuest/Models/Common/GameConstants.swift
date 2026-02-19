@@ -460,6 +460,19 @@ enum GameConstants {
         static let highBallIndicatorDistance: CGFloat = 0.3     // only show when ball within this court distance
     }
 
+    // MARK: - Put-Away Balance
+    enum PutAway {
+        // Return rate: continuous DUPR-scaled formula
+        static let baseReturnRate: CGFloat = 0.5955     // return chance at DUPR 4.0
+        static let returnDUPRScale: CGFloat = 0.3698    // change per 1.0 DUPR
+        static let returnFloor: CGFloat = 0.0         // min return rate
+        static let returnCeiling: CGFloat = 0.92      // max return rate
+        static let stretchPenalty: CGFloat = 0.0845      // stretch reduces return rate
+
+        // Accuracy: put-away scatter multiplier
+        static let scatterMultiplier: CGFloat = 2.0534  // lower = more accurate
+    }
+
     // MARK: - NPC Strategy
     enum NPCStrategy {
         // Shot difficulty factor weights (must sum to 1.0)

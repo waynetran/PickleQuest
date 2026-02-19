@@ -280,16 +280,13 @@ final class SimulatedPlayerAI {
             errorRate *= multiplier
         }
 
-        // Put-away: kitchen slam — error rate scales with receiver's DUPR.
-        // Below 4.5: can't handle full power put-aways, ~90% error floor.
-        // 4.5+: need placement away from receiver to get a winner.
+        // Put-away: continuous DUPR-scaled return rate (symmetric with MatchAI)
         if ball.isPutAway {
-            if dupr < 4.5 {
-                errorRate = max(errorRate, 0.90)
-            } else {
-                let putAwayFloor: CGFloat = 0.50 + stretchFraction * 0.40
-                errorRate = max(errorRate, putAwayFloor)
-            }
+            let PA = GameConstants.PutAway.self
+            let rawReturn = PA.baseReturnRate + CGFloat(dupr - 4.0) * PA.returnDUPRScale
+            let clampedReturn = max(PA.returnFloor, min(PA.returnCeiling, rawReturn))
+            let adjustedReturn = clampedReturn * (1.0 - stretchFraction * PA.stretchPenalty)
+            errorRate = max(errorRate, 1.0 - adjustedReturn)
         }
 
         return CGFloat.random(in: 0...1) < errorRate
