@@ -1024,7 +1024,11 @@ final class InteractiveMatchScene: SKScene {
             // Fault: aim into kitchen or net
             targetNY = CGFloat.random(in: 0.35...0.48)
         } else {
-            targetNY = CGFloat.random(in: 0.05...0.28)
+            // Low DUPR: aim safe and deep (0.05-0.18) to avoid kitchen faults
+            // High DUPR: can push closer to kitchen (0.05-0.25) for placement
+            let duprFrac = CGFloat(max(0, min(1, (npc.duprRating - 2.0) / 6.0)))
+            let maxNY: CGFloat = 0.18 + duprFrac * 0.07  // 0.18 at 2.0, 0.25 at 8.0
+            targetNY = CGFloat.random(in: 0.05...maxNY)
         }
 
         // Compute physics-based arc for the actual serve distance (NPC at ~0.92 → target ~0.15)
