@@ -366,6 +366,8 @@ enum DrillShotCalculator {
             targetNX = sidelineNX
             // Target deep to push opponent back and wide
             targetNY = CGFloat.random(in: 0.75...0.90)
+            // Slam it — 2x power
+            power *= 2.0
         }
 
         // --- Tactical placement: bias shot away from opponent ---
