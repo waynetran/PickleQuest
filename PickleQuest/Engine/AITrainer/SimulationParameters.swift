@@ -14,9 +14,13 @@ struct SimulationParameters: Sendable, Codable {
     var npcEquipOffset: Double
     /// Trained starting stats for a new player (11 values in statNames order)
     var playerStarterStats: [Double]  // 11 values
+    /// NPC move speed multiplier at DUPR 2.0 (low end)
+    var npcMoveSpeedScaleLow: Double
+    /// NPC move speed multiplier at DUPR 8.0 (high end)
+    var npcMoveSpeedScaleHigh: Double
 
     static let statCount = 11
-    static let parameterCount = 35 // 11 slopes + 11 offsets + 2 npcEquip + 11 starter
+    static let parameterCount = 37 // 11 slopes + 11 offsets + 2 npcEquip + 11 starter + 2 speedScale
 
     static let statNames: [String] = [
         "power", "accuracy", "spin", "speed",
@@ -34,18 +38,23 @@ struct SimulationParameters: Sendable, Codable {
             offsets: [Double](repeating: offset, count: statCount),
             npcEquipSlope: 4.0,
             npcEquipOffset: 3.0,
-            playerStarterStats: [10, 10, 10, 10, 10, 10, 10, 10, 10, 13, 13]
+            playerStarterStats: [10, 10, 10, 10, 10, 10, 10, 10, 10, 13, 13],
+            npcMoveSpeedScaleLow: 0.55,
+            npcMoveSpeedScaleHigh: 1.0
         )
     }()
 
     init(slopes: [Double], offsets: [Double],
          npcEquipSlope: Double = 4.0, npcEquipOffset: Double = 3.0,
-         playerStarterStats: [Double] = [10, 10, 10, 10, 10, 10, 10, 10, 10, 13, 13]) {
+         playerStarterStats: [Double] = [10, 10, 10, 10, 10, 10, 10, 10, 10, 13, 13],
+         npcMoveSpeedScaleLow: Double = 0.55, npcMoveSpeedScaleHigh: Double = 1.0) {
         self.slopes = slopes
         self.offsets = offsets
         self.npcEquipSlope = npcEquipSlope
         self.npcEquipOffset = npcEquipOffset
         self.playerStarterStats = playerStarterStats
+        self.npcMoveSpeedScaleLow = npcMoveSpeedScaleLow
+        self.npcMoveSpeedScaleHigh = npcMoveSpeedScaleHigh
     }
 
     init(fromArray a: [Double]) {
@@ -55,12 +64,15 @@ struct SimulationParameters: Sendable, Codable {
         npcEquipSlope = a[2 * sc]
         npcEquipOffset = a[2 * sc + 1]
         playerStarterStats = Array(a[(2 * sc + 2)..<(2 * sc + 2 + sc)])
+        npcMoveSpeedScaleLow = a[2 * sc + 2 + sc]
+        npcMoveSpeedScaleHigh = a[2 * sc + 2 + sc + 1]
     }
 
     // MARK: - Codable (backward compatible)
 
     enum CodingKeys: String, CodingKey {
         case slopes, offsets, npcEquipSlope, npcEquipOffset, playerStarterStats
+        case npcMoveSpeedScaleLow, npcMoveSpeedScaleHigh
     }
 
     init(from decoder: Decoder) throws {
@@ -71,10 +83,13 @@ struct SimulationParameters: Sendable, Codable {
         npcEquipOffset = try c.decodeIfPresent(Double.self, forKey: .npcEquipOffset) ?? 3.0
         playerStarterStats = try c.decodeIfPresent([Double].self, forKey: .playerStarterStats)
             ?? [10, 10, 7, 10, 10, 10, 10, 7, 10, 13, 13]
+        npcMoveSpeedScaleLow = try c.decodeIfPresent(Double.self, forKey: .npcMoveSpeedScaleLow) ?? 0.55
+        npcMoveSpeedScaleHigh = try c.decodeIfPresent(Double.self, forKey: .npcMoveSpeedScaleHigh) ?? 1.0
     }
 
     func toArray() -> [Double] {
         slopes + offsets + [npcEquipSlope, npcEquipOffset] + playerStarterStats
+            + [npcMoveSpeedScaleLow, npcMoveSpeedScaleHigh]
     }
 
     /// Clamp all parameters to valid ranges.
@@ -95,10 +110,14 @@ struct SimulationParameters: Sendable, Codable {
         for i in 0..<SimulationParameters.statCount {
             starter[i] = max(1, min(40, starter[i]))
         }
+        let speedScaleLow = max(0.3, min(1.0, npcMoveSpeedScaleLow))
+        let speedScaleHigh = max(0.5, min(1.2, npcMoveSpeedScaleHigh))
         return SimulationParameters(
             slopes: s, offsets: o,
             npcEquipSlope: eqSlope, npcEquipOffset: eqOffset,
-            playerStarterStats: starter
+            playerStarterStats: starter,
+            npcMoveSpeedScaleLow: speedScaleLow,
+            npcMoveSpeedScaleHigh: speedScaleHigh
         )
     }
 
@@ -147,5 +166,11 @@ struct SimulationParameters: Sendable, Codable {
             defense: s(4), reflexes: s(5), positioning: s(6),
             clutch: s(7), focus: s(8), stamina: s(9), consistency: s(10)
         )
+    }
+
+    /// DUPR-based move speed multiplier. Interpolates linearly from low (DUPR 2.0) to high (DUPR 8.0).
+    func moveSpeedScale(dupr: Double) -> CGFloat {
+        let n = max(0, min(1, (dupr - 2.0) / 6.0))
+        return CGFloat(npcMoveSpeedScaleLow + (npcMoveSpeedScaleHigh - npcMoveSpeedScaleLow) * n)
     }
 }

@@ -190,7 +190,7 @@ final class MatchAI {
     private var noiseOffsetY: CGFloat = 0
     private var hasComputedNoise: Bool = false
 
-    init(npc: NPC, playerDUPR: Double = 3.0, headless: Bool = false) {
+    init(npc: NPC, playerDUPR: Double = 3.0, headless: Bool = false, moveSpeedScale: CGFloat? = nil) {
         self.npcStats = npc.stats
         self.npcName = npc.name
         self.npcDUPR = npc.duprRating
@@ -209,7 +209,8 @@ final class MatchAI {
         }
         self.statBoost = boost
         let speedStat = CGFloat(min(99, npc.stats.stat(.speed) + boost))
-        self.moveSpeed = P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus
+        let scale = moveSpeedScale ?? StatProfileLoader.shared.moveSpeedScale(dupr: npc.duprRating)
+        self.moveSpeed = (P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus) * scale
         self.sprintSpeed = moveSpeed * (1.0 + P.maxSprintSpeedBoost)
 
         if headless {

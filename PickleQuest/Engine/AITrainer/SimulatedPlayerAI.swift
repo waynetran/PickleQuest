@@ -56,7 +56,7 @@ final class SimulatedPlayerAI {
     // Rally pressure (mirrors InteractiveMatchScene)
     var rallyPressure: CGFloat = 0
 
-    init(stats: PlayerStats, dupr: Double) {
+    init(stats: PlayerStats, dupr: Double, moveSpeedScale: CGFloat? = nil) {
         self.stats = stats
         self.dupr = dupr
 
@@ -67,9 +67,10 @@ final class SimulatedPlayerAI {
         self.positioningNoise = 0.08 - fraction * 0.07 // 0.08 beginner → 0.01 expert
         self.shotModeCompetence = fraction * fraction   // 0.0 beginner → 1.0 expert
 
-        // Movement speed from raw stats
+        // Movement speed from raw stats, scaled by DUPR
         let speedStat = CGFloat(stats.stat(.speed))
-        self.moveSpeed = P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus
+        let scale = moveSpeedScale ?? StatProfileLoader.shared.moveSpeedScale(dupr: dupr)
+        self.moveSpeed = (P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus) * scale
         self.sprintSpeed = moveSpeed * (1.0 + P.maxSprintSpeedBoost)
 
         // Hitbox from raw positioning stat (player-side constants)

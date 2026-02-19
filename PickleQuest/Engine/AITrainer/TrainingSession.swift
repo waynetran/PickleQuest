@@ -509,7 +509,8 @@ final class TrainingSession {
                 let sim = HeadlessMatchSimulator(
                     npc: npc,
                     playerStats: playerStats,
-                    playerDUPR: dupr
+                    playerDUPR: dupr,
+                    params: params
                 )
                 let result = sim.simulateMatch()
 

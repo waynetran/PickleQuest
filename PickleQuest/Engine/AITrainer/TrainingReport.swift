@@ -103,6 +103,14 @@ struct TrainingReport: Sendable {
         }
         lines.append("")
 
+        // NPC Move Speed Scale by DUPR
+        lines.append("NPC Move Speed Scale by DUPR:")
+        for dupr in duprLevels {
+            let scale = parameters.moveSpeedScale(dupr: dupr)
+            lines.append(String(format: "  DUPR %.1f: %.2fx", dupr, scale))
+        }
+        lines.append("")
+
         // NPC-vs-NPC point differentials
         lines.append("NPC-vs-NPC Point Differentials (Higher - Lower):")
         lines.append("  Matchup           Target   Actual   WinRate")

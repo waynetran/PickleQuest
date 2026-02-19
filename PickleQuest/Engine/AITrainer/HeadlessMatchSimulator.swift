@@ -120,9 +120,11 @@ final class HeadlessMatchSimulator {
 
     // MARK: - Init
 
-    init(npc: NPC, playerStats: PlayerStats, playerDUPR: Double) {
-        self.npcAI = MatchAI(npc: npc, playerDUPR: playerDUPR, headless: true)
-        self.playerAI = SimulatedPlayerAI(stats: playerStats, dupr: playerDUPR)
+    init(npc: NPC, playerStats: PlayerStats, playerDUPR: Double, params: SimulationParameters? = nil) {
+        let npcScale = params?.moveSpeedScale(dupr: npc.duprRating)
+        let playerScale = params?.moveSpeedScale(dupr: playerDUPR)
+        self.npcAI = MatchAI(npc: npc, playerDUPR: playerDUPR, headless: true, moveSpeedScale: npcScale)
+        self.playerAI = SimulatedPlayerAI(stats: playerStats, dupr: playerDUPR, moveSpeedScale: playerScale)
     }
 
     // MARK: - Simulate Match
