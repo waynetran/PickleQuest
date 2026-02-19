@@ -17,7 +17,8 @@ enum AlphaNPCGenerator {
             playerType: .allRounder,
             dialogue: alphaDialogue(courtName: court.name),
             portraitName: "alpha_boss",
-            rewardMultiplier: GameConstants.CourtProgression.alphaRewardMultiplier
+            rewardMultiplier: GameConstants.CourtProgression.alphaRewardMultiplier,
+            skills: MockNPCService.generateSkills(playerType: .allRounder, difficulty: bumpedDifficulty)
         )
     }
 

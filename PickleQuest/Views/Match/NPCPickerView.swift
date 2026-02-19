@@ -78,6 +78,23 @@ struct NPCCard: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
+
+                        if !npc.skills.isEmpty {
+                            HStack(spacing: 4) {
+                                ForEach(npc.skills.prefix(4), id: \.self) { skillID in
+                                    if let def = SkillDefinition.definition(for: skillID) {
+                                        Image(systemName: def.icon)
+                                            .font(.caption2)
+                                            .foregroundStyle(.purple.opacity(0.8))
+                                    }
+                                }
+                                if npc.skills.count > 4 {
+                                    Text("+\(npc.skills.count - 4)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.purple.opacity(0.6))
+                                }
+                            }
+                        }
                     }
 
                     Spacer()

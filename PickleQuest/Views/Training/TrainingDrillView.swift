@@ -29,6 +29,36 @@ struct TrainingDrillView: View {
                     interactiveDrillCover(vm: vm)
                 }
             }
+            .overlay {
+                if let vm = viewModel, let name = vm.unlockedSkillName, let icon = vm.unlockedSkillIcon {
+                    ZStack {
+                        Color.black.opacity(0.4).ignoresSafeArea()
+                        VStack(spacing: 20) {
+                            Spacer()
+                            SkillUnlockedBanner(skillName: name, skillIcon: icon, onDismiss: {
+                                vm.clearResult()
+                                dismiss()
+                            })
+                            Button {
+                                vm.clearResult()
+                                dismiss()
+                            } label: {
+                                Text("Continue")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(.purple)
+                                    .foregroundStyle(.white)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            .padding(.horizontal)
+                            Spacer()
+                        }
+                    }
+                    .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.3), value: viewModel?.unlockedSkillName != nil)
             .navigationTitle("Training")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -59,6 +89,9 @@ struct TrainingDrillView: View {
 
                 // Daily specialty
                 dailySpecialtySection(vm: vm)
+
+                // Skill teaching progress
+                skillTeachingSection(vm: vm)
 
                 // Training preview
                 trainingPreviewSection(vm: vm)
@@ -124,6 +157,43 @@ struct TrainingDrillView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(.blue.opacity(0.2), lineWidth: 1)
         )
+    }
+
+    @ViewBuilder
+    private func skillTeachingSection(vm: TrainingViewModel) -> some View {
+        if let teaching = vm.teachingSkill(for: appState.player) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Teaching Skill")
+                    .font(.headline)
+
+                HStack(spacing: 12) {
+                    Image(systemName: teaching.skill.icon)
+                        .font(.title2)
+                        .foregroundStyle(.purple)
+                        .frame(width: 40, height: 40)
+                        .background(.purple.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(teaching.skill.name)
+                            .font(.subheadline.bold())
+
+                        HStack(spacing: 4) {
+                            ProgressView(value: Double(teaching.progress.lessonsCompleted), total: Double(GameConstants.Skills.lessonsToAcquire))
+                                .tint(.purple)
+                                .frame(maxWidth: 100)
+                            Text("\(teaching.progress.lessonsCompleted)/\(GameConstants.Skills.lessonsToAcquire) lessons")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.purple.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+        }
     }
 
     private func dailySpecialtySection(vm: TrainingViewModel) -> some View {
@@ -273,8 +343,10 @@ struct TrainingDrillView: View {
                 vm.completeInteractiveDrill(result: result, player: &player)
                 appState.player = player
                 showInteractiveDrill = false
-                vm.clearResult()
-                dismiss()
+                if vm.unlockedSkillName == nil {
+                    vm.clearResult()
+                    dismiss()
+                }
             }
         )
         .environment(appState)

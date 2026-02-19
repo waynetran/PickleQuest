@@ -75,6 +75,7 @@
 		470429CEA3B3C2B1C7A13A3C /* TournamentBracketView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A221F9F0E394C6E1DBD79DF1 /* TournamentBracketView.swift */; };
 		473BB098A5401D2799FD9521 /* CourtDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0A3F5F877F307464FDF9F72 /* CourtDetailSheet.swift */; };
 		49657DCD34805C399017F8FA /* FatigueModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549DF67C3EB0E36D696AE3EA /* FatigueModelTests.swift */; };
+		4BD733A9FFF495752EB334CE /* PersonalityDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EA2544012B1FE52D107871E /* PersonalityDialog.swift */; };
 		4D748EE939FE5E3303B90587 /* AnimatedSpriteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86C3558974FB3B5245A17E9E /* AnimatedSpriteView.swift */; };
 		4DAD72FBC09DA09E916FEB5B /* InventoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0E26D687250C76182C3D4C /* InventoryService.swift */; };
 		500C63BE9013D7DBB0CF32EE /* SpriteSheetLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11A0AC7AEE35D805C2CD630 /* SpriteSheetLoader.swift */; };
@@ -276,6 +277,7 @@
 		0D5CBD9FA214FC088FFEC5EA /* DrillScorekeeper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillScorekeeper.swift; sourceTree = "<group>"; };
 		0E3B9DA82455DDC9859651BB /* character1-Sheet.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "character1-Sheet.png"; sourceTree = "<group>"; };
 		0E914C9C273D3930B80A55E0 /* InteractiveMatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveMatchView.swift; sourceTree = "<group>"; };
+		0EA2544012B1FE52D107871E /* PersonalityDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalityDialog.swift; sourceTree = "<group>"; };
 		0F008F637AAC2F4A4BA60D19 /* WagerDecision.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WagerDecision.swift; sourceTree = "<group>"; };
 		113D32D22345163D83B3B9D9 /* MatchPoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPoint.swift; sourceTree = "<group>"; };
 		1189DB1F3E1BDB85799DBDD7 /* SpriteSheetAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteSheetAnimator.swift; sourceTree = "<group>"; };
@@ -1067,6 +1069,7 @@
 				A7553D70815FA074D7998B6C /* CharacterPreset.swift */,
 				51DD3F8872DF216E539BB427 /* DUPRProfile.swift */,
 				BB53C4ABD474D0E83AFB7A84 /* Personality.swift */,
+				0EA2544012B1FE52D107871E /* PersonalityDialog.swift */,
 				FF93932170EAA8760BA56E83 /* Player.swift */,
 				52C2A0413DC0CD20FB85994C /* PlayerProgression.swift */,
 				FA01C280E5F28D53830ED79E /* PlayerStats.swift */,
@@ -1474,6 +1477,7 @@
 				5F7C1DFF5E46BF710731A45C /* PersistenceService.swift in Sources */,
 				306F5B45553E81E832CF2D64 /* Personality+Display.swift in Sources */,
 				C5132CE79FCDF2C16F9091BB /* Personality.swift in Sources */,
+				4BD733A9FFF495752EB334CE /* PersonalityDialog.swift in Sources */,
 				F8EB27192BD681D5C6389AD3 /* PickleQuestApp.swift in Sources */,
 				87FC21F3F57E1F3D93EC6104 /* Player.swift in Sources */,
 				D04DA27A2FD389B7A0B483F4 /* PlayerChooserView.swift in Sources */,

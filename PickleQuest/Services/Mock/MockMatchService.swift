@@ -176,13 +176,40 @@ final class MockMatchService: MatchService {
         }
         player.lastMatchDate = Date()
 
+        // Skill acquisition from NPC defeat
+        var acquiredSkill: SkillDefinition? = nil
+        if result.didPlayerWin && !result.wasResigned {
+            let playerSkillIDs = Set(player.skills.map(\.skillID))
+            let candidateSkills = opponent.skills
+                .compactMap { SkillDefinition.definition(for: $0) }
+                .filter { def in
+                    !playerSkillIDs.contains(def.id)
+                    && player.progression.level >= def.requiredLevel
+                    && (def.exclusiveTo == nil || def.exclusiveTo == player.playerType)
+                }
+            // Prioritize exclusive skills
+            let exclusive = candidateSkills.filter { $0.exclusiveTo != nil }
+            let target = exclusive.first ?? candidateSkills.first
+
+            if let target {
+                player.skills.append(PlayerSkill(
+                    skillID: target.id,
+                    rank: 1,
+                    acquiredDate: Date(),
+                    acquiredVia: .defeat
+                ))
+                acquiredSkill = target
+            }
+        }
+
         return MatchRewards(
             levelUpRewards: levelUpRewards,
             duprChange: duprChange,
             potentialDuprChange: potentialChange,
             repChange: repChange,
             energyDrain: energyDrain,
-            brokenEquipment: brokenEquipment
+            brokenEquipment: brokenEquipment,
+            acquiredSkill: acquiredSkill
         )
     }
 
@@ -205,4 +232,5 @@ struct MatchRewards: Sendable {
     let repChange: Int
     let energyDrain: Double
     let brokenEquipment: [Equipment]
+    let acquiredSkill: SkillDefinition?
 }

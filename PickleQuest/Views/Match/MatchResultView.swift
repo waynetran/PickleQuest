@@ -91,6 +91,26 @@ struct MatchResultView: View {
                         repBadge
                     }
 
+                    // Skill acquired from NPC defeat
+                    if let skill = matchVM.acquiredSkill {
+                        HStack(spacing: 8) {
+                            Image(systemName: skill.icon)
+                                .foregroundStyle(.purple)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Skill Learned!")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.purple)
+                                Text(skill.name)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.purple.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+
                     // Hustler defeat bonus
                     if matchVM.isHustlerMatch && result.didPlayerWin {
                         HStack(spacing: 8) {

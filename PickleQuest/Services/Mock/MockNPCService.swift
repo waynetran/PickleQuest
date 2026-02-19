@@ -70,7 +70,31 @@ actor MockNPCService: NPCService {
     // MARK: - NPC Roster
 
     private static func createAllNPCs() -> [NPC] {
-        beginnerNPCs + intermediateNPCs + advancedNPCs + expertNPCs + masterNPCs
+        let all = beginnerNPCs + intermediateNPCs + advancedNPCs + expertNPCs + masterNPCs
+        return all.map { npc in
+            var mutable = npc
+            mutable.skills = generateSkills(playerType: npc.playerType, difficulty: npc.difficulty)
+            return mutable
+        }
+    }
+
+    /// Deterministically assign skills to NPCs based on player type and difficulty.
+    static func generateSkills(playerType: PlayerType, difficulty: NPCDifficulty) -> [SkillID] {
+        let maxLevel: Int
+        let count: Int
+        switch difficulty {
+        case .beginner: maxLevel = 3; count = 1
+        case .intermediate: maxLevel = 5; count = 2
+        case .advanced: maxLevel = 10; count = 3
+        case .expert: maxLevel = 13; count = 4
+        case .master: maxLevel = 15; count = 5
+        }
+
+        let available = SkillDefinition.forPlayerType(playerType)
+            .filter { $0.requiredLevel <= maxLevel }
+            .sorted { $0.requiredLevel < $1.requiredLevel }
+
+        return Array(available.prefix(count).map(\.id))
     }
 
     // MARK: Beginner (~10-15 avg)

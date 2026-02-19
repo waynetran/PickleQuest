@@ -70,6 +70,7 @@ final class MatchViewModel {
     var brokenEquipment: [Equipment] = []
     var energyDrain: Double = 0
     var bonusLootReady = false
+    var acquiredSkill: SkillDefinition?
     var matchConfig: MatchConfig = .quickMatch
     var currentServingSide: MatchSide = .player
     var courtName: String = ""
@@ -395,7 +396,7 @@ final class MatchViewModel {
 
     func processResult(player: inout Player) -> MatchRewards {
         guard let result = matchResult, let npc = selectedNPC else {
-            return MatchRewards(levelUpRewards: [], duprChange: nil, potentialDuprChange: 0, repChange: 0, energyDrain: 0, brokenEquipment: [])
+            return MatchRewards(levelUpRewards: [], duprChange: nil, potentialDuprChange: 0, repChange: 0, energyDrain: 0, brokenEquipment: [], acquiredSkill: nil)
         }
         let rewards = matchService.processMatchResult(result, for: &player, opponent: npc, config: matchConfig)
         levelUpRewards = rewards.levelUpRewards
@@ -404,6 +405,7 @@ final class MatchViewModel {
         repChange = rewards.repChange
         brokenEquipment = rewards.brokenEquipment
         energyDrain = rewards.energyDrain
+        acquiredSkill = rewards.acquiredSkill
         return rewards
     }
 
@@ -425,6 +427,7 @@ final class MatchViewModel {
         brokenEquipment = []
         energyDrain = 0
         bonusLootReady = false
+        acquiredSkill = nil
         courtName = ""
         currentServingSide = .player
         isSkipping = false

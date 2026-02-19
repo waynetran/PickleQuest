@@ -30,7 +30,8 @@ enum HustlerNPCGenerator {
         rewardMultiplier: 2.0,
         isHustler: true,
         hiddenStats: true,
-        baseWagerAmount: 300
+        baseWagerAmount: 300,
+        skills: MockNPCService.generateSkills(playerType: .strategist, difficulty: .advanced)
     )
 
     // MARK: - Hustler 2: Upper-tier
@@ -56,7 +57,8 @@ enum HustlerNPCGenerator {
         rewardMultiplier: 3.0,
         isHustler: true,
         hiddenStats: true,
-        baseWagerAmount: 500
+        baseWagerAmount: 500,
+        skills: MockNPCService.generateSkills(playerType: .allRounder, difficulty: .expert)
     )
 
     // MARK: - Hustler 3: Top-tier
@@ -82,6 +84,7 @@ enum HustlerNPCGenerator {
         rewardMultiplier: 3.0,
         isHustler: true,
         hiddenStats: true,
-        baseWagerAmount: 800
+        baseWagerAmount: 800,
+        skills: MockNPCService.generateSkills(playerType: .aggressive, difficulty: .expert)
     )
 }

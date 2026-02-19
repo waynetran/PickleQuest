@@ -1304,6 +1304,17 @@ final class InteractiveMatchScene: SKScene {
             showDebugPanel(debugText)
         }
 
+        // Player personality reaction (~30% of the time)
+        if Int.random(in: 0..<10) < 3 {
+            let playerContext: PersonalityDialog.Context
+            switch result {
+            case .playerWon: playerContext = .pointWon
+            case .npcWon: playerContext = .pointLost
+            }
+            let reaction = PersonalityDialog.randomLine(for: player.personality, context: playerContext)
+            showPlayerSpeech(reaction)
+        }
+
         // Check for match end
         if isMatchOver() {
             endMatch(wasResigned: false)
@@ -3372,81 +3383,7 @@ final class InteractiveMatchScene: SKScene {
 
     // MARK: - Post-Match Handshake
 
-    private static let postMatchQuips: [PlayerType: (win: [String], loss: [String])] = [
-        .aggressive: (
-            win: [
-                "Better luck next time 😏",
-                "Too easy 💪",
-                "You couldn't handle\nthe heat 🔥",
-                "That's how it's done.\nTake notes.",
-                "Maybe stick to\nbadminton? 😂",
-            ],
-            loss: [
-                "Alright, you got me...\nthis time 😤",
-                "Don't get used to it.",
-                "Lucky shots.\nWon't happen again.",
-                "I was going easy\non you... obviously 🙄",
-                "Rematch. NOW.",
-            ]
-        ),
-        .defensive: (
-            win: [
-                "Honestly didn't think\nI'd pull that off 😅",
-                "Wow, that was close!\nGreat match.",
-                "I just tried to keep\nthe ball in play 🤷",
-                "Patience pays off\nI guess!",
-            ],
-            loss: [
-                "You earned that one.\nSeriously.",
-                "I gave it everything.\nYou were just better today.",
-                "Can't win 'em all!\nNice playing 🤝",
-                "Your shots were\ntoo good today.",
-            ]
-        ),
-        .allRounder: (
-            win: [
-                "That was a blast!\nRematch soon? 🏓",
-                "Great game!\nYou pushed me hard.",
-                "Love a good battle.\nThanks for that! 🙌",
-                "That rally though!\nSo fun.",
-            ],
-            loss: [
-                "You were on fire!\nI couldn't keep up 🔥",
-                "Amazing game.\nYou deserved that W!",
-                "I had fun even though\nI lost! Great match 🎉",
-                "You played awesome.\nI'll get you next time!",
-            ]
-        ),
-        .speedster: (
-            win: [
-                "LETS GOOO! 🏃💨",
-                "Speed kills, baby! ⚡",
-                "Catch me if you can!\nOh wait, you couldn't 😂",
-                "Zoom zoom! That was\na workout! 💪",
-                "*victory lap* 🏃‍♂️🏃‍♂️🏃‍♂️",
-            ],
-            loss: [
-                "Okay that was fun\neven though I lost 😂",
-                "You slowed me down!\nHow?? 🤔",
-                "I ran out of gas...\nGG though! 🏃💀",
-                "Faster next time.\nWatch out! ⚡",
-            ]
-        ),
-        .strategist: (
-            win: [
-                "The math was\nin my favor today 🤓",
-                "Calculated.\nEvery. Single. Point.",
-                "My game plan\nworked perfectly 📋",
-                "I had you figured out\nby point three 🧠",
-            ],
-            loss: [
-                "I need to recalculate\nmy approach... 📊",
-                "You broke my system.\nImpressive. 🤔",
-                "Back to the drawing\nboard... literally 📝",
-                "My analysis didn't\naccount for... you.",
-            ]
-        ),
-    ]
+    // Post-match quips now use PersonalityDialog via NPC.dialogPersonality
 
     private func showPostMatchBubble(above node: SKSpriteNode, text: String, duration: TimeInterval = 2.5) {
         let bubble = SKNode()
@@ -3524,11 +3461,10 @@ final class InteractiveMatchScene: SKScene {
             .scale(to: npcMeetScale, duration: walkDuration)
         ]))
 
-        // Get personality quip
-        let personality = npc.playerType
+        // Get personality quip via dialog personality
         let didNPCWin = !result.didPlayerWin
-        let quipPool = Self.postMatchQuips[personality] ?? Self.postMatchQuips[.allRounder]!
-        let quip = (didNPCWin ? quipPool.win : quipPool.loss).randomElement() ?? "Good game!"
+        let quipContext: PersonalityDialog.Context = didNPCWin ? .postMatchWin : .postMatchLoss
+        let quip = PersonalityDialog.randomLine(for: npc.dialogPersonality, context: quipContext)
 
         // Timeline using sequence of waits + run blocks
         let playerName = player.name.components(separatedBy: " ").first ?? player.name

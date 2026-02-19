@@ -412,6 +412,23 @@ struct CourtDetailSheet: View {
                             }
                         }
                     }
+
+                    if !npc.skills.isEmpty && !isLocked {
+                        HStack(spacing: 3) {
+                            ForEach(npc.skills.prefix(4), id: \.self) { skillID in
+                                if let def = SkillDefinition.definition(for: skillID) {
+                                    Image(systemName: def.icon)
+                                        .font(.system(size: 9))
+                                        .foregroundStyle(.purple.opacity(0.7))
+                                }
+                            }
+                            if npc.skills.count > 4 {
+                                Text("+\(npc.skills.count - 4)")
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(.purple.opacity(0.5))
+                            }
+                        }
+                    }
                 }
 
                 Spacer()
