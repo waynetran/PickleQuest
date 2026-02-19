@@ -167,6 +167,7 @@ final class MatchAI {
 
     // Kitchen approach tracking
     private var lastShotWasTouch: Bool = false
+    private var shouldApproachKitchenAfterDrop: Bool = false
 
     // Player position for tactical placement (updated by scene each frame)
     var playerPositionNX: CGFloat = 0.5
@@ -445,26 +446,8 @@ final class MatchAI {
                 // Interactive: strategy-based recovery with kitchen approach
                 let recoveryStrength = strategy.aggressionControl
 
-                let recoveryNY: CGFloat
-                if lastShotWasTouch {
-                    // Pressure-specific kitchen approach: use DUPR-scaled rate
-                    let PS = GameConstants.PressureShots.self
-                    let pressureApproachRate = Self.pressureRate(
-                        dupr: npcDUPR, base: PS.kitchenApproachAfterDropBase,
-                        slope: PS.kitchenApproachAfterDropSlope,
-                        floor: PS.kitchenApproachAfterDropFloor,
-                        ceiling: PS.kitchenApproachAfterDropCeiling
-                    )
-                    // Use the better of: existing strategy or pressure-specific rate
-                    let approachChance = max(strategy.kitchenApproach, pressureApproachRate)
-                    if roll(Double(approachChance)) {
-                        recoveryNY = 0.69 // kitchen line
-                    } else {
-                        recoveryNY = startNY
-                    }
-                } else {
-                    recoveryNY = startNY
-                }
+                // Use pre-computed kitchen approach decision (set once in generateShot)
+                let recoveryNY: CGFloat = shouldApproachKitchenAfterDrop ? 0.69 : startNY
 
                 targetNX = currentNX + (0.5 - currentNX) * recoveryStrength
                 targetNY = currentNY + (recoveryNY - currentNY) * recoveryStrength
@@ -886,6 +869,21 @@ final class MatchAI {
         lastShotWasTouch = modes.contains(.touch)
         lastShotModes = modes
 
+        // Decide once whether to approach kitchen after a drop shot
+        if lastShotWasTouch && !isHeadless {
+            let PS = GameConstants.PressureShots.self
+            let pressureApproachRate = Self.pressureRate(
+                dupr: npcDUPR, base: PS.kitchenApproachAfterDropBase,
+                slope: PS.kitchenApproachAfterDropSlope,
+                floor: PS.kitchenApproachAfterDropFloor,
+                ceiling: PS.kitchenApproachAfterDropCeiling
+            )
+            let approachChance = max(strategy.kitchenApproach, pressureApproachRate)
+            shouldApproachKitchenAfterDrop = roll(Double(approachChance))
+        } else {
+            shouldApproachKitchenAfterDrop = false
+        }
+
         // Drain stamina for power/focus shots
         if modes.contains(.power) {
             stamina = max(0, stamina - 5)
@@ -1302,6 +1300,7 @@ final class MatchAI {
         self.isServing = isServing
         self.shotCountThisPoint = 0
         self.lastShotWasTouch = false
+        self.shouldApproachKitchenAfterDrop = false
         self.playerShotHistory = []
         self.lastShotModes = []
         self.hasReacted = false

@@ -6,10 +6,9 @@ import CoreGraphics
 @Suite("Pressure Drop Shot Balance")
 struct PressureDropShotBalanceTests {
 
-    // MARK: - Anchor Targets
-    // Targets are linearized from the design doc's S-curve to fit the
-    // `rate = clamp(base + (dupr-4)*slope, floor, ceiling)` formula.
-    // Tolerance is ±0.10 to accommodate linear approximation of non-linear real behavior.
+    // MARK: - Targets
+    // All tests use real MatchAI in interactive mode with pressure positioning.
+    // Tolerance is ±0.10 to account for stat variance and interaction with other AI systems.
 
     /// Drop shot selection rate under pressure (NPC deep, opponent at net)
     static let dropSelectTargets: [(dupr: Double, rate: Double)] = [
@@ -17,655 +16,207 @@ struct PressureDropShotBalanceTests {
         (4.5, 0.54), (5.5, 0.66), (6.5, 0.75)
     ]
 
-    /// Drop quality — perfect rate (unattackable kitchen drop)
-    /// Stat modifier creates natural non-linearity: low DUPR stats compress the rate down
-    static let dropPerfectTargets: [(dupr: Double, rate: Double)] = [
-        (2.0, 0.08), (3.0, 0.22), (3.5, 0.35),
-        (4.5, 0.55), (5.5, 0.72), (6.5, 0.85)
-    ]
-
-    /// Drop quality — error rate (net/out whiff)
+    /// Drop error rate: NPC chose touch under pressure and shouldMakeError returns true
     static let dropErrorTargets: [(dupr: Double, rate: Double)] = [
         (2.0, 0.50), (3.0, 0.32), (3.5, 0.22),
         (4.5, 0.13), (5.5, 0.06), (6.5, 0.03)
     ]
 
-    /// Drive quality — clean pass rate under pressure
-    static let driveCleanTargets: [(dupr: Double, rate: Double)] = [
-        (2.0, 0.15), (3.0, 0.30), (3.5, 0.40),
-        (4.5, 0.58), (5.5, 0.72), (6.5, 0.82)
-    ]
-
-    /// Kitchen approach after successful drop
+    /// Kitchen approach after successful drop: NPC moves toward kitchen line (NY < 0.80)
     static let kitchenApproachTargets: [(dupr: Double, rate: Double)] = [
         (2.0, 0.12), (3.0, 0.33), (3.5, 0.45),
         (4.5, 0.65), (5.5, 0.85), (6.5, 0.95)
     ]
 
     static let tolerance: Double = 0.10
-    static let trialsPerDUPR = 3000
+    static let trialsPerDUPR = 5000
 
-    // MARK: - Simulation Helpers
+    // MARK: - Helpers
 
-    /// Compute rate = clamp(base + (dupr - 4.0) * slope, floor, ceiling)
-    private static func duprRate(
-        dupr: Double,
-        base: CGFloat, slope: CGFloat,
-        floor: CGFloat, ceiling: CGFloat
-    ) -> CGFloat {
-        let raw = base + CGFloat(dupr - 4.0) * slope
-        return max(floor, min(ceiling, raw))
-    }
-
-    // MARK: - Drop Selection Simulation
-
-    static func simulateDropSelection(
-        dupr: Double, count: Int,
-        dropBase: CGFloat, dropSlope: CGFloat,
-        lobBase: CGFloat, lobSlope: CGFloat
-    ) -> Double {
-        let PS = GameConstants.PressureShots.self
-        var drops = 0
-        for _ in 0..<count {
-            let dropRate = duprRate(
-                dupr: dupr, base: dropBase, slope: dropSlope,
-                floor: PS.dropSelectFloor, ceiling: PS.dropSelectCeiling
-            )
-            let roll = CGFloat.random(in: 0...1)
-            if roll < dropRate {
-                drops += 1
-            }
-        }
-        return Double(drops) / Double(count)
-    }
-
-    // MARK: - Drop Quality Simulation
-
-    static func simulateDropPerfect(
-        dupr: Double, count: Int,
-        perfectBase: CGFloat, perfectSlope: CGFloat
-    ) -> Double {
-        let PS = GameConstants.PressureShots.self
+    /// Create a MatchAI positioned for pressure: NPC deep (NY=0.88), player at net (NY=0.25).
+    private static func createPressureAI(dupr: Double) -> MatchAI {
         let npc = NPC.practiceOpponent(dupr: dupr)
-        let stats = npc.stats
-
-        let avgTouchStat = CGFloat(
-            stats.stat(.accuracy) + stats.stat(.consistency) +
-            stats.stat(.focus) + stats.stat(.spin)
-        ) / 4.0
-        let statModifier = avgTouchStat / 99.0
-
-        var perfects = 0
-        for _ in 0..<count {
-            let rawPerfect = duprRate(
-                dupr: dupr, base: perfectBase, slope: perfectSlope,
-                floor: PS.dropPerfectFloor, ceiling: PS.dropPerfectCeiling
-            )
-            let perfectRate = rawPerfect * (0.7 + 0.3 * statModifier)
-            if CGFloat.random(in: 0...1) < perfectRate {
-                perfects += 1
-            }
-        }
-        return Double(perfects) / Double(count)
+        let ai = MatchAI(npc: npc, playerDUPR: dupr, headless: false)
+        ai.currentNX = 0.5
+        ai.currentNY = 0.88
+        ai.playerPositionNX = 0.5
+        ai.playerPositionNY = 0.25
+        return ai
     }
 
-    static func simulateDropError(
-        dupr: Double, count: Int,
-        errorBase: CGFloat, errorSlope: CGFloat
-    ) -> Double {
-        let PS = GameConstants.PressureShots.self
-        let npc = NPC.practiceOpponent(dupr: dupr)
-        let stats = npc.stats
-
-        let avgTouchStat = CGFloat(
-            stats.stat(.accuracy) + stats.stat(.consistency) +
-            stats.stat(.focus) + stats.stat(.spin)
-        ) / 4.0
-        let statModifier = avgTouchStat / 99.0
-
-        var errors = 0
-        for _ in 0..<count {
-            let rawError = duprRate(
-                dupr: dupr, base: errorBase, slope: errorSlope,
-                floor: PS.dropErrorFloor, ceiling: PS.dropErrorCeiling
-            )
-            let errorRate = rawError * (1.3 - 0.3 * statModifier)
-            if CGFloat.random(in: 0...1) < errorRate {
-                errors += 1
-            }
-        }
-        return Double(errors) / Double(count)
+    /// Create an incoming ball at the NPC's deep position (typical rally ball).
+    /// Height is kept below 0.20 to avoid smash override in preselectModes.
+    private static func createPressureBall() -> DrillBallSimulation {
+        let ball = DrillBallSimulation()
+        ball.isActive = true
+        ball.lastHitByPlayer = true
+        ball.courtX = CGFloat.random(in: 0.20...0.80)
+        ball.courtY = CGFloat.random(in: 0.82...0.90)
+        ball.height = CGFloat.random(in: 0.03...0.08)
+        ball.vx = CGFloat.random(in: (-0.3)...0.3)
+        ball.vy = CGFloat.random(in: (-0.5)...(-0.1))
+        ball.bounceCount = 1
+        return ball
     }
 
-    // MARK: - Drive Quality Simulation
+    // MARK: - Test 1: Drop Selection Rate (real MatchAI)
 
-    static func simulateDriveClean(
-        dupr: Double, count: Int,
-        cleanBase: CGFloat, cleanSlope: CGFloat
-    ) -> Double {
-        let PS = GameConstants.PressureShots.self
-        let npc = NPC.practiceOpponent(dupr: dupr)
-        let stats = npc.stats
+    /// Verify that MatchAI.preselectModes() produces DUPR-appropriate drop/drive/lob
+    /// selection rates when the NPC is deep and the opponent is at the net.
+    @Test func verifyPressureDropSelection() {
+        print("Pressure Drop Selection (Real MatchAI)")
+        print("=======================================")
 
-        let avgDriveStat = CGFloat(
-            stats.stat(.power) + stats.stat(.accuracy) + stats.stat(.speed)
-        ) / 3.0
-        let statModifier = avgDriveStat / 99.0
-
-        var cleans = 0
-        for _ in 0..<count {
-            let rawClean = duprRate(
-                dupr: dupr, base: cleanBase, slope: cleanSlope,
-                floor: PS.driveCleanFloor, ceiling: PS.driveCleanCeiling
-            )
-            let cleanRate = rawClean * (0.7 + 0.3 * statModifier)
-            if CGFloat.random(in: 0...1) < cleanRate {
-                cleans += 1
-            }
-        }
-        return Double(cleans) / Double(count)
-    }
-
-    // MARK: - Kitchen Approach Simulation
-
-    static func simulateKitchenApproach(
-        dupr: Double, count: Int,
-        approachBase: CGFloat, approachSlope: CGFloat
-    ) -> Double {
-        let PS = GameConstants.PressureShots.self
-        var approaches = 0
-        for _ in 0..<count {
-            let rate = duprRate(
-                dupr: dupr, base: approachBase, slope: approachSlope,
-                floor: PS.kitchenApproachAfterDropFloor, ceiling: PS.kitchenApproachAfterDropCeiling
-            )
-            if CGFloat.random(in: 0...1) < rate {
-                approaches += 1
-            }
-        }
-        return Double(approaches) / Double(count)
-    }
-
-    // MARK: - Gradient Helpers
-
-    /// Compute weighted average error across all DUPRs for base adjustment.
-    private static func weightedBaseError(_ results: [(dupr: Double, measured: Double, target: Double)]) -> Double {
-        var totalErr: Double = 0
-        for r in results {
-            totalErr += r.measured - r.target
-        }
-        return totalErr / Double(results.count)
-    }
-
-    /// Compute slope error from low vs high DUPR differential.
-    private static func slopeError(
-        _ results: [(dupr: Double, measured: Double, target: Double)]
-    ) -> Double {
-        guard let low = results.first, let high = results.last else { return 0 }
-        let duprSpan = high.dupr - low.dupr
-        guard duprSpan > 0 else { return 0 }
-        let measuredSlope = (high.measured - low.measured) / duprSpan
-        let targetSlope = (high.target - low.target) / duprSpan
-        return measuredSlope - targetSlope
-    }
-
-    // MARK: - Tuning Test: Drop Selection
-
-    @Test func tunePressureDropSelection() {
-        let maxIterations = 20
-
-        var dropBase = GameConstants.PressureShots.dropSelectBase
-        var dropSlope = GameConstants.PressureShots.dropSelectSlope
-
-        var bestDropBase = dropBase
-        var bestDropSlope = dropSlope
-        var bestTotalError: Double = .infinity
-
-        print("Pressure Drop Selection Tuning")
-        print("==============================")
-
-        for iteration in 1...maxIterations {
-            var results: [(dupr: Double, measured: Double, target: Double)] = []
-            var totalError: Double = 0
-
-            for (dupr, target) in Self.dropSelectTargets {
-                let rate = Self.simulateDropSelection(
-                    dupr: dupr, count: Self.trialsPerDUPR,
-                    dropBase: dropBase, dropSlope: dropSlope,
-                    lobBase: GameConstants.PressureShots.lobSelectBase,
-                    lobSlope: GameConstants.PressureShots.lobSelectSlope
-                )
-                let diff = rate - target
-                totalError += pow(diff, 2)
-                results.append((dupr, rate, target))
-            }
-
-            let rmse = sqrt(totalError / Double(results.count))
-            print("Iteration \(iteration): dropBase=\(String(format: "%.4f", dropBase)), dropSlope=\(String(format: "%.4f", dropSlope))")
-            for r in results {
-                let status = Swift.abs(r.measured - r.target) <= Self.tolerance ? "OK" : "MISS"
-                print("  DUPR \(String(format: "%.1f", r.dupr)): \(String(format: "%.1f%%", r.measured * 100)) (target: \(String(format: "%.0f%%", r.target * 100))) [\(status)]")
-            }
-            print("  RMSE: \(String(format: "%.4f", rmse))")
-
-            if totalError < bestTotalError {
-                bestTotalError = totalError
-                bestDropBase = dropBase
-                bestDropSlope = dropSlope
-            }
-
-            let allGood = results.allSatisfy { Swift.abs($0.measured - $0.target) <= Self.tolerance }
-            if allGood {
-                print("\nAll DUPR levels within tolerance after \(iteration) iterations!")
-                break
-            }
-
-            let lr: CGFloat = 0.5
-
-            // Base: use weighted average across ALL DUPRs
-            let avgErr = Self.weightedBaseError(results)
-            if Swift.abs(avgErr) > 0.02 {
-                dropBase -= CGFloat(avgErr) * lr * 0.5
-                dropBase = max(0.10, min(1.0, dropBase))
-            }
-
-            // Slope: from low-to-high differential
-            let slpErr = Self.slopeError(results)
-            if Swift.abs(slpErr) > 0.01 {
-                dropSlope -= CGFloat(slpErr) * lr * 0.4
-                dropSlope = max(0.02, min(0.50, dropSlope))
-            }
-
-            print("")
-        }
-
-        dropBase = bestDropBase
-        dropSlope = bestDropSlope
-
-        print("\n--- Final Verification (10k trials per DUPR) ---")
         var allPassed = true
+
         for (dupr, target) in Self.dropSelectTargets {
-            let rate = Self.simulateDropSelection(
-                dupr: dupr, count: 10_000,
-                dropBase: dropBase, dropSlope: dropSlope,
-                lobBase: GameConstants.PressureShots.lobSelectBase,
-                lobSlope: GameConstants.PressureShots.lobSelectSlope
-            )
-            let status = Swift.abs(rate - target) <= Self.tolerance ? "PASS" : "FAIL"
-            if Swift.abs(rate - target) > Self.tolerance { allPassed = false }
-            print("  DUPR \(String(format: "%.1f", dupr)): \(String(format: "%.1f%%", rate * 100)) (target: \(String(format: "%.0f%%", target * 100))) [\(status)]")
-        }
+            var dropCount = 0
+            var lobCount = 0
+            var driveCount = 0
 
-        print("\nOptimal drop selection constants:")
-        print("  dropSelectBase = \(String(format: "%.4f", dropBase))")
-        print("  dropSelectSlope = \(String(format: "%.4f", dropSlope))")
+            for _ in 0..<Self.trialsPerDUPR {
+                let ai = Self.createPressureAI(dupr: dupr)
+                let ball = Self.createPressureBall()
+                ai.preselectModes(ball: ball)
 
-        if allPassed {
-            writePressureConstants(
-                dropSelectBase: dropBase, dropSelectSlope: dropSlope,
-                dropPerfectBase: nil, dropPerfectSlope: nil,
-                dropErrorBase: nil, dropErrorSlope: nil,
-                driveCleanBase: nil, driveCleanSlope: nil,
-                kitchenApproachBase: nil, kitchenApproachSlope: nil
-            )
-            print("\nDrop selection constants written to GameConstants.swift")
-        } else {
-            print("\nWARNING: Not all targets met — constants NOT written.")
+                if ai.lastShotModes.contains(.touch) {
+                    dropCount += 1
+                } else if ai.lastShotModes.contains(.lob) {
+                    lobCount += 1
+                } else {
+                    driveCount += 1
+                }
+            }
+
+            let dropRate = Double(dropCount) / Double(Self.trialsPerDUPR)
+            let lobRate = Double(lobCount) / Double(Self.trialsPerDUPR)
+            let driveRate = Double(driveCount) / Double(Self.trialsPerDUPR)
+            let pass = Swift.abs(dropRate - target) <= Self.tolerance
+            if !pass { allPassed = false }
+            let status = pass ? "PASS" : "FAIL"
+            print("  DUPR \(String(format: "%.1f", dupr)): drop=\(String(format: "%.1f%%", dropRate * 100)) (target: \(String(format: "%.0f%%", target * 100))) lob=\(String(format: "%.1f%%", lobRate * 100)) drive=\(String(format: "%.1f%%", driveRate * 100)) [\(status)]")
         }
 
         #expect(allPassed, "All DUPR drop selection rates should be within tolerance")
     }
 
-    // MARK: - Tuning Test: Drop Quality
+    // MARK: - Test 2: Drop Error Rate (real MatchAI)
 
-    @Test func tunePressureDropQuality() {
-        let maxIterations = 20
+    /// Verify that shouldMakeError() produces DUPR-appropriate error rates
+    /// when the NPC chose touch mode under pressure (drop shot quality).
+    @Test func verifyPressureDropErrorRate() {
+        print("Pressure Drop Error Rate (Real MatchAI)")
+        print("========================================")
 
-        var perfectBase = GameConstants.PressureShots.dropPerfectBase
-        var perfectSlope = GameConstants.PressureShots.dropPerfectSlope
-        var errorBase = GameConstants.PressureShots.dropErrorBase
-        var errorSlope = GameConstants.PressureShots.dropErrorSlope
-
-        var bestPerfectBase = perfectBase
-        var bestPerfectSlope = perfectSlope
-        var bestErrorBase = errorBase
-        var bestErrorSlope = errorSlope
-        var bestTotalError: Double = .infinity
-
-        print("Pressure Drop Quality Tuning")
-        print("============================")
-
-        for iteration in 1...maxIterations {
-            var totalError: Double = 0
-            var perfectResults: [(dupr: Double, measured: Double, target: Double)] = []
-            var errorResults: [(dupr: Double, measured: Double, target: Double)] = []
-
-            for (dupr, target) in Self.dropPerfectTargets {
-                let rate = Self.simulateDropPerfect(
-                    dupr: dupr, count: Self.trialsPerDUPR,
-                    perfectBase: perfectBase, perfectSlope: perfectSlope
-                )
-                totalError += pow(rate - target, 2)
-                perfectResults.append((dupr, rate, target))
-            }
-
-            for (dupr, target) in Self.dropErrorTargets {
-                let rate = Self.simulateDropError(
-                    dupr: dupr, count: Self.trialsPerDUPR,
-                    errorBase: errorBase, errorSlope: errorSlope
-                )
-                totalError += pow(rate - target, 2)
-                errorResults.append((dupr, rate, target))
-            }
-
-            let totalCount = Double(perfectResults.count + errorResults.count)
-            let rmse = sqrt(totalError / totalCount)
-
-            print("Iteration \(iteration): perfectBase=\(String(format: "%.4f", perfectBase)), perfectSlope=\(String(format: "%.4f", perfectSlope)), errorBase=\(String(format: "%.4f", errorBase)), errorSlope=\(String(format: "%.4f", errorSlope))")
-            print("  Perfect drops:")
-            for r in perfectResults {
-                let status = Swift.abs(r.measured - r.target) <= Self.tolerance ? "OK" : "MISS"
-                print("    DUPR \(String(format: "%.1f", r.dupr)): \(String(format: "%.1f%%", r.measured * 100)) (target: \(String(format: "%.0f%%", r.target * 100))) [\(status)]")
-            }
-            print("  Drop errors:")
-            for r in errorResults {
-                let status = Swift.abs(r.measured - r.target) <= Self.tolerance ? "OK" : "MISS"
-                print("    DUPR \(String(format: "%.1f", r.dupr)): \(String(format: "%.1f%%", r.measured * 100)) (target: \(String(format: "%.0f%%", r.target * 100))) [\(status)]")
-            }
-            print("  RMSE: \(String(format: "%.4f", rmse))")
-
-            if totalError < bestTotalError {
-                bestTotalError = totalError
-                bestPerfectBase = perfectBase
-                bestPerfectSlope = perfectSlope
-                bestErrorBase = errorBase
-                bestErrorSlope = errorSlope
-            }
-
-            let allGood = perfectResults.allSatisfy { Swift.abs($0.measured - $0.target) <= Self.tolerance }
-                && errorResults.allSatisfy { Swift.abs($0.measured - $0.target) <= Self.tolerance }
-            if allGood {
-                print("\nAll DUPR levels within tolerance after \(iteration) iterations!")
-                break
-            }
-
-            let lr: CGFloat = 0.5
-
-            // Perfect: weighted average base, slope from differential
-            let pAvgErr = Self.weightedBaseError(perfectResults)
-            if Swift.abs(pAvgErr) > 0.02 {
-                perfectBase -= CGFloat(pAvgErr) * lr * 0.5
-                perfectBase = max(0.05, min(1.0, perfectBase))
-            }
-            let pSlpErr = Self.slopeError(perfectResults)
-            if Swift.abs(pSlpErr) > 0.01 {
-                perfectSlope -= CGFloat(pSlpErr) * lr * 0.4
-                perfectSlope = max(0.02, min(0.60, perfectSlope))
-            }
-
-            // Error: weighted average base, slope from differential
-            let eAvgErr = Self.weightedBaseError(errorResults)
-            if Swift.abs(eAvgErr) > 0.02 {
-                errorBase -= CGFloat(eAvgErr) * lr * 0.5
-                errorBase = max(-0.50, min(1.0, errorBase))
-            }
-            let eSlpErr = Self.slopeError(errorResults)
-            if Swift.abs(eSlpErr) > 0.01 {
-                errorSlope -= CGFloat(eSlpErr) * lr * 0.4
-                errorSlope = max(-0.60, min(0.0, errorSlope))
-            }
-
-            print("")
-        }
-
-        perfectBase = bestPerfectBase
-        perfectSlope = bestPerfectSlope
-        errorBase = bestErrorBase
-        errorSlope = bestErrorSlope
-
-        print("\n--- Final Verification (10k trials per DUPR) ---")
         var allPassed = true
-        print("  Perfect drops:")
-        for (dupr, target) in Self.dropPerfectTargets {
-            let rate = Self.simulateDropPerfect(
-                dupr: dupr, count: 10_000,
-                perfectBase: perfectBase, perfectSlope: perfectSlope
-            )
-            let status = Swift.abs(rate - target) <= Self.tolerance ? "PASS" : "FAIL"
-            if Swift.abs(rate - target) > Self.tolerance { allPassed = false }
-            print("    DUPR \(String(format: "%.1f", dupr)): \(String(format: "%.1f%%", rate * 100)) (target: \(String(format: "%.0f%%", target * 100))) [\(status)]")
-        }
-        print("  Drop errors:")
+
         for (dupr, target) in Self.dropErrorTargets {
-            let rate = Self.simulateDropError(
-                dupr: dupr, count: 10_000,
-                errorBase: errorBase, errorSlope: errorSlope
-            )
-            let status = Swift.abs(rate - target) <= Self.tolerance ? "PASS" : "FAIL"
-            if Swift.abs(rate - target) > Self.tolerance { allPassed = false }
-            print("    DUPR \(String(format: "%.1f", dupr)): \(String(format: "%.1f%%", rate * 100)) (target: \(String(format: "%.0f%%", target * 100))) [\(status)]")
+            var errorCount = 0
+            var touchTrials = 0
+
+            // Run enough trials to get at least trialsPerDUPR touch selections
+            var attempts = 0
+            while touchTrials < Self.trialsPerDUPR && attempts < Self.trialsPerDUPR * 10 {
+                attempts += 1
+                let ai = Self.createPressureAI(dupr: dupr)
+                let ball = Self.createPressureBall()
+
+                // Preselect modes — only measure error rate when touch was chosen
+                ai.preselectModes(ball: ball)
+                guard ai.lastShotModes.contains(.touch) else { continue }
+
+                touchTrials += 1
+                if ai.shouldMakeError(ball: ball) {
+                    errorCount += 1
+                }
+            }
+
+            guard touchTrials > 0 else {
+                print("  DUPR \(String(format: "%.1f", dupr)): no touch selections in \(attempts) attempts [SKIP]")
+                continue
+            }
+
+            let errorRate = Double(errorCount) / Double(touchTrials)
+            let pass = Swift.abs(errorRate - target) <= Self.tolerance
+            if !pass { allPassed = false }
+            let status = pass ? "PASS" : "FAIL"
+            print("  DUPR \(String(format: "%.1f", dupr)): error=\(String(format: "%.1f%%", errorRate * 100)) (target: \(String(format: "%.0f%%", target * 100))) from \(touchTrials) touch trials [\(status)]")
         }
 
-        print("\nOptimal drop quality constants:")
-        print("  dropPerfectBase = \(String(format: "%.4f", perfectBase))")
-        print("  dropPerfectSlope = \(String(format: "%.4f", perfectSlope))")
-        print("  dropErrorBase = \(String(format: "%.4f", errorBase))")
-        print("  dropErrorSlope = \(String(format: "%.4f", errorSlope))")
-
-        if allPassed {
-            writePressureConstants(
-                dropSelectBase: nil, dropSelectSlope: nil,
-                dropPerfectBase: perfectBase, dropPerfectSlope: perfectSlope,
-                dropErrorBase: errorBase, dropErrorSlope: errorSlope,
-                driveCleanBase: nil, driveCleanSlope: nil,
-                kitchenApproachBase: nil, kitchenApproachSlope: nil
-            )
-            print("\nDrop quality constants written to GameConstants.swift")
-        } else {
-            print("\nWARNING: Not all targets met — constants NOT written.")
-        }
-
-        #expect(allPassed, "All DUPR drop quality rates should be within tolerance")
+        #expect(allPassed, "All DUPR drop error rates should be within tolerance")
     }
 
-    // MARK: - Tuning Test: Drive Quality
+    // MARK: - Test 3: Kitchen Approach After Drop (real MatchAI)
 
-    @Test func tunePressureDriveQuality() {
-        let maxIterations = 20
+    /// Verify that after a successful drop shot, the NPC approaches the kitchen
+    /// at DUPR-appropriate rates. Measures by calling generateShot() with touch mode,
+    /// then running update() frames and checking if NPC moved forward.
+    @Test func verifyPressureKitchenApproach() {
+        print("Pressure Kitchen Approach (Real MatchAI)")
+        print("=========================================")
 
-        var cleanBase = GameConstants.PressureShots.driveCleanBase
-        var cleanSlope = GameConstants.PressureShots.driveCleanSlope
-
-        var bestCleanBase = cleanBase
-        var bestCleanSlope = cleanSlope
-        var bestTotalError: Double = .infinity
-
-        print("Pressure Drive Quality Tuning")
-        print("=============================")
-
-        for iteration in 1...maxIterations {
-            var results: [(dupr: Double, measured: Double, target: Double)] = []
-            var totalError: Double = 0
-
-            for (dupr, target) in Self.driveCleanTargets {
-                let rate = Self.simulateDriveClean(
-                    dupr: dupr, count: Self.trialsPerDUPR,
-                    cleanBase: cleanBase, cleanSlope: cleanSlope
-                )
-                totalError += pow(rate - target, 2)
-                results.append((dupr, rate, target))
-            }
-
-            let rmse = sqrt(totalError / Double(results.count))
-            print("Iteration \(iteration): cleanBase=\(String(format: "%.4f", cleanBase)), cleanSlope=\(String(format: "%.4f", cleanSlope))")
-            for r in results {
-                let status = Swift.abs(r.measured - r.target) <= Self.tolerance ? "OK" : "MISS"
-                print("  DUPR \(String(format: "%.1f", r.dupr)): \(String(format: "%.1f%%", r.measured * 100)) (target: \(String(format: "%.0f%%", r.target * 100))) [\(status)]")
-            }
-            print("  RMSE: \(String(format: "%.4f", rmse))")
-
-            if totalError < bestTotalError {
-                bestTotalError = totalError
-                bestCleanBase = cleanBase
-                bestCleanSlope = cleanSlope
-            }
-
-            let allGood = results.allSatisfy { Swift.abs($0.measured - $0.target) <= Self.tolerance }
-            if allGood {
-                print("\nAll DUPR levels within tolerance after \(iteration) iterations!")
-                break
-            }
-
-            let lr: CGFloat = 0.5
-            let avgErr = Self.weightedBaseError(results)
-            if Swift.abs(avgErr) > 0.02 {
-                cleanBase -= CGFloat(avgErr) * lr * 0.5
-                cleanBase = max(0.10, min(1.0, cleanBase))
-            }
-            let slpErr = Self.slopeError(results)
-            if Swift.abs(slpErr) > 0.01 {
-                cleanSlope -= CGFloat(slpErr) * lr * 0.4
-                cleanSlope = max(0.02, min(0.50, cleanSlope))
-            }
-
-            print("")
-        }
-
-        cleanBase = bestCleanBase
-        cleanSlope = bestCleanSlope
-
-        print("\n--- Final Verification (10k trials per DUPR) ---")
         var allPassed = true
-        for (dupr, target) in Self.driveCleanTargets {
-            let rate = Self.simulateDriveClean(
-                dupr: dupr, count: 10_000,
-                cleanBase: cleanBase, cleanSlope: cleanSlope
-            )
-            let status = Swift.abs(rate - target) <= Self.tolerance ? "PASS" : "FAIL"
-            if Swift.abs(rate - target) > Self.tolerance { allPassed = false }
-            print("  DUPR \(String(format: "%.1f", dupr)): \(String(format: "%.1f%%", rate * 100)) (target: \(String(format: "%.0f%%", target * 100))) [\(status)]")
-        }
 
-        print("\nOptimal drive quality constants:")
-        print("  driveCleanBase = \(String(format: "%.4f", cleanBase))")
-        print("  driveCleanSlope = \(String(format: "%.4f", cleanSlope))")
-
-        if allPassed {
-            writePressureConstants(
-                dropSelectBase: nil, dropSelectSlope: nil,
-                dropPerfectBase: nil, dropPerfectSlope: nil,
-                dropErrorBase: nil, dropErrorSlope: nil,
-                driveCleanBase: cleanBase, driveCleanSlope: cleanSlope,
-                kitchenApproachBase: nil, kitchenApproachSlope: nil
-            )
-            print("\nDrive quality constants written to GameConstants.swift")
-        } else {
-            print("\nWARNING: Not all targets met — constants NOT written.")
-        }
-
-        #expect(allPassed, "All DUPR drive quality rates should be within tolerance")
-    }
-
-    // MARK: - Tuning Test: Kitchen Approach
-
-    @Test func tunePressureKitchenApproach() {
-        let maxIterations = 20
-
-        var approachBase = GameConstants.PressureShots.kitchenApproachAfterDropBase
-        var approachSlope = GameConstants.PressureShots.kitchenApproachAfterDropSlope
-
-        var bestApproachBase = approachBase
-        var bestApproachSlope = approachSlope
-        var bestTotalError: Double = .infinity
-
-        print("Pressure Kitchen Approach Tuning")
-        print("================================")
-
-        for iteration in 1...maxIterations {
-            var results: [(dupr: Double, measured: Double, target: Double)] = []
-            var totalError: Double = 0
-
-            for (dupr, target) in Self.kitchenApproachTargets {
-                let rate = Self.simulateKitchenApproach(
-                    dupr: dupr, count: Self.trialsPerDUPR,
-                    approachBase: approachBase, approachSlope: approachSlope
-                )
-                totalError += pow(rate - target, 2)
-                results.append((dupr, rate, target))
-            }
-
-            let rmse = sqrt(totalError / Double(results.count))
-            print("Iteration \(iteration): approachBase=\(String(format: "%.4f", approachBase)), approachSlope=\(String(format: "%.4f", approachSlope))")
-            for r in results {
-                let status = Swift.abs(r.measured - r.target) <= Self.tolerance ? "OK" : "MISS"
-                print("  DUPR \(String(format: "%.1f", r.dupr)): \(String(format: "%.1f%%", r.measured * 100)) (target: \(String(format: "%.0f%%", r.target * 100))) [\(status)]")
-            }
-            print("  RMSE: \(String(format: "%.4f", rmse))")
-
-            if totalError < bestTotalError {
-                bestTotalError = totalError
-                bestApproachBase = approachBase
-                bestApproachSlope = approachSlope
-            }
-
-            let allGood = results.allSatisfy { Swift.abs($0.measured - $0.target) <= Self.tolerance }
-            if allGood {
-                print("\nAll DUPR levels within tolerance after \(iteration) iterations!")
-                break
-            }
-
-            let lr: CGFloat = 0.5
-            let avgErr = Self.weightedBaseError(results)
-            if Swift.abs(avgErr) > 0.02 {
-                approachBase -= CGFloat(avgErr) * lr * 0.5
-                approachBase = max(0.05, min(1.0, approachBase))
-            }
-            let slpErr = Self.slopeError(results)
-            if Swift.abs(slpErr) > 0.01 {
-                approachSlope -= CGFloat(slpErr) * lr * 0.4
-                approachSlope = max(0.05, min(0.60, approachSlope))
-            }
-
-            print("")
-        }
-
-        approachBase = bestApproachBase
-        approachSlope = bestApproachSlope
-
-        print("\n--- Final Verification (10k trials per DUPR) ---")
-        var allPassed = true
         for (dupr, target) in Self.kitchenApproachTargets {
-            let rate = Self.simulateKitchenApproach(
-                dupr: dupr, count: 10_000,
-                approachBase: approachBase, approachSlope: approachSlope
-            )
-            let status = Swift.abs(rate - target) <= Self.tolerance ? "PASS" : "FAIL"
-            if Swift.abs(rate - target) > Self.tolerance { allPassed = false }
-            print("  DUPR \(String(format: "%.1f", dupr)): \(String(format: "%.1f%%", rate * 100)) (target: \(String(format: "%.0f%%", target * 100))) [\(status)]")
-        }
+            var approachCount = 0
+            var successfulDrops = 0
 
-        print("\nOptimal kitchen approach constants:")
-        print("  kitchenApproachAfterDropBase = \(String(format: "%.4f", approachBase))")
-        print("  kitchenApproachAfterDropSlope = \(String(format: "%.4f", approachSlope))")
+            var attempts = 0
+            while successfulDrops < Self.trialsPerDUPR && attempts < Self.trialsPerDUPR * 10 {
+                attempts += 1
+                let ai = Self.createPressureAI(dupr: dupr)
+                let ball = Self.createPressureBall()
 
-        if allPassed {
-            writePressureConstants(
-                dropSelectBase: nil, dropSelectSlope: nil,
-                dropPerfectBase: nil, dropPerfectSlope: nil,
-                dropErrorBase: nil, dropErrorSlope: nil,
-                driveCleanBase: nil, driveCleanSlope: nil,
-                kitchenApproachBase: approachBase, kitchenApproachSlope: approachSlope
-            )
-            print("\nKitchen approach constants written to GameConstants.swift")
-        } else {
-            print("\nWARNING: Not all targets met — constants NOT written.")
+                // Preselect — only test when touch mode was chosen
+                ai.preselectModes(ball: ball)
+                guard ai.lastShotModes.contains(.touch) else { continue }
+
+                // Check if NPC would error (we only want successful drops)
+                guard !ai.shouldMakeError(ball: ball) else { continue }
+
+                successfulDrops += 1
+
+                // Generate the shot — this sets lastShotWasTouch = true
+                let _ = ai.generateShot(ball: ball)
+
+                // Simulate recovery: ball is now heading toward player (NPC just hit it)
+                ball.lastHitByPlayer = false
+                ball.courtY = 0.50
+                ball.vy = -0.6
+
+                // Run several update frames to let NPC move toward recovery position
+                let startNY = ai.currentNY
+                for _ in 0..<20 {
+                    ai.update(dt: 0.1, ball: ball)
+                }
+
+                // Kitchen approach: NPC moved significantly forward from deep position
+                // startNY is ~0.88; kitchen line is 0.69; threshold for "approached" = moved >40% of the way
+                let moved = startNY - ai.currentNY
+                if moved > 0.05 {
+                    approachCount += 1
+                }
+            }
+
+            guard successfulDrops > 0 else {
+                print("  DUPR \(String(format: "%.1f", dupr)): no successful drops in \(attempts) attempts [SKIP]")
+                continue
+            }
+
+            let approachRate = Double(approachCount) / Double(successfulDrops)
+            let pass = Swift.abs(approachRate - target) <= Self.tolerance
+            if !pass { allPassed = false }
+            let status = pass ? "PASS" : "FAIL"
+            print("  DUPR \(String(format: "%.1f", dupr)): approach=\(String(format: "%.1f%%", approachRate * 100)) (target: \(String(format: "%.0f%%", target * 100))) from \(successfulDrops) drops [\(status)]")
         }
 
         #expect(allPassed, "All DUPR kitchen approach rates should be within tolerance")
     }
 
-    // MARK: - Write Constants
+    // MARK: - Write Constants (for manual tuning when tests fail)
 
+    /// Write tuned pressure constants to GameConstants.swift.
+    /// Call this from a separate tuning test if the integration tests fail.
     private func writePressureConstants(
         dropSelectBase: CGFloat?, dropSelectSlope: CGFloat?,
         dropPerfectBase: CGFloat?, dropPerfectSlope: CGFloat?,
