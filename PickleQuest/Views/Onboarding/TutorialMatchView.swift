@@ -90,7 +90,8 @@ struct TutorialMatchView: View {
                         await viewModel.startMatch(
                             player: appState.player,
                             matchService: container.matchService,
-                            npcService: container.npcService
+                            npcService: container.npcService,
+                            inventoryService: container.inventoryService
                         )
                     }
                 }

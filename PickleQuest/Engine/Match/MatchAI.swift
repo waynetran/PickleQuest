@@ -148,7 +148,19 @@ final class MatchAI {
     private let sprintSpeed: CGFloat
 
     // Hitbox
-    let hitboxRadius: CGFloat
+    let baseHitboxRadius: CGFloat
+    /// Number of consecutive kitchen shots the opponent has hit while this NPC is deep.
+    /// Each shot shrinks the effective hitbox. Resets when NPC reaches the kitchen or between points.
+    var pressureShotCount: Int = 0
+    var hitboxRadius: CGFloat {
+        guard pressureShotCount > 0 else { return baseHitboxRadius }
+        // Each pressure shot shrinks hitbox; accuracy stat resists shrink
+        let accuracyStat = CGFloat(npcStats.stat(.accuracy))
+        let touchResist = accuracyStat / 99.0 * P.pressureTouchResistMax
+        let shrinkPerShot = P.pressureShrinkPerShot * (1.0 - touchResist)
+        let multiplier = max(P.pressureHitboxMinMultiplier, 1.0 - CGFloat(pressureShotCount) * shrinkPerShot)
+        return baseHitboxRadius * multiplier
+    }
 
     // Strategy profile (built from DUPR + personality)
     let strategy: NPCStrategyProfile
@@ -218,13 +230,13 @@ final class MatchAI {
         if headless {
             // Use player-equivalent hitbox formula (no compensatory inflation)
             let positioningStat = CGFloat(npc.stats.stat(.positioning))
-            self.hitboxRadius = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
+            self.baseHitboxRadius = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
         } else {
             // Interactive: larger hitbox compensates for human joystick advantage
             let reflexesStat = CGFloat(min(99, npc.stats.stat(.reflexes) + boost))
             let positioningStat = CGFloat(min(99, npc.stats.stat(.positioning) + boost))
             let reachStat = max(reflexesStat, positioningStat)
-            self.hitboxRadius = P.npcBaseHitboxRadius + (reachStat / 99.0) * P.npcHitboxBonus
+            self.baseHitboxRadius = P.npcBaseHitboxRadius + (reachStat / 99.0) * P.npcHitboxBonus
         }
 
         // Headless mode: add reaction delay and positioning noise (mirrors SimulatedPlayerAI)
@@ -1298,6 +1310,7 @@ final class MatchAI {
 
     func reset(npcScore: Int, isServing: Bool) {
         self.isServing = isServing
+        self.pressureShotCount = 0
         self.shotCountThisPoint = 0
         self.lastShotWasTouch = false
         self.shouldApproachKitchenAfterDrop = false

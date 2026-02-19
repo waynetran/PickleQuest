@@ -21,7 +21,8 @@ struct MatchHubView: View {
                 if matchVM == nil {
                     matchVM = MatchViewModel(
                         matchService: container.matchService,
-                        npcService: container.npcService
+                        npcService: container.npcService,
+                        inventoryService: container.inventoryService
                     )
                 }
                 if mapVM == nil {
@@ -110,7 +111,8 @@ struct MatchHubView: View {
                         isRated: matchVM.matchConfig.isRated,
                         wagerAmount: matchVM.wagerAmount,
                         contestedDropRarity: mapVM.pendingContestedDrop?.rarity,
-                        contestedDropItemCount: mapVM.pendingContestedDrop != nil ? 3 : 0
+                        contestedDropItemCount: mapVM.pendingContestedDrop != nil ? 3 : 0,
+                        playerEffectiveStats: matchVM.playerEffectiveStats
                     ) { result in
                         matchVM.matchResult = result
                         matchVM.lootDrops = result.loot

@@ -8,6 +8,7 @@ final class MatchViewModel {
     // Dependencies
     private let matchService: MatchService
     private let npcService: NPCService
+    private let inventoryService: InventoryService
 
     // Loot decisions (LootDecision enum is in Models/Common/LootDecision.swift)
     var lootDecisions: [UUID: LootDecision] = [:]
@@ -75,6 +76,7 @@ final class MatchViewModel {
     var currentServingSide: MatchSide = .player
     var courtName: String = ""
     var playerName: String = "You"
+    var playerEffectiveStats: PlayerStats = PlayerStats.starter
 
     var canUseTimeout: Bool {
         matchState == .simulating && !isSkipping && timeoutsAvailable > 0
@@ -97,9 +99,10 @@ final class MatchViewModel {
         case finished
     }
 
-    init(matchService: MatchService, npcService: NPCService) {
+    init(matchService: MatchService, npcService: NPCService, inventoryService: InventoryService) {
         self.matchService = matchService
         self.npcService = npcService
+        self.inventoryService = inventoryService
     }
 
     func loadNPCs() async {
@@ -155,12 +158,19 @@ final class MatchViewModel {
 
     /// Switch from a simulated match (already in .simulating state) to interactive mode.
     /// Discards the running engine and transitions to .interactiveMatch.
-    func switchToInteractive(player: Player) {
+    func switchToInteractive(player: Player) async {
         guard let opponent = selectedNPC else { return }
 
         // Discard the running simulation engine
         engine = nil
         courtScene = nil
+
+        // Compute effective stats with equipment bonuses
+        let equipped = await inventoryService.getEquippedItems(for: player.equippedItems)
+        playerEffectiveStats = StatCalculator().effectiveStats(
+            base: player.stats, equipment: equipped,
+            playerLevel: player.progression.level
+        )
 
         // Reconfigure for interactive match scoring
         let effectiveRated = effectiveIsRated(

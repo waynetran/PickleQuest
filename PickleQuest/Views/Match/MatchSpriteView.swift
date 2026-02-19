@@ -158,7 +158,7 @@ struct MatchSpriteView: View {
             // Start button
             Button {
                 if selectedPlayMode == .interactive && !viewModel.isDoublesMode {
-                    viewModel.switchToInteractive(player: appState.player)
+                    Task { await viewModel.switchToInteractive(player: appState.player) }
                 } else {
                     showPreMatchOverlay = false
                 }

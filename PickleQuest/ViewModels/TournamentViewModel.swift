@@ -130,7 +130,7 @@ final class TournamentViewModel {
             state = .playerMatch
 
             // Create a MatchViewModel for the player to use
-            let vm = MatchViewModel(matchService: matchService, npcService: npcService)
+            let vm = MatchViewModel(matchService: matchService, npcService: npcService, inventoryService: inventoryService)
             self.matchViewModel = vm
 
         case .playerMatchComplete(_, let result):

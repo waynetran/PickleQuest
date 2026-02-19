@@ -497,14 +497,14 @@ struct PutAwayBalanceTests {
         if let smashRange = source.range(of: "enum Smash \\{[\\s\\S]*?\\}", options: .regularExpression) {
             var smashBlock = String(source[smashRange])
             replace(in: &smashBlock,
-                    #"static let baseReturnRate: CGFloat = [\d.]+"#,
-                    with: "static let baseReturnRate: CGFloat = \(String(format: "%.4f", baseReturnRate))")
+                    #"static var baseReturnRate: CGFloat = [\d.]+"#,
+                    with: "static var baseReturnRate: CGFloat = \(String(format: "%.4f", baseReturnRate))")
             replace(in: &smashBlock,
-                    #"static let returnDUPRScale: CGFloat = [\d.]+"#,
-                    with: "static let returnDUPRScale: CGFloat = \(String(format: "%.4f", returnDUPRScale))")
+                    #"static var returnDUPRScale: CGFloat = [\d.]+"#,
+                    with: "static var returnDUPRScale: CGFloat = \(String(format: "%.4f", returnDUPRScale))")
             replace(in: &smashBlock,
-                    #"static let stretchPenalty: CGFloat = [\d.]+"#,
-                    with: "static let stretchPenalty: CGFloat = \(String(format: "%.4f", stretchPenalty))")
+                    #"static var stretchPenalty: CGFloat = [\d.]+"#,
+                    with: "static var stretchPenalty: CGFloat = \(String(format: "%.4f", stretchPenalty))")
             source.replaceSubrange(smashRange, with: smashBlock)
         }
 
@@ -522,14 +522,14 @@ struct PutAwayBalanceTests {
         if let putAwayRange = source.range(of: "enum PutAway \\{[\\s\\S]*?\\}", options: .regularExpression) {
             var putAwayBlock = String(source[putAwayRange])
             replace(in: &putAwayBlock,
-                    #"static let baseReturnRate: CGFloat = [\d.]+"#,
-                    with: "static let baseReturnRate: CGFloat = \(String(format: "%.4f", baseReturnRate))")
+                    #"static var baseReturnRate: CGFloat = [\d.]+"#,
+                    with: "static var baseReturnRate: CGFloat = \(String(format: "%.4f", baseReturnRate))")
             replace(in: &putAwayBlock,
-                    #"static let returnDUPRScale: CGFloat = [\d.]+"#,
-                    with: "static let returnDUPRScale: CGFloat = \(String(format: "%.4f", returnDUPRScale))")
+                    #"static var returnDUPRScale: CGFloat = [\d.]+"#,
+                    with: "static var returnDUPRScale: CGFloat = \(String(format: "%.4f", returnDUPRScale))")
             replace(in: &putAwayBlock,
-                    #"static let stretchPenalty: CGFloat = [\d.]+"#,
-                    with: "static let stretchPenalty: CGFloat = \(String(format: "%.4f", stretchPenalty))")
+                    #"static var stretchPenalty: CGFloat = [\d.]+"#,
+                    with: "static var stretchPenalty: CGFloat = \(String(format: "%.4f", stretchPenalty))")
             source.replaceSubrange(putAwayRange, with: putAwayBlock)
         }
 

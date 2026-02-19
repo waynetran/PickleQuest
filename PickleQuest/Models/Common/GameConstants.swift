@@ -351,6 +351,14 @@ enum GameConstants {
         static let npcBaseHitboxRadius: CGFloat = 0.18
         static let npcHitboxBonus: CGFloat = 0.06        // bonus from max(reflexes, positioning)
 
+        // Pressure hitbox shrink — cumulative per kitchen shot while opponent is deep.
+        // Each shot from the kitchen player while NPC stays back shrinks NPC hitbox further.
+        static var pressureShrinkPerShot: CGFloat = 0.18        // hitbox multiplier lost per pressure shot
+        static var pressureHitboxMinMultiplier: CGFloat = 0.40  // floor — can't shrink below 40%
+        static var pressureTouchResistMax: CGFloat = 0.60       // accuracy stat 99 resists 60% of shrink
+        static let pressurePlayerKitchenNY: CGFloat = 0.38      // player Y threshold to be "at kitchen"
+        static let pressureNPCDeepNY: CGFloat = 0.72            // NPC Y threshold to be "deep/back"
+
         // Height reach — replaces the old hard height gate (0.20).
         // Balls within reach are hittable; excess height adds to 3D distance.
         // Athleticism = avg(speed, reflexes) / 99. Higher DUPR = more athletic = higher reach.
@@ -394,9 +402,10 @@ enum GameConstants {
 
         // Stamina (sprint system in drills — separate from persistent energy)
         static let maxStamina: CGFloat = 100
-        static let sprintDrainRate: CGFloat = 25        // per second while sprinting
-        static let staminaRecoveryRate: CGFloat = 5     // per second while walking/standing
-        static let staminaRecoveryDelay: CGFloat = 1.5  // seconds after sprint ends before recovery
+        static let sprintDrainRate: CGFloat = 12        // per second while sprinting
+        static let staminaRecoveryRate: CGFloat = 8     // per second while walking/standing
+        static let staminaRecoveryDelay: CGFloat = 0.8  // seconds after sprint ends before recovery
+        static let powerShotStaminaDrain: CGFloat = 0.12 // fraction of maxStamina per power shot/serve
         static let maxSprintSpeedBoost: CGFloat = 1.0   // 100% max speed boost
         static let playerPositioningOffset: CGFloat = 0.04 // half-sprite court units for kitchen clamp
 
@@ -466,12 +475,12 @@ enum GameConstants {
 
     // MARK: - Put-Away Balance
     enum PutAway {
-        // Return rate: continuous DUPR-scaled formula
-        static let baseReturnRate: CGFloat = 0.3561      // return chance at DUPR 4.0
-        static let returnDUPRScale: CGFloat = 0.2452     // change per 1.0 DUPR
+        // Return rate: continuous DUPR-scaled formula (var for runtime tuning by balance tests)
+        nonisolated(unsafe) static var baseReturnRate: CGFloat = 0.3561      // return chance at DUPR 4.0
+        nonisolated(unsafe) static var returnDUPRScale: CGFloat = 0.2452     // change per 1.0 DUPR
         static let returnFloor: CGFloat = 0.0          // min return rate
         static let returnCeiling: CGFloat = 0.65       // max return rate (put-aways are winners)
-        static let stretchPenalty: CGFloat = 0.1588      // stretch reduces return rate significantly
+        nonisolated(unsafe) static var stretchPenalty: CGFloat = 0.1485      // stretch reduces return rate significantly
 
         // Accuracy: put-away scatter multiplier (lower = more accurate, put-aways are easy to place)
         static let scatterMultiplier: CGFloat = 0.30
@@ -479,12 +488,12 @@ enum GameConstants {
 
     // MARK: - Smash Balance
     enum Smash {
-        // Smash return rate: less punishing than put-away (player is further from net)
-        static let baseReturnRate: CGFloat = 0.5626     // return chance at DUPR 4.0
-        static let returnDUPRScale: CGFloat = 0.2066    // change per 1.0 DUPR
+        // Smash return rate: less punishing than put-away (player is further from net) (var for runtime tuning)
+        nonisolated(unsafe) static var baseReturnRate: CGFloat = 0.5626     // return chance at DUPR 4.0
+        nonisolated(unsafe) static var returnDUPRScale: CGFloat = 0.2097    // change per 1.0 DUPR
         static let returnFloor: CGFloat = 0.0         // min return rate
         static let returnCeiling: CGFloat = 0.90      // max return rate (after stretch → effective ~80%)
-        static let stretchPenalty: CGFloat = 0.1704      // stretch reduces return rate
+        nonisolated(unsafe) static var stretchPenalty: CGFloat = 0.1704      // stretch reduces return rate
 
         // Power: reduced from 2.0 to prevent wild/out-of-bounds shots
         static let powerMultiplier: CGFloat = 1.5

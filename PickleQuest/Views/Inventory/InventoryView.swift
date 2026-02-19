@@ -5,21 +5,22 @@ struct InventoryView: View {
     @EnvironmentObject private var container: DependencyContainer
     @State private var viewModel: InventoryViewModel?
 
-    private let columns = [
-        GridItem(.flexible()),
-        GridItem(.flexible())
-    ]
-
     var body: some View {
         NavigationStack {
-            Group {
+            ZStack {
+                Color(white: 0.08).ignoresSafeArea()
+
                 if let vm = viewModel {
                     inventoryContent(vm: vm)
                 } else {
                     ProgressView()
                 }
             }
-            .navigationTitle("Inventory")
+            .navigationTitle("INVENTORY")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color(white: 0.08), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .task {
                 if viewModel == nil {
                     let vm = InventoryViewModel(
@@ -39,132 +40,103 @@ struct InventoryView: View {
 
     @ViewBuilder
     private func inventoryContent(vm: InventoryViewModel) -> some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // Equipment Slots
-                EquipmentSlotsView(
-                    player: appState.player,
-                    selectedFilter: vm.selectedFilter,
-                    equippedItemFor: { slot in
-                        vm.equippedItem(for: slot, player: appState.player)
-                    },
-                    onSlotTap: { slot in
-                        vm.setFilter(vm.selectedFilter == slot ? nil : slot)
-                    },
-                    onShowAll: {
-                        vm.setFilter(nil)
+        VStack(spacing: 0) {
+            // Block 1: Character + Equipment Slots
+            CharacterEquipmentView(vm: vm, player: appState.player)
+
+            // Pixel divider
+            Rectangle()
+                .fill(Color(white: 0.2))
+                .frame(height: 2)
+
+            // Block 2: Tabbed Inventory Grid
+            InventoryGridView(vm: vm, player: appState.player)
+
+            Spacer(minLength: 0)
+        }
+        .coordinateSpace(name: "inventory")
+        .onPreferenceChange(SlotFramePreferenceKey.self) { frames in
+            vm.slotFrames = frames
+        }
+        // Drag gesture overlay — captures movement and drop across the whole view
+        .gesture(
+            DragGesture(coordinateSpace: .named("inventory"))
+                .onChanged { value in
+                    if vm.dragState != nil {
+                        vm.updateDragLocation(value.location)
                     }
-                )
-
-                // Item count + active filter chip
-                HStack {
-                    Text("\(vm.filteredInventory.count) items")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                    if vm.selectedFilter != nil {
-                        Button {
-                            vm.setFilter(nil)
-                        } label: {
-                            HStack(spacing: 4) {
-                                Text("Show All")
-                                Image(systemName: "xmark.circle.fill")
-                            }
-                            .font(.caption.bold())
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(.green.opacity(0.15))
-                            .foregroundStyle(.green)
-                            .clipShape(Capsule())
+                }
+                .onEnded { _ in
+                    if vm.dragState != nil {
+                        Task {
+                            var player = appState.player
+                            await vm.endDrag(player: &player)
+                            appState.player = player
                         }
                     }
-
-                    Spacer()
                 }
-                .padding(.horizontal)
-
-                // Item Grid
-                if vm.filteredInventory.isEmpty {
-                    VStack(spacing: 8) {
-                        Image(systemName: "bag")
-                            .font(.system(size: 40))
-                            .foregroundStyle(.secondary)
-                        Text("No items")
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.top, 40)
-                } else {
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(vm.filteredInventory) { item in
-                            EquipmentCardView(
-                                equipment: item,
-                                isEquipped: appState.player.equippedItems.values.contains(item.id)
-                            )
-                            .onTapGesture {
-                                vm.selectItem(item, player: appState.player)
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-            }
-            .padding(.vertical)
+        )
+        .overlay {
+            DragPreviewView(vm: vm)
+                .allowsHitTesting(false)
         }
         .sheet(isPresented: Binding(
             get: { vm.showingDetail },
             set: { vm.showingDetail = $0 }
         )) {
             if let item = vm.selectedItem {
-                EquipmentDetailView(
-                    equipment: item,
-                    isEquipped: appState.player.equippedItems.values.contains(item.id),
-                    currentStats: vm.effectiveStats(for: appState.player),
-                    previewStats: vm.previewStats,
-                    playerCoins: appState.player.wallet.coins,
-                    playerLevel: appState.player.progression.level,
-                    onEquip: {
-                        Task {
-                            var player = appState.player
-                            await vm.equipItem(item, player: &player)
-                            appState.player = player
-                            vm.showingDetail = false
-                        }
-                    },
-                    onUnequip: {
-                        Task {
-                            var player = appState.player
-                            await vm.unequipSlot(item.slot, player: &player)
-                            appState.player = player
-                            vm.showingDetail = false
-                        }
-                    },
-                    onSell: {
-                        Task {
-                            var player = appState.player
-                            await vm.sellItem(item, player: &player)
-                            appState.player = player
-                        }
-                    },
-                    onRepair: item.isBroken ? {
-                        Task {
-                            var player = appState.player
-                            guard player.wallet.coins >= item.repairCost else { return }
-                            player.wallet.coins -= item.repairCost
-                            let success = await vm.repairItem(item)
-                            if success {
+                NavigationStack {
+                    ItemDetailView(
+                        equipment: item,
+                        isEquipped: appState.player.equippedItems.values.contains(item.id),
+                        currentStats: vm.effectiveStats(for: appState.player),
+                        previewStats: vm.previewStats,
+                        playerCoins: appState.player.wallet.coins,
+                        playerLevel: appState.player.progression.level,
+                        onEquip: {
+                            Task {
+                                var player = appState.player
+                                await vm.equipItem(item, player: &player)
                                 appState.player = player
                                 vm.showingDetail = false
                             }
+                        },
+                        onUnequip: {
+                            Task {
+                                var player = appState.player
+                                await vm.unequipSlot(item.slot, player: &player)
+                                appState.player = player
+                                vm.showingDetail = false
+                            }
+                        },
+                        onSell: {
+                            Task {
+                                var player = appState.player
+                                await vm.sellItem(item, player: &player)
+                                appState.player = player
+                            }
+                        },
+                        onRepair: item.isBroken ? {
+                            Task {
+                                var player = appState.player
+                                guard player.wallet.coins >= item.repairCost else { return }
+                                player.wallet.coins -= item.repairCost
+                                let success = await vm.repairItem(item)
+                                if success {
+                                    appState.player = player
+                                    vm.showingDetail = false
+                                }
+                            }
+                        } : nil,
+                        onUpgrade: {
+                            Task {
+                                var player = appState.player
+                                _ = await vm.upgradeItem(item, player: &player)
+                                appState.player = player
+                            }
                         }
-                    } : nil,
-                    onUpgrade: {
-                        Task {
-                            var player = appState.player
-                            _ = await vm.upgradeItem(item, player: &player)
-                            appState.player = player
-                        }
-                    }
-                )
+                    )
+                }
                 .presentationDetents([.large])
             }
         }

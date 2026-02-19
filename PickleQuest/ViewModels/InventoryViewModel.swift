@@ -18,6 +18,22 @@ final class InventoryViewModel {
     // Stat preview when considering equipping an item
     var previewStats: PlayerStats?
 
+    // --- Inventory grid paging ---
+    var currentTab: Int = 0
+
+    var tabCount: Int {
+        max(2, Int(ceil(Double(filteredInventory.count) / 20.0)))
+    }
+
+    // --- Drag state ---
+    var dragState: DragState?
+
+    // --- Character animation ---
+    var animationState: CharacterAnimationState = .idleFront
+
+    // --- Slot frame registration for drop targeting ---
+    var slotFrames: [EquipmentSlot: CGRect] = [:]
+
     init(inventoryService: InventoryService, playerService: PlayerService) {
         self.inventoryService = inventoryService
         self.playerService = playerService
@@ -33,6 +49,7 @@ final class InventoryViewModel {
     func setFilter(_ slot: EquipmentSlot?) {
         selectedFilter = slot
         applyFilter()
+        currentTab = 0
     }
 
     func selectItem(_ item: Equipment, player: Player) {
@@ -42,7 +59,6 @@ final class InventoryViewModel {
     }
 
     func equipItem(_ item: Equipment, player: inout Player) async {
-        // Unequip existing item in that slot (if any)
         player.equippedItems[item.slot] = item.id
         await playerService.savePlayer(player)
     }
@@ -53,7 +69,6 @@ final class InventoryViewModel {
     }
 
     func sellItem(_ item: Equipment, player: inout Player) async {
-        // Remove from equipped if currently equipped
         if player.equippedItems.values.contains(item.id) {
             for (slot, id) in player.equippedItems where id == item.id {
                 player.equippedItems.removeValue(forKey: slot)
@@ -100,6 +115,72 @@ final class InventoryViewModel {
         return statCalculator.effectiveStats(base: player.stats, equipment: equipped, playerLevel: player.progression.level)
     }
 
+    // MARK: - Grid Paging
+
+    func itemForSlot(tab: Int, index: Int, player: Player) -> Equipment? {
+        let allItems = filteredInventory
+        let offset = tab * 20 + index
+        guard offset < allItems.count else { return nil }
+        return allItems[offset]
+    }
+
+    // MARK: - Drag & Drop
+
+    func startDrag(item: Equipment, at location: CGPoint, player: Player) {
+        let deltas = computeStatDeltas(equipping: item, player: player)
+        dragState = DragState(item: item, location: location, statDeltas: deltas)
+    }
+
+    func updateDragLocation(_ point: CGPoint) {
+        dragState?.location = point
+    }
+
+    func endDrag(player: inout Player) async {
+        guard let drag = dragState else { return }
+        // Check if drop location intersects a compatible slot frame
+        for (slot, frame) in slotFrames {
+            if frame.contains(drag.location) && drag.item.slot == slot {
+                player.equippedItems[slot] = drag.item.id
+                await playerService.savePlayer(player)
+                break
+            }
+        }
+        dragState = nil
+    }
+
+    func cancelDrag() {
+        dragState = nil
+    }
+
+    func computeStatDeltas(equipping item: Equipment, player: Player) -> [StatDelta] {
+        let current = effectiveStats(for: player)
+        let preview = calculatePreviewStats(equipping: item, player: player)
+        var deltas: [StatDelta] = []
+        for stat in StatType.allCases {
+            let diff = preview.stat(stat) - current.stat(stat)
+            if diff != 0 {
+                deltas.append(StatDelta(stat: stat, value: diff))
+            }
+        }
+        return deltas
+    }
+
+    // MARK: - Character Animation
+
+    private static let hitAnimations: [CharacterAnimationState] = [
+        .forehandFront, .backhandFront, .smashFront
+    ]
+
+    func cycleAnimation() {
+        let hit = Self.hitAnimations.randomElement() ?? .forehandFront
+        animationState = hit
+        // Return to idle after the animation plays (~0.5s)
+        Task {
+            try? await Task.sleep(for: .milliseconds(500))
+            animationState = .idleFront
+        }
+    }
+
     // MARK: - Private
 
     private func applyFilter() {
@@ -108,7 +189,6 @@ final class InventoryViewModel {
         } else {
             filteredInventory = inventory
         }
-        // Sort by rarity (highest first), then by total bonus
         filteredInventory.sort { a, b in
             if a.rarity != b.rarity { return a.rarity > b.rarity }
             return a.totalBonusPoints > b.totalBonusPoints
@@ -119,9 +199,30 @@ final class InventoryViewModel {
         var equippedItems = player.equippedItems.values.compactMap { id in
             inventory.first { $0.id == id }
         }
-        // Remove current item in same slot
         equippedItems.removeAll { $0.slot == item.slot }
         equippedItems.append(item)
         return statCalculator.effectiveStats(base: player.stats, equipment: equippedItems, playerLevel: player.progression.level)
+    }
+}
+
+// MARK: - Supporting Types
+
+struct DragState {
+    let item: Equipment
+    var location: CGPoint
+    var statDeltas: [StatDelta]
+}
+
+struct StatDelta: Identifiable {
+    let stat: StatType
+    let value: Int
+    var id: StatType { stat }
+
+    var formatted: String {
+        value > 0 ? "+\(value)" : "\(value)"
+    }
+
+    var color: Color {
+        value > 0 ? .green : .red
     }
 }

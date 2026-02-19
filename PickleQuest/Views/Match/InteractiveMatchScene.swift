@@ -37,6 +37,12 @@ final class InteractiveMatchScene: SKScene {
     private var shotTypeLabel: SKLabelNode!
     private var shotTypeLabelTimer: CGFloat = 0
 
+    // Hitbox visualization (subtle ground circles)
+    private var playerHitboxRing: SKShapeNode!
+    private var playerHitboxEdge: SKShapeNode!
+    private var npcHitboxRing: SKShapeNode!
+    private var npcHitboxEdge: SKShapeNode!
+
     // Debug panel for point-over info
     private var debugPanel: SKNode!
     private var debugTextLabel: SKLabelNode!
@@ -321,6 +327,7 @@ final class InteractiveMatchScene: SKScene {
         wagerAmount: Int,
         contestedDropRarity: EquipmentRarity? = nil,
         contestedDropItemCount: Int = 0,
+        playerEffectiveStats: PlayerStats? = nil,
         onComplete: @escaping (MatchResult) -> Void
     ) {
         self.player = player
@@ -331,7 +338,7 @@ final class InteractiveMatchScene: SKScene {
         self.contestedDropRarity = contestedDropRarity
         self.contestedDropItemCount = contestedDropItemCount
         self.onComplete = onComplete
-        self.playerStats = player.stats
+        self.playerStats = playerEffectiveStats ?? player.stats
         self.npcBoost = P.npcStatBoost(forBaseStatAverage: CGFloat(npc.stats.average))
 
         super.init(size: CGSize(width: AC.sceneWidth, height: AC.sceneHeight))
@@ -486,6 +493,9 @@ final class InteractiveMatchScene: SKScene {
         // NPC boss bar
         buildNPCBossBar()
 
+        // Hitbox visualization rings
+        buildHitboxRings()
+
         // Player floating stamina bar
         buildPlayerStaminaBar()
 
@@ -639,6 +649,38 @@ final class InteractiveMatchScene: SKScene {
         npcBossBar.addChild(npcStaminaBarFill)
 
         addChild(npcBossBar)
+    }
+
+    private func buildHitboxRings() {
+        // Player hitbox: inner (direct hit) + outer (edge/stretch zone)
+        playerHitboxRing = SKShapeNode(circleOfRadius: 1)
+        playerHitboxRing.strokeColor = UIColor.systemCyan.withAlphaComponent(0.5)
+        playerHitboxRing.fillColor = UIColor.systemCyan.withAlphaComponent(0.10)
+        playerHitboxRing.lineWidth = 1.5
+        playerHitboxRing.zPosition = AC.ZPositions.courtLines + 0.5
+        addChild(playerHitboxRing)
+
+        playerHitboxEdge = SKShapeNode(circleOfRadius: 1)
+        playerHitboxEdge.strokeColor = UIColor.systemCyan.withAlphaComponent(0.25)
+        playerHitboxEdge.fillColor = .clear
+        playerHitboxEdge.lineWidth = 1.0
+        playerHitboxEdge.zPosition = AC.ZPositions.courtLines + 0.5
+        addChild(playerHitboxEdge)
+
+        // NPC hitbox: inner (direct hit) + outer (edge/stretch zone)
+        npcHitboxRing = SKShapeNode(circleOfRadius: 1)
+        npcHitboxRing.strokeColor = UIColor.systemRed.withAlphaComponent(0.5)
+        npcHitboxRing.fillColor = UIColor.systemRed.withAlphaComponent(0.10)
+        npcHitboxRing.lineWidth = 1.5
+        npcHitboxRing.zPosition = AC.ZPositions.courtLines + 0.5
+        addChild(npcHitboxRing)
+
+        npcHitboxEdge = SKShapeNode(circleOfRadius: 1)
+        npcHitboxEdge.strokeColor = UIColor.systemRed.withAlphaComponent(0.25)
+        npcHitboxEdge.fillColor = .clear
+        npcHitboxEdge.lineWidth = 1.0
+        npcHitboxEdge.zPosition = AC.ZPositions.courtLines + 0.5
+        addChild(npcHitboxEdge)
     }
 
     private func buildPlayerStaminaBar() {
@@ -999,7 +1041,7 @@ final class InteractiveMatchScene: SKScene {
 
         // Recover stamina between points (scaled by stamina stat)
         let staminaStat = CGFloat(playerStats.stat(.stamina))
-        let staminaRecovery: CGFloat = 10 + (staminaStat / 99.0) * 12
+        let staminaRecovery: CGFloat = 20 + (staminaStat / 99.0) * 15
         stamina = min(P.maxStamina, stamina + staminaRecovery)
         npcAI.recoverBetweenPoints()
 
@@ -1094,7 +1136,7 @@ final class InteractiveMatchScene: SKScene {
 
         // Drain stamina for power serve
         let serveModes: DrillShotCalculator.ShotMode = isPowerServe ? [.power] : []
-        if isPowerServe { stamina = max(0, stamina - P.maxStamina * 0.20) }
+        if isPowerServe { stamina = max(0, stamina - P.maxStamina * P.powerShotStaminaDrain) }
 
         dbg.logPlayerServe(
             originNX: playerNX, originNY: max(0, playerNY),
@@ -1743,6 +1785,7 @@ final class InteractiveMatchScene: SKScene {
 
             npcAI.playerPositionNX = playerNX
             npcAI.playerPositionNY = playerNY
+            updateNPCPressureHitbox()
             npcAI.update(dt: dt, ball: ballSim)
             checkBallState()
             checkPlayerHit()
@@ -1760,6 +1803,7 @@ final class InteractiveMatchScene: SKScene {
             if npcDinkPushTimer > 0 { npcDinkPushTimer = max(0, npcDinkPushTimer - dt) }
 
             syncAllPositions()
+            syncHitboxRings()
             updatePlayerStaminaBar()
             updateNPCBossBar()
             updateMovementGuide()
@@ -1770,6 +1814,7 @@ final class InteractiveMatchScene: SKScene {
             movePlayer(dt: dt)
             tickPendingServe(dt: dt)
             syncAllPositions()
+            syncHitboxRings()
             updatePlayerStaminaBar()
             updateNPCBossBar()
             // NPC auto-serve after pause
@@ -2446,7 +2491,7 @@ final class InteractiveMatchScene: SKScene {
 
         // Power mode stamina drain
         if shotModes.contains(.power) {
-            stamina = max(0, stamina - P.maxStamina * 0.20)
+            stamina = max(0, stamina - P.maxStamina * P.powerShotStaminaDrain)
         }
 
         let ballFromLeft = ballSim.courtX < playerNX
@@ -2571,6 +2616,11 @@ final class InteractiveMatchScene: SKScene {
         npcAI.playerShotHistory.append(shot.targetNX)
         if npcAI.playerShotHistory.count > 5 {
             npcAI.playerShotHistory.removeFirst()
+        }
+
+        // Accumulate pressure: player at kitchen hitting while NPC is deep
+        if playerNY >= P.pressurePlayerKitchenNY && npcAI.currentNY >= P.pressureNPCDeepNY {
+            npcAI.pressureShotCount += 1
         }
 
         // Defer ball launch to mid-swing
@@ -3133,6 +3183,66 @@ final class InteractiveMatchScene: SKScene {
         return path
     }
 
+    private func syncHitboxRings() {
+        // Convert court-space hitbox radius to screen-space ellipse using perspective
+        let positioningStat = CGFloat(playerStats.stat(.positioning))
+        let playerHitbox = P.baseHitboxRadius + (positioningStat / 99.0) * P.positioningHitboxBonus
+
+        // Player rings
+        let pPos = CourtRenderer.courtPoint(nx: playerNX, ny: max(0, playerNY))
+        let pScale = CourtRenderer.perspectiveScale(ny: max(0, min(1, playerNY)))
+        let pWidth = CourtRenderer.interpolatedWidth(ny: pow(max(0, min(1, playerNY)), MatchAnimationConstants.Court.perspectiveExponent))
+        let pScreenRadius = playerHitbox * pWidth * 0.5
+        let pEdgeRadius = pScreenRadius * 1.5  // edge zone = 1.5x hitbox
+
+        playerHitboxRing.position = pPos
+        playerHitboxRing.setScale(1.0)
+        playerHitboxRing.path = CGPath(ellipseIn: CGRect(
+            x: -pScreenRadius, y: -pScreenRadius * pScale,
+            width: pScreenRadius * 2, height: pScreenRadius * pScale * 2
+        ), transform: nil)
+
+        playerHitboxEdge.position = pPos
+        playerHitboxEdge.setScale(1.0)
+        playerHitboxEdge.path = CGPath(ellipseIn: CGRect(
+            x: -pEdgeRadius, y: -pEdgeRadius * pScale,
+            width: pEdgeRadius * 2, height: pEdgeRadius * pScale * 2
+        ), transform: nil)
+
+        // NPC rings (use effective hitboxRadius which includes pressure)
+        let npcEffectiveHitbox = npcAI.hitboxRadius
+        let nPos = CourtRenderer.courtPoint(nx: npcAI.currentNX, ny: npcAI.currentNY)
+        let nScale = CourtRenderer.perspectiveScale(ny: npcAI.currentNY)
+        let nWidth = CourtRenderer.interpolatedWidth(ny: pow(max(0, min(1, npcAI.currentNY)), MatchAnimationConstants.Court.perspectiveExponent))
+        let nScreenRadius = npcEffectiveHitbox * nWidth * 0.5
+        let nEdgeRadius = nScreenRadius * 1.5
+
+        npcHitboxRing.position = nPos
+        npcHitboxRing.setScale(1.0)
+        npcHitboxRing.path = CGPath(ellipseIn: CGRect(
+            x: -nScreenRadius, y: -nScreenRadius * nScale,
+            width: nScreenRadius * 2, height: nScreenRadius * nScale * 2
+        ), transform: nil)
+
+        npcHitboxEdge.position = nPos
+        npcHitboxEdge.setScale(1.0)
+        npcHitboxEdge.path = CGPath(ellipseIn: CGRect(
+            x: -nEdgeRadius, y: -nEdgeRadius * nScale,
+            width: nEdgeRadius * 2, height: nEdgeRadius * nScale * 2
+        ), transform: nil)
+
+        // Pressure visual: NPC ring turns more red/opaque when under pressure
+        let pressureCount = npcAI.pressureShotCount
+        if pressureCount > 0 {
+            let intensity = min(1.0, CGFloat(pressureCount) * 0.35)
+            npcHitboxRing.strokeColor = UIColor.systemOrange.withAlphaComponent(0.40 + intensity * 0.30)
+            npcHitboxRing.fillColor = UIColor.systemOrange.withAlphaComponent(0.08 + intensity * 0.10)
+        } else {
+            npcHitboxRing.strokeColor = UIColor.systemRed.withAlphaComponent(0.5)
+            npcHitboxRing.fillColor = UIColor.systemRed.withAlphaComponent(0.10)
+        }
+    }
+
     private func syncAllPositions() {
         syncPlayerPosition()
         syncNPCPosition()
@@ -3192,6 +3302,14 @@ final class InteractiveMatchScene: SKScene {
 
         // Shot type label follows player (below feet)
         shotTypeLabel.position = CGPoint(x: screenPos.x, y: screenPos.y - 25 * pScale)
+    }
+
+    /// Reset NPC pressure when they come forward to the kitchen.
+    private func updateNPCPressureHitbox() {
+        let npcDeep = npcAI.currentNY >= P.pressureNPCDeepNY
+        if !npcDeep && npcAI.pressureShotCount > 0 {
+            npcAI.pressureShotCount = 0
+        }
     }
 
     private func updateNPCBossBar() {

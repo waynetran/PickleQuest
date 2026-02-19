@@ -69,10 +69,10 @@ final class TutorialViewModel {
         }
     }
 
-    func startMatch(player: Player, matchService: MatchService, npcService: NPCService) async {
+    func startMatch(player: Player, matchService: MatchService, npcService: NPCService, inventoryService: InventoryService) async {
         phase = .matchInProgress
 
-        let vm = MatchViewModel(matchService: matchService, npcService: npcService)
+        let vm = MatchViewModel(matchService: matchService, npcService: npcService, inventoryService: inventoryService)
         vm.isRated = false
         matchVM = vm
 

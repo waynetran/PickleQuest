@@ -12,6 +12,7 @@ struct InteractiveMatchView: View {
     let wagerAmount: Int
     var contestedDropRarity: EquipmentRarity?
     var contestedDropItemCount: Int = 0
+    var playerEffectiveStats: PlayerStats?
     let onComplete: (MatchResult) -> Void
 
     @State private var matchResult: MatchResult?
@@ -105,6 +106,7 @@ struct InteractiveMatchView: View {
             wagerAmount: wagerAmount,
             contestedDropRarity: contestedDropRarity,
             contestedDropItemCount: contestedDropItemCount,
+            playerEffectiveStats: playerEffectiveStats,
             onComplete: { result in
                 matchResult = result
             }
