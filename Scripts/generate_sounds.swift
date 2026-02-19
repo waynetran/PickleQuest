@@ -64,12 +64,12 @@ func appendSamples(_ dest: inout [Float], _ src: [Float], at offset: Int) {
 }
 
 let specs: [ToneSpec] = [
-    // Paddle hit: short transient sine burst + noise
+    // Paddle hit: higher pitched transient pop
     ToneSpec(name: "paddle_hit") { sr in
         let count = Int(0.08 * sr)
         var samples = (0..<count).map { i -> Float in
             let t = Double(i) / sr
-            let sine = Float(sin(2.0 * .pi * 800 * t)) * 0.7
+            let sine = Float(sin(2.0 * .pi * 1100 * t)) * 0.7
             let noise = Float.random(in: -0.3...0.3)
             return sine + noise
         }
@@ -77,12 +77,12 @@ let specs: [ToneSpec] = [
         return samples
     },
 
-    // Paddle hit smash: louder, lower transient
+    // Paddle hit smash: higher pitched power hit
     ToneSpec(name: "paddle_hit_smash") { sr in
         let count = Int(0.10 * sr)
         var samples = (0..<count).map { i -> Float in
             let t = Double(i) / sr
-            let sine = Float(sin(2.0 * .pi * 500 * t)) * 0.8
+            let sine = Float(sin(2.0 * .pi * 900 * t)) * 0.8
             let noise = Float.random(in: -0.4...0.4)
             return sine + noise
         }
@@ -90,27 +90,24 @@ let specs: [ToneSpec] = [
         return samples
     },
 
-    // Paddle hit distant: quieter, filtered
+    // Paddle hit distant: higher pitched, quieter
     ToneSpec(name: "paddle_hit_distant") { sr in
         let count = Int(0.06 * sr)
         var samples = (0..<count).map { i -> Float in
             let t = Double(i) / sr
-            return Float(sin(2.0 * .pi * 600 * t)) * 0.4
+            return Float(sin(2.0 * .pi * 900 * t)) * 0.4
         }
         envelope(samples: &samples, attack: Int(0.003 * sr), decay: Int(0.05 * sr))
         return samples
     },
 
-    // Ball bounce: low thud (floor impact feel)
+    // Ball bounce: 90Hz low thud
     ToneSpec(name: "ball_bounce") { sr in
         let count = Int(0.08 * sr)
         var samples = (0..<count).map { i -> Float in
             let t = Double(i) / sr
-            // Low thump — quick sine sweep from 180→60Hz
-            let freq = 180.0 - (120.0 * t / 0.08)
-            let thud = Float(sin(2.0 * .pi * freq * t)) * 0.8
-            // Short muffled noise for surface texture
-            let noise = (t < 0.005) ? Float.random(in: -0.3...0.3) : Float(0)
+            let thud = Float(sin(2.0 * .pi * 90 * t)) * 0.8
+            let noise = (t < 0.005) ? Float.random(in: -0.2...0.2) : Float(0)
             return thud + noise
         }
         envelope(samples: &samples, attack: Int(0.0005 * sr), decay: Int(0.06 * sr))
@@ -194,14 +191,14 @@ let specs: [ToneSpec] = [
         return result
     },
 
-    // Serve whoosh: filtered noise sweep
+    // Serve whoosh: higher frequency breathy sweep
     ToneSpec(name: "serve_whoosh") { sr in
         let count = Int(0.15 * sr)
         var samples = noiseBuffer(count: count, amplitude: 0.5)
-        // Simple low-pass by averaging
+        // Brighter filter — less low-pass for a higher pitched whoosh
         for i in 1..<samples.count {
             let t = Double(i) / Double(count)
-            let mix = Float(0.3 + 0.7 * t) // sweep from muffled to brighter
+            let mix = Float(0.6 + 0.4 * t)
             samples[i] = samples[i] * mix + samples[i-1] * (1.0 - mix)
         }
         envelope(samples: &samples, attack: Int(0.01 * sr), decay: Int(0.08 * sr))

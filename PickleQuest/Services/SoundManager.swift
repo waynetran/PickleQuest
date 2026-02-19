@@ -93,19 +93,19 @@ final class SoundManager {
 
     private nonisolated static func volumeFor(_ id: SoundID) -> Float {
         switch id {
-        case .paddleHit: return 0.2
-        case .paddleHitSmash: return 0.2
-        case .paddleHitDistant: return 0.1
-        case .ballBounce: return 0.5
+        case .paddleHit: return 0.05
+        case .paddleHitSmash: return 0.05
+        case .paddleHitDistant: return 0.03
+        case .ballBounce: return 0.05
         case .netThud: return 0.4
         case .whistle: return 0.5
         case .pointChime: return 0.6
         case .matchWin: return 0.7
         case .matchLose: return 0.5
-        case .serveWhoosh: return 0.2
+        case .serveWhoosh: return 0.05
         case .buttonClick: return 0.3
-        case .footstep: return 0.2
-        case .footstepSprint: return 0.2
+        case .footstep: return 0.05
+        case .footstepSprint: return 0.05
         case .lootReveal: return 0.6
         }
     }
