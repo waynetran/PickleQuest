@@ -1181,6 +1181,42 @@ Seven realism gaps in the interactive match AI were fixed, making NPC opponents 
 
 ---
 
+## Post-Milestone: Joystick Swipe Shot Control
+
+**Commit**: `00e5469`
+
+### Summary
+Replaced the 7-button shot mode toggle system with an intuitive joystick-based swipe control. The joystick now serves dual purpose: movement AND shot intent.
+
+### How it works
+- **Release joystick** before contact → Touch/Dink (soft reset to kitchen)
+- **Flick up** (fast) → Power drive (speed scales with swipe velocity, capped by stats)
+- **Flick down** → Lob (arc scales with downward swipe velocity)
+- **Hold/gentle movement** → Touch with directional aim (horizontal component → target NX)
+- Serve power derives from serve swipe speed (fast swipe = 1.2x power serve)
+
+### What was removed
+- `activeShotModes` variable and all 7 shot mode buttons (Power/Touch/Lob/Slice/Topspin/Angled/Focus)
+- Shot mode floating dots above player
+- `shotModeTouch` tracking
+- Focus mode continuous stamina drain
+- `buildShotButtons()`, `buildShotModeDots()`, `toggleShotMode()`, `updateShotModeDots()`, `updateShotButtonVisuals()`
+
+### What was added
+- Joystick swipe velocity tracking (`joystickSwipeVelocity`, exponential smoothing in `touchesMoved`)
+- `determineShotMode()` → reads joystick state at contact time → `ShotMode`
+- `swipeDirectionNX()` → horizontal swipe → target X override (0.15–0.85 range)
+- `swipePowerBoost()` → velocity → extra shot power (capped by player power stat)
+- `swipeLobArcBoost()` → downward velocity → extra lob arc
+- Shot type flash label: "POWER!" (red), "TOUCH" (teal), "LOB" (indigo) — pulse + fade animation below player
+- Updated control hints in InteractiveMatchView
+
+### Files modified
+- `InteractiveMatchScene.swift` (-183 lines, +160 lines)
+- `InteractiveMatchView.swift` (updated control hints)
+
+---
+
 ## Milestone 7c: Persistence Polish, Cloud Prep, Multiplayer Prep (Planned)
 
 ### Goals
