@@ -1987,7 +1987,18 @@ final class InteractiveMatchScene: SKScene {
             let lungeSpeed = effectiveLungeDistance / lungeJumpDuration
             playerNX += lungeDirection * lungeSpeed * dt
             playerNX = max(0.0, min(1.0, playerNX))
-            if lungeTimer >= lungeJumpDuration {
+
+            // Stop at ball's X so we don't overshoot
+            let ballX = ballSim.courtX
+            let overshoot = lungeDirection > 0
+                ? playerNX > ballX
+                : playerNX < ballX
+            if overshoot && ballSim.isActive {
+                playerNX = ballX
+            }
+
+            let reachedBall = overshoot && ballSim.isActive
+            if reachedBall || lungeTimer >= lungeJumpDuration {
                 lungePhase = .landing
                 lungeTimer = 0
                 playerAnimator.play(.idle(isNear: true))

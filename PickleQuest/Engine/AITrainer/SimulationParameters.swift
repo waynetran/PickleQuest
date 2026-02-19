@@ -39,7 +39,7 @@ struct SimulationParameters: Sendable, Codable {
             npcEquipSlope: 4.0,
             npcEquipOffset: 3.0,
             playerStarterStats: [10, 10, 10, 10, 10, 10, 10, 10, 10, 13, 13],
-            npcMoveSpeedScaleLow: 0.55,
+            npcMoveSpeedScaleLow: 0.20,
             npcMoveSpeedScaleHigh: 1.0
         )
     }()
@@ -47,7 +47,7 @@ struct SimulationParameters: Sendable, Codable {
     init(slopes: [Double], offsets: [Double],
          npcEquipSlope: Double = 4.0, npcEquipOffset: Double = 3.0,
          playerStarterStats: [Double] = [10, 10, 10, 10, 10, 10, 10, 10, 10, 13, 13],
-         npcMoveSpeedScaleLow: Double = 0.55, npcMoveSpeedScaleHigh: Double = 1.0) {
+         npcMoveSpeedScaleLow: Double = 0.20, npcMoveSpeedScaleHigh: Double = 1.0) {
         self.slopes = slopes
         self.offsets = offsets
         self.npcEquipSlope = npcEquipSlope
@@ -83,7 +83,7 @@ struct SimulationParameters: Sendable, Codable {
         npcEquipOffset = try c.decodeIfPresent(Double.self, forKey: .npcEquipOffset) ?? 3.0
         playerStarterStats = try c.decodeIfPresent([Double].self, forKey: .playerStarterStats)
             ?? [10, 10, 7, 10, 10, 10, 10, 7, 10, 13, 13]
-        npcMoveSpeedScaleLow = try c.decodeIfPresent(Double.self, forKey: .npcMoveSpeedScaleLow) ?? 0.55
+        npcMoveSpeedScaleLow = try c.decodeIfPresent(Double.self, forKey: .npcMoveSpeedScaleLow) ?? 0.20
         npcMoveSpeedScaleHigh = try c.decodeIfPresent(Double.self, forKey: .npcMoveSpeedScaleHigh) ?? 1.0
     }
 

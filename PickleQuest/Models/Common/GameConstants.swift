@@ -379,8 +379,8 @@ enum GameConstants {
         }
 
         // Player movement (court units per second)
-        static let baseMoveSpeed: CGFloat = 0.32
-        static let maxMoveSpeedBonus: CGFloat = 0.64
+        nonisolated(unsafe) static var baseMoveSpeed: CGFloat = 0.28
+        nonisolated(unsafe) static var maxMoveSpeedBonus: CGFloat = 0.56
 
         // Shot quality
         static let heightPowerBonus: CGFloat = 0.3        // bonus power for high ball (overhead smash)
