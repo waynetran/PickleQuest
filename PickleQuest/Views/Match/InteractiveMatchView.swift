@@ -127,10 +127,11 @@ struct InteractiveMatchView: View {
                     .font(.title3.bold())
 
                 VStack(alignment: .leading, spacing: 10) {
-                    controlRow(icon: "arrow.up.and.down.and.arrow.left.and.right", label: "Left side", detail: "Joystick to move")
-                    controlRow(icon: "hand.draw.fill", label: "Right side", detail: "Swipe up to serve")
-                    controlRow(icon: "slider.horizontal.3", label: "Bottom buttons", detail: "Toggle shot modes")
-                    controlRow(icon: "bolt.fill", label: "Stamina bar", detail: "Above your player")
+                    controlRow(icon: "arrow.up.and.down.and.arrow.left.and.right", label: "Joystick", detail: "Move + aim shots")
+                    controlRow(icon: "hand.draw.fill", label: "Serve", detail: "Swipe up on right side")
+                    controlRow(icon: "arrow.up", label: "Flick up", detail: "Power drive (fast = stronger)")
+                    controlRow(icon: "arrow.down", label: "Flick down", detail: "Lob shot")
+                    controlRow(icon: "hand.raised.fill", label: "Release", detail: "Soft dink / touch")
                 }
 
                 Button {
