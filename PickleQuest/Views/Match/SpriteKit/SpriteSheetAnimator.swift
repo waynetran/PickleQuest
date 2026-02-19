@@ -105,35 +105,6 @@ final class SpriteSheetAnimator {
         }
     }
 
-    /// Lunge: play first 3 frames of runSide fast, then revert to idle.
-    func playLunge(goingRight: Bool) {
-        let state = CharacterAnimationState.runSide
-        guard let frames = textures[state], frames.count >= 3 else { return }
-
-        currentState = state
-        node.removeAction(forKey: Self.actionKey)
-
-        // 3 frames at 0.06s each = 0.18s total
-        let lungeAnim = SKAction.animate(with: Array(frames.prefix(3)), timePerFrame: 0.06)
-
-        let idleState = CharacterAnimationState.idle(isNear: isNear)
-        let idleFrames = textures[idleState] ?? []
-        let revert: SKAction
-        if !idleFrames.isEmpty {
-            revert = .repeatForever(.animate(with: idleFrames, timePerFrame: idleState.frameDuration))
-        } else {
-            revert = .setTexture(frames.last!)
-        }
-        node.run(.sequence([lungeAnim, revert]), withKey: Self.actionKey)
-
-        let duration = 0.06 * 3
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
-            if self?.currentState == state {
-                self?.currentState = idleState
-            }
-        }
-    }
-
     /// Duration of the run portion of the split step (4 frames at 0.08s)
     static let splitStepRunDuration: CGFloat = 0.08 * 4
 

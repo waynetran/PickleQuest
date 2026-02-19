@@ -170,14 +170,13 @@ final class InteractiveMatchScene: SKScene {
     private let dinkPushDuration: CGFloat = 0.25
     private let dinkKitchenThreshold: CGFloat = 0.30
 
-    // Lateral lunge (swipe-triggered sideways dash, 3-frame animation)
+    // Lateral lunge (swipe-triggered sideways dash with small hop)
     private var lungeTimer: CGFloat = 0
     private var lungeActive: Bool = false
     private var lungeDirection: CGFloat = 0       // +1 right, -1 left
     private var lungeDuration: CGFloat = 0.18     // 3 frames at 0.06s each (faster for athletic)
     private var lungeDistance: CGFloat = 0.25     // stat-based: 1/4 court min, more for athletic
-    private let lungeCooldown: CGFloat = 0.4      // prevent rapid re-triggering
-    private var lungeCooldownTimer: CGFloat = 0
+    private let lungeJumpPeak: CGFloat = 4.0      // small hop height in points
     private var lastJoystickTouchPos: CGPoint?
     private var joystickSwipeVelocityX: CGFloat = 0
     private let lungeSwipeThreshold: CGFloat = 800 // points/sec horizontal velocity to trigger lunge
@@ -928,7 +927,6 @@ final class InteractiveMatchScene: SKScene {
         lungeActive = false
         lungeTimer = 0
         lungeDirection = 0
-        lungeCooldownTimer = 0
         pendingPlayerShot = nil
         pendingNPCShot = nil
         pendingServeShot = nil
@@ -1445,15 +1443,14 @@ final class InteractiveMatchScene: SKScene {
             // Trigger lunge on fast horizontal swipe
             if abs(joystickSwipeVelocityX) > lungeSwipeThreshold
                 && abs(frameDx) > abs(frameDy) * 2  // mainly horizontal
-                && !lungeActive && lungeCooldownTimer <= 0
+                && !lungeActive
                 && playerJumpPhase == .grounded
                 && phase == .playing {
                 lungeActive = true
                 lungeTimer = 0
                 lungeDirection = joystickSwipeVelocityX > 0 ? 1.0 : -1.0
-                lungeCooldownTimer = lungeCooldown
-                // Play 3-frame lunge animation
-                playerAnimator.playLunge(goingRight: lungeDirection > 0)
+                // Side shuffle animation for lunge
+                playerAnimator.play(.shuffle(isNear: true))
                 playerSpriteFlipped = lungeDirection < 0
             }
         }
@@ -1750,6 +1747,13 @@ final class InteractiveMatchScene: SKScene {
         return sin(fraction * .pi) * P.jumpSpriteYOffset
     }
 
+    /// Small hop Y-offset during lunge. Sine arc over lungeDuration.
+    private var lungeSpriteYOffset: CGFloat {
+        guard lungeActive else { return 0 }
+        let fraction = min(lungeTimer / lungeDuration, 1.0)
+        return sin(fraction * .pi) * lungeJumpPeak
+    }
+
     // MARK: - Movement Guide
 
     private func hideAllMoveGuides() {
@@ -2003,9 +2007,6 @@ final class InteractiveMatchScene: SKScene {
         let dx = joystickDirection.dx
         let dy = joystickDirection.dy
         let isMainlyHorizontal = abs(dx) > abs(dy)
-
-        // Lunge cooldown tick
-        if lungeCooldownTimer > 0 { lungeCooldownTimer -= dt }
 
         // Apply movement: lunge overrides horizontal, normal otherwise
         if lungeActive {
@@ -2655,13 +2656,16 @@ final class InteractiveMatchScene: SKScene {
         // Jump Y-offset
         let jumpOffset = playerJumpSpriteYOffset * pScale
 
+        // Lunge hop Y-offset
+        let lungeOffset = lungeSpriteYOffset * pScale
+
         // Dink push Y-offset (toward net = positive screen Y for player)
         var dinkPushOffset: CGFloat = 0
         if playerDinkPushTimer > 0 {
             let progress = 1.0 - playerDinkPushTimer / dinkPushDuration
             dinkPushOffset = sin(progress * .pi) * 8.0 * pScale
         }
-        playerNode.position = CGPoint(x: screenPos.x, y: screenPos.y + jumpOffset + dinkPushOffset)
+        playerNode.position = CGPoint(x: screenPos.x, y: screenPos.y + jumpOffset + lungeOffset + dinkPushOffset)
 
         // Squash/stretch during jump + sprite flipping
         let baseScale = AC.Sprites.nearPlayerScale * pScale
