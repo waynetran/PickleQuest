@@ -2219,7 +2219,16 @@ final class InteractiveMatchScene: SKScene {
         rallyLength += 1
 
         // Determine shot mode from joystick swipe state
-        let shotModes = determineShotMode()
+        var shotModes = determineShotMode()
+
+        // Auto-upgrade to power at the kitchen when ball is high (put-away opportunity)
+        // Touch mode blocks the put-away/smash logic in the calculator, so force power
+        let distFromNet = abs(0.5 - playerNY)
+        if distFromNet < P.kitchenVolleyRange
+            && ballSim.height > P.smashHeightThreshold
+            && shotModes.contains(.touch) {
+            shotModes = [.power]
+        }
 
         // Power mode stamina drain
         if shotModes.contains(.power) {
