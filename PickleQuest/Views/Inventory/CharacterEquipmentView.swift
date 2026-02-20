@@ -26,25 +26,19 @@ struct CharacterEquipmentView: View {
 
             // Slot sizing
             let slotSize: CGFloat = min(70, (height - inset * 2) / 4.5)
+            let slotGap: CGFloat = 6
 
-            // Semi-circle radius — constrained to fit
-            let maxRadiusX = (statsLeft - playerCenterX - slotSize / 2 - 4)
-            let maxRadiusY = (height / 2 - slotSize / 2 - inset)
-            let radius = min(maxRadiusX, maxRadiusY)
+            // Left column X, right column X (between player and stats)
+            let leftX = inset + slotSize / 2
+            let rightX = statsLeft - slotSize / 2 - 4
 
             // Stats
             let effectiveStats = vm.effectiveStats(for: player)
             let baseStats = player.stats
 
-            // Slot positions: body gear clustered left, hand gear clustered right
-            let slotData: [(slot: EquipmentSlot, angle: CGFloat)] = [
-                (.headwear, 108),    // upper-left
-                (.shirt, 163),       // left, above center
-                (.bottoms, 197),     // left, below center
-                (.shoes, 252),       // lower-left
-                (.paddle, 13),       // right, above center
-                (.wristband, 347),   // right, below center
-            ]
+            // Vertical stacks
+            let leftSlots: [EquipmentSlot] = [.headwear, .shirt, .bottoms, .shoes]
+            let rightSlots: [EquipmentSlot] = [.paddle, .wristband]
 
             ZStack {
                 // Court background
@@ -60,13 +54,20 @@ struct CharacterEquipmentView: View {
                 )
                 .position(x: playerCenterX, y: playerCenterY)
 
-                // Semi-circle equipment slots
-                ForEach(slotData, id: \.slot) { data in
-                    let angleRad = data.angle * .pi / 180
-                    let x = playerCenterX + radius * cos(angleRad)
-                    let y = playerCenterY - radius * sin(angleRad)
-                    slotView(for: data.slot, size: slotSize)
-                        .position(x: x, y: y)
+                // Left column: hat, shirt, bottoms, shoes — vertically centered
+                let leftTotalH = slotSize * CGFloat(leftSlots.count) + slotGap * CGFloat(leftSlots.count - 1)
+                let leftTopY = (height - leftTotalH) / 2 + slotSize / 2
+                ForEach(Array(leftSlots.enumerated()), id: \.element) { i, slot in
+                    slotView(for: slot, size: slotSize)
+                        .position(x: leftX, y: leftTopY + CGFloat(i) * (slotSize + slotGap))
+                }
+
+                // Right column: paddle, wristband — vertically centered
+                let rightTotalH = slotSize * CGFloat(rightSlots.count) + slotGap * CGFloat(rightSlots.count - 1)
+                let rightTopY = (height - rightTotalH) / 2 + slotSize / 2
+                ForEach(Array(rightSlots.enumerated()), id: \.element) { i, slot in
+                    slotView(for: slot, size: slotSize)
+                        .position(x: rightX, y: rightTopY + CGFloat(i) * (slotSize + slotGap))
                 }
 
                 // Stats box — full height, right side
