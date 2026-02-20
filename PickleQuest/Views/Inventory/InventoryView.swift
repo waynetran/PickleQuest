@@ -108,6 +108,10 @@ struct InventoryView: View {
                                 _ = await vm.upgradeItem(item, player: &player)
                                 appState.player = player
                             }
+                        },
+                        sameSlotItems: vm.sameSlotItems(as: item),
+                        onSelectItem: { newItem in
+                            vm.selectItem(newItem, player: appState.player)
                         }
                     )
                 }

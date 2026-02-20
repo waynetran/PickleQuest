@@ -58,6 +58,15 @@ final class InventoryViewModel {
         showingDetail = true
     }
 
+    func sameSlotItems(as item: Equipment) -> [Equipment] {
+        inventory
+            .filter { $0.slot == item.slot && $0.id != item.id }
+            .sorted {
+                if $0.rarity != $1.rarity { return $0.rarity > $1.rarity }
+                return $0.totalBonusPoints > $1.totalBonusPoints
+            }
+    }
+
     func equipItem(_ item: Equipment, player: inout Player) async {
         player.equippedItems[item.slot] = item.id
         equippedIDs = Set(player.equippedItems.values)

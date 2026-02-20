@@ -12,6 +12,8 @@ struct ItemDetailView: View {
     let onSell: (() -> Void)?
     let onRepair: (() -> Void)?
     let onUpgrade: (() -> Void)?
+    var sameSlotItems: [Equipment] = []
+    var onSelectItem: ((Equipment) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
 
@@ -307,6 +309,33 @@ struct ItemDetailView: View {
                         .padding(.horizontal, 12)
                     }
 
+                    // Similar items of same slot type
+                    if !sameSlotItems.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            sectionHeader("OTHER \(equipment.slot.displayName.uppercased())S")
+
+                            LazyVGrid(
+                                columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3),
+                                spacing: 6
+                            ) {
+                                ForEach(sameSlotItems) { item in
+                                    Button {
+                                        onSelectItem?(item)
+                                    } label: {
+                                        similarItemCell(item)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .padding(12)
+                        .background(Color(white: 0.1))
+                        .overlay(
+                            Rectangle().strokeBorder(Color(white: 0.2), lineWidth: 1)
+                        )
+                        .padding(.horizontal, 12)
+                    }
+
                     Spacer(minLength: 16)
                 }
             }
@@ -386,6 +415,27 @@ struct ItemDetailView: View {
             .fill(Color(white: 0.2))
             .frame(height: 2)
             .padding(.horizontal, 12)
+    }
+
+    private func similarItemCell(_ item: Equipment) -> some View {
+        VStack(spacing: 2) {
+            Text(item.slot.icon)
+                .font(.system(size: 28))
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(item.rarity.color.opacity(0.2))
+                .overlay(
+                    Rectangle().strokeBorder(item.rarity.color.opacity(0.4), lineWidth: 1)
+                )
+
+            Text(item.rarity.displayName.prefix(3).uppercased())
+                .font(.system(size: 7, weight: .bold, design: .monospaced))
+                .foregroundStyle(item.rarity.color)
+
+            Text("+\(item.totalBonusPoints)")
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundStyle(.white)
+        }
     }
 
     private func traitColor(_ tier: TraitTier) -> Color {
