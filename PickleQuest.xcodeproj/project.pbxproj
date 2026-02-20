@@ -144,7 +144,6 @@
 		899AB9B088777306A83BEF32 /* PlayerControllerLungeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80C16DCA81CBD4F8BED2D9B9 /* PlayerControllerLungeTests.swift */; };
 		8A6E8673C4512FCF8D2FE9C0 /* PlayerSlotCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F65E0A112D11DF18FAFB4E9 /* PlayerSlotCard.swift */; };
 		8CE2A745A019908957FED502 /* CourtAnnotationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9FE1BBA7AC5DE918DA1EC60 /* CourtAnnotationView.swift */; };
-		8E1F6764F4F3E5588D92340D /* DragPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10F5A51B3143DFB6571F8872 /* DragPreviewView.swift */; };
 		8F90F06F0A6B66D855EF6EC4 /* PlayerControllerHitboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFFB5FDC03D54496828A3ADB /* PlayerControllerHitboxTests.swift */; };
 		900FEEF01FBBCB5DF110F54E /* PlayerControllerMovementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A4A4707DA7BDF93CAD9A6E /* PlayerControllerMovementTests.swift */; };
 		902F65DDE7981382B64D20BB /* PlayerStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA01C280E5F28D53830ED79E /* PlayerStats.swift */; };
@@ -294,7 +293,6 @@
 		0E914C9C273D3930B80A55E0 /* InteractiveMatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveMatchView.swift; sourceTree = "<group>"; };
 		0EA2544012B1FE52D107871E /* PersonalityDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalityDialog.swift; sourceTree = "<group>"; };
 		0F008F637AAC2F4A4BA60D19 /* WagerDecision.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WagerDecision.swift; sourceTree = "<group>"; };
-		10F5A51B3143DFB6571F8872 /* DragPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragPreviewView.swift; sourceTree = "<group>"; };
 		113D32D22345163D83B3B9D9 /* MatchPoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchPoint.swift; sourceTree = "<group>"; };
 		1189DB1F3E1BDB85799DBDD7 /* SpriteSheetAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteSheetAnimator.swift; sourceTree = "<group>"; };
 		11A1EFB540E81DAA2A2410A3 /* MatchCalibrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchCalibrationTests.swift; sourceTree = "<group>"; };
@@ -1128,7 +1126,6 @@
 			isa = PBXGroup;
 			children = (
 				BAD2DC487B38192356D28AC6 /* CharacterEquipmentView.swift */,
-				10F5A51B3143DFB6571F8872 /* DragPreviewView.swift */,
 				B619B590B70982D275E99B1B /* EquipmentCardView.swift */,
 				CC56C33DEA89A36C94D6A5DE /* EquipmentDetailView.swift */,
 				3C7D0E4AD263AFFDB2620896 /* EquipmentSlotsView.swift */,
@@ -1449,7 +1446,6 @@
 				B375F79A5388BBAE55B61D80 /* DevTrainingLauncher.swift in Sources */,
 				AA6561880A8BF310F041A92D /* DevTrainingMatchViewModel.swift in Sources */,
 				072B58AE5FD6E05492409251 /* DoublesScoreTracker.swift in Sources */,
-				8E1F6764F4F3E5588D92340D /* DragPreviewView.swift in Sources */,
 				3ECD6088E7E286B2695E46E4 /* DrillBallSimulation.swift in Sources */,
 				0063D33B299E7C1E07372BD7 /* DrillCoachAI.swift in Sources */,
 				0E07B851E462F9FCE0E9F67A /* DrillConfig.swift in Sources */,

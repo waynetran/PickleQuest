@@ -18,8 +18,8 @@ struct CharacterEquipmentView: View {
             let maxSlotFromWidth = (width - padding * 2) / 4
             let slotSize = min(maxSlotFromHeight, maxSlotFromWidth, 52)
 
-            // Sprite fills the entire section as background
-            let spriteSize = min(width, height) * 0.85
+            // Sprite fills the full height of the section
+            let spriteSize = height
 
             let leftX = padding + slotSize / 2
             let rightX = width - padding - slotSize / 2
@@ -44,29 +44,24 @@ struct CharacterEquipmentView: View {
                 // Left column: Shirt, Bottoms, Headwear, Shoes
                 slotView(for: .shirt, size: slotSize)
                     .position(x: leftX, y: leftTopY)
-                    .overlaySlotFrame(.shirt)
 
                 slotView(for: .bottoms, size: slotSize)
                     .position(x: leftX, y: leftTopY + slotSize + slotGap)
-                    .overlaySlotFrame(.bottoms)
 
                 slotView(for: .headwear, size: slotSize)
                     .position(x: leftX, y: leftTopY + (slotSize + slotGap) * 2)
-                    .overlaySlotFrame(.headwear)
 
                 slotView(for: .shoes, size: slotSize)
                     .position(x: leftX, y: leftTopY + (slotSize + slotGap) * 3)
-                    .overlaySlotFrame(.shoes)
 
                 // Right column: Paddle, Wristband
                 slotView(for: .paddle, size: slotSize)
                     .position(x: rightX, y: rightTopY)
-                    .overlaySlotFrame(.paddle)
 
                 slotView(for: .wristband, size: slotSize)
                     .position(x: rightX, y: rightTopY + slotSize + slotGap)
-                    .overlaySlotFrame(.wristband)
             }
+            .clipped()
         }
         .onAppear { startAnimationTimer() }
         .onDisappear { stopAnimationTimer() }
@@ -75,14 +70,12 @@ struct CharacterEquipmentView: View {
     @ViewBuilder
     private func slotView(for slot: EquipmentSlot, size: CGFloat) -> some View {
         let equipped = vm.equippedItem(for: slot, player: player)
-        let isDragging = vm.dragState != nil
-        let isCompatible = vm.dragState?.item.slot == slot
 
         EquipSlotView(
             slot: slot,
             equippedItem: equipped,
-            isHighlighted: isDragging && isCompatible,
-            isDimmed: isDragging && !isCompatible,
+            isHighlighted: false,
+            isDimmed: false,
             slotSize: size,
             onTap: {
                 if let item = equipped {
@@ -103,27 +96,5 @@ struct CharacterEquipmentView: View {
     private func stopAnimationTimer() {
         animationTimer?.invalidate()
         animationTimer = nil
-    }
-}
-
-// MARK: - Slot Frame Preference Key
-
-struct SlotFramePreferenceKey: PreferenceKey {
-    nonisolated(unsafe) static var defaultValue: [EquipmentSlot: CGRect] = [:]
-    static func reduce(value: inout [EquipmentSlot: CGRect], nextValue: () -> [EquipmentSlot: CGRect]) {
-        value.merge(nextValue()) { _, new in new }
-    }
-}
-
-extension View {
-    func overlaySlotFrame(_ slot: EquipmentSlot) -> some View {
-        self.background(
-            GeometryReader { geo in
-                Color.clear.preference(
-                    key: SlotFramePreferenceKey.self,
-                    value: [slot: geo.frame(in: .named("inventory"))]
-                )
-            }
-        )
     }
 }
