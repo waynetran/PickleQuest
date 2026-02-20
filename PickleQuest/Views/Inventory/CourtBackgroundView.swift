@@ -35,15 +35,10 @@ struct CourtBackgroundView: View {
                     (y - courtTop) / courtHeight
                 }
 
-                // Apron (green surround)
-                let apronInset: CGFloat = -20
-                var apronPath = Path()
-                apronPath.move(to: CGPoint(x: leftX(0) + apronInset, y: courtTop + apronInset))
-                apronPath.addLine(to: CGPoint(x: rightX(0) - apronInset, y: courtTop + apronInset))
-                apronPath.addLine(to: CGPoint(x: rightX(1) - apronInset * 1.5, y: courtBottom - apronInset))
-                apronPath.addLine(to: CGPoint(x: leftX(1) + apronInset * 1.5, y: courtBottom - apronInset))
-                apronPath.closeSubpath()
-                context.fill(apronPath, with: .color(Color(hex: "3A8C42")))
+                // Green fill — covers entire canvas so no black edges show
+                var fullFill = Path()
+                fullFill.addRect(CGRect(x: 0, y: 0, width: w, height: h))
+                context.fill(fullFill, with: .color(Color(hex: "3A8C42")))
 
                 // Court surface (blue)
                 var surfacePath = Path()
@@ -64,8 +59,8 @@ struct CourtBackgroundView: View {
                 kitchenPath.closeSubpath()
                 context.fill(kitchenPath, with: .color(Color(hex: "8E8E93")))
 
-                // Lines (white)
-                let lineWidth: CGFloat = 2
+                // Lines (white, 4x thick)
+                let lineWidth: CGFloat = 8
                 let lineColor = Color.white
 
                 // Near baseline
@@ -105,15 +100,15 @@ struct CourtBackgroundView: View {
                 context.stroke(centerLine, with: .color(lineColor), lineWidth: lineWidth)
 
                 // Net (thick bar at the top)
-                let netHeight: CGFloat = 6
+                let netHeight: CGFloat = 12
                 var netRect = Path()
-                netRect.move(to: CGPoint(x: leftX(0) - 8, y: courtTop))
-                netRect.addLine(to: CGPoint(x: rightX(0) + 8, y: courtTop))
-                netRect.addLine(to: CGPoint(x: rightX(0) + 8, y: courtTop - netHeight))
-                netRect.addLine(to: CGPoint(x: leftX(0) - 8, y: courtTop - netHeight))
+                netRect.move(to: CGPoint(x: leftX(0) - 12, y: courtTop))
+                netRect.addLine(to: CGPoint(x: rightX(0) + 12, y: courtTop))
+                netRect.addLine(to: CGPoint(x: rightX(0) + 12, y: courtTop - netHeight))
+                netRect.addLine(to: CGPoint(x: leftX(0) - 12, y: courtTop - netHeight))
                 netRect.closeSubpath()
                 context.fill(netRect, with: .color(Color(hex: "C0C0C0").opacity(0.7)))
-                context.stroke(netRect, with: .color(Color(hex: "C0C0C0")), lineWidth: 1)
+                context.stroke(netRect, with: .color(Color(hex: "C0C0C0")), lineWidth: 2)
             }
         }
     }
