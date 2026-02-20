@@ -25,7 +25,7 @@ struct CharacterEquipmentView: View {
             let spriteSize = height * 1.4
 
             // Slot sizing
-            let slotSize: CGFloat = min(70, (height - inset * 2) / 4.5)
+            let slotSize: CGFloat = min(60, (height - inset * 2) / 5.3)
             let slotGap: CGFloat = 6
 
             // Left column X, right column X (between player and stats)

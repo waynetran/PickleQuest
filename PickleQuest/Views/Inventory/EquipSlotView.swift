@@ -17,8 +17,7 @@ struct EquipSlotView: View {
                         .fill(item.rarity.color.opacity(0.9))
 
                     Text(slot.icon)
-                        .font(.system(size: slotSize * 0.52))
-                        .padding(3)
+                        .font(.system(size: slotSize * 0.7))
 
                     // Level badge
                     if item.level > 1 {
@@ -36,7 +35,7 @@ struct EquipSlotView: View {
                         .fill(Color(white: 0.12).opacity(0.9))
 
                     Text(slot.icon)
-                        .font(.system(size: slotSize * 0.42))
+                        .font(.system(size: slotSize * 0.6))
                         .foregroundStyle(Color(white: 0.6))
                 }
 
