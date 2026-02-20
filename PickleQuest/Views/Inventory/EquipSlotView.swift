@@ -6,14 +6,16 @@ struct EquipSlotView: View {
     var slotSize: CGFloat = 50
     let onTap: () -> Void
 
+    private let slotBackground = Color(red: 0.9, green: 0.7, blue: 0.3)
+
     var body: some View {
         Button(action: onTap) {
             ZStack {
-                if let item = equippedItem {
-                    // Equipped: rarity-colored background
-                    Rectangle()
-                        .fill(item.rarity.color.opacity(0.25))
+                // Background — amber at 90% opacity
+                Rectangle()
+                    .fill(slotBackground.opacity(0.9))
 
+                if let item = equippedItem {
                     Text(slot.icon)
                         .font(.system(size: slotSize * 0.52))
                         .padding(3)
@@ -33,10 +35,7 @@ struct EquipSlotView: View {
                             .padding(2)
                     }
                 } else {
-                    // Empty: dark background, light grey icon at full alpha
-                    Rectangle()
-                        .fill(Color(white: 0.12))
-
+                    // Empty: light grey icon at full alpha
                     Text(slot.icon)
                         .font(.system(size: slotSize * 0.42))
                         .foregroundStyle(Color(white: 0.6))
