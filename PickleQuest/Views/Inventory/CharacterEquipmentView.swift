@@ -28,9 +28,9 @@ struct CharacterEquipmentView: View {
             let slotSize: CGFloat = min(60, (height - inset * 2) / 5.3)
             let slotGap: CGFloat = 6
 
-            // Left column X, right column X (between player and stats)
+            // Left column X, right column X — equal padding from edges
             let leftX = inset + slotSize / 2
-            let rightX = statsLeft - slotSize / 2 - 4
+            let rightX = statsLeft - inset - slotSize / 2
 
             // Stats
             let effectiveStats = vm.effectiveStats(for: player)
