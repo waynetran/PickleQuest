@@ -15,8 +15,8 @@ struct CharacterEquipmentView: View {
             // Slot sizing — 2x original (~100pt), capped by available space
             let slotSize: CGFloat = min(100, (height - inset * 2) / 4)
 
-            // Sprite + court: 35% smaller than previous 2.8x
-            let spriteSize = height * 1.82
+            // Sprite + court: 50% smaller than previous 2.8x
+            let spriteSize = height * 1.4
 
             // Left column: shirt, bottoms, shoes — vertically centered
             let leftSlotGap: CGFloat = 4
