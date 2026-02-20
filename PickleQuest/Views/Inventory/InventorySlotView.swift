@@ -19,43 +19,49 @@ struct InventorySlotView: View {
             }
 
             if let item {
-                VStack(spacing: 1) {
-                    // Title at the top
-                    Text(item.displayTitle)
-                        .font(.system(size: max(6, cellSize * 0.09), weight: .semibold, design: .rounded))
-                        .foregroundStyle(item.rarity == .common ? .white.opacity(0.7) : item.rarity.color)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
-                        .minimumScaleFactor(0.6)
-                        .frame(maxWidth: .infinity)
+                // Icon fills the box
+                Text(item.slot.icon)
+                    .font(.system(size: cellSize * 0.55))
 
-                    // Icon left, stats right
-                    HStack(spacing: 2) {
-                        // Icon
-                        Text(item.slot.icon)
-                            .font(.system(size: cellSize * 0.3))
-
-                        // Stats column — green/red based on equip delta
-                        VStack(alignment: .leading, spacing: 0) {
-                            let allBonuses = (item.baseStat.map { [$0] } ?? []) + item.statBonuses
+                // Stat overlay — bottom, on top of icon
+                VStack(spacing: 0) {
+                    Spacer()
+                    let allBonuses = (item.baseStat.map { [$0] } ?? []) + item.statBonuses
+                    if !allBonuses.isEmpty {
+                        HStack(spacing: 2) {
                             ForEach(Array(allBonuses.prefix(3).enumerated()), id: \.offset) { _, bonus in
                                 let delta = statDeltas.first { $0.stat == bonus.stat }
                                 let color: Color = {
-                                    guard let d = delta else { return .white.opacity(0.5) }
-                                    return d.value > 0 ? .green : (d.value < 0 ? .red : .white.opacity(0.5))
+                                    guard let d = delta else { return .white.opacity(0.7) }
+                                    return d.value > 0 ? .green : (d.value < 0 ? .red : .white.opacity(0.7))
                                 }()
-                                Text("+\(bonus.value) \(bonus.stat.displayName.prefix(3))")
-                                    .font(.system(size: max(5, cellSize * 0.08), design: .monospaced))
+                                Text("+\(bonus.value)\(bonus.stat.displayName.prefix(3))")
+                                    .font(.system(size: max(6, cellSize * 0.09), weight: .medium, design: .monospaced))
                                     .foregroundStyle(color)
                             }
                         }
-
-                        Spacer(minLength: 0)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .padding(.horizontal, 3)
+                        .padding(.vertical, 1)
+                        .background(Color.black.opacity(0.6))
                     }
                 }
-                .padding(3)
 
-                // Equipped checkmark
+                // Rarity pill — top left
+                if item.rarity != .common {
+                    Text(item.rarity.displayName.prefix(4).uppercased())
+                        .font(.system(size: max(5, cellSize * 0.08), weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(item.rarity.color.opacity(0.85))
+                        .clipShape(Capsule())
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .padding(3)
+                }
+
+                // Equipped checkmark — top right
                 if isEquipped {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: min(cellSize * 0.14, 12)))
@@ -64,7 +70,7 @@ struct InventorySlotView: View {
                         .padding(3)
                 }
 
-                // Level badge
+                // Level badge — bottom right
                 if item.level > 1 {
                     Text("L\(item.level)")
                         .font(.system(size: max(6, cellSize * 0.09), design: .monospaced))

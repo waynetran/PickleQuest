@@ -3,8 +3,6 @@ import SwiftUI
 struct EquipSlotView: View {
     let slot: EquipmentSlot
     let equippedItem: Equipment?
-    let isHighlighted: Bool
-    let isDimmed: Bool
     var slotSize: CGFloat = 50
     let onTap: () -> Void
 
@@ -44,16 +42,8 @@ struct EquipSlotView: View {
                     Rectangle()
                         .strokeBorder(Color(white: 0.25), lineWidth: 2)
                 }
-
-                // Highlight glow for compatible drag target
-                if isHighlighted {
-                    Rectangle()
-                        .strokeBorder(Color.green, lineWidth: 3)
-                        .shadow(color: .green.opacity(0.6), radius: 6)
-                }
             }
             .frame(width: slotSize, height: slotSize)
-            .opacity(isDimmed ? 0.3 : 1.0)
         }
         .buttonStyle(.plain)
     }

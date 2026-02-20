@@ -10,56 +10,73 @@ struct CharacterEquipmentView: View {
         GeometryReader { geo in
             let width = geo.size.width
             let height = geo.size.height
-            let padding: CGFloat = 8
+            let inset: CGFloat = 16
             let slotGap: CGFloat = 4
 
-            // Left column has 4 slots stacked, right has 2 — size from the tighter constraint
-            let maxSlotFromHeight = (height - padding * 2 - slotGap * 3) / 4
-            let maxSlotFromWidth = (width - padding * 2) / 4
-            let slotSize = min(maxSlotFromHeight, maxSlotFromWidth, 52)
+            // Slot sizing — a bit bigger, max 56pt
+            let maxSlotFromHeight = (height - inset * 2 - slotGap * 5) / 6
+            let slotSize = min(maxSlotFromHeight, 56)
 
-            // Sprite fills the full height of the section
-            let spriteSize = height
+            // Sprite is 2x the section height
+            let spriteSize = height * 2.0
 
-            let leftX = padding + slotSize / 2
-            let rightX = width - padding - slotSize / 2
+            // Left column X — moved in from edge
+            let leftX = inset + slotSize / 2
 
-            // Vertically center the 4-slot left column
-            let totalLeftHeight = slotSize * 4 + slotGap * 3
-            let leftTopY = (height - totalLeftHeight) / 2 + slotSize / 2
+            // All 6 slots stacked on left, vertically centered
+            let totalSlotHeight = slotSize * 6 + slotGap * 5
+            let slotTopY = (height - totalSlotHeight) / 2 + slotSize / 2
 
-            // Vertically center the 2-slot right column
-            let totalRightHeight = slotSize * 2 + slotGap
-            let rightTopY = (height - totalRightHeight) / 2 + slotSize / 2
+            // Stats column on right side
+            let statsX = width - inset
+            let effectiveStats = vm.effectiveStats(for: player)
+            let baseStats = player.stats
 
             ZStack {
-                // Background layer: animated character sprite fills the section
+                // Background layer: animated character sprite
                 AnimatedSpriteView(
                     appearance: player.appearance,
                     size: spriteSize,
                     animationState: vm.animationState
                 )
-                .position(x: width / 2, y: height / 2)
+                .position(x: width * 0.45, y: height * 0.5)
 
-                // Left column: Shirt, Bottoms, Headwear, Shoes
-                slotView(for: .shirt, size: slotSize)
-                    .position(x: leftX, y: leftTopY)
+                // Left column: all 6 equipment slots
+                let slots: [EquipmentSlot] = [.paddle, .shirt, .bottoms, .headwear, .shoes, .wristband]
+                ForEach(Array(slots.enumerated()), id: \.element) { i, slot in
+                    slotView(for: slot, size: slotSize)
+                        .position(x: leftX, y: slotTopY + CGFloat(i) * (slotSize + slotGap))
+                }
 
-                slotView(for: .bottoms, size: slotSize)
-                    .position(x: leftX, y: leftTopY + slotSize + slotGap)
+                // Right column: player stats with equipment bonuses
+                VStack(alignment: .trailing, spacing: 1) {
+                    ForEach(StatType.allCases, id: \.self) { stat in
+                        let base = baseStats.stat(stat)
+                        let effective = effectiveStats.stat(stat)
+                        let bonus = effective - base
 
-                slotView(for: .headwear, size: slotSize)
-                    .position(x: leftX, y: leftTopY + (slotSize + slotGap) * 2)
+                        HStack(spacing: 2) {
+                            Text(stat.displayName.prefix(3).uppercased())
+                                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                .foregroundStyle(Color(white: 0.5))
+                                .frame(width: 28, alignment: .leading)
 
-                slotView(for: .shoes, size: slotSize)
-                    .position(x: leftX, y: leftTopY + (slotSize + slotGap) * 3)
+                            Text("\(base)")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundStyle(.white)
 
-                // Right column: Paddle, Wristband
-                slotView(for: .paddle, size: slotSize)
-                    .position(x: rightX, y: rightTopY)
-
-                slotView(for: .wristband, size: slotSize)
-                    .position(x: rightX, y: rightTopY + slotSize + slotGap)
+                            if bonus != 0 {
+                                Text(bonus > 0 ? "+\(bonus)" : "\(bonus)")
+                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(bonus > 0 ? .green : .red)
+                            }
+                        }
+                    }
+                }
+                .padding(6)
+                .background(Color.black.opacity(0.5))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .position(x: statsX - 50, y: height / 2)
             }
             .clipped()
         }
@@ -74,8 +91,6 @@ struct CharacterEquipmentView: View {
         EquipSlotView(
             slot: slot,
             equippedItem: equipped,
-            isHighlighted: false,
-            isDimmed: false,
             slotSize: size,
             onTap: {
                 if let item = equipped {
