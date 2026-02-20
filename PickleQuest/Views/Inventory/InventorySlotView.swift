@@ -51,7 +51,7 @@ struct InventorySlotView: View {
                         .padding(.vertical, 1)
                         .background(item.rarity.color.opacity(0.85))
                         .clipShape(Capsule())
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                         .padding(3)
                 }
 

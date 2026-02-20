@@ -15,8 +15,8 @@ enum EquipmentRarity: String, Codable, CaseIterable, Comparable, Sendable {
     var color: Color {
         switch self {
         case .common: return .gray
-        case .uncommon: return .green
-        case .rare: return .blue
+        case .uncommon: return .blue
+        case .rare: return .yellow
         case .epic: return .purple
         case .legendary: return .orange
         }

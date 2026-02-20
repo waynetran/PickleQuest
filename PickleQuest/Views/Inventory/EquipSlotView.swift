@@ -9,12 +9,11 @@ struct EquipSlotView: View {
     var body: some View {
         Button(action: onTap) {
             ZStack {
-                // Background
-                Rectangle()
-                    .fill(Color(white: 0.12))
-
                 if let item = equippedItem {
-                    // Filled slot — icon fills with 3px padding
+                    // Equipped: rarity-colored background
+                    Rectangle()
+                        .fill(item.rarity.color.opacity(0.25))
+
                     Text(slot.icon)
                         .font(.system(size: slotSize * 0.52))
                         .padding(3)
@@ -34,10 +33,13 @@ struct EquipSlotView: View {
                             .padding(2)
                     }
                 } else {
-                    // Empty slot
+                    // Empty: dark background, light grey icon at full alpha
+                    Rectangle()
+                        .fill(Color(white: 0.12))
+
                     Text(slot.icon)
                         .font(.system(size: slotSize * 0.42))
-                        .opacity(0.3)
+                        .foregroundStyle(Color(white: 0.6))
 
                     Rectangle()
                         .strokeBorder(Color(white: 0.25), lineWidth: 2)

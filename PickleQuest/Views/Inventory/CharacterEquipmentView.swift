@@ -12,95 +12,98 @@ struct CharacterEquipmentView: View {
             let height = geo.size.height
             let inset: CGFloat = 12
 
-            // Slot sizing — 2x original (~100pt), capped by available space
-            let slotSize: CGFloat = min(100, (height - inset * 2) / 4)
+            // Stats box on the right
+            let statsWidth: CGFloat = 100
+            let statsLeft = width - inset - statsWidth
 
-            // Court background size (original 2.8x)
+            // Player center: between left edge and stats box
+            let playerCenterX = statsLeft / 2
+            let playerCenterY = height / 2
+
+            // Court and sprite sizing (independent)
             let courtSize = height * 2.8
-            // Character sprite: 50% of court
             let spriteSize = height * 1.4
 
-            // Left column: shirt, bottoms, shoes — vertically centered
-            let leftSlotGap: CGFloat = 4
-            let leftSlots: [EquipmentSlot] = [.shirt, .bottoms, .shoes]
-            let leftTotalH = slotSize * 3 + leftSlotGap * 2
-            let leftTopY = (height - leftTotalH) / 2 + slotSize / 2
-            let leftX = inset + slotSize / 2
+            // Slot sizing
+            let slotSize: CGFloat = min(70, (height - inset * 2) / 4.5)
+
+            // Semi-circle radius — constrained to fit
+            let maxRadiusX = (statsLeft - playerCenterX - slotSize / 2 - 4)
+            let maxRadiusY = (height / 2 - slotSize / 2 - inset)
+            let radius = min(maxRadiusX, maxRadiusY)
 
             // Stats
             let effectiveStats = vm.effectiveStats(for: player)
             let baseStats = player.stats
 
-            // Right column layout: stats box on top, paddle + wristband below
-            let rightX = width - inset
+            // Slot positions: counter-clockwise arc from top
+            // Hat(top) → Shirt(upper-left) → Bottoms(left) → Shoes(lower-left)
+            // → Wristband(lower-right) → Paddle(upper-right)
+            let slotData: [(slot: EquipmentSlot, angle: CGFloat)] = [
+                (.headwear, 90),
+                (.shirt, 145),
+                (.bottoms, 200),
+                (.shoes, 255),
+                (.wristband, 310),
+                (.paddle, 5),
+            ]
 
             ZStack {
                 // Court background
                 CourtBackgroundView()
                     .frame(width: courtSize, height: courtSize)
-                    .position(x: width / 2, y: height / 2)
+                    .position(x: playerCenterX, y: playerCenterY)
 
-                // Animated character sprite centered
+                // Player sprite
                 AnimatedSpriteView(
                     appearance: player.appearance,
                     size: spriteSize,
                     animationState: vm.animationState
                 )
-                .position(x: width / 2, y: height / 2)
+                .position(x: playerCenterX, y: playerCenterY)
 
-                // Left column: shirt, bottoms, shoes
-                ForEach(Array(leftSlots.enumerated()), id: \.element) { i, slot in
-                    slotView(for: slot, size: slotSize)
-                        .position(x: leftX, y: leftTopY + CGFloat(i) * (slotSize + leftSlotGap))
+                // Semi-circle equipment slots
+                ForEach(slotData, id: \.slot) { data in
+                    let angleRad = data.angle * .pi / 180
+                    let x = playerCenterX + radius * cos(angleRad)
+                    let y = playerCenterY - radius * sin(angleRad)
+                    slotView(for: data.slot, size: slotSize)
+                        .position(x: x, y: y)
                 }
 
-                // Headwear slot — centered above the sprite
-                slotView(for: .headwear, size: slotSize)
-                    .position(x: width / 2, y: inset + slotSize / 2)
+                // Stats box — full height, right side
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(StatType.allCases, id: \.self) { stat in
+                        let base = baseStats.stat(stat)
+                        let effective = effectiveStats.stat(stat)
+                        let bonus = effective - base
 
-                // Right column: stats + paddle/wristband filling height
-                VStack(spacing: 4) {
-                    // Player stats box
-                    VStack(alignment: .leading, spacing: 1) {
-                        ForEach(StatType.allCases, id: \.self) { stat in
-                            let base = baseStats.stat(stat)
-                            let effective = effectiveStats.stat(stat)
-                            let bonus = effective - base
+                        HStack(spacing: 4) {
+                            Text(stat.displayName.prefix(3).uppercased())
+                                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(Color(red: 0.9, green: 0.7, blue: 0.3))
+                                .frame(width: 36, alignment: .leading)
 
-                            HStack(spacing: 0) {
-                                Text(stat.displayName.prefix(3).uppercased())
-                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(Color(white: 0.5))
-                                    .frame(width: 30, alignment: .leading)
+                            Text("\(base)")
+                                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                .foregroundStyle(.white)
 
-                                Text("\(base)")
-                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 20, alignment: .trailing)
-
-                                if bonus != 0 {
-                                    Text(bonus > 0 ? "+\(bonus)" : "\(bonus)")
-                                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(bonus > 0 ? .green : .red)
-                                        .frame(width: 22, alignment: .trailing)
-                                }
+                            if bonus != 0 {
+                                Text(bonus > 0 ? "+\(bonus)" : "\(bonus)")
+                                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(bonus > 0 ? .green : .red)
                             }
+
+                            Spacer()
                         }
+                        .frame(maxHeight: .infinity)
                     }
-                    .padding(6)
-                    .frame(width: slotSize)
-                    .background(Color.black.opacity(0.5))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-
-                    // Paddle slot
-                    slotView(for: .paddle, size: slotSize)
-
-                    // Wristband slot
-                    slotView(for: .wristband, size: slotSize)
                 }
-                .frame(maxHeight: .infinity, alignment: .top)
-                .padding(.top, inset)
-                .position(x: rightX - slotSize / 2, y: height / 2)
+                .padding(10)
+                .frame(width: statsWidth, height: height - inset * 2)
+                .background(Color.black.opacity(0.5))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .position(x: width - inset - statsWidth / 2, y: height / 2)
             }
             .clipped()
         }
