@@ -19,7 +19,7 @@ enum MatchAnimationConstants {
         static let perspectiveExponent: CGFloat = 0.75
 
         // Lines
-        static let lineWidth: CGFloat = 8
+        static let lineWidth: CGFloat = 2
         static let kitchenDepthRatio: CGFloat = 0.318 // 7/22, official pickleball kitchen depth
 
         // Colors
