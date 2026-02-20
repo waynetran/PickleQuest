@@ -36,14 +36,14 @@ struct CharacterEquipmentView: View {
             let effectiveStats = vm.effectiveStats(for: player)
             let baseStats = player.stats
 
-            // Slot positions: body gear on left arc, hand gear on right arc
+            // Slot positions: body gear clustered far-left, hand gear clustered far-right
             let slotData: [(slot: EquipmentSlot, angle: CGFloat)] = [
-                (.headwear, 100),    // upper-left
-                (.shirt, 153),       // left, above center
-                (.bottoms, 207),     // left, below center
-                (.shoes, 260),       // lower-left
-                (.paddle, 40),       // upper-right
-                (.wristband, 320),   // lower-right
+                (.headwear, 135),    // upper-left
+                (.shirt, 165),       // left, above center
+                (.bottoms, 195),     // left, below center
+                (.shoes, 225),       // lower-left
+                (.paddle, 15),       // right, above center
+                (.wristband, 345),   // right, below center
             ]
 
             ZStack {
