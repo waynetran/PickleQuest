@@ -23,6 +23,18 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
 
     // MARK: - Computed Properties
 
+    /// Generated display name: "[Rarity] [slot] of [stat phrase]"
+    /// The stat phrase is a funny name derived from the item's highest stat bonus.
+    var displayTitle: String {
+        let allBonuses = (baseStat.map { [$0] } ?? []) + statBonuses
+        let topStat = allBonuses.max(by: { $0.value < $1.value })?.stat
+        let phrase = topStat?.equipmentPhrase ?? "Vibes"
+        if rarity == .common {
+            return "\(slot.displayName) of \(phrase)"
+        }
+        return "\(rarity.displayName) \(slot.displayName) of \(phrase)"
+    }
+
     var totalBonusPoints: Int {
         let bonusTotal = statBonuses.reduce(0) { $0 + $1.value }
         let baseTotal = baseStat?.value ?? 0

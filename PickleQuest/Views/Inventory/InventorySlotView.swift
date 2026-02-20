@@ -11,23 +11,33 @@ struct InventorySlotView: View {
 
     var body: some View {
         ZStack {
-            // Background
-            Rectangle()
-                .fill(Color(white: 0.12))
+            // Background — rarity tinted or empty dark
+            if let item, item.rarity != .common {
+                Rectangle()
+                    .fill(item.rarity.color.opacity(0.18))
+            } else {
+                Rectangle()
+                    .fill(Color(white: 0.12))
+            }
 
             if let item {
-                // Item icon — fills box with 3px padding
-                Text(item.slot.icon)
-                    .font(.system(size: cellSize * 0.52))
-                    .padding(3)
+                VStack(spacing: 0) {
+                    // Icon row
+                    Text(item.slot.icon)
+                        .font(.system(size: cellSize * 0.32))
 
-                // Rarity indicator — left border stripe
-                HStack(spacing: 0) {
-                    Rectangle()
-                        .fill(item.rarity.color)
-                        .frame(width: 3)
-                    Spacer()
+                    // Item name (truncated)
+                    Text(item.displayTitle)
+                        .font(.system(size: max(6, cellSize * 0.1), weight: .semibold, design: .rounded))
+                        .foregroundStyle(item.rarity == .common ? .white.opacity(0.7) : item.rarity.color)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                        .minimumScaleFactor(0.7)
+
+                    // Stat summary
+                    statSummary(for: item)
                 }
+                .padding(3)
 
                 // Equipped checkmark
                 if isEquipped {
@@ -41,7 +51,7 @@ struct InventorySlotView: View {
                 // Level badge
                 if item.level > 1 {
                     Text("L\(item.level)")
-                        .font(.system(size: max(7, cellSize * 0.08), design: .monospaced))
+                        .font(.system(size: max(6, cellSize * 0.09), design: .monospaced))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 2)
                         .background(Color.black.opacity(0.7))
@@ -81,5 +91,23 @@ struct InventorySlotView: View {
                     isDragging = false
                 }
         )
+    }
+
+    @ViewBuilder
+    private func statSummary(for item: Equipment) -> some View {
+        let allBonuses = (item.baseStat.map { [$0] } ?? []) + item.statBonuses
+        let fontSize = max(5, cellSize * 0.08)
+
+        if !allBonuses.isEmpty {
+            HStack(spacing: 2) {
+                ForEach(Array(allBonuses.prefix(3).enumerated()), id: \.offset) { _, bonus in
+                    Text("+\(bonus.value) \(bonus.stat.displayName.prefix(3))")
+                        .font(.system(size: fontSize, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+        }
     }
 }

@@ -125,6 +125,22 @@ enum StatType: String, Codable, CaseIterable, Sendable {
         rawValue.capitalized
     }
 
+    var equipmentPhrase: String {
+        switch self {
+        case .power: return "Thundersmash"
+        case .accuracy: return "Surgical Precision"
+        case .spin: return "Wicked English"
+        case .speed: return "Greased Lightning"
+        case .defense: return "The Brick Wall"
+        case .reflexes: return "Cat-Like Reflexes"
+        case .positioning: return "Court Whispering"
+        case .clutch: return "Ice in the Veins"
+        case .focus: return "Laser Eyes"
+        case .stamina: return "Infinite Lungs"
+        case .consistency: return "The Machine"
+        }
+    }
+
     var category: StatCategory {
         switch self {
         case .power, .accuracy, .spin, .speed: return .offensive
