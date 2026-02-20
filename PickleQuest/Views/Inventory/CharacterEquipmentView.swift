@@ -15,7 +15,9 @@ struct CharacterEquipmentView: View {
             // Slot sizing — 2x original (~100pt), capped by available space
             let slotSize: CGFloat = min(100, (height - inset * 2) / 4)
 
-            // Sprite + court: 50% smaller than previous 2.8x
+            // Court background size (original 2.8x)
+            let courtSize = height * 2.8
+            // Character sprite: 50% of court
             let spriteSize = height * 1.4
 
             // Left column: shirt, bottoms, shoes — vertically centered
@@ -33,9 +35,9 @@ struct CharacterEquipmentView: View {
             let rightX = width - inset
 
             ZStack {
-                // Court background — 2x scaled
+                // Court background
                 CourtBackgroundView()
-                    .frame(width: spriteSize, height: spriteSize)
+                    .frame(width: courtSize, height: courtSize)
                     .position(x: width / 2, y: height / 2)
 
                 // Animated character sprite centered
