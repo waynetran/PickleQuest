@@ -6,23 +6,19 @@ struct EquipSlotView: View {
     var slotSize: CGFloat = 50
     let onTap: () -> Void
 
-    private let slotBackground = Color(red: 0.9, green: 0.7, blue: 0.3)
+    private let amberColor = Color(red: 0.9, green: 0.7, blue: 0.3)
 
     var body: some View {
         Button(action: onTap) {
             ZStack {
-                // Background — amber at 90% opacity
-                Rectangle()
-                    .fill(slotBackground.opacity(0.9))
-
                 if let item = equippedItem {
+                    // Background — rarity color
+                    Rectangle()
+                        .fill(item.rarity.color.opacity(0.3))
+
                     Text(slot.icon)
                         .font(.system(size: slotSize * 0.52))
                         .padding(3)
-
-                    // Rarity border
-                    Rectangle()
-                        .strokeBorder(item.rarity.color, lineWidth: 2)
 
                     // Level badge
                     if item.level > 1 {
@@ -35,14 +31,18 @@ struct EquipSlotView: View {
                             .padding(2)
                     }
                 } else {
-                    // Empty: light grey icon at full alpha
+                    // Empty: dark background, light grey icon
+                    Rectangle()
+                        .fill(Color(white: 0.12))
+
                     Text(slot.icon)
                         .font(.system(size: slotSize * 0.42))
                         .foregroundStyle(Color(white: 0.6))
-
-                    Rectangle()
-                        .strokeBorder(Color(white: 0.25), lineWidth: 2)
                 }
+
+                // Amber outline for all slots
+                Rectangle()
+                    .strokeBorder(amberColor, lineWidth: 2)
             }
             .frame(width: slotSize, height: slotSize)
         }
