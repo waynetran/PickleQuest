@@ -52,7 +52,8 @@ struct InventorySlotView: View {
                         .background(item.rarity.color.opacity(0.85))
                         .clipShape(Capsule())
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                        .padding(3)
+                        .padding(.horizontal, 3)
+                        .padding(.bottom, 6)
                 }
 
                 // Equipped checkmark — top right
