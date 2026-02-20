@@ -18,7 +18,7 @@ struct CharacterEquipmentView: View {
 
             // Player center: between left edge and stats box
             let playerCenterX = statsLeft / 2
-            let playerCenterY = height / 2
+            let playerCenterY = height * 0.45
 
             // Court and sprite sizing (independent)
             let courtSize = height * 2.8
