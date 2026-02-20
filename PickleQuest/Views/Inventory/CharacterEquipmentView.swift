@@ -10,61 +10,62 @@ struct CharacterEquipmentView: View {
         GeometryReader { geo in
             let width = geo.size.width
             let height = geo.size.height
-            let padding: CGFloat = 12
-            let slotGap: CGFloat = 6
+            let padding: CGFloat = 8
+            let slotGap: CGFloat = 4
 
-            // Slot size: fit 3 rows vertically (top slot, 2 side slots stacked, bottom slot)
-            // and 4 columns horizontally (slot, gap, sprite, gap, slot)
-            let maxSlotFromHeight = (height - slotGap * 4 - padding * 2) / 4.5
-            let maxSlotFromWidth = (width - padding * 2 - slotGap * 2) / 5.5
-            let slotSize = min(maxSlotFromHeight, maxSlotFromWidth, 56)
+            // Left column has 4 slots stacked, right has 2 — size from the tighter constraint
+            let maxSlotFromHeight = (height - padding * 2 - slotGap * 3) / 4
+            let maxSlotFromWidth = (width - padding * 2) / 4
+            let slotSize = min(maxSlotFromHeight, maxSlotFromWidth, 52)
 
-            // Sprite fills remaining center space
-            let spriteW = width - padding * 2 - slotSize * 2 - slotGap * 2
-            let spriteH = height - padding * 2 - slotSize * 2 - slotGap * 2
-            let spriteSize = max(48, min(spriteW, spriteH))
+            // Sprite fills the entire section as background
+            let spriteSize = min(width, height) * 0.85
 
-            let centerX = width / 2
-            let centerY = height / 2
+            let leftX = padding + slotSize / 2
+            let rightX = width - padding - slotSize / 2
+
+            // Vertically center the 4-slot left column
+            let totalLeftHeight = slotSize * 4 + slotGap * 3
+            let leftTopY = (height - totalLeftHeight) / 2 + slotSize / 2
+
+            // Vertically center the 2-slot right column
+            let totalRightHeight = slotSize * 2 + slotGap
+            let rightTopY = (height - totalRightHeight) / 2 + slotSize / 2
 
             ZStack {
-                // Animated character sprite (center)
+                // Background layer: animated character sprite fills the section
                 AnimatedSpriteView(
                     appearance: player.appearance,
                     size: spriteSize,
                     animationState: vm.animationState
                 )
-                .position(x: centerX, y: centerY)
+                .position(x: width / 2, y: height / 2)
 
-                // Headwear — top center
-                slotView(for: .headwear, size: slotSize)
-                    .position(x: centerX, y: centerY - spriteSize / 2 - slotGap - slotSize / 2)
-                    .overlaySlotFrame(.headwear)
-
-                // Shirt — left of sprite, upper
+                // Left column: Shirt, Bottoms, Headwear, Shoes
                 slotView(for: .shirt, size: slotSize)
-                    .position(x: centerX - spriteSize / 2 - slotGap - slotSize / 2, y: centerY - slotSize / 2 - slotGap / 2)
+                    .position(x: leftX, y: leftTopY)
                     .overlaySlotFrame(.shirt)
 
-                // Bottoms — left of sprite, lower
                 slotView(for: .bottoms, size: slotSize)
-                    .position(x: centerX - spriteSize / 2 - slotGap - slotSize / 2, y: centerY + slotSize / 2 + slotGap / 2)
+                    .position(x: leftX, y: leftTopY + slotSize + slotGap)
                     .overlaySlotFrame(.bottoms)
 
-                // Paddle — right of sprite, upper
+                slotView(for: .headwear, size: slotSize)
+                    .position(x: leftX, y: leftTopY + (slotSize + slotGap) * 2)
+                    .overlaySlotFrame(.headwear)
+
+                slotView(for: .shoes, size: slotSize)
+                    .position(x: leftX, y: leftTopY + (slotSize + slotGap) * 3)
+                    .overlaySlotFrame(.shoes)
+
+                // Right column: Paddle, Wristband
                 slotView(for: .paddle, size: slotSize)
-                    .position(x: centerX + spriteSize / 2 + slotGap + slotSize / 2, y: centerY - slotSize / 2 - slotGap / 2)
+                    .position(x: rightX, y: rightTopY)
                     .overlaySlotFrame(.paddle)
 
-                // Wristband — right of sprite, lower
                 slotView(for: .wristband, size: slotSize)
-                    .position(x: centerX + spriteSize / 2 + slotGap + slotSize / 2, y: centerY + slotSize / 2 + slotGap / 2)
+                    .position(x: rightX, y: rightTopY + slotSize + slotGap)
                     .overlaySlotFrame(.wristband)
-
-                // Shoes — bottom center
-                slotView(for: .shoes, size: slotSize)
-                    .position(x: centerX, y: centerY + spriteSize / 2 + slotGap + slotSize / 2)
-                    .overlaySlotFrame(.shoes)
             }
         }
         .onAppear { startAnimationTimer() }
