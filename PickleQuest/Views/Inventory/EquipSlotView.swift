@@ -14,7 +14,7 @@ struct EquipSlotView: View {
                 if let item = equippedItem {
                     // Background — rarity color
                     Rectangle()
-                        .fill(item.rarity.color.opacity(0.3))
+                        .fill(item.rarity.color.opacity(0.9))
 
                     Text(slot.icon)
                         .font(.system(size: slotSize * 0.52))
@@ -33,7 +33,7 @@ struct EquipSlotView: View {
                 } else {
                     // Empty: dark background, light grey icon
                     Rectangle()
-                        .fill(Color(white: 0.12))
+                        .fill(Color(white: 0.12).opacity(0.9))
 
                     Text(slot.icon)
                         .font(.system(size: slotSize * 0.42))
