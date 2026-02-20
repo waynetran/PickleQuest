@@ -23,29 +23,23 @@ struct InventorySlotView: View {
                 Text(item.slot.icon)
                     .font(.system(size: cellSize * 0.55))
 
-                // Stat overlay — bottom, on top of icon
-                VStack(spacing: 0) {
-                    Spacer()
-                    let allBonuses = (item.baseStat.map { [$0] } ?? []) + item.statBonuses
-                    if !allBonuses.isEmpty {
-                        HStack(spacing: 2) {
-                            ForEach(Array(allBonuses.prefix(3).enumerated()), id: \.offset) { _, bonus in
-                                let delta = statDeltas.first { $0.stat == bonus.stat }
-                                let color: Color = {
-                                    guard let d = delta else { return .white.opacity(0.7) }
-                                    return d.value > 0 ? .green : (d.value < 0 ? .red : .white.opacity(0.7))
-                                }()
-                                Text("+\(bonus.value)\(bonus.stat.displayName.prefix(3))")
-                                    .font(.system(size: max(6, cellSize * 0.09), weight: .medium, design: .monospaced))
-                                    .foregroundStyle(color)
-                            }
+                // Equipment stats — right side, left-aligned, no background
+                let allBonuses = (item.baseStat.map { [$0] } ?? []) + item.statBonuses
+                if !allBonuses.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(allBonuses.prefix(3).enumerated()), id: \.offset) { _, bonus in
+                            let delta = statDeltas.first { $0.stat == bonus.stat }
+                            let color: Color = {
+                                guard let d = delta else { return .white.opacity(0.7) }
+                                return d.value > 0 ? .green : (d.value < 0 ? .red : .white.opacity(0.7))
+                            }()
+                            Text("+\(bonus.value)\(bonus.stat.displayName.prefix(3))")
+                                .font(.system(size: max(6, cellSize * 0.09), weight: .medium, design: .monospaced))
+                                .foregroundStyle(color)
                         }
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                        .padding(.horizontal, 3)
-                        .padding(.vertical, 1)
-                        .background(Color.black.opacity(0.6))
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .padding(3)
                 }
 
                 // Rarity pill — top left
@@ -70,14 +64,14 @@ struct InventorySlotView: View {
                         .padding(3)
                 }
 
-                // Level badge — bottom right
+                // Level badge — bottom left
                 if item.level > 1 {
                     Text("L\(item.level)")
                         .font(.system(size: max(6, cellSize * 0.09), design: .monospaced))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 2)
                         .background(Color.black.opacity(0.7))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                         .padding(2)
                 }
             }

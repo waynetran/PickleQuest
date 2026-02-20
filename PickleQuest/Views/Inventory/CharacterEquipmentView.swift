@@ -13,12 +13,12 @@ struct CharacterEquipmentView: View {
             let inset: CGFloat = 16
             let slotGap: CGFloat = 4
 
-            // Slot sizing — a bit bigger, max 56pt
+            // Slot sizing — max 56pt
             let maxSlotFromHeight = (height - inset * 2 - slotGap * 5) / 6
             let slotSize = min(maxSlotFromHeight, 56)
 
-            // Sprite is 2x the section height
-            let spriteSize = height * 2.0
+            // Sprite: 1.4x section height, centered with padding
+            let spriteSize = height * 1.4
 
             // Left column X — moved in from edge
             let leftX = inset + slotSize / 2
@@ -27,24 +27,23 @@ struct CharacterEquipmentView: View {
             let totalSlotHeight = slotSize * 6 + slotGap * 5
             let slotTopY = (height - totalSlotHeight) / 2 + slotSize / 2
 
-            // Stats column on right side
-            let statsX = width - inset
+            // Stats — right side, same inset as slots
             let effectiveStats = vm.effectiveStats(for: player)
             let baseStats = player.stats
 
             ZStack {
-                // Court background — scaled to match sprite (2x height)
+                // Court background — scaled to match sprite
                 CourtBackgroundView()
                     .frame(width: spriteSize, height: spriteSize)
-                    .position(x: width * 0.45, y: height * 0.5)
+                    .position(x: width / 2, y: height / 2)
 
-                // Animated character sprite on top of court
+                // Animated character sprite centered
                 AnimatedSpriteView(
                     appearance: player.appearance,
                     size: spriteSize,
                     animationState: vm.animationState
                 )
-                .position(x: width * 0.45, y: height * 0.5)
+                .position(x: width / 2, y: height / 2)
 
                 // Left column: all 6 equipment slots
                 let slots: [EquipmentSlot] = [.paddle, .shirt, .bottoms, .headwear, .shoes, .wristband]
@@ -54,26 +53,28 @@ struct CharacterEquipmentView: View {
                 }
 
                 // Right column: player stats with equipment bonuses
-                VStack(alignment: .trailing, spacing: 1) {
+                VStack(alignment: .leading, spacing: 1) {
                     ForEach(StatType.allCases, id: \.self) { stat in
                         let base = baseStats.stat(stat)
                         let effective = effectiveStats.stat(stat)
                         let bonus = effective - base
 
-                        HStack(spacing: 2) {
+                        HStack(spacing: 0) {
                             Text(stat.displayName.prefix(3).uppercased())
                                 .font(.system(size: 9, weight: .medium, design: .monospaced))
                                 .foregroundStyle(Color(white: 0.5))
-                                .frame(width: 28, alignment: .leading)
+                                .frame(width: 30, alignment: .leading)
 
                             Text("\(base)")
                                 .font(.system(size: 9, weight: .bold, design: .monospaced))
                                 .foregroundStyle(.white)
+                                .frame(width: 20, alignment: .trailing)
 
                             if bonus != 0 {
                                 Text(bonus > 0 ? "+\(bonus)" : "\(bonus)")
                                     .font(.system(size: 9, weight: .bold, design: .monospaced))
                                     .foregroundStyle(bonus > 0 ? .green : .red)
+                                    .frame(width: 22, alignment: .trailing)
                             }
                         }
                     }
@@ -81,7 +82,9 @@ struct CharacterEquipmentView: View {
                 .padding(6)
                 .background(Color.black.opacity(0.5))
                 .clipShape(RoundedRectangle(cornerRadius: 4))
-                .position(x: statsX - 50, y: height / 2)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                .padding(.top, inset)
+                .padding(.trailing, inset)
             }
             .clipped()
         }
