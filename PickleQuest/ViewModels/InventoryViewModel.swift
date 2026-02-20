@@ -18,6 +18,9 @@ final class InventoryViewModel {
     // Stat preview when considering equipping an item
     var previewStats: PlayerStats?
 
+    // Equipped item IDs — excluded from grid
+    var equippedIDs: Set<UUID> = []
+
     // --- Inventory grid paging ---
     var currentTab: Int = 0
 
@@ -35,8 +38,9 @@ final class InventoryViewModel {
         self.playerService = playerService
     }
 
-    func loadInventory() async {
+    func loadInventory(equippedIDs: Set<UUID> = []) async {
         isLoading = true
+        self.equippedIDs = equippedIDs
         inventory = await inventoryService.getInventory()
         applyFilter()
         isLoading = false
@@ -56,11 +60,15 @@ final class InventoryViewModel {
 
     func equipItem(_ item: Equipment, player: inout Player) async {
         player.equippedItems[item.slot] = item.id
+        equippedIDs = Set(player.equippedItems.values)
+        applyFilter()
         await playerService.savePlayer(player)
     }
 
     func unequipSlot(_ slot: EquipmentSlot, player: inout Player) async {
         player.equippedItems.removeValue(forKey: slot)
+        equippedIDs = Set(player.equippedItems.values)
+        applyFilter()
         await playerService.savePlayer(player)
     }
 
@@ -73,7 +81,8 @@ final class InventoryViewModel {
         player.wallet.add(item.effectiveSellPrice)
         await inventoryService.removeEquipment(item.id)
         await playerService.savePlayer(player)
-        await loadInventory()
+        equippedIDs = Set(player.equippedItems.values)
+        await loadInventory(equippedIDs: equippedIDs)
         showingDetail = false
         selectedItem = nil
     }
@@ -81,7 +90,7 @@ final class InventoryViewModel {
     func repairItem(_ item: Equipment) async -> Bool {
         let success = await inventoryService.repairEquipment(item.id)
         if success {
-            await loadInventory()
+            await loadInventory(equippedIDs: equippedIDs)
         }
         return success
     }
@@ -94,7 +103,7 @@ final class InventoryViewModel {
         guard let upgraded = await inventoryService.upgradeEquipment(item.id) else { return nil }
         player.wallet.coins -= cost
         await playerService.savePlayer(player)
-        await loadInventory()
+        await loadInventory(equippedIDs: equippedIDs)
         selectedItem = upgraded
         return upgraded
     }
@@ -152,15 +161,15 @@ final class InventoryViewModel {
     // MARK: - Private
 
     private func applyFilter() {
+        var items = inventory.filter { !equippedIDs.contains($0.id) }
         if let slot = selectedFilter {
-            filteredInventory = inventory.filter { $0.slot == slot }
-        } else {
-            filteredInventory = inventory
+            items = items.filter { $0.slot == slot }
         }
-        filteredInventory.sort { a, b in
+        items.sort { a, b in
             if a.rarity != b.rarity { return a.rarity > b.rarity }
             return a.totalBonusPoints > b.totalBonusPoints
         }
+        filteredInventory = items
     }
 
     private func calculatePreviewStats(equipping item: Equipment, player: Player) -> PlayerStats {

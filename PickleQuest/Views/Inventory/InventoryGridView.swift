@@ -64,7 +64,7 @@ struct InventoryGridView: View {
                 .padding(.bottom, 4)
             }
 
-            // 3x3 responsive grid
+            // 3x3 responsive grid with swipe to switch tabs
             GeometryReader { geo in
                 let totalSpacing = gridSpacing * CGFloat(columnCount - 1)
                 let cellSize = (geo.size.width - gridPadding * 2 - totalSpacing) / CGFloat(columnCount)
@@ -95,6 +95,16 @@ struct InventoryGridView: View {
                     }
                 }
                 .padding(.horizontal, gridPadding)
+                .gesture(
+                    DragGesture(minimumDistance: 30)
+                        .onEnded { value in
+                            if value.translation.width < -30 && vm.currentTab < vm.tabCount - 1 {
+                                vm.currentTab += 1
+                            } else if value.translation.width > 30 && vm.currentTab > 0 {
+                                vm.currentTab -= 1
+                            }
+                        }
+                )
             }
         }
     }

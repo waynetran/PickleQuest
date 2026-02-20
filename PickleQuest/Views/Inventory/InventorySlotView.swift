@@ -44,7 +44,7 @@ struct InventorySlotView: View {
 
                 // Rarity pill — top left
                 if item.rarity != .common {
-                    Text(item.rarity.displayName.prefix(4).uppercased())
+                    Text(item.rarity.displayName.uppercased())
                         .font(.system(size: max(5, cellSize * 0.08), weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 4)

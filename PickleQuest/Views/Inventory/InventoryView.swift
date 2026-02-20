@@ -24,12 +24,12 @@ struct InventoryView: View {
                         playerService: container.playerService
                     )
                     viewModel = vm
-                    await vm.loadInventory()
+                    await vm.loadInventory(equippedIDs: Set(appState.player.equippedItems.values))
                 }
             }
             .onAppear {
                 guard let vm = viewModel else { return }
-                Task { await vm.loadInventory() }
+                Task { await vm.loadInventory(equippedIDs: Set(appState.player.equippedItems.values)) }
             }
         }
     }
