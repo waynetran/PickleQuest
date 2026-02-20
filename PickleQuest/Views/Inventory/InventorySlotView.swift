@@ -23,7 +23,7 @@ struct InventorySlotView: View {
                 Text(item.slot.icon)
                     .font(.system(size: cellSize * 0.55))
 
-                // Equipment stats — right side, left-aligned, no background
+                // Equipment stats — top-right, left-aligned text
                 let allBonuses = (item.baseStat.map { [$0] } ?? []) + item.statBonuses
                 if !allBonuses.isEmpty {
                     VStack(alignment: .leading, spacing: 0) {
@@ -38,20 +38,20 @@ struct InventorySlotView: View {
                                 .foregroundStyle(color)
                         }
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                     .padding(3)
                 }
 
-                // Rarity pill — top left
+                // Rarity pill — bottom left, smaller
                 if item.rarity != .common {
                     Text(item.rarity.displayName.uppercased())
-                        .font(.system(size: max(5, cellSize * 0.08), weight: .bold, design: .rounded))
+                        .font(.system(size: max(4, cellSize * 0.06), weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 4)
+                        .padding(.horizontal, 3)
                         .padding(.vertical, 1)
                         .background(item.rarity.color.opacity(0.85))
                         .clipShape(Capsule())
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                         .padding(3)
                 }
 
@@ -64,14 +64,14 @@ struct InventorySlotView: View {
                         .padding(3)
                 }
 
-                // Level badge — bottom left
+                // Level badge — bottom right
                 if item.level > 1 {
                     Text("L\(item.level)")
                         .font(.system(size: max(6, cellSize * 0.09), design: .monospaced))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 2)
                         .background(Color.black.opacity(0.7))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                         .padding(2)
                 }
             }
