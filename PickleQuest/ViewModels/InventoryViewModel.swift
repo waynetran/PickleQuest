@@ -21,8 +21,10 @@ final class InventoryViewModel {
     // --- Inventory grid paging ---
     var currentTab: Int = 0
 
+    private let itemsPerPage = 16
+
     var tabCount: Int {
-        max(2, Int(ceil(Double(filteredInventory.count) / 20.0)))
+        max(2, Int(ceil(Double(filteredInventory.count) / Double(itemsPerPage))))
     }
 
     // --- Drag state ---
@@ -119,7 +121,7 @@ final class InventoryViewModel {
 
     func itemForSlot(tab: Int, index: Int, player: Player) -> Equipment? {
         let allItems = filteredInventory
-        let offset = tab * 20 + index
+        let offset = tab * itemsPerPage + index
         guard offset < allItems.count else { return nil }
         return allItems[offset]
     }

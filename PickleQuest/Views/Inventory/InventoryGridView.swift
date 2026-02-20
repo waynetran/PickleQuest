@@ -4,7 +4,10 @@ struct InventoryGridView: View {
     @Bindable var vm: InventoryViewModel
     let player: Player
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 4)
+    private let gridSpacing: CGFloat = 3
+    private let gridPadding: CGFloat = 8
+    private let columnCount: Int = 4
+    private let rowCount: Int = 4
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,7 +40,7 @@ struct InventoryGridView: View {
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(Color(white: 0.4))
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, gridPadding)
             .padding(.vertical, 6)
 
             // Filter chips
@@ -57,34 +60,43 @@ struct InventoryGridView: View {
                     }
                     Spacer()
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, gridPadding)
                 .padding(.bottom, 4)
             }
 
-            // 4x5 grid
-            LazyVGrid(columns: columns, spacing: 4) {
-                ForEach(0..<20, id: \.self) { index in
-                    let item = vm.itemForSlot(tab: vm.currentTab, index: index, player: player)
-                    let isEquipped = item.map { eq in
-                        player.equippedItems.values.contains(eq.id)
-                    } ?? false
+            // 4x4 responsive grid
+            GeometryReader { geo in
+                let totalSpacing = gridSpacing * CGFloat(columnCount - 1)
+                let cellSize = (geo.size.width - gridPadding * 2 - totalSpacing) / CGFloat(columnCount)
+                let itemsPerPage = columnCount * rowCount
 
-                    InventorySlotView(
-                        item: item,
-                        isEquipped: isEquipped,
-                        onTap: {
-                            if let item {
-                                vm.selectItem(item, player: player)
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.fixed(cellSize), spacing: gridSpacing), count: columnCount),
+                    spacing: gridSpacing
+                ) {
+                    ForEach(0..<itemsPerPage, id: \.self) { index in
+                        let item = vm.itemForSlot(tab: vm.currentTab, index: index, player: player)
+                        let isEquipped = item.map { eq in
+                            player.equippedItems.values.contains(eq.id)
+                        } ?? false
+
+                        InventorySlotView(
+                            item: item,
+                            isEquipped: isEquipped,
+                            cellSize: cellSize,
+                            onTap: {
+                                if let item {
+                                    vm.selectItem(item, player: player)
+                                }
+                            },
+                            onDragStart: { equipment, location in
+                                vm.startDrag(item: equipment, at: location, player: player)
                             }
-                        },
-                        onDragStart: { equipment, location in
-                            vm.startDrag(item: equipment, at: location, player: player)
-                        }
-                    )
+                        )
+                    }
                 }
+                .padding(.horizontal, gridPadding)
             }
-            .padding(.horizontal, 8)
-            .padding(.bottom, 8)
         }
     }
 }

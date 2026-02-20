@@ -5,9 +5,8 @@ struct EquipSlotView: View {
     let equippedItem: Equipment?
     let isHighlighted: Bool
     let isDimmed: Bool
+    var slotSize: CGFloat = 50
     let onTap: () -> Void
-
-    private let slotSize: CGFloat = 50
 
     var body: some View {
         Button(action: onTap) {
@@ -15,22 +14,21 @@ struct EquipSlotView: View {
                 // Background
                 Rectangle()
                     .fill(Color(white: 0.12))
-                    .frame(width: slotSize, height: slotSize)
 
                 if let item = equippedItem {
-                    // Filled slot
+                    // Filled slot — icon fills with 3px padding
                     Text(slot.icon)
-                        .font(.title2)
+                        .font(.system(size: slotSize * 0.52))
+                        .padding(3)
 
                     // Rarity border
                     Rectangle()
                         .strokeBorder(item.rarity.color, lineWidth: 2)
-                        .frame(width: slotSize, height: slotSize)
 
                     // Level badge
                     if item.level > 1 {
                         Text("L\(item.level)")
-                            .font(.system(size: 8, design: .monospaced))
+                            .font(.system(size: 7, design: .monospaced))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 2)
                             .background(Color.black.opacity(0.7))
@@ -40,19 +38,17 @@ struct EquipSlotView: View {
                 } else {
                     // Empty slot
                     Text(slot.icon)
-                        .font(.title3)
+                        .font(.system(size: slotSize * 0.42))
                         .opacity(0.3)
 
                     Rectangle()
                         .strokeBorder(Color(white: 0.25), lineWidth: 2)
-                        .frame(width: slotSize, height: slotSize)
                 }
 
                 // Highlight glow for compatible drag target
                 if isHighlighted {
                     Rectangle()
                         .strokeBorder(Color.green, lineWidth: 3)
-                        .frame(width: slotSize, height: slotSize)
                         .shadow(color: .green.opacity(0.6), radius: 6)
                 }
             }

@@ -16,11 +16,7 @@ struct InventoryView: View {
                     ProgressView()
                 }
             }
-            .navigationTitle("INVENTORY")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color(white: 0.08), for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .navigationBarHidden(true)
             .task {
                 if viewModel == nil {
                     let vm = InventoryViewModel(
@@ -40,19 +36,23 @@ struct InventoryView: View {
 
     @ViewBuilder
     private func inventoryContent(vm: InventoryViewModel) -> some View {
-        VStack(spacing: 0) {
-            // Block 1: Character + Equipment Slots
-            CharacterEquipmentView(vm: vm, player: appState.player)
+        GeometryReader { geo in
+            let availableHeight = geo.size.height
+            let equipHeight = availableHeight * 0.40
 
-            // Pixel divider
-            Rectangle()
-                .fill(Color(white: 0.2))
-                .frame(height: 2)
+            VStack(spacing: 0) {
+                // Block 1: Character + Equipment Slots (~40%)
+                CharacterEquipmentView(vm: vm, player: appState.player)
+                    .frame(height: equipHeight)
 
-            // Block 2: Tabbed Inventory Grid
-            InventoryGridView(vm: vm, player: appState.player)
+                // Pixel divider
+                Rectangle()
+                    .fill(Color(white: 0.2))
+                    .frame(height: 2)
 
-            Spacer(minLength: 0)
+                // Block 2: Tabbed Inventory Grid (remaining ~60%)
+                InventoryGridView(vm: vm, player: appState.player)
+            }
         }
         .coordinateSpace(name: "inventory")
         .onPreferenceChange(SlotFramePreferenceKey.self) { frames in

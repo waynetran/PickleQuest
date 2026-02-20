@@ -3,6 +3,7 @@ import SwiftUI
 struct InventorySlotView: View {
     let item: Equipment?
     let isEquipped: Bool
+    var cellSize: CGFloat = 80
     let onTap: () -> Void
     let onDragStart: (Equipment, CGPoint) -> Void
 
@@ -15,9 +16,10 @@ struct InventorySlotView: View {
                 .fill(Color(white: 0.12))
 
             if let item {
-                // Item icon
+                // Item icon — fills box with 3px padding
                 Text(item.slot.icon)
-                    .font(.title2)
+                    .font(.system(size: cellSize * 0.52))
+                    .padding(3)
 
                 // Rarity indicator — left border stripe
                 HStack(spacing: 0) {
@@ -30,7 +32,7 @@ struct InventorySlotView: View {
                 // Equipped checkmark
                 if isEquipped {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 10))
+                        .font(.system(size: min(cellSize * 0.14, 12)))
                         .foregroundStyle(.green)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                         .padding(3)
@@ -39,7 +41,7 @@ struct InventorySlotView: View {
                 // Level badge
                 if item.level > 1 {
                     Text("L\(item.level)")
-                        .font(.system(size: 7, design: .monospaced))
+                        .font(.system(size: max(7, cellSize * 0.08), design: .monospaced))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 2)
                         .background(Color.black.opacity(0.7))
@@ -55,7 +57,7 @@ struct InventorySlotView: View {
                     lineWidth: 2
                 )
         }
-        .aspectRatio(1, contentMode: .fit)
+        .frame(width: cellSize, height: cellSize)
         .opacity(isDragging ? 0.3 : 1.0)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
