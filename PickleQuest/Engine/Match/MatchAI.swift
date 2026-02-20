@@ -224,7 +224,7 @@ final class MatchAI {
         self.statBoost = boost
         let dupr = npc.duprRating
         let speedStat = CGFloat(P.npcScaledStat(.speed, base: npc.stats.stat(.speed), boost: boost, dupr: dupr))
-        let scale = moveSpeedScale ?? P.npcMoveSpeedScale(dupr: dupr)
+        let scale = moveSpeedScale ?? 1.0  // Speed GlobalMultiplier handles DUPR scaling via speedStat
         self.moveSpeed = (P.baseMoveSpeed + (speedStat / 99.0) * P.maxMoveSpeedBonus) * scale
         self.sprintSpeed = moveSpeed * (1.0 + P.maxSprintSpeedBoost)
 

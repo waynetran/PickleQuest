@@ -4,10 +4,8 @@ struct InventorySlotView: View {
     let item: Equipment?
     let isEquipped: Bool
     var cellSize: CGFloat = 80
+    let statDeltas: [StatDelta]
     let onTap: () -> Void
-    let onDragStart: (Equipment, CGPoint) -> Void
-
-    @State private var isDragging = false
 
     var body: some View {
         ZStack {
@@ -21,21 +19,39 @@ struct InventorySlotView: View {
             }
 
             if let item {
-                VStack(spacing: 0) {
-                    // Icon row
-                    Text(item.slot.icon)
-                        .font(.system(size: cellSize * 0.32))
-
-                    // Item name (truncated)
+                VStack(spacing: 1) {
+                    // Title at the top
                     Text(item.displayTitle)
-                        .font(.system(size: max(6, cellSize * 0.1), weight: .semibold, design: .rounded))
+                        .font(.system(size: max(6, cellSize * 0.09), weight: .semibold, design: .rounded))
                         .foregroundStyle(item.rarity == .common ? .white.opacity(0.7) : item.rarity.color)
                         .lineLimit(2)
                         .multilineTextAlignment(.center)
-                        .minimumScaleFactor(0.7)
+                        .minimumScaleFactor(0.6)
+                        .frame(maxWidth: .infinity)
 
-                    // Stat summary
-                    statSummary(for: item)
+                    // Icon left, stats right
+                    HStack(spacing: 2) {
+                        // Icon
+                        Text(item.slot.icon)
+                            .font(.system(size: cellSize * 0.3))
+
+                        // Stats column — green/red based on equip delta
+                        VStack(alignment: .leading, spacing: 0) {
+                            let allBonuses = (item.baseStat.map { [$0] } ?? []) + item.statBonuses
+                            ForEach(Array(allBonuses.prefix(3).enumerated()), id: \.offset) { _, bonus in
+                                let delta = statDeltas.first { $0.stat == bonus.stat }
+                                let color: Color = {
+                                    guard let d = delta else { return .white.opacity(0.5) }
+                                    return d.value > 0 ? .green : (d.value < 0 ? .red : .white.opacity(0.5))
+                                }()
+                                Text("+\(bonus.value) \(bonus.stat.displayName.prefix(3))")
+                                    .font(.system(size: max(5, cellSize * 0.08), design: .monospaced))
+                                    .foregroundStyle(color)
+                            }
+                        }
+
+                        Spacer(minLength: 0)
+                    }
                 }
                 .padding(3)
 
@@ -68,46 +84,7 @@ struct InventorySlotView: View {
                 )
         }
         .frame(width: cellSize, height: cellSize)
-        .opacity(isDragging ? 0.3 : 1.0)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.2)
-                .sequenced(before: DragGesture(coordinateSpace: .named("inventory")))
-                .onChanged { value in
-                    switch value {
-                    case .second(true, let drag):
-                        if let drag, let item {
-                            if !isDragging {
-                                isDragging = true
-                                onDragStart(item, drag.location)
-                            }
-                        }
-                    default:
-                        break
-                    }
-                }
-                .onEnded { _ in
-                    isDragging = false
-                }
-        )
-    }
-
-    @ViewBuilder
-    private func statSummary(for item: Equipment) -> some View {
-        let allBonuses = (item.baseStat.map { [$0] } ?? []) + item.statBonuses
-        let fontSize = max(5, cellSize * 0.08)
-
-        if !allBonuses.isEmpty {
-            HStack(spacing: 2) {
-                ForEach(Array(allBonuses.prefix(3).enumerated()), id: \.offset) { _, bonus in
-                    Text("+\(bonus.value) \(bonus.stat.displayName.prefix(3))")
-                        .font(.system(size: fontSize, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.6))
-                }
-            }
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-        }
     }
 }

@@ -4,15 +4,18 @@ enum DrillShotCalculator {
     struct ShotResult: Sendable {
         var power: CGFloat         // 0-1 speed magnitude
         var accuracy: CGFloat      // 0-1 deviation from target
-        var scatter: CGFloat       // raw scatter radius applied to target
+        var scatter: CGFloat       // scatter radius applied to target
         var spinCurve: CGFloat     // -1 to 1 lateral curve
         var arc: CGFloat           // 0-1 initial vertical velocity
-        var targetNX: CGFloat      // target X in court space
-        var targetNY: CGFloat      // target Y in court space
+        var targetNX: CGFloat      // FINAL target X in court space (after scatter)
+        var targetNY: CGFloat      // FINAL target Y in court space (after scatter)
         let shotType: ShotType
         var topspinFactor: CGFloat // -1 = backspin, 0 = flat, +1 = topspin
         var smashFactor: CGFloat = 0 // 0 = normal, 1 = full overhead smash
         var isPutAway: Bool = false  // kitchen put-away: high ball near net → near-certain winner
+        var intendedNX: CGFloat = 0.5  // intended target X before scatter
+        var intendedNY: CGFloat = 0.5  // intended target Y before scatter
+        var scatterRadius: CGFloat = 0 // DUPR-scaled scatter radius for visualization
     }
 
     enum ShotType: Sendable {
@@ -324,11 +327,11 @@ enum DrillShotCalculator {
         let focusStat = CGFloat(stats.stat(.focus))
 
         if drillType == .dinkingDrill && modes.isEmpty {
-            power = 0.15 + (powerStat / 99.0) * 0.20
+            power = 0.10 + (powerStat / 99.0) * 0.20
         } else if drillType == .baselineRally && modes.isEmpty {
-            power = max(0.15, 0.15 + (powerStat / 99.0) * 0.85)
+            power = 0.05 + (powerStat / 99.0) * 0.95
         } else {
-            power = max(0.15, 0.15 + (powerStat / 99.0) * 0.85)
+            power = 0.05 + (powerStat / 99.0) * 0.95
             let heightBonus = min(ballHeight / 0.15, 1.0) * P.heightPowerBonus
             power += heightBonus
 
@@ -400,35 +403,15 @@ enum DrillShotCalculator {
             }
         }
 
-        // --- Base scatter from stats (always present) ---
-        // Accuracy, consistency, and focus all contribute to shot control.
-        // stat 1 → scatter ~0.20 (frequent misses), stat 99 → scatter ~0 (laser accurate)
-        let avgControl = (accuracyStat + consistencyStat + focusStat) / 3.0
-        var scatter = GameConstants.PlayerBalance.baseScatter * (1.0 - avgControl / 99.0)
-
-        // Fatigue increases scatter: below 50% stamina, scatter grows up to 50% more
-        if staminaFraction < 0.5 {
-            scatter *= 1.0 + (1.0 - staminaFraction / 0.5) * 0.5
-        }
-
-        // Put-away: easy ball to place — reduce scatter significantly
-        if isPutAway {
-            scatter *= GameConstants.PutAway.scatterMultiplier
-        }
-
         // --- Apply mode modifiers ---
 
         // Power mode: 2x ball speed at full stamina, scales down to regular at 0 stamina
         if modes.contains(.power) {
             if !isPutAway {
-                // Normal power shots get full boost + extra scatter
                 let regularPower = power
                 let fullPower = regularPower * (1.0 + powerStat / 99.0)
                 power = regularPower + (fullPower - regularPower) * staminaFraction
-                let powerScatter = 0.06 * (1.0 - accuracyStat / 99.0)
-                scatter += powerScatter
             }
-            // Put-aways already have their own 1.2x power — don't double-boost
             targetNY = CGFloat.random(in: 0.80...0.92)
         }
 
@@ -453,63 +436,77 @@ enum DrillShotCalculator {
             }
         }
 
-        // Focus mode: reduces scatter, scaled by stamina
-        if modes.contains(.focus) {
-            let focusReduction = 0.7 * staminaFraction
-            scatter *= (1.0 - focusReduction)
-        }
-
         // Smash: boosted power when ball is high enough and touch is off
-        // Skip for put-aways — they already have their own power scaling (1.2x + height bonus)
         if ballHeight >= P.smashHeightThreshold && !modes.contains(.touch) && !isPutAway {
             power *= GameConstants.Smash.powerMultiplier
         }
 
-        power = max(0.15, min(2.5, power))
+        power = max(0.05, min(2.5, power))
 
         // Far-side shooters: mirror target to opponent's court half
         if shootingFromFarSide {
             targetNY = 1.0 - targetNY
         }
 
-        // --- Physics-based arc calculation ---
+        // Save intended target (pre-scatter)
+        let intendedNX = targetNX
+        let intendedNY = targetNY
+
+        // --- DUPR-scaled scatter radius (applied last) ---
+        // DUPR 2.0 → radius ~0.41 (half court), DUPR 5.5 → ~0.03, DUPR 8.0 → 0.01
+        let duprFrac = CGFloat(max(0, min(1, (shooterDUPR - 2.0) / 6.0)))
+        var scatterRadius = 0.40 * pow(1.0 - duprFrac, 3.5) + 0.01
+
+        // Fatigue increases scatter: below 50% stamina, up to 50% more
+        if staminaFraction < 0.5 {
+            scatterRadius *= 1.0 + (1.0 - staminaFraction / 0.5) * 0.5
+        }
+
+        // Put-away: easy ball — reduce scatter
+        if isPutAway {
+            scatterRadius *= GameConstants.PutAway.scatterMultiplier
+        }
+
+        // Power mode: adds scatter
+        if modes.contains(.power) && !isPutAway {
+            scatterRadius += 0.06 * (1.0 - accuracyStat / 99.0)
+        }
+
+        // Focus mode: reduces scatter, scaled by stamina
+        if modes.contains(.focus) {
+            scatterRadius *= 1.0 - 0.7 * staminaFraction
+        }
+
+        // Apply circular scatter (uniform distribution within circle)
+        let scatterAngle = CGFloat.random(in: 0...(2.0 * .pi))
+        let scatterDist = scatterRadius * sqrt(CGFloat.random(in: 0...1))
+        targetNX += cos(scatterAngle) * scatterDist
+        targetNY += sin(scatterAngle) * scatterDist
+        // No clamping — targets can land outside court for natural out-of-bounds errors
+
+        // --- Physics-based arc calculation (for final scattered target) ---
         let distToTargetNY = abs(targetNY - courtNY)
         let distToTargetNX = abs(targetNX - courtNX)
 
         if drillType == .dinkingDrill && modes.isEmpty {
             arc = CGFloat.random(in: 0.5...0.7)
         } else {
-            // Arc margins reduced after fixing arcToLandAt travel time calculation.
-            // ensureNetClearance() in launch() handles net clearance as a safety net.
             var margin: CGFloat = 1.0
             if modes.contains(.topspin) {
-                margin = 1.25  // topspin pulls ball down — needs extra arc
+                margin = 1.25
             } else if modes.contains(.slice) {
-                margin = 0.90  // slice floats — less arc needed
+                margin = 0.90
             }
             arc = arcToLandAt(distanceNY: distToTargetNY, distanceNX: distToTargetNX, power: power, arcMargin: margin)
 
-            // Overhead smash: steeper descent → higher bounce on opponent's side
             if ballHeight >= P.smashHeightThreshold {
                 arc += P.smashArcBonus
             }
         }
 
-        // Apply scatter — allow targets outside court for genuine misses
-        let scatterX = CGFloat.random(in: -scatter...scatter)
-        let scatterY = CGFloat.random(in: -scatter...scatter)
-
         // Spin
         let spinDirection: CGFloat = Bool.random() ? 1.0 : -1.0
         let spinCurve = spinDirection * (spinStat / 99.0)
-
-        // Soft clamp: allow targets slightly past court edges for out balls
-        targetNX = max(-0.05, min(1.05, targetNX + scatterX))
-        if shootingFromFarSide {
-            targetNY = max(-0.05, min(0.52, targetNY + scatterY))
-        } else {
-            targetNY = max(0.48, min(1.05, targetNY + scatterY))
-        }
 
         // Smash factor: scales 0→1 based on how far above smash threshold
         let smashFactor: CGFloat = ballHeight >= P.smashHeightThreshold
@@ -518,8 +515,8 @@ enum DrillShotCalculator {
 
         return ShotResult(
             power: power,
-            accuracy: max(0, 1.0 - scatter * 5),
-            scatter: scatter,
+            accuracy: max(0, 1.0 - scatterRadius * 2.5),
+            scatter: scatterRadius,
             spinCurve: spinCurve,
             arc: arc,
             targetNX: targetNX,
@@ -527,7 +524,10 @@ enum DrillShotCalculator {
             shotType: shotType,
             topspinFactor: topspinFactor,
             smashFactor: smashFactor,
-            isPutAway: isPutAway
+            isPutAway: isPutAway,
+            intendedNX: intendedNX,
+            intendedNY: intendedNY,
+            scatterRadius: scatterRadius
         )
     }
 

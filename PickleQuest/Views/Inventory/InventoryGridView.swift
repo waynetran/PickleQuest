@@ -6,8 +6,8 @@ struct InventoryGridView: View {
 
     private let gridSpacing: CGFloat = 3
     private let gridPadding: CGFloat = 8
-    private let columnCount: Int = 4
-    private let rowCount: Int = 4
+    private let columnCount: Int = 3
+    private let rowCount: Int = 3
 
     var body: some View {
         VStack(spacing: 0) {
@@ -64,7 +64,7 @@ struct InventoryGridView: View {
                 .padding(.bottom, 4)
             }
 
-            // 4x4 responsive grid
+            // 3x3 responsive grid
             GeometryReader { geo in
                 let totalSpacing = gridSpacing * CGFloat(columnCount - 1)
                 let cellSize = (geo.size.width - gridPadding * 2 - totalSpacing) / CGFloat(columnCount)
@@ -79,18 +79,17 @@ struct InventoryGridView: View {
                         let isEquipped = item.map { eq in
                             player.equippedItems.values.contains(eq.id)
                         } ?? false
+                        let deltas = item.map { vm.computeStatDeltas(equipping: $0, player: player) } ?? []
 
                         InventorySlotView(
                             item: item,
                             isEquipped: isEquipped,
                             cellSize: cellSize,
+                            statDeltas: deltas,
                             onTap: {
                                 if let item {
                                     vm.selectItem(item, player: player)
                                 }
-                            },
-                            onDragStart: { equipment, location in
-                                vm.startDrag(item: equipment, at: location, player: player)
                             }
                         )
                     }

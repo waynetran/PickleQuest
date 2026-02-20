@@ -21,20 +21,14 @@ final class InventoryViewModel {
     // --- Inventory grid paging ---
     var currentTab: Int = 0
 
-    private let itemsPerPage = 16
+    private let itemsPerPage = 9
 
     var tabCount: Int {
         max(2, Int(ceil(Double(filteredInventory.count) / Double(itemsPerPage))))
     }
 
-    // --- Drag state ---
-    var dragState: DragState?
-
     // --- Character animation ---
     var animationState: CharacterAnimationState = .idleFront
-
-    // --- Slot frame registration for drop targeting ---
-    var slotFrames: [EquipmentSlot: CGRect] = [:]
 
     init(inventoryService: InventoryService, playerService: PlayerService) {
         self.inventoryService = inventoryService
@@ -126,34 +120,6 @@ final class InventoryViewModel {
         return allItems[offset]
     }
 
-    // MARK: - Drag & Drop
-
-    func startDrag(item: Equipment, at location: CGPoint, player: Player) {
-        let deltas = computeStatDeltas(equipping: item, player: player)
-        dragState = DragState(item: item, location: location, statDeltas: deltas)
-    }
-
-    func updateDragLocation(_ point: CGPoint) {
-        dragState?.location = point
-    }
-
-    func endDrag(player: inout Player) async {
-        guard let drag = dragState else { return }
-        // Check if drop location intersects a compatible slot frame
-        for (slot, frame) in slotFrames {
-            if frame.contains(drag.location) && drag.item.slot == slot {
-                player.equippedItems[slot] = drag.item.id
-                await playerService.savePlayer(player)
-                break
-            }
-        }
-        dragState = nil
-    }
-
-    func cancelDrag() {
-        dragState = nil
-    }
-
     func computeStatDeltas(equipping item: Equipment, player: Player) -> [StatDelta] {
         let current = effectiveStats(for: player)
         let preview = calculatePreviewStats(equipping: item, player: player)
@@ -208,12 +174,6 @@ final class InventoryViewModel {
 }
 
 // MARK: - Supporting Types
-
-struct DragState {
-    let item: Equipment
-    var location: CGPoint
-    var statDeltas: [StatDelta]
-}
 
 struct StatDelta: Identifiable {
     let stat: StatType

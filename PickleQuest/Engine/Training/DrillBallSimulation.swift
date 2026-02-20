@@ -125,8 +125,8 @@ final class DrillBallSimulation {
         }
     }
 
-    func launch(from origin: CGPoint, toward target: CGPoint, power: CGFloat, arc: CGFloat, spin: CGFloat, topspin: CGFloat = 0) {
-        skipNetCorrection = false
+    func launch(from origin: CGPoint, toward target: CGPoint, power: CGFloat, arc: CGFloat, spin: CGFloat, topspin: CGFloat = 0, allowNetHit: Bool = false) {
+        skipNetCorrection = allowNetHit
         smashFactor = 0
         isPutAway = false
         heightAtNetCrossing = 0
@@ -260,5 +260,89 @@ final class DrillBallSimulation {
         guard isActive else { return false }
         let crossedNet = (previousY < 0.5 && courtY >= 0.5) || (previousY > 0.5 && courtY <= 0.5)
         return crossedNet && height < P.netLogicalHeight
+    }
+
+    /// Analytically predict where the ball will first bounce (height = 0).
+    /// Uses projectile equations with effective gravity (including topspin Magnus),
+    /// spin curve lateral drift, and current velocity. O(1) — no simulation needed.
+    func predictFirstBounce() -> CGPoint {
+        // Effective gravity: base gravity + topspin downward pull
+        let gEff = P.gravity + topspinFactor * 0.6
+        guard gEff > 0.001 else { return CGPoint(x: courtX, y: courtY) }
+
+        // Solve: 0 = h + vz*t - 0.5*gEff*t²
+        // Quadratic: t = (vz + sqrt(vz² + 2*gEff*h)) / gEff
+        let disc = vz * vz + 2.0 * gEff * height
+        guard disc >= 0 else { return CGPoint(x: courtX, y: courtY) }
+
+        let t = (vz + sqrt(disc)) / gEff
+        guard t > 0 else { return CGPoint(x: courtX, y: courtY) }
+
+        // X: constant acceleration from spin curve → x = x0 + vx*t + 0.5*spin*t²
+        let landX = courtX + vx * t + 0.5 * spinCurve * t * t
+        // Y: constant velocity (no Y acceleration)
+        let landY = courtY + vy * t
+
+        return CGPoint(x: landX, y: landY)
+    }
+
+    /// Predict the ideal intercept position — where the player should stand for a perfect hit.
+    /// This is the ball's (courtX, courtY) at the peak of the post-bounce arc, which gives
+    /// the most reaction time and easiest contact height.
+    /// Falls back to first bounce position if the ball has already bounced or won't bounce.
+    func predictIdealIntercept() -> CGPoint {
+        let gEff = P.gravity + topspinFactor * 0.6
+        guard gEff > 0.001 else { return CGPoint(x: courtX, y: courtY) }
+
+        // If the ball already bounced, predict from current state (post-bounce arc peak)
+        if bounceCount >= 1 {
+            guard vz > 0 else { return CGPoint(x: courtX, y: courtY) }
+            let tPeak = vz / gEff
+            let peakX = courtX + vx * tPeak + 0.5 * spinCurve * tPeak * tPeak
+            let peakY = courtY + vy * tPeak
+            return CGPoint(x: peakX, y: peakY)
+        }
+
+        // Pre-bounce: predict first bounce, then compute post-bounce arc peak
+        let disc = vz * vz + 2.0 * gEff * height
+        guard disc >= 0 else { return CGPoint(x: courtX, y: courtY) }
+        let tBounce = (vz + sqrt(disc)) / gEff
+        guard tBounce > 0 else { return CGPoint(x: courtX, y: courtY) }
+
+        // Position at first bounce
+        let bounceX = courtX + vx * tBounce + 0.5 * spinCurve * tBounce * tBounce
+        let bounceY = courtY + vy * tBounce
+
+        // Post-bounce velocities (mirroring DrillBallSimulation.update bounce logic)
+        var vzAfter = -(-vz + gEff * tBounce) * P.bounceDamping  // vz at impact is negative; reflect + damp
+        var vxAfter = (vx + spinCurve * tBounce) * P.courtFriction
+        var vyAfter = vy * P.courtFriction
+
+        // Smash bounce amplification
+        if smashFactor > 0 {
+            vzAfter *= (1.0 + smashFactor * (P.smashBounceMultiplier - 1.0))
+        }
+
+        // Topspin/backspin effects on bounce
+        if topspinFactor > 0 {
+            vyAfter *= (1.0 + topspinFactor * 0.30)
+            vzAfter *= (1.0 - topspinFactor * 0.4)
+        } else if topspinFactor < 0 {
+            vyAfter *= (1.0 + topspinFactor * 0.05)
+            vzAfter *= (1.0 + topspinFactor * 0.35)
+        }
+
+        // Time to reach peak of post-bounce arc
+        guard vzAfter > 0.01 else {
+            return CGPoint(x: bounceX, y: bounceY) // ball barely bounces, intercept at bounce
+        }
+        let gPost = P.gravity + topspinFactor * 0.6  // same effective gravity
+        let tPeak = vzAfter / gPost
+
+        // Position at arc peak
+        let peakX = bounceX + vxAfter * tPeak + 0.5 * spinCurve * tPeak * tPeak
+        let peakY = bounceY + vyAfter * tPeak
+
+        return CGPoint(x: peakX, y: peakY)
     }
 }

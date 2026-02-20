@@ -54,32 +54,6 @@ struct InventoryView: View {
                 InventoryGridView(vm: vm, player: appState.player)
             }
         }
-        .coordinateSpace(name: "inventory")
-        .onPreferenceChange(SlotFramePreferenceKey.self) { frames in
-            vm.slotFrames = frames
-        }
-        // Drag gesture overlay — captures movement and drop across the whole view
-        .gesture(
-            DragGesture(coordinateSpace: .named("inventory"))
-                .onChanged { value in
-                    if vm.dragState != nil {
-                        vm.updateDragLocation(value.location)
-                    }
-                }
-                .onEnded { _ in
-                    if vm.dragState != nil {
-                        Task {
-                            var player = appState.player
-                            await vm.endDrag(player: &player)
-                            appState.player = player
-                        }
-                    }
-                }
-        )
-        .overlay {
-            DragPreviewView(vm: vm)
-                .allowsHitTesting(false)
-        }
         .sheet(isPresented: Binding(
             get: { vm.showingDetail },
             set: { vm.showingDetail = $0 }

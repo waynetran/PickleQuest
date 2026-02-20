@@ -30,9 +30,9 @@ struct Equipment: Identifiable, Codable, Equatable, Sendable {
         let topStat = allBonuses.max(by: { $0.value < $1.value })?.stat
         let phrase = topStat?.equipmentPhrase ?? "Vibes"
         if rarity == .common {
-            return "\(slot.displayName) of \(phrase)"
+            return "\(slot.displayName) of The \(phrase)"
         }
-        return "\(rarity.displayName) \(slot.displayName) of \(phrase)"
+        return "\(rarity.displayName) \(slot.displayName) of The \(phrase)"
     }
 
     var totalBonusPoints: Int {

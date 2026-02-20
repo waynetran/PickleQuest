@@ -339,7 +339,9 @@ enum GameConstants {
         static let spinCurveFactor: CGFloat = 0.15  // max lateral curve from spin stat
 
         // Shot speeds (court units per second)
-        static let baseShotSpeed: CGFloat = 0.35
+        // baseShotSpeed is the minimum ball speed (power=0). Lower = more stat separation.
+        // Must be high enough for the ball to physically cross the court (~0.20 minimum).
+        static let baseShotSpeed: CGFloat = 0.25
         static let maxShotSpeed: CGFloat = 0.90
         static let dinkShotSpeed: CGFloat = 0.20
 
@@ -353,9 +355,9 @@ enum GameConstants {
 
         // Pressure hitbox shrink — cumulative per kitchen shot while opponent is deep.
         // Each shot from the kitchen player while NPC stays back shrinks NPC hitbox further.
-        nonisolated(unsafe) static var pressureShrinkPerShot: CGFloat = 0.18        // hitbox multiplier lost per pressure shot
-        nonisolated(unsafe) static var pressureHitboxMinMultiplier: CGFloat = 0.40  // floor — can't shrink below 40%
-        nonisolated(unsafe) static var pressureTouchResistMax: CGFloat = 0.60       // accuracy stat 99 resists 60% of shrink
+        static let pressureShrinkPerShot: CGFloat = 0.2800        // hitbox multiplier lost per pressure shot
+        static let pressureHitboxMinMultiplier: CGFloat = 0.3000  // floor — can't shrink below 30%
+        static let pressureTouchResistMax: CGFloat = 0.8000       // positioning stat 99 resists 80% of shrink
         static let pressurePlayerKitchenNY: CGFloat = 0.38      // player Y threshold to be "at kitchen"
         static let pressureNPCDeepNY: CGFloat = 0.72            // NPC Y threshold to be "deep/back"
 
@@ -365,61 +367,49 @@ enum GameConstants {
         static let baseHeightReach: CGFloat = 0.05       // minimum reach (low-stat players struggle with high balls)
         static let maxHeightReachBonus: CGFloat = 0.30   // stat 99 adds 0.30 → total 0.35
 
-        /// DUPR-scaled stat boost for NPCs in interactive matches.
-        /// Compensates for human joystick advantage (perfect positioning intelligence).
-        /// Low-DUPR NPCs get a small boost (beginners don't have much joystick advantage),
-        /// high-DUPR NPCs get a larger boost (experts exploit joystick precision fully).
-        /// Formula: max(minBoost, baseStatAvg * boostFraction)
-        static let npcStatBoostFraction: CGFloat = 0.25  // 25% of base stat average
-        static let npcStatBoostMin: Int = 5               // minimum boost at any DUPR
+        /// NPC stat boost disabled — stats now fully driven by base + GlobalMultiplier.
+        static let npcStatBoostFraction: CGFloat = 0
+        static let npcStatBoostMin: Int = 0
 
         /// Compute the stat boost for an NPC based on their base stat average.
         static func npcStatBoost(forBaseStatAverage avg: CGFloat) -> Int {
-            max(npcStatBoostMin, Int((avg * npcStatBoostFraction).rounded()))
+            0
         }
 
         // Player movement (court units per second)
-        nonisolated(unsafe) static var baseMoveSpeed: CGFloat = 0.28
-        nonisolated(unsafe) static var maxMoveSpeedBonus: CGFloat = 0.56
+        static let baseMoveSpeed: CGFloat = 0.2000
+        static let maxMoveSpeedBonus: CGFloat = 0.5600
 
-        // NPC move speed DUPR scaling — interpolates from low (DUPR 2.0) to high (DUPR 8.0)
-        nonisolated(unsafe) static var npcMoveSpeedScaleLow: CGFloat = 0.20   // DUPR 2.0 speed multiplier
-        nonisolated(unsafe) static var npcMoveSpeedScaleHigh: CGFloat = 1.0   // DUPR 8.0 speed multiplier
-
-        /// Compute NPC move speed scale from DUPR. Single source of truth — used by
-        /// MatchAI, SimulatedPlayerAI, and balance tests. HeadlessMatchSimulator can
-        /// override via SimulationParameters for training experiments.
-        static func npcMoveSpeedScale(dupr: Double) -> CGFloat {
-            let n = CGFloat(max(0, min(1, (dupr - 2.0) / 6.0)))
-            return npcMoveSpeedScaleLow + (npcMoveSpeedScaleHigh - npcMoveSpeedScaleLow) * n
-        }
+        // NPC move speed DUPR scaling — REMOVED. Speed GlobalMultiplier now handles
+        // DUPR scaling of the speed stat, which feeds into the move speed formula.
+        // npcMoveSpeedScale kept only for HeadlessMatchSimulator training overrides.
 
         // MARK: NPC Stat Global Multipliers
         // Scale NPC effective stats by DUPR: DUPR 2.0 uses Low, DUPR 8.0 uses High.
         // Interpolated linearly. Applied after stat boost, before stats are used.
         // Search: "GlobalMultiplier" to find all per-stat multipliers.
-        nonisolated(unsafe) static var npcPowerGlobalMultiplierLow: CGFloat = 0.50
-        nonisolated(unsafe) static var npcPowerGlobalMultiplierHigh: CGFloat = 1.0
-        nonisolated(unsafe) static var npcAccuracyGlobalMultiplierLow: CGFloat = 0.50
-        nonisolated(unsafe) static var npcAccuracyGlobalMultiplierHigh: CGFloat = 1.0
-        nonisolated(unsafe) static var npcSpinGlobalMultiplierLow: CGFloat = 0.50
-        nonisolated(unsafe) static var npcSpinGlobalMultiplierHigh: CGFloat = 1.0
-        nonisolated(unsafe) static var npcSpeedGlobalMultiplierLow: CGFloat = 1.0   // speed already has npcMoveSpeedScale
-        nonisolated(unsafe) static var npcSpeedGlobalMultiplierHigh: CGFloat = 1.0
-        nonisolated(unsafe) static var npcDefenseGlobalMultiplierLow: CGFloat = 0.50
-        nonisolated(unsafe) static var npcDefenseGlobalMultiplierHigh: CGFloat = 1.0
-        nonisolated(unsafe) static var npcReflexesGlobalMultiplierLow: CGFloat = 0.50
-        nonisolated(unsafe) static var npcReflexesGlobalMultiplierHigh: CGFloat = 1.0
-        nonisolated(unsafe) static var npcPositioningGlobalMultiplierLow: CGFloat = 0.50
-        nonisolated(unsafe) static var npcPositioningGlobalMultiplierHigh: CGFloat = 1.0
-        nonisolated(unsafe) static var npcClutchGlobalMultiplierLow: CGFloat = 0.50
-        nonisolated(unsafe) static var npcClutchGlobalMultiplierHigh: CGFloat = 1.0
-        nonisolated(unsafe) static var npcFocusGlobalMultiplierLow: CGFloat = 0.50
-        nonisolated(unsafe) static var npcFocusGlobalMultiplierHigh: CGFloat = 1.0
-        nonisolated(unsafe) static var npcStaminaGlobalMultiplierLow: CGFloat = 0.50
-        nonisolated(unsafe) static var npcStaminaGlobalMultiplierHigh: CGFloat = 1.0
-        nonisolated(unsafe) static var npcConsistencyGlobalMultiplierLow: CGFloat = 0.50
-        nonisolated(unsafe) static var npcConsistencyGlobalMultiplierHigh: CGFloat = 1.0
+        static let npcPowerGlobalMultiplierLow: CGFloat = 0.10
+        static let npcPowerGlobalMultiplierHigh: CGFloat = 1.0
+        static let npcAccuracyGlobalMultiplierLow: CGFloat = 0.10
+        static let npcAccuracyGlobalMultiplierHigh: CGFloat = 1.0
+        static let npcSpinGlobalMultiplierLow: CGFloat = 0.10
+        static let npcSpinGlobalMultiplierHigh: CGFloat = 1.0
+        static let npcSpeedGlobalMultiplierLow: CGFloat = 0.10
+        static let npcSpeedGlobalMultiplierHigh: CGFloat = 1.0
+        static let npcDefenseGlobalMultiplierLow: CGFloat = 0.10
+        static let npcDefenseGlobalMultiplierHigh: CGFloat = 1.0
+        static let npcReflexesGlobalMultiplierLow: CGFloat = 0.10
+        static let npcReflexesGlobalMultiplierHigh: CGFloat = 1.0
+        static let npcPositioningGlobalMultiplierLow: CGFloat = 0.10
+        static let npcPositioningGlobalMultiplierHigh: CGFloat = 1.0
+        static let npcClutchGlobalMultiplierLow: CGFloat = 0.10
+        static let npcClutchGlobalMultiplierHigh: CGFloat = 1.0
+        static let npcFocusGlobalMultiplierLow: CGFloat = 0.10
+        static let npcFocusGlobalMultiplierHigh: CGFloat = 1.0
+        static let npcStaminaGlobalMultiplierLow: CGFloat = 0.10
+        static let npcStaminaGlobalMultiplierHigh: CGFloat = 1.0
+        static let npcConsistencyGlobalMultiplierLow: CGFloat = 0.10
+        static let npcConsistencyGlobalMultiplierHigh: CGFloat = 1.0
 
         /// Returns the DUPR-interpolated global multiplier for a given stat.
         static func npcGlobalMultiplier(for stat: StatType, dupr: Double) -> CGFloat {
@@ -492,8 +482,9 @@ enum GameConstants {
         static let coneHitRadius: CGFloat = 0.10
 
         // NPC error rates (interactive match)
-        /// Base error rate on neutral/easy shots (scales with 1 - statFraction)
-        static let npcBaseErrorRate: CGFloat = 0.04
+        /// Base error rate on neutral/easy shots (scales with 1 - statFraction).
+        /// At stat 1: ~79% unforced errors. At stat 99: ~0%.
+        static let npcBaseErrorRate: CGFloat = 0.80
         /// Error scaling from incoming shot difficulty (speed + spin pressure)
         static let npcPowerErrorScale: CGFloat = 0.50
         /// Minimum error rate floor per unit of shot difficulty (even stat 99 NPCs)
@@ -541,12 +532,11 @@ enum GameConstants {
 
     // MARK: - Put-Away Balance
     enum PutAway {
-        // Return rate: continuous DUPR-scaled formula (var for runtime tuning by balance tests)
-        nonisolated(unsafe) static var baseReturnRate: CGFloat = 0.3561      // return chance at DUPR 4.0
-        nonisolated(unsafe) static var returnDUPRScale: CGFloat = 0.2452     // change per 1.0 DUPR
+        static let baseReturnRate: CGFloat = 0.3561      // return chance at DUPR 4.0
+        static let returnDUPRScale: CGFloat = 0.2452     // change per 1.0 DUPR
         static let returnFloor: CGFloat = 0.0          // min return rate
         static let returnCeiling: CGFloat = 0.65       // max return rate (put-aways are winners)
-        nonisolated(unsafe) static var stretchPenalty: CGFloat = 0.1485      // stretch reduces return rate significantly
+        static let stretchPenalty: CGFloat = 0.1485      // stretch reduces return rate significantly
 
         // Accuracy: put-away scatter multiplier (lower = more accurate, put-aways are easy to place)
         static let scatterMultiplier: CGFloat = 0.30
@@ -554,12 +544,11 @@ enum GameConstants {
 
     // MARK: - Smash Balance
     enum Smash {
-        // Smash return rate: less punishing than put-away (player is further from net) (var for runtime tuning)
-        nonisolated(unsafe) static var baseReturnRate: CGFloat = 0.5626     // return chance at DUPR 4.0
-        nonisolated(unsafe) static var returnDUPRScale: CGFloat = 0.2097    // change per 1.0 DUPR
+        static let baseReturnRate: CGFloat = 0.5626     // return chance at DUPR 4.0
+        static let returnDUPRScale: CGFloat = 0.2097    // change per 1.0 DUPR
         static let returnFloor: CGFloat = 0.0         // min return rate
         static let returnCeiling: CGFloat = 0.90      // max return rate (after stretch → effective ~80%)
-        nonisolated(unsafe) static var stretchPenalty: CGFloat = 0.1704      // stretch reduces return rate
+        static let stretchPenalty: CGFloat = 0.1704      // stretch reduces return rate
 
         // Power: reduced from 2.0 to prevent wild/out-of-bounds shots
         static let powerMultiplier: CGFloat = 1.5

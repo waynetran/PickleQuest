@@ -24,13 +24,10 @@ struct PutAwayBalanceTests {
     // MARK: - Simulate Return Rate
 
     /// Simulate put-away return rate at a given DUPR by replicating the shouldMakeError formula
-    /// inline with parameterized put-away constants (since static lets can't be mutated at runtime).
+    /// inline with the locked put-away constants from GameConstants.
     static func simulatePutAwayReturnRate(
         dupr: Double,
-        count: Int,
-        baseReturnRate: CGFloat,
-        returnDUPRScale: CGFloat,
-        stretchPenalty: CGFloat
+        count: Int
     ) -> Double {
         let PA = GameConstants.PutAway.self
         let P = GameConstants.DrillPhysics.self
@@ -87,10 +84,10 @@ struct PutAwayBalanceTests {
 
             // No DUPR gap (same-DUPR matchup)
 
-            // Put-away formula with parameterized constants
-            let rawReturn = baseReturnRate + CGFloat(dupr - 4.0) * returnDUPRScale
+            // Put-away formula with locked constants
+            let rawReturn = PA.baseReturnRate + CGFloat(dupr - 4.0) * PA.returnDUPRScale
             let clampedReturn = max(PA.returnFloor, min(PA.returnCeiling, rawReturn))
-            let adjustedReturn = clampedReturn * (1.0 - stretchFraction * stretchPenalty)
+            let adjustedReturn = clampedReturn * (1.0 - stretchFraction * PA.stretchPenalty)
             errorRate = max(errorRate, 1.0 - adjustedReturn)
 
             let madeError = CGFloat.random(in: 0...1) < errorRate
@@ -102,140 +99,27 @@ struct PutAwayBalanceTests {
         return Double(returns) / Double(count)
     }
 
-    // MARK: - Feedback Loop: Return Rates
+    // MARK: - Verify Put-Away Return Rates (validation-only)
+    //
+    // If this test fails, adjust stat curves in stat_profiles.json (offsets/slopes) or
+    // NPCStrategyProfile parameters. Do NOT reintroduce mutable GameConstants.
 
-    @Test func tunePutAwayReturnRates() {
-        let testDUPRs: [Double] = Self.returnTargets.map { $0.dupr }
-        let maxIterations = 20
-
-        // Start from current constants
-        var baseReturnRate = GameConstants.PutAway.baseReturnRate
-        var returnDUPRScale = GameConstants.PutAway.returnDUPRScale
-        var stretchPenalty = GameConstants.PutAway.stretchPenalty
-
-        var bestBaseReturn = baseReturnRate
-        var bestDUPRScale = returnDUPRScale
-        var bestStretchPenalty = stretchPenalty
-        var bestTotalError: Double = .infinity
-
-        print("Put-Away Return Rate Tuning")
-        print("===========================")
+    @Test func verifyPutAwayReturnRates() {
+        print("Put-Away Return Rate Verification")
+        print("==================================")
         print("Targets: \(Self.returnTargets.map { "DUPR \($0.dupr): \(Int($0.returnRate * 100))%" }.joined(separator: ", "))")
         print("")
 
-        for iteration in 1...maxIterations {
-            var results: [(dupr: Double, measured: Double, target: Double)] = []
-            var totalError: Double = 0
-
-            for (dupr, target) in Self.returnTargets {
-                let rate = Self.simulatePutAwayReturnRate(
-                    dupr: dupr,
-                    count: Self.trialsPerDUPR,
-                    baseReturnRate: baseReturnRate,
-                    returnDUPRScale: returnDUPRScale,
-                    stretchPenalty: stretchPenalty
-                )
-                let diff = rate - target
-                totalError += diff * diff
-                results.append((dupr, rate, target))
-            }
-
-            let rmse = sqrt(totalError / Double(testDUPRs.count))
-
-            print("Iteration \(iteration): baseReturn=\(String(format: "%.4f", baseReturnRate)), duprScale=\(String(format: "%.4f", returnDUPRScale)), stretchPenalty=\(String(format: "%.4f", stretchPenalty))")
-            for r in results {
-                let status = Swift.abs(r.measured - r.target) <= Self.returnTolerance ? "OK" : "MISS"
-                print("  DUPR \(String(format: "%.1f", r.dupr)): \(String(format: "%.1f%%", r.measured * 100)) (target: \(String(format: "%.0f%%", r.target * 100))) [\(status)]")
-            }
-            print("  RMSE: \(String(format: "%.4f", rmse))")
-
-            if totalError < bestTotalError {
-                bestTotalError = totalError
-                bestBaseReturn = baseReturnRate
-                bestDUPRScale = returnDUPRScale
-                bestStretchPenalty = stretchPenalty
-            }
-
-            let allGood = results.allSatisfy { Swift.abs($0.measured - $0.target) <= Self.returnTolerance }
-            if allGood {
-                print("\nAll DUPR levels within tolerance after \(iteration) iterations!")
-                break
-            }
-
-            // --- Gradient adjustments ---
-            // Higher baseReturnRate → more returns; higher stretchPenalty → fewer returns
-            let lr: CGFloat = 0.5
-
-            // Mid-DUPR (4.0) drives baseReturnRate
-            let midResult = results.first { $0.dupr == 4.0 }!
-            let midError = midResult.measured - midResult.target
-            if Swift.abs(midError) > Self.returnTolerance {
-                // Positive midError = too many returns → decrease baseReturnRate
-                baseReturnRate -= CGFloat(midError) * lr * 0.4
-                baseReturnRate = max(0.10, min(2.0, baseReturnRate))
-            }
-
-            // Slope between DUPR 2.0 and 6.0 drives returnDUPRScale
-            let lowResult = results.first { $0.dupr == 2.0 }!
-            let highResult = results.first { $0.dupr == 6.0 }!
-            let measuredSlope = (highResult.measured - lowResult.measured) / 4.0  // per 1.0 DUPR
-            let targetSlope = (highResult.target - lowResult.target) / 4.0
-            let slopeError = measuredSlope - targetSlope
-            if Swift.abs(slopeError) > 0.02 {
-                // Positive slopeError = slope too steep → decrease returnDUPRScale
-                returnDUPRScale -= CGFloat(slopeError) * lr * 0.3
-                returnDUPRScale = max(0.05, min(1.0, returnDUPRScale))
-            }
-
-            // High-DUPR overshoot drives stretchPenalty
-            let highError = highResult.measured - highResult.target
-            if Swift.abs(highError) > Self.returnTolerance {
-                // Positive highError = too many returns → increase stretch penalty
-                stretchPenalty += CGFloat(highError) * lr * 0.3
-                stretchPenalty = max(0.05, min(0.80, stretchPenalty))
-            }
-
-            print("")
-        }
-
-        // Use best parameters
-        baseReturnRate = bestBaseReturn
-        returnDUPRScale = bestDUPRScale
-        stretchPenalty = bestStretchPenalty
-
-        // Final verification with more samples
-        print("\n--- Final Verification (10k trials per DUPR) ---")
         var allPassed = true
         for (dupr, target) in Self.returnTargets {
-            let rate = Self.simulatePutAwayReturnRate(
-                dupr: dupr,
-                count: 10_000,
-                baseReturnRate: baseReturnRate,
-                returnDUPRScale: returnDUPRScale,
-                stretchPenalty: stretchPenalty
-            )
-            let status = Swift.abs(rate - target) <= Self.returnTolerance ? "PASS" : "FAIL"
-            if Swift.abs(rate - target) > Self.returnTolerance { allPassed = false }
+            let rate = Self.simulatePutAwayReturnRate(dupr: dupr, count: 10_000)
+            let pass = Swift.abs(rate - target) <= Self.returnTolerance
+            if !pass { allPassed = false }
+            let status = pass ? "PASS" : "FAIL"
             print("  DUPR \(String(format: "%.1f", dupr)): \(String(format: "%.1f%%", rate * 100)) (target: \(String(format: "%.0f%%", target * 100))) [\(status)]")
         }
 
-        print("\nOptimal return rate constants:")
-        print("  baseReturnRate = \(String(format: "%.4f", baseReturnRate))")
-        print("  returnDUPRScale = \(String(format: "%.4f", returnDUPRScale))")
-        print("  stretchPenalty = \(String(format: "%.4f", stretchPenalty))")
-
-        if allPassed {
-            writeReturnConstants(
-                baseReturnRate: baseReturnRate,
-                returnDUPRScale: returnDUPRScale,
-                stretchPenalty: stretchPenalty
-            )
-            print("\nReturn rate constants written to GameConstants.swift")
-        } else {
-            print("\nWARNING: Not all targets met — constants NOT written. Review and re-run.")
-        }
-
-        #expect(allPassed, "All DUPR put-away return rates should be within tolerance of targets")
+        #expect(allPassed, "All DUPR put-away return rates should be within tolerance. Fix: adjust stat_profiles.json or NPCStrategyProfile.")
     }
 
     // MARK: - Scatter Validation
@@ -291,10 +175,7 @@ struct PutAwayBalanceTests {
 
     static func simulateSmashReturnRate(
         dupr: Double,
-        count: Int,
-        baseReturnRate: CGFloat,
-        returnDUPRScale: CGFloat,
-        stretchPenalty: CGFloat
+        count: Int
     ) -> Double {
         let SM = GameConstants.Smash.self
         let P = GameConstants.DrillPhysics.self
@@ -341,11 +222,11 @@ struct PutAwayBalanceTests {
                 errorRate *= 1.0 + (stretchFraction - 0.6) * 1.5
             }
 
-            // Smash formula with parameterized constants (full smash: smashFactor=1.0)
+            // Smash formula with locked constants (full smash: smashFactor=1.0)
             let smashFactor: CGFloat = 1.0
-            let rawReturn = baseReturnRate + CGFloat(dupr - 4.0) * returnDUPRScale
+            let rawReturn = SM.baseReturnRate + CGFloat(dupr - 4.0) * SM.returnDUPRScale
             let clampedReturn = max(SM.returnFloor, min(SM.returnCeiling, rawReturn))
-            let adjustedReturn = clampedReturn * (1.0 - stretchFraction * stretchPenalty)
+            let adjustedReturn = clampedReturn * (1.0 - stretchFraction * SM.stretchPenalty)
             let smashErrorFloor = 1.0 - adjustedReturn * smashFactor
             errorRate = max(errorRate, smashErrorFloor)
 
@@ -358,214 +239,26 @@ struct PutAwayBalanceTests {
         return Double(returns) / Double(count)
     }
 
-    // MARK: - Feedback Loop: Smash Return Rates
+    // MARK: - Verify Smash Return Rates (validation-only)
+    //
+    // If this test fails, adjust stat curves in stat_profiles.json (offsets/slopes) or
+    // NPCStrategyProfile parameters. Do NOT reintroduce mutable GameConstants.
 
-    @Test func tuneSmashReturnRates() {
-        let testDUPRs: [Double] = Self.smashReturnTargets.map { $0.dupr }
-        let maxIterations = 20
-
-        var baseReturnRate = GameConstants.Smash.baseReturnRate
-        var returnDUPRScale = GameConstants.Smash.returnDUPRScale
-        var stretchPenalty = GameConstants.Smash.stretchPenalty
-
-        var bestBaseReturn = baseReturnRate
-        var bestDUPRScale = returnDUPRScale
-        var bestStretchPenalty = stretchPenalty
-        var bestTotalError: Double = .infinity
-
-        print("Smash Return Rate Tuning")
-        print("========================")
+    @Test func verifySmashReturnRates() {
+        print("Smash Return Rate Verification")
+        print("===============================")
         print("Targets: \(Self.smashReturnTargets.map { "DUPR \($0.dupr): \(Int($0.returnRate * 100))%" }.joined(separator: ", "))")
         print("")
 
-        for iteration in 1...maxIterations {
-            var results: [(dupr: Double, measured: Double, target: Double)] = []
-            var totalError: Double = 0
-
-            for (dupr, target) in Self.smashReturnTargets {
-                let rate = Self.simulateSmashReturnRate(
-                    dupr: dupr,
-                    count: Self.trialsPerDUPR,
-                    baseReturnRate: baseReturnRate,
-                    returnDUPRScale: returnDUPRScale,
-                    stretchPenalty: stretchPenalty
-                )
-                let diff = rate - target
-                totalError += diff * diff
-                results.append((dupr, rate, target))
-            }
-
-            let rmse = sqrt(totalError / Double(testDUPRs.count))
-
-            print("Iteration \(iteration): baseReturn=\(String(format: "%.4f", baseReturnRate)), duprScale=\(String(format: "%.4f", returnDUPRScale)), stretchPenalty=\(String(format: "%.4f", stretchPenalty))")
-            for r in results {
-                let status = Swift.abs(r.measured - r.target) <= Self.smashReturnTolerance ? "OK" : "MISS"
-                print("  DUPR \(String(format: "%.1f", r.dupr)): \(String(format: "%.1f%%", r.measured * 100)) (target: \(String(format: "%.0f%%", r.target * 100))) [\(status)]")
-            }
-            print("  RMSE: \(String(format: "%.4f", rmse))")
-
-            if totalError < bestTotalError {
-                bestTotalError = totalError
-                bestBaseReturn = baseReturnRate
-                bestDUPRScale = returnDUPRScale
-                bestStretchPenalty = stretchPenalty
-            }
-
-            let allGood = results.allSatisfy { Swift.abs($0.measured - $0.target) <= Self.smashReturnTolerance }
-            if allGood {
-                print("\nAll DUPR levels within tolerance after \(iteration) iterations!")
-                break
-            }
-
-            // Gradient adjustments (same pattern as put-away tuning)
-            let lr: CGFloat = 0.5
-
-            let midResult = results.first { $0.dupr == 4.0 }!
-            let midError = midResult.measured - midResult.target
-            if Swift.abs(midError) > Self.smashReturnTolerance {
-                baseReturnRate -= CGFloat(midError) * lr * 0.4
-                baseReturnRate = max(0.10, min(2.0, baseReturnRate))
-            }
-
-            let lowResult = results.first { $0.dupr == 2.0 }!
-            let highResult = results.first { $0.dupr == 6.0 }!
-            let measuredSlope = (highResult.measured - lowResult.measured) / 4.0
-            let targetSlope = (highResult.target - lowResult.target) / 4.0
-            let slopeError = measuredSlope - targetSlope
-            if Swift.abs(slopeError) > 0.02 {
-                returnDUPRScale -= CGFloat(slopeError) * lr * 0.3
-                returnDUPRScale = max(0.05, min(1.0, returnDUPRScale))
-            }
-
-            let highError = highResult.measured - highResult.target
-            if Swift.abs(highError) > Self.smashReturnTolerance {
-                stretchPenalty += CGFloat(highError) * lr * 0.3
-                stretchPenalty = max(0.05, min(0.80, stretchPenalty))
-            }
-
-            print("")
-        }
-
-        baseReturnRate = bestBaseReturn
-        returnDUPRScale = bestDUPRScale
-        stretchPenalty = bestStretchPenalty
-
-        print("\n--- Final Verification (10k trials per DUPR) ---")
         var allPassed = true
         for (dupr, target) in Self.smashReturnTargets {
-            let rate = Self.simulateSmashReturnRate(
-                dupr: dupr,
-                count: 10_000,
-                baseReturnRate: baseReturnRate,
-                returnDUPRScale: returnDUPRScale,
-                stretchPenalty: stretchPenalty
-            )
-            let status = Swift.abs(rate - target) <= Self.smashReturnTolerance ? "PASS" : "FAIL"
-            if Swift.abs(rate - target) > Self.smashReturnTolerance { allPassed = false }
+            let rate = Self.simulateSmashReturnRate(dupr: dupr, count: 10_000)
+            let pass = Swift.abs(rate - target) <= Self.smashReturnTolerance
+            if !pass { allPassed = false }
+            let status = pass ? "PASS" : "FAIL"
             print("  DUPR \(String(format: "%.1f", dupr)): \(String(format: "%.1f%%", rate * 100)) (target: \(String(format: "%.0f%%", target * 100))) [\(status)]")
         }
 
-        print("\nOptimal smash return rate constants:")
-        print("  baseReturnRate = \(String(format: "%.4f", baseReturnRate))")
-        print("  returnDUPRScale = \(String(format: "%.4f", returnDUPRScale))")
-        print("  stretchPenalty = \(String(format: "%.4f", stretchPenalty))")
-
-        if allPassed {
-            writeSmashConstants(
-                baseReturnRate: baseReturnRate,
-                returnDUPRScale: returnDUPRScale,
-                stretchPenalty: stretchPenalty
-            )
-            print("\nSmash return rate constants written to GameConstants.swift")
-        } else {
-            print("\nWARNING: Not all targets met — constants NOT written. Review and re-run.")
-        }
-
-        #expect(allPassed, "All DUPR smash return rates should be within tolerance of targets")
-    }
-
-    // MARK: - Write Constants
-
-    private func writeSmashConstants(
-        baseReturnRate: CGFloat,
-        returnDUPRScale: CGFloat,
-        stretchPenalty: CGFloat
-    ) {
-        guard var source = readGameConstants() else { return }
-
-        // Scope replacements to the Smash enum block to avoid clobbering PutAway constants
-        if let smashRange = source.range(of: "enum Smash \\{[\\s\\S]*?\\}", options: .regularExpression) {
-            var smashBlock = String(source[smashRange])
-            replace(in: &smashBlock,
-                    #"static var baseReturnRate: CGFloat = [\d.]+"#,
-                    with: "static var baseReturnRate: CGFloat = \(String(format: "%.4f", baseReturnRate))")
-            replace(in: &smashBlock,
-                    #"static var returnDUPRScale: CGFloat = [\d.]+"#,
-                    with: "static var returnDUPRScale: CGFloat = \(String(format: "%.4f", returnDUPRScale))")
-            replace(in: &smashBlock,
-                    #"static var stretchPenalty: CGFloat = [\d.]+"#,
-                    with: "static var stretchPenalty: CGFloat = \(String(format: "%.4f", stretchPenalty))")
-            source.replaceSubrange(smashRange, with: smashBlock)
-        }
-
-        writeGameConstants(source)
-    }
-
-    private func writeReturnConstants(
-        baseReturnRate: CGFloat,
-        returnDUPRScale: CGFloat,
-        stretchPenalty: CGFloat
-    ) {
-        guard var source = readGameConstants() else { return }
-
-        // Scope replacements to the PutAway enum block to avoid clobbering Smash constants
-        if let putAwayRange = source.range(of: "enum PutAway \\{[\\s\\S]*?\\}", options: .regularExpression) {
-            var putAwayBlock = String(source[putAwayRange])
-            replace(in: &putAwayBlock,
-                    #"static var baseReturnRate: CGFloat = [\d.]+"#,
-                    with: "static var baseReturnRate: CGFloat = \(String(format: "%.4f", baseReturnRate))")
-            replace(in: &putAwayBlock,
-                    #"static var returnDUPRScale: CGFloat = [\d.]+"#,
-                    with: "static var returnDUPRScale: CGFloat = \(String(format: "%.4f", returnDUPRScale))")
-            replace(in: &putAwayBlock,
-                    #"static var stretchPenalty: CGFloat = [\d.]+"#,
-                    with: "static var stretchPenalty: CGFloat = \(String(format: "%.4f", stretchPenalty))")
-            source.replaceSubrange(putAwayRange, with: putAwayBlock)
-        }
-
-        writeGameConstants(source)
-    }
-
-    // MARK: - File Helpers
-
-    private func gameConstantsURL() -> URL {
-        let testFileURL = URL(fileURLWithPath: #filePath)
-        let repoRoot = testFileURL
-            .deletingLastPathComponent() // Engine/
-            .deletingLastPathComponent() // PickleQuestTests/
-            .deletingLastPathComponent() // repo root
-        return repoRoot
-            .appendingPathComponent("PickleQuest")
-            .appendingPathComponent("Models")
-            .appendingPathComponent("Common")
-            .appendingPathComponent("GameConstants.swift")
-    }
-
-    private func readGameConstants() -> String? {
-        guard let source = try? String(contentsOf: gameConstantsURL(), encoding: .utf8) else {
-            print("ERROR: Could not read GameConstants.swift")
-            return nil
-        }
-        return source
-    }
-
-    private func writeGameConstants(_ source: String) {
-        try? source.write(to: gameConstantsURL(), atomically: true, encoding: .utf8)
-    }
-
-    private func replace(in source: inout String, _ pattern: String, with value: String) {
-        if let range = source.range(of: pattern, options: .regularExpression) {
-            source.replaceSubrange(range, with: value)
-        }
+        #expect(allPassed, "All DUPR smash return rates should be within tolerance. Fix: adjust stat_profiles.json or NPCStrategyProfile.")
     }
 }

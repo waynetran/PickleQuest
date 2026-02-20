@@ -19,7 +19,7 @@ struct ServeBalanceTests {
     ]
 
     static let tolerance: Double = 0.25         // acceptable deviation from target
-    static let servesPerTrial = 5000            // serves per DUPR level for stats
+    static let servesPerTrial = 10_000          // serves per DUPR level for verification
     static let avgServesPerMatch: Double = 11.0 // ~22 points, each side serves ~11
 
     // MARK: - Simulate Serves
@@ -27,11 +27,7 @@ struct ServeBalanceTests {
     /// Simulate `count` NPC serves at the given DUPR and return the fraction that fault.
     static func simulateServeFaultRate(
         dupr: Double,
-        count: Int,
-        baseFaultRate: CGFloat,
-        serveMinNY: CGFloat,
-        serveMaxNY_Low: CGFloat,
-        serveMaxNY_High: CGFloat
+        count: Int
     ) -> Double {
         let params = StatProfileLoader.shared
         let stats = params.toNPCStats(dupr: dupr)
@@ -46,11 +42,13 @@ struct ServeBalanceTests {
         let serveStat = (consistencyStat + accuracyStat) / 2.0
 
         // Base double fault rate from stats (exponential scaling for DUPR separation)
+        let baseFaultRate = P.npcBaseServeFaultRate
         let statFaultRate = baseFaultRate * pow(1.0 - serveStat / 99.0, P.npcServeFaultStatExponent)
 
         // Serve mode selection (same as InteractiveMatchScene.npcServe)
         let duprFrac = CGFloat(max(0, min(1, (dupr - 2.0) / 6.0)))
-        let maxNY = serveMaxNY_Low + duprFrac * (serveMaxNY_High - serveMaxNY_Low)
+        let serveMinNY = S.npcServeTargetMinNY
+        let maxNY = S.npcServeTargetMaxNY_Low + duprFrac * (S.npcServeTargetMaxNY_High - S.npcServeTargetMaxNY_Low)
 
         // NPC serve origin (behind baseline — matches MatchAI.positionForServe)
         let serveOriginNY: CGFloat = 1.0
@@ -71,7 +69,6 @@ struct ServeBalanceTests {
         )
 
         var totalFaults = 0
-        var dbgDoubleFault = 0, dbgKitchen = 0, dbgOutX = 0, dbgOutY = 0, dbgTimeout = 0
         let ballSim = DrillBallSimulation()
         let kitchenNear: CGFloat = 0.318
 
@@ -123,7 +120,6 @@ struct ServeBalanceTests {
             var faultPowerOverride: CGFloat? = nil
 
             if isDoubleFault {
-                dbgDoubleFault += 1
                 let hasSpin = modes.contains(.topspin) || modes.contains(.slice)
                 let kitchenFaultChance = hasSpin ? duprFrac * 0.4 : 0.0
 
@@ -183,22 +179,16 @@ struct ServeBalanceTests {
                 let bounceX = ballSim.lastBounceCourtX
                 if bounceY <= 0.5 && bounceY > kitchenNear {
                     totalFaults += 1
-                    dbgKitchen += 1
                 }
                 if ballSim.isLandingOut {
                     totalFaults += 1
-                    if bounceX < 0 || bounceX > 1 { dbgOutX += 1 }
-                    else { dbgOutY += 1 }
+                    let _ = bounceX // suppress unused warning
                 }
             } else {
                 totalFaults += 1
-                dbgTimeout += 1
             }
         }
 
-        if count >= 5000 {
-            print("    [DBG DUPR \(String(format: "%.1f", dupr))]: probFaults=\(dbgDoubleFault) physKitchen=\(dbgKitchen) physOutX=\(dbgOutX) physOutY=\(dbgOutY) timeout=\(dbgTimeout) total=\(totalFaults)/\(count)")
-        }
         return Double(totalFaults) / Double(count)
     }
 
@@ -218,204 +208,30 @@ struct ServeBalanceTests {
         return targets.last!.faultsPerMatch
     }
 
-    // MARK: - Feedback Loop Test
+    // MARK: - Verify Serve Fault Rates (validation-only)
+    //
+    // If this test fails, adjust stat curves in stat_profiles.json (offsets/slopes) or
+    // NPCStrategyProfile parameters. Do NOT reintroduce mutable GameConstants.
 
-    /// Iteratively adjust serve constants until fault rates match targets at all DUPR levels.
-    ///
-    /// Run explicitly:
-    /// ```
-    /// xcodebuild test -project PickleQuest.xcodeproj -scheme PickleQuest \
-    ///   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-    ///   -only-testing 'PickleQuestTests/ServeBalanceTests'
-    /// ```
-    @Test func tuneServeFaultRates() {
+    @Test func verifyServeFaultRates() {
         let testDUPRs: [Double] = [2.0, 3.0, 3.5, 5.0, 6.5, 8.0]
-        let maxIterations = 20
 
-        // Start from current constants
-        var baseFaultRate = GameConstants.DrillPhysics.npcBaseServeFaultRate
-        var serveMinNY = GameConstants.NPCStrategy.npcServeTargetMinNY
-        var serveMaxNY_Low = GameConstants.NPCStrategy.npcServeTargetMaxNY_Low
-        var serveMaxNY_High = GameConstants.NPCStrategy.npcServeTargetMaxNY_High
-
-        var bestBaseFaultRate = baseFaultRate
-        var bestMaxNY_Low = serveMaxNY_Low
-        var bestMaxNY_High = serveMaxNY_High
-        var bestTotalError: Double = .infinity
-
-        print("Serve Balance Tuning")
-        print("====================")
+        print("Serve Fault Rate Verification")
+        print("==============================")
         print("Targets: \(Self.faultTargets.map { "DUPR \($0.dupr): \($0.faultsPerMatch)/match" }.joined(separator: ", "))")
         print("")
 
-        for iteration in 1...maxIterations {
-            // Measure current fault rates
-            var results: [(dupr: Double, faultRate: Double, faultsPerMatch: Double, target: Double)] = []
-            var totalError: Double = 0
-
-            for dupr in testDUPRs {
-                let rate = Self.simulateServeFaultRate(
-                    dupr: dupr,
-                    count: Self.servesPerTrial,
-                    baseFaultRate: baseFaultRate,
-                    serveMinNY: serveMinNY,
-                    serveMaxNY_Low: serveMaxNY_Low,
-                    serveMaxNY_High: serveMaxNY_High
-                )
-                let faultsPerMatch = rate * Self.avgServesPerMatch
-                let target = Self.targetFaultsPerMatch(dupr: dupr)
-                let diff = faultsPerMatch - target
-                totalError += diff * diff
-                results.append((dupr, rate, faultsPerMatch, target))
-            }
-
-            let rmse = sqrt(totalError / Double(testDUPRs.count))
-
-            print("Iteration \(iteration): baseFaultRate=\(String(format: "%.4f", baseFaultRate)), maxNY_Low=\(String(format: "%.3f", serveMaxNY_Low)), maxNY_High=\(String(format: "%.3f", serveMaxNY_High))")
-            for r in results {
-                let status = abs(r.faultsPerMatch - r.target) <= Self.tolerance ? "OK" : "MISS"
-                print("  DUPR \(String(format: "%.1f", r.dupr)): \(String(format: "%.2f", r.faultsPerMatch))/match (target: \(String(format: "%.1f", r.target))) [\(status)]")
-            }
-            print("  RMSE: \(String(format: "%.3f", rmse))")
-
-            if totalError < bestTotalError {
-                bestTotalError = totalError
-                bestBaseFaultRate = baseFaultRate
-                bestMaxNY_Low = serveMaxNY_Low
-                bestMaxNY_High = serveMaxNY_High
-            }
-
-            // Check if all within tolerance
-            let allGood = results.allSatisfy { abs($0.faultsPerMatch - $0.target) <= Self.tolerance }
-            if allGood {
-                print("\nAll DUPR levels within tolerance after \(iteration) iterations!")
-                break
-            }
-
-            // Adjust constants based on errors
-            // Low DUPR error → adjust baseFaultRate (dominant factor for low stats)
-            // High DUPR error → adjust serveMaxNY_High (kitchen proximity)
-            let lowDUPRResult = results.first { $0.dupr == 2.0 }!
-            let highDUPRResult = results.first { $0.dupr >= 5.0 }!
-
-            let lowError = lowDUPRResult.faultsPerMatch - lowDUPRResult.target
-            let highError = highDUPRResult.faultsPerMatch - highDUPRResult.target
-
-            // Gradient-style adjustment (aggressive lr for fast convergence)
-            let lr: CGFloat = 0.5
-            if abs(lowError) > Self.tolerance {
-                // Too many faults → reduce baseFaultRate; too few → increase
-                baseFaultRate -= CGFloat(lowError) * lr * 0.05
-                baseFaultRate = max(0.01, min(0.50, baseFaultRate))
-
-                // Also adjust maxNY_Low (closer to baseline = safer)
-                serveMaxNY_Low -= CGFloat(lowError) * lr * 0.02
-                serveMaxNY_Low = max(0.08, min(0.25, serveMaxNY_Low))
-            }
-
-            if abs(highError) > Self.tolerance {
-                serveMaxNY_High -= CGFloat(highError) * lr * 0.02
-                serveMaxNY_High = max(0.10, min(0.30, serveMaxNY_High))
-            }
-
-            print("")
-        }
-
-        // Use best parameters found
-        baseFaultRate = bestBaseFaultRate
-        serveMaxNY_Low = bestMaxNY_Low
-        serveMaxNY_High = bestMaxNY_High
-
-        // Final verification with more samples
-        print("\n--- Final Verification (10k serves per DUPR) ---")
         var allPassed = true
         for dupr in testDUPRs {
-            let rate = Self.simulateServeFaultRate(
-                dupr: dupr,
-                count: 10_000,
-                baseFaultRate: baseFaultRate,
-                serveMinNY: serveMinNY,
-                serveMaxNY_Low: serveMaxNY_Low,
-                serveMaxNY_High: serveMaxNY_High
-            )
+            let rate = Self.simulateServeFaultRate(dupr: dupr, count: Self.servesPerTrial)
             let faultsPerMatch = rate * Self.avgServesPerMatch
             let target = Self.targetFaultsPerMatch(dupr: dupr)
-            let status = abs(faultsPerMatch - target) <= Self.tolerance ? "PASS" : "FAIL"
-            if abs(faultsPerMatch - target) > Self.tolerance { allPassed = false }
+            let pass = abs(faultsPerMatch - target) <= Self.tolerance
+            if !pass { allPassed = false }
+            let status = pass ? "PASS" : "FAIL"
             print("  DUPR \(String(format: "%.1f", dupr)): \(String(format: "%.2f", faultsPerMatch))/match (target: \(String(format: "%.1f", target))) [\(status)]")
         }
 
-        print("\nOptimal constants:")
-        print("  npcBaseServeFaultRate = \(String(format: "%.4f", baseFaultRate))")
-        print("  npcServeTargetMinNY = \(String(format: "%.3f", serveMinNY))")
-        print("  npcServeTargetMaxNY_Low = \(String(format: "%.3f", serveMaxNY_Low))")
-        print("  npcServeTargetMaxNY_High = \(String(format: "%.3f", serveMaxNY_High))")
-
-        // Write back to GameConstants source file
-        if allPassed {
-            writeConstants(
-                baseFaultRate: baseFaultRate,
-                serveMinNY: serveMinNY,
-                maxNY_Low: serveMaxNY_Low,
-                maxNY_High: serveMaxNY_High
-            )
-            print("\nConstants written to GameConstants.swift")
-        } else {
-            print("\nWARNING: Not all targets met — constants NOT written. Review and re-run.")
-        }
-
-        #expect(allPassed, "All DUPR serve fault rates should be within tolerance of targets")
-    }
-
-    // MARK: - Write Constants
-
-    private func writeConstants(
-        baseFaultRate: CGFloat,
-        serveMinNY: CGFloat,
-        maxNY_Low: CGFloat,
-        maxNY_High: CGFloat
-    ) {
-        let testFilePath = #filePath
-        let testFileURL = URL(fileURLWithPath: testFilePath)
-        let repoRoot = testFileURL
-            .deletingLastPathComponent() // Engine/
-            .deletingLastPathComponent() // PickleQuestTests/
-            .deletingLastPathComponent() // repo root
-        let constantsURL = repoRoot
-            .appendingPathComponent("PickleQuest")
-            .appendingPathComponent("Models")
-            .appendingPathComponent("Common")
-            .appendingPathComponent("GameConstants.swift")
-
-        guard var source = try? String(contentsOf: constantsURL, encoding: .utf8) else {
-            print("ERROR: Could not read GameConstants.swift")
-            return
-        }
-
-        // Replace each constant value using regex
-        func replace(_ pattern: String, with value: String) {
-            if let range = source.range(of: pattern, options: .regularExpression) {
-                source.replaceSubrange(range, with: value)
-            }
-        }
-
-        replace(
-            #"static let npcServeTargetMinNY: CGFloat = [\d.]+"#,
-            with: "static let npcServeTargetMinNY: CGFloat = \(String(format: "%.3f", serveMinNY))"
-        )
-        replace(
-            #"static let npcServeTargetMaxNY_Low: CGFloat = [\d.]+"#,
-            with: "static let npcServeTargetMaxNY_Low: CGFloat = \(String(format: "%.3f", maxNY_Low))"
-        )
-        replace(
-            #"static let npcServeTargetMaxNY_High: CGFloat = [\d.]+"#,
-            with: "static let npcServeTargetMaxNY_High: CGFloat = \(String(format: "%.3f", maxNY_High))"
-        )
-        replace(
-            #"static let npcBaseServeFaultRate: CGFloat = [\d.]+"#,
-            with: "static let npcBaseServeFaultRate: CGFloat = \(String(format: "%.4f", baseFaultRate))"
-        )
-
-        try? source.write(to: constantsURL, atomically: true, encoding: .utf8)
+        #expect(allPassed, "All DUPR serve fault rates should be within tolerance. Fix: adjust stat_profiles.json or NPCStrategyProfile.")
     }
 }

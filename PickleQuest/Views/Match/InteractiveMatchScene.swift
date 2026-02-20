@@ -48,6 +48,9 @@ final class InteractiveMatchScene: SKScene {
     private var debugTextLabel: SKLabelNode!
     private var debugDoneButton: SKLabelNode!
 
+    // NPC effective stats debug overlay
+    private var npcStatsLabel: SKLabelNode!
+
     // (Joystick state is in controller)
 
     // Swipe-to-serve state
@@ -158,6 +161,10 @@ final class InteractiveMatchScene: SKScene {
         let targetNX: CGFloat
         let targetNY: CGFloat
         let accuracy: CGFloat
+        let allowNetHit: Bool
+        let intendedNX: CGFloat
+        let intendedNY: CGFloat
+        let scatterRadius: CGFloat
         var timer: CGFloat
     }
 
@@ -168,6 +175,9 @@ final class InteractiveMatchScene: SKScene {
         let arc: CGFloat
         let spin: CGFloat
         let accuracy: CGFloat
+        let intendedNX: CGFloat
+        let intendedNY: CGFloat
+        let scatterRadius: CGFloat
         var timer: CGFloat
     }
 
@@ -179,11 +189,9 @@ final class InteractiveMatchScene: SKScene {
 
     // (Lunge state is in controller)
 
-    // Movement guide arrows (court-painted directional hints)
-    private var moveGuideBack: SKNode!
-    private var moveGuideLeft: SKNode!
-    private var moveGuideRight: SKNode!
-    private var moveGuideForward: SKNode!
+    // Converging guide arrows (4 arrows pointing inward toward intercept marker)
+    private var guideArrows: [SKShapeNode] = []  // N, S, E, W arrows
+    private var guideArrowBaseOffsets: [CGPoint] = []  // starting offsets from marker center
     private var wasLobbed: Bool = false  // tracks if current point had an unreachable lob
 
     // Split step animation (quick foot shuffle before opponent contacts ball)
@@ -210,6 +218,11 @@ final class InteractiveMatchScene: SKScene {
     private var shotMarkersNode: SKNode!
     private var lastShotTargetNX: CGFloat = 0.5
     private var lastShotTargetNY: CGFloat = 0.5
+
+    // Dynamic target marker (updates color based on player distance)
+    private var activeShotTargetMarker: SKShapeNode?
+    private var activeShotTargetNX: CGFloat = 0.5
+    private var activeShotTargetNY: CGFloat = 0.5
 
     // MARK: - Game State
 
@@ -448,6 +461,9 @@ final class InteractiveMatchScene: SKScene {
         // Initialize AI
         npcAI = MatchAI(npc: npc, playerDUPR: player.duprRating)
 
+        // NPC effective stats debug overlay
+        buildNPCStatsOverlay()
+
         // Set positions
         controller.playerNX = 0.5
         controller.playerNY = 0.08
@@ -504,54 +520,46 @@ final class InteractiveMatchScene: SKScene {
     }
 
     private func buildHighBallIndicator() {
-        // Movement guide arrows — court-painted perspective arrows in 4 directions
-        moveGuideBack = buildMoveGuideArrow(text: "GO BACK!", rotation: .pi)
-        moveGuideLeft = buildMoveGuideArrow(text: "GO LEFT!", rotation: .pi / 2)
-        moveGuideRight = buildMoveGuideArrow(text: "GO RIGHT!", rotation: -.pi / 2)
-        moveGuideForward = buildMoveGuideArrow(text: "MOVE UP!", rotation: 0)
-        addChild(moveGuideBack)
-        addChild(moveGuideLeft)
-        addChild(moveGuideRight)
-        addChild(moveGuideForward)
+        // Converging guide arrows — 4 arrows pointing inward toward intercept marker
+        buildConvergingArrows()
     }
 
-    /// Build a single court-painted movement guide arrow with text.
-    /// Rotation 0 = pointing down (toward player baseline), .pi/2 = pointing left, etc.
-    private func buildMoveGuideArrow(text: String, rotation: CGFloat) -> SKNode {
-        let node = SKNode()
-        node.zPosition = AC.ZPositions.courtLines + 1.5
-        node.alpha = 0
+    /// Build 4 converging arrows (N, S, E, W) that point inward toward a target.
+    private func buildConvergingArrows() {
+        // Rotations: each arrow points inward (tip toward center)
+        // N arrow sits above target, points down → rotation = .pi
+        // S arrow sits below target, points up → rotation = 0
+        // E arrow sits right of target, points left → rotation = .pi/2
+        // W arrow sits left of target, points right → rotation = -.pi/2
+        let rotations: [CGFloat] = [.pi, 0, .pi / 2, -.pi / 2]
+        // Base offsets from marker center (in screen points, before perspective)
+        let baseOffsets: [CGPoint] = [
+            CGPoint(x: 0, y: 30),    // N: above
+            CGPoint(x: 0, y: -30),   // S: below
+            CGPoint(x: 30, y: 0),    // E: right
+            CGPoint(x: -30, y: 0),   // W: left
+        ]
 
-        // Triangle arrow (perspective-squished to look flat on court)
-        let arrowPath = CGMutablePath()
-        arrowPath.move(to: CGPoint(x: 0, y: 20))     // tip
-        arrowPath.addLine(to: CGPoint(x: -14, y: -6))  // bottom-left
-        arrowPath.addLine(to: CGPoint(x: 14, y: -6))   // bottom-right
-        arrowPath.closeSubpath()
+        guideArrows = []
+        guideArrowBaseOffsets = baseOffsets
 
-        let arrow = SKShapeNode(path: arrowPath)
-        arrow.fillColor = UIColor.systemGreen.withAlphaComponent(0.45)
-        arrow.strokeColor = UIColor.systemGreen.withAlphaComponent(0.85)
-        arrow.lineWidth = 2.5
-        arrow.zRotation = rotation
-        node.addChild(arrow)
+        for i in 0..<4 {
+            let arrowPath = CGMutablePath()
+            arrowPath.move(to: CGPoint(x: 0, y: 12))      // tip
+            arrowPath.addLine(to: CGPoint(x: -8, y: -4))   // bottom-left
+            arrowPath.addLine(to: CGPoint(x: 8, y: -4))    // bottom-right
+            arrowPath.closeSubpath()
 
-        // Text label
-        let label = SKLabelNode(text: text)
-        label.fontName = "AvenirNext-Heavy"
-        label.fontSize = 13
-        label.fontColor = .white
-        label.verticalAlignmentMode = .center
-        label.horizontalAlignmentMode = .center
-        // Offset text behind the arrow tip direction
-        let textOffset: CGFloat = -30
-        label.position = CGPoint(
-            x: sin(rotation) * textOffset,
-            y: -cos(rotation) * textOffset
-        )
-        node.addChild(label)
-
-        return node
+            let arrow = SKShapeNode(path: arrowPath)
+            arrow.fillColor = UIColor.systemGreen.withAlphaComponent(0.55)
+            arrow.strokeColor = UIColor.systemGreen.withAlphaComponent(0.9)
+            arrow.lineWidth = 2.0
+            arrow.zRotation = rotations[i]
+            arrow.zPosition = AC.ZPositions.courtLines + 1.5
+            arrow.alpha = 0
+            addChild(arrow)
+            guideArrows.append(arrow)
+        }
     }
 
     private func buildNPCBossBar() {
@@ -625,6 +633,41 @@ final class InteractiveMatchScene: SKScene {
         playerStaminaBar.addChild(playerStaminaBarFill)
 
         addChild(playerStaminaBar)
+    }
+
+    private func buildNPCStatsOverlay() {
+        let P = GameConstants.DrillPhysics.self
+        let dupr = npc.duprRating
+        let boost = npcBoost
+
+        // Compute effective stats (same as MatchAI.effectiveStats)
+        func eff(_ stat: StatType) -> Int {
+            P.npcScaledStat(stat, base: npc.stats.stat(stat), boost: boost, dupr: dupr)
+        }
+        let pow = eff(.power), acc = eff(.accuracy), spn = eff(.spin), spd = eff(.speed)
+        let def = eff(.defense), rfx = eff(.reflexes), pos = eff(.positioning)
+        let clt = eff(.clutch), foc = eff(.focus), sta = eff(.stamina), con = eff(.consistency)
+        let mult = P.npcGlobalMultiplier(for: .power, dupr: dupr)
+
+        let text = """
+        DUPR \(String(format: "%.1f", dupr)) | mult \(String(format: "%.2f", mult)) | boost +\(boost)
+        POW \(pow) ACC \(acc) SPN \(spn) SPD \(spd)
+        DEF \(def) RFX \(rfx) POS \(pos) CLT \(clt)
+        FOC \(foc) STA \(sta) CON \(con)
+        base:\(npc.stats.power) errRate:\(String(format: "%.1f", P.npcBaseErrorRate * 100))%
+        """
+
+        npcStatsLabel = SKLabelNode(text: text)
+        npcStatsLabel.fontName = "Menlo-Bold"
+        npcStatsLabel.fontSize = 8
+        npcStatsLabel.fontColor = .yellow
+        npcStatsLabel.numberOfLines = 0
+        npcStatsLabel.preferredMaxLayoutWidth = 200
+        npcStatsLabel.horizontalAlignmentMode = .left
+        npcStatsLabel.verticalAlignmentMode = .top
+        npcStatsLabel.zPosition = AC.ZPositions.text + 20
+        npcStatsLabel.position = CGPoint(x: 8, y: AC.sceneHeight - 8)
+        addChild(npcStatsLabel)
     }
 
     private func buildDebugPanel() {
@@ -862,33 +905,110 @@ final class InteractiveMatchScene: SKScene {
 
     // MARK: - Shot Markers
 
-    private func showShotMarkers(targetNX: CGFloat, targetNY: CGFloat, accuracy: CGFloat) {
+    private func showShotMarkers(
+        intendedNX: CGFloat, intendedNY: CGFloat,
+        scatterRadius: CGFloat,
+        interceptNX: CGFloat, interceptNY: CGFloat
+    ) {
         clearShotMarkers()
-        lastShotTargetNX = targetNX
-        lastShotTargetNY = targetNY
+        lastShotTargetNX = interceptNX
+        lastShotTargetNY = interceptNY
+        activeShotTargetNX = interceptNX
+        activeShotTargetNY = interceptNY
 
-        let pos = CourtRenderer.courtPoint(nx: targetNX, ny: targetNY)
-        let scale = CourtRenderer.perspectiveScale(ny: targetNY)
+        let intendedPos = CourtRenderer.courtPoint(nx: intendedNX, ny: intendedNY)
+        let intendedScale = CourtRenderer.perspectiveScale(ny: intendedNY)
 
-        // Error margin (orange, larger ellipse) — less accurate = bigger circle
-        let errorRadius = max(6, (1.0 - accuracy) * 50) * scale
-        let errorMarker = SKShapeNode(ellipseOf: CGSize(width: errorRadius * 2, height: errorRadius * 0.6))
-        errorMarker.fillColor = UIColor.orange.withAlphaComponent(0.25)
-        errorMarker.strokeColor = UIColor.orange.withAlphaComponent(0.6)
-        errorMarker.lineWidth = 1.5
-        errorMarker.position = pos
-        errorMarker.name = "errorMargin"
-        shotMarkersNode.addChild(errorMarker)
+        // Scatter circle (margin of error) around intended target
+        if scatterRadius > 0.005 {
+            let scatterScreenRadius = scatterRadius * AC.sceneWidth * intendedScale
+            let scatterMarker = SKShapeNode(ellipseOf: CGSize(
+                width: scatterScreenRadius * 2,
+                height: scatterScreenRadius * 0.6
+            ))
+            scatterMarker.fillColor = UIColor.orange.withAlphaComponent(0.10)
+            scatterMarker.strokeColor = UIColor.orange.withAlphaComponent(0.4)
+            scatterMarker.lineWidth = 1.0
+            scatterMarker.position = intendedPos
+            scatterMarker.name = "scatterCircle"
+            shotMarkersNode.addChild(scatterMarker)
+        }
 
-        // Target (yellow, small ellipse)
-        let targetRadius: CGFloat = 5 * scale
-        let targetMarker = SKShapeNode(ellipseOf: CGSize(width: targetRadius * 2, height: targetRadius * 0.6))
-        targetMarker.fillColor = UIColor.yellow.withAlphaComponent(0.5)
-        targetMarker.strokeColor = UIColor.yellow.withAlphaComponent(0.8)
-        targetMarker.lineWidth = 1.5
-        targetMarker.position = pos
-        targetMarker.name = "targetMarker"
-        shotMarkersNode.addChild(targetMarker)
+        // Intended target (yellow crosshair, small)
+        let intendedRadius: CGFloat = 4 * intendedScale
+        let intendedMarker = SKShapeNode(ellipseOf: CGSize(width: intendedRadius * 2, height: intendedRadius * 0.6))
+        intendedMarker.fillColor = UIColor.yellow.withAlphaComponent(0.4)
+        intendedMarker.strokeColor = UIColor.yellow.withAlphaComponent(0.7)
+        intendedMarker.lineWidth = 1.0
+        intendedMarker.position = intendedPos
+        intendedMarker.name = "intendedTarget"
+        shotMarkersNode.addChild(intendedMarker)
+
+        // Ideal intercept marker — where player should be for a perfect hit, projected on court
+        let interceptPos = CourtRenderer.courtPoint(nx: interceptNX, ny: interceptNY)
+        let interceptScale = CourtRenderer.perspectiveScale(ny: interceptNY)
+        let interceptRadius: CGFloat = 8 * interceptScale
+        let interceptMarker = SKShapeNode(ellipseOf: CGSize(
+            width: interceptRadius * 2,
+            height: interceptRadius * 0.6
+        ))
+        interceptMarker.lineWidth = 2.0
+        interceptMarker.position = interceptPos
+        interceptMarker.name = "interceptMarker"
+        shotMarkersNode.addChild(interceptMarker)
+        activeShotTargetMarker = interceptMarker
+
+        // Initial color update
+        updateShotTargetColor()
+    }
+
+    /// Update the intercept marker: recompute prediction live, reposition on court,
+    /// color-code by player distance, and animate converging arrows.
+    private func updateShotTargetColor() {
+        guard let marker = activeShotTargetMarker else { return }
+        guard ballSim.isActive else { return }
+
+        // Only show intercept for NPC shots heading toward player
+        let isNPCShot = !ballSim.lastHitByPlayer
+
+        // Live-update the intercept prediction as ball moves
+        if isNPCShot {
+            let intercept = ballSim.predictIdealIntercept()
+            activeShotTargetNX = intercept.x
+            activeShotTargetNY = intercept.y
+
+            // Reposition marker on court
+            let pos = CourtRenderer.courtPoint(nx: intercept.x, ny: intercept.y)
+            let scale = CourtRenderer.perspectiveScale(ny: intercept.y)
+            let r: CGFloat = 8 * scale
+            marker.position = pos
+            marker.path = CGPath(ellipseIn: CGRect(
+                x: -r, y: -r * 0.3,
+                width: r * 2, height: r * 0.6
+            ), transform: nil)
+        }
+
+        let dx = activeShotTargetNX - controller.playerNX
+        let dy = activeShotTargetNY - controller.playerNY
+        let dist = sqrt(dx * dx + dy * dy)
+        let hitbox = controller.hitboxRadius
+
+        // Out of bounds target — always show red
+        let isOut = activeShotTargetNX < 0.0 || activeShotTargetNX > 1.0
+            || activeShotTargetNY < 0.0 || activeShotTargetNY > 1.0
+
+        let color: UIColor
+        if isOut {
+            color = .systemRed
+        } else if dist < hitbox * 1.2 {
+            color = .systemGreen    // in strike zone
+        } else if dist < hitbox * 3.0 {
+            color = .systemOrange   // reachable with movement
+        } else {
+            color = .systemRed      // need to sprint, may not make it
+        }
+        marker.fillColor = color.withAlphaComponent(0.35)
+        marker.strokeColor = color.withAlphaComponent(0.85)
     }
 
     private func showLandingSpot(courtX: CGFloat, courtY: CGFloat) {
@@ -908,6 +1028,8 @@ final class InteractiveMatchScene: SKScene {
 
     private func clearShotMarkers() {
         shotMarkersNode?.removeAllChildren()
+        activeShotTargetMarker = nil
+        hideAllMoveGuides()
     }
 
     // MARK: - Match Flow
@@ -1068,6 +1190,9 @@ final class InteractiveMatchScene: SKScene {
             arc: serveArc,
             spin: angleDeviation * 0.3,
             accuracy: max(0, serveAccuracy),
+            intendedNX: targetNX,
+            intendedNY: targetNY,
+            scatterRadius: 0,
             timer: swingContactDelay
         )
     }
@@ -1186,7 +1311,12 @@ final class InteractiveMatchScene: SKScene {
             self.previousBallNY = self.ballSim.courtY
             self.ballNode.alpha = 1
             self.ballShadow.alpha = 1
-            self.showShotMarkers(targetNX: targetNX, targetNY: targetNY, accuracy: serveAccuracy)
+            let predicted = self.ballSim.predictIdealIntercept()
+            self.showShotMarkers(
+                intendedNX: targetNX, intendedNY: targetNY,
+                scatterRadius: 0,
+                interceptNX: predicted.x, interceptNY: predicted.y
+            )
         }
         self.run(.sequence([delay, launch]))
     }
@@ -1602,7 +1732,7 @@ final class InteractiveMatchScene: SKScene {
             if ballSim.didBounceThisFrame && prevBounces == 0 {
                 firstBounceCourtX = ballSim.lastBounceCourtX
                 firstBounceCourtY = ballSim.lastBounceCourtY
-                showLandingSpot(courtX: firstBounceCourtX, courtY: firstBounceCourtY)
+                // Landing spot removed — color-coded target marker already shows where ball is heading
             }
             // Log when ball crosses player's Y line (NPC shots heading toward player)
             if !ballSim.lastHitByPlayer && controller.prevBallY > controller.playerNY && ballSim.courtY <= controller.playerNY {
@@ -1640,6 +1770,7 @@ final class InteractiveMatchScene: SKScene {
 
             syncAllPositions()
             syncHitboxRings()
+            updateShotTargetColor()
             updatePlayerStaminaBar()
             updateNPCBossBar()
             updateMovementGuide()
@@ -1726,10 +1857,7 @@ final class InteractiveMatchScene: SKScene {
     // MARK: - Movement Guide
 
     private func hideAllMoveGuides() {
-        moveGuideBack.alpha = 0
-        moveGuideLeft.alpha = 0
-        moveGuideRight.alpha = 0
-        moveGuideForward.alpha = 0
+        for arrow in guideArrows { arrow.alpha = 0 }
     }
 
     private func updateMovementGuide() {
@@ -1742,41 +1870,48 @@ final class InteractiveMatchScene: SKScene {
             return
         }
 
-        // Predict landing position using projectile equation:
-        // 0 = h + vz*t - 0.5*g*t²  →  t = (vz + sqrt(vz² + 2*g*h)) / g
-        let h = ballSim.height
-        let vzCur = ballSim.vz
+        // Only show on player's half
+        guard activeShotTargetNY < 0.55 else { hideAllMoveGuides(); return }
+
+        // Estimate time until second bounce (urgency driver)
+        // First: time to first bounce (if not yet bounced)
         let g = P.gravity
-        let discriminant = vzCur * vzCur + 2 * g * h
-        guard discriminant >= 0 else { hideAllMoveGuides(); return }
+        let gEff = g + ballSim.topspinFactor * 0.6
+        var timeToDoubleBounce: CGFloat = 2.0  // default fallback
 
-        let timeToLand = (vzCur + sqrt(discriminant)) / g
-        guard timeToLand > 0.05 else { hideAllMoveGuides(); return }
+        if ballSim.bounceCount == 0 {
+            // Time to first bounce
+            let disc1 = ballSim.vz * ballSim.vz + 2.0 * gEff * ballSim.height
+            if disc1 >= 0 {
+                let t1 = (ballSim.vz + sqrt(disc1)) / gEff
+                // After bounce: vz_after ≈ bounce-speed upward, then second bounce time
+                let vzAfter = abs(ballSim.vz - gEff * t1) * P.bounceDamping
+                let t2 = 2.0 * vzAfter / gEff  // time for full arc (up and back down)
+                timeToDoubleBounce = t1 + t2
+            }
+        } else if ballSim.bounceCount == 1 {
+            // Already bounced once — time to next ground hit
+            if ballSim.vz > 0 {
+                let disc2 = ballSim.vz * ballSim.vz + 2.0 * gEff * ballSim.height
+                if disc2 >= 0 {
+                    timeToDoubleBounce = (ballSim.vz + sqrt(disc2)) / gEff
+                }
+            } else {
+                // Already descending after bounce
+                let disc2 = ballSim.vz * ballSim.vz + 2.0 * gEff * ballSim.height
+                if disc2 >= 0 && gEff > 0.001 {
+                    timeToDoubleBounce = (-ballSim.vz + sqrt(disc2)) / gEff
+                } else {
+                    timeToDoubleBounce = 0.1
+                }
+            }
+        } else {
+            hideAllMoveGuides()
+            return
+        }
 
-        let landNX = ballSim.courtX + ballSim.vx * timeToLand
-        let landNY = ballSim.courtY + ballSim.vy * timeToLand
-
-        // Only guide on player's half
-        guard landNY < 0.55 else { hideAllMoveGuides(); return }
-
-        // How far player needs to move to reach landing spot
-        let needDX = landNX - controller.playerNX   // positive = need to go right
-        let needDY = landNY - controller.playerNY   // negative = need to go back (lower Y)
-
-        // Threshold: only show if player needs to move a meaningful distance
-        let lateralThreshold: CGFloat = 0.12
-        let depthThreshold: CGFloat = 0.10
-
-        let needLeft = needDX < -lateralThreshold
-        let needRight = needDX > lateralThreshold
-        let needBack = needDY < -depthThreshold
-        let needForward = needDY > depthThreshold
-
-        // DUPR-based anticipation: higher DUPR = show guide earlier
-        // DUPR 2.0 → show at 0.6s before land, DUPR 8.0 → show at 1.5s before land
-        let dupr = player.duprRating
-        let anticipation: CGFloat = 0.6 + CGFloat((dupr - 2.0) / 6.0) * 0.9
-        guard timeToLand < anticipation else { hideAllMoveGuides(); return }
+        let maxTime: CGFloat = 2.5  // seconds from NPC hit to roughly double bounce
+        guard timeToDoubleBounce > 0.02 else { hideAllMoveGuides(); return }
 
         // Auto-jump for high balls within jump reach
         let ballSpeedY = abs(ballSim.vy)
@@ -1794,62 +1929,36 @@ final class InteractiveMatchScene: SKScene {
                 && ballSim.bounceCount == 0 {
                 controller.initiateJump()
             }
-            // Mark as lob if unreachable even with jump
             if heightAtPlayer > jumpReach {
                 wasLobbed = true
             }
         }
 
-        // Pulsing alpha — faster pulse as ball gets closer
-        let urgency = 1.0 - min(timeToLand / anticipation, 1.0)
-        let pulseSpeed: CGFloat = 4 + urgency * 6
-        let pulse = (0.4 + urgency * 0.6) * (0.6 + 0.4 * abs(sin(CGFloat(CACurrentMediaTime()) * pulseSpeed)))
+        // Smooth in-and-out animation (sine wave, no urgency factor)
+        let time = CGFloat(CACurrentMediaTime())
+        let slideProgress = 0.5 + 0.5 * sin(time * 2.5)  // 0→1→0 smoothly
 
-        // Position each arrow on the court relative to the player
-        let pNY = max(0.0, controller.playerNY)
+        let outerMult: CGFloat = 1.5
+        let innerMult: CGFloat = 0.7
+        let currentMult = outerMult - (outerMult - innerMult) * slideProgress
 
-        if needBack {
-            let arrowNY = max(0.0, pNY - 0.18)
-            let pos = CourtRenderer.courtPoint(nx: controller.playerNX, ny: arrowNY)
-            let scale = CourtRenderer.perspectiveScale(ny: arrowNY)
-            moveGuideBack.position = pos
-            moveGuideBack.setScale(scale)
-            moveGuideBack.alpha = pulse
-        } else {
-            moveGuideBack.alpha = 0
-        }
+        // Project intercept position to screen
+        let targetPos = CourtRenderer.courtPoint(nx: activeShotTargetNX, ny: activeShotTargetNY)
+        let targetScale = CourtRenderer.perspectiveScale(ny: activeShotTargetNY)
 
-        if needForward {
-            let arrowNY = min(0.48, pNY + 0.18)
-            let pos = CourtRenderer.courtPoint(nx: controller.playerNX, ny: arrowNY)
-            let scale = CourtRenderer.perspectiveScale(ny: arrowNY)
-            moveGuideForward.position = pos
-            moveGuideForward.setScale(scale)
-            moveGuideForward.alpha = pulse
-        } else {
-            moveGuideForward.alpha = 0
-        }
+        for i in 0..<min(4, guideArrows.count) {
+            let arrow = guideArrows[i]
+            let baseOffset = guideArrowBaseOffsets[i]
 
-        if needLeft {
-            let arrowNX = max(0.05, controller.playerNX - 0.20)
-            let pos = CourtRenderer.courtPoint(nx: arrowNX, ny: pNY)
-            let scale = CourtRenderer.perspectiveScale(ny: pNY)
-            moveGuideLeft.position = pos
-            moveGuideLeft.setScale(scale)
-            moveGuideLeft.alpha = pulse
-        } else {
-            moveGuideLeft.alpha = 0
-        }
+            let offsetX = baseOffset.x * targetScale * currentMult
+            let offsetY = baseOffset.y * targetScale * currentMult * 0.6
 
-        if needRight {
-            let arrowNX = min(0.95, controller.playerNX + 0.20)
-            let pos = CourtRenderer.courtPoint(nx: arrowNX, ny: pNY)
-            let scale = CourtRenderer.perspectiveScale(ny: pNY)
-            moveGuideRight.position = pos
-            moveGuideRight.setScale(scale)
-            moveGuideRight.alpha = pulse
-        } else {
-            moveGuideRight.alpha = 0
+            arrow.position = CGPoint(
+                x: targetPos.x + offsetX,
+                y: targetPos.y + offsetY
+            )
+            arrow.setScale(targetScale)
+            arrow.alpha = 0.85
         }
     }
 
@@ -1931,7 +2040,8 @@ final class InteractiveMatchScene: SKScene {
                 ballSim.launch(
                     from: shot.origin, toward: shot.target,
                     power: shot.power, arc: shot.arc,
-                    spin: shot.spin, topspin: shot.topspin
+                    spin: shot.spin, topspin: shot.topspin,
+                    allowNetHit: shot.allowNetHit
                 )
                 ballSim.smashFactor = shot.smashFactor
                 ballSim.isPutAway = shot.isPutAway
@@ -1940,7 +2050,12 @@ final class InteractiveMatchScene: SKScene {
                 checkedFirstBounce = false
                 ballNode.alpha = 1
                 ballShadow.alpha = 1
-                showShotMarkers(targetNX: shot.targetNX, targetNY: shot.targetNY, accuracy: shot.accuracy)
+                let predicted = ballSim.predictIdealIntercept()
+                showShotMarkers(
+                    intendedNX: shot.intendedNX, intendedNY: shot.intendedNY,
+                    scatterRadius: shot.scatterRadius,
+                    interceptNX: predicted.x, interceptNY: predicted.y
+                )
                 lastShotPower = shot.power
                 let speed = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
                 maxBallSpeedThisPoint = max(maxBallSpeedThisPoint, speed)
@@ -1956,7 +2071,8 @@ final class InteractiveMatchScene: SKScene {
                 ballSim.launch(
                     from: shot.origin, toward: shot.target,
                     power: shot.power, arc: shot.arc,
-                    spin: shot.spin, topspin: shot.topspin
+                    spin: shot.spin, topspin: shot.topspin,
+                    allowNetHit: shot.allowNetHit
                 )
                 ballSim.smashFactor = shot.smashFactor
                 ballSim.isPutAway = shot.isPutAway
@@ -1965,7 +2081,12 @@ final class InteractiveMatchScene: SKScene {
                 checkedFirstBounce = false
                 ballNode.alpha = 1
                 ballShadow.alpha = 1
-                showShotMarkers(targetNX: shot.targetNX, targetNY: shot.targetNY, accuracy: shot.accuracy)
+                let predicted = ballSim.predictIdealIntercept()
+                showShotMarkers(
+                    intendedNX: shot.intendedNX, intendedNY: shot.intendedNY,
+                    scatterRadius: shot.scatterRadius,
+                    interceptNX: predicted.x, interceptNY: predicted.y
+                )
                 lastShotPower = shot.power
                 let speed = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
                 maxBallSpeedThisPoint = max(maxBallSpeedThisPoint, speed)
@@ -1991,7 +2112,12 @@ final class InteractiveMatchScene: SKScene {
                 previousBallNY = ballSim.courtY
                 ballNode.alpha = 1
                 ballShadow.alpha = 1
-                showShotMarkers(targetNX: serve.target.x, targetNY: serve.target.y, accuracy: serve.accuracy)
+                let predicted = ballSim.predictIdealIntercept()
+                showShotMarkers(
+                    intendedNX: serve.intendedNX, intendedNY: serve.intendedNY,
+                    scatterRadius: serve.scatterRadius,
+                    interceptNX: predicted.x, interceptNY: predicted.y
+                )
                 lastShotPower = serve.power
                 let speed = sqrt(ballSim.vx * ballSim.vx + ballSim.vy * ballSim.vy)
                 maxBallSpeedThisPoint = max(maxBallSpeedThisPoint, speed)
@@ -2120,7 +2246,6 @@ final class InteractiveMatchScene: SKScene {
         let netFaultRoll = CGFloat.random(in: 0...1)
         let isNetFault = netFaultRoll < netFaultRate
         if isNetFault {
-            ballSim.skipNetCorrection = true
             shot.arc *= 0.15
         }
 
@@ -2214,6 +2339,10 @@ final class InteractiveMatchScene: SKScene {
             targetNX: shot.targetNX,
             targetNY: shot.targetNY,
             accuracy: shot.accuracy,
+            allowNetHit: isNetFault,
+            intendedNX: shot.intendedNX,
+            intendedNY: shot.intendedNY,
+            scatterRadius: shot.scatterRadius,
             timer: swingContactDelay
         )
     }
@@ -2254,73 +2383,11 @@ final class InteractiveMatchScene: SKScene {
         }
 
         if npcAI.shouldSwing(ball: ballSim) {
-            // Pre-select modes so error type is context-aware
+            // Pre-select modes so shot type is context-aware
             npcAI.preselectModes(ball: ballSim)
 
-            // Capture debug info before the roll
-            let errDbg = npcAI.computeErrorDebugInfo(ball: ballSim)
-
-            // Check for unforced error before generating the return
-            if npcAI.shouldMakeError(ball: ballSim) {
-                npcErrors += 1
-                rallyLength += 1
-                // Animate the whiff
-                let ballFromLeft = ballSim.courtX < npcAI.currentNX
-                npcAnimator.play(ballFromLeft ? .backhand(isNear: false) : .forehand(isNear: false))
-
-                // Context-aware error type based on shot attempted
-                let errType = npcAI.errorType(for: npcAI.lastShotModes)
-
-                dbg.logNPCError(
-                    errorRate: errDbg.errorRate,
-                    baseError: errDbg.baseError,
-                    pressureError: errDbg.pressureError,
-                    shotDifficulty: errDbg.shotDifficulty,
-                    speedFrac: errDbg.speedFrac,
-                    spinPressure: errDbg.spinPressure,
-                    stretchFrac: errDbg.stretchFrac,
-                    stretchMultiplier: errDbg.stretchMultiplier,
-                    staminaPct: errDbg.staminaPct,
-                    shotQuality: errDbg.shotQuality,
-                    duprMultiplier: errDbg.duprMultiplier,
-                    isPutAway: errDbg.isPutAway,
-                    smashFactor: errDbg.smashFactor,
-                    errorType: errType,
-                    modes: npcAI.lastShotModes
-                )
-
-                switch errType {
-                case .net:
-                    ballSim.launch(
-                        from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
-                        toward: CGPoint(x: CGFloat.random(in: 0.2...0.8), y: 0.3),
-                        power: 0.25,
-                        arc: 0.02,
-                        spin: 0
-                    )
-                case .long:
-                    ballSim.launch(
-                        from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
-                        toward: CGPoint(x: CGFloat.random(in: 0.2...0.8), y: CGFloat.random(in: -0.10...0.05)),
-                        power: 0.8,
-                        arc: 0.15,
-                        spin: 0
-                    )
-                case .wide:
-                    let wideTarget = Bool.random() ? CGFloat.random(in: -0.2...0.05) : CGFloat.random(in: 0.95...1.2)
-                    ballSim.launch(
-                        from: CGPoint(x: npcAI.currentNX, y: npcAI.currentNY),
-                        toward: CGPoint(x: wideTarget, y: CGFloat.random(in: 0.0...0.20)),
-                        power: 0.7,
-                        arc: 0.12,
-                        spin: 0
-                    )
-                }
-                ballSim.lastHitByPlayer = false
-                previousBallNY = ballSim.courtY
-                checkedFirstBounce = false
-                return
-            }
+            // NPC errors now come from physics-based scatter pushing targets
+            // outside court bounds — no shouldMakeError roll needed.
 
             rallyLength += 1
             let shot = npcAI.generateShot(ball: ballSim)
@@ -2335,7 +2402,7 @@ final class InteractiveMatchScene: SKScene {
                 arc: shot.arc,
                 spinCurve: shot.spinCurve,
                 topspinFactor: shot.topspinFactor,
-                errorRate: errDbg.errorRate
+                errorRate: 0
             )
 
             // Pick animation based on shot context (mirrors player logic)
@@ -2384,6 +2451,10 @@ final class InteractiveMatchScene: SKScene {
                 targetNX: shot.targetNX,
                 targetNY: shot.targetNY,
                 accuracy: shot.accuracy,
+                allowNetHit: false,
+                intendedNX: shot.intendedNX,
+                intendedNY: shot.intendedNY,
+                scatterRadius: shot.scatterRadius,
                 timer: swingContactDelay
             )
         }
