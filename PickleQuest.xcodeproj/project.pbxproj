@@ -232,6 +232,7 @@
 		DB1E24C03C5CA4CDFAA83ABD /* MatchResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 784E4E44166C3416091BA7E0 /* MatchResult.swift */; };
 		DBE5F18AC6CBE4C42E7A712E /* StatCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75B283E423B33D740D8EB72 /* StatCalculatorTests.swift */; };
 		DCCB7C2F0979528084E67B4F /* stat_profiles.json in Resources */ = {isa = PBXBuildFile; fileRef = 637619EDD3755D264C071799 /* stat_profiles.json */; };
+		DD53DC2AD35F519D311D7CAE /* CourtBackgroundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE47008AF80EEB84BDE33857 /* CourtBackgroundView.swift */; };
 		DDF106C6BA80AD50CC113924 /* GearDropSpawnEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52C66553606405FE4BBBEE3C /* GearDropSpawnEngine.swift */; };
 		DE394D3B7574357C89473158 /* TrainingDrillSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634683B0BE31F01A4E5C08DF /* TrainingDrillSimulator.swift */; };
 		E10FA50EA8111B042BFEEF58 /* DevHeadlessRunnerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB7ACA77D92B3C8ADCEB44E0 /* DevHeadlessRunnerView.swift */; };
@@ -538,6 +539,7 @@
 		FB6D206DD4CAD02B5041B8BF /* EquipSlotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipSlotView.swift; sourceTree = "<group>"; };
 		FD07BCE35CB5A979F86D4A2F /* AlphaNPCGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphaNPCGenerator.swift; sourceTree = "<group>"; };
 		FD8FB5462329B4FD893BADEB /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		FE47008AF80EEB84BDE33857 /* CourtBackgroundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtBackgroundView.swift; sourceTree = "<group>"; };
 		FEB6871F2BC9AB0D6E1EBD19 /* PerformanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceView.swift; sourceTree = "<group>"; };
 		FED0E8BEF06AD0DD9066B5E9 /* MatchAI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchAI.swift; sourceTree = "<group>"; };
 		FF93932170EAA8760BA56E83 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
@@ -1126,6 +1128,7 @@
 			isa = PBXGroup;
 			children = (
 				BAD2DC487B38192356D28AC6 /* CharacterEquipmentView.swift */,
+				FE47008AF80EEB84BDE33857 /* CourtBackgroundView.swift */,
 				B619B590B70982D275E99B1B /* EquipmentCardView.swift */,
 				CC56C33DEA89A36C94D6A5DE /* EquipmentDetailView.swift */,
 				3C7D0E4AD263AFFDB2620896 /* EquipmentSlotsView.swift */,
@@ -1427,6 +1430,7 @@
 				E79425421D10B9AF9796A15A /* ContestedDropSheet.swift in Sources */,
 				EE2059E8882E44409C0B7255 /* Court.swift in Sources */,
 				8CE2A745A019908957FED502 /* CourtAnnotationView.swift in Sources */,
+				DD53DC2AD35F519D311D7CAE /* CourtBackgroundView.swift in Sources */,
 				473BB098A5401D2799FD9521 /* CourtDetailSheet.swift in Sources */,
 				0AFD27EDFF7CA4308C8471FB /* CourtLadder.swift in Sources */,
 				6BA89A76AD013E7FE476EFDA /* CourtProgressionService.swift in Sources */,

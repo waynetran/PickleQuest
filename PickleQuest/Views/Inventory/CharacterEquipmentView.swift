@@ -33,7 +33,12 @@ struct CharacterEquipmentView: View {
             let baseStats = player.stats
 
             ZStack {
-                // Background layer: animated character sprite
+                // Court background — scaled to match sprite (2x height)
+                CourtBackgroundView()
+                    .frame(width: spriteSize, height: spriteSize)
+                    .position(x: width * 0.45, y: height * 0.5)
+
+                // Animated character sprite on top of court
                 AnimatedSpriteView(
                     appearance: player.appearance,
                     size: spriteSize,
