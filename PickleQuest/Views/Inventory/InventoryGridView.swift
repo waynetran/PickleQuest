@@ -15,7 +15,7 @@ struct InventoryGridView: View {
             HStack(spacing: 6) {
                 ForEach(0..<vm.tabCount, id: \.self) { tab in
                     Button {
-                        vm.currentTab = tab
+                        withAnimation { vm.currentTab = tab }
                     } label: {
                         Text("\(tab + 1)")
                             .font(.system(size: 12, design: .monospaced).bold())
@@ -64,48 +64,52 @@ struct InventoryGridView: View {
                 .padding(.bottom, 4)
             }
 
-            // 3x3 responsive grid with swipe to switch tabs
-            GeometryReader { geo in
-                let totalSpacing = gridSpacing * CGFloat(columnCount - 1)
-                let cellSize = (geo.size.width - gridPadding * 2 - totalSpacing) / CGFloat(columnCount)
-                let itemsPerPage = columnCount * rowCount
-
-                LazyVGrid(
-                    columns: Array(repeating: GridItem(.fixed(cellSize), spacing: gridSpacing), count: columnCount),
-                    spacing: gridSpacing
-                ) {
-                    ForEach(0..<itemsPerPage, id: \.self) { index in
-                        let item = vm.itemForSlot(tab: vm.currentTab, index: index, player: player)
-                        let isEquipped = item.map { eq in
-                            player.equippedItems.values.contains(eq.id)
-                        } ?? false
-                        let deltas = item.map { vm.computeStatDeltas(equipping: $0, player: player) } ?? []
-
-                        InventorySlotView(
-                            item: item,
-                            isEquipped: isEquipped,
-                            cellSize: cellSize,
-                            statDeltas: deltas,
-                            onTap: {
-                                if let item {
-                                    vm.selectItem(item, player: player)
-                                }
-                            }
-                        )
-                    }
+            // Paged horizontal scroll grid
+            TabView(selection: Binding(
+                get: { vm.currentTab },
+                set: { vm.currentTab = $0 }
+            )) {
+                ForEach(0..<vm.tabCount, id: \.self) { tab in
+                    gridPage(tab: tab)
+                        .tag(tab)
                 }
-                .padding(.horizontal, gridPadding)
-                .gesture(
-                    DragGesture(minimumDistance: 30)
-                        .onEnded { value in
-                            if value.translation.width < -30 && vm.currentTab < vm.tabCount - 1 {
-                                vm.currentTab += 1
-                            } else if value.translation.width > 30 && vm.currentTab > 0 {
-                                vm.currentTab -= 1
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+        }
+    }
+
+    @ViewBuilder
+    private func gridPage(tab: Int) -> some View {
+        GeometryReader { geo in
+            let totalSpacing = gridSpacing * CGFloat(columnCount - 1)
+            let cellSize = (geo.size.width - gridPadding * 2 - totalSpacing) / CGFloat(columnCount)
+            let itemsPerPage = columnCount * rowCount
+
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.fixed(cellSize), spacing: gridSpacing), count: columnCount),
+                spacing: gridSpacing
+            ) {
+                ForEach(0..<itemsPerPage, id: \.self) { index in
+                    let item = vm.itemForSlot(tab: tab, index: index, player: player)
+                    let isEquipped = item.map { eq in
+                        player.equippedItems.values.contains(eq.id)
+                    } ?? false
+                    let deltas = item.map { vm.computeStatDeltas(equipping: $0, player: player) } ?? []
+
+                    InventorySlotView(
+                        item: item,
+                        isEquipped: isEquipped,
+                        cellSize: cellSize,
+                        statDeltas: deltas,
+                        onTap: {
+                            if let item {
+                                vm.selectItem(item, player: player)
                             }
                         }
-                )
+                    )
+                }
             }
+            .padding(.horizontal, gridPadding)
         }
     }
 }
