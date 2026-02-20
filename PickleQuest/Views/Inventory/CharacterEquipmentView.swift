@@ -13,7 +13,7 @@ struct CharacterEquipmentView: View {
             let inset: CGFloat = 12
 
             // Stats box on the right
-            let statsWidth: CGFloat = 100
+            let statsWidth: CGFloat = 130
             let statsLeft = width - inset - statsWidth
 
             // Player center: between left edge and stats box
@@ -85,11 +85,13 @@ struct CharacterEquipmentView: View {
                             Text("\(base)")
                                 .font(.system(size: 14, weight: .bold, design: .monospaced))
                                 .foregroundStyle(.white)
+                                .fixedSize()
 
                             if bonus != 0 {
                                 Text(bonus > 0 ? "+\(bonus)" : "\(bonus)")
                                     .font(.system(size: 12, weight: .bold, design: .monospaced))
                                     .foregroundStyle(bonus > 0 ? .green : .red)
+                                    .fixedSize()
                             }
 
                             Spacer()
