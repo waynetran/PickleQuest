@@ -314,19 +314,28 @@ struct ItemDetailView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             sectionHeader("OTHER \(equipment.slot.displayName.uppercased())S")
 
-                            LazyVGrid(
-                                columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3),
-                                spacing: 6
-                            ) {
-                                ForEach(sameSlotItems) { item in
-                                    Button {
-                                        onSelectItem?(item)
-                                    } label: {
-                                        similarItemCell(item)
+                            GeometryReader { geo in
+                                let spacing: CGFloat = 6
+                                let columns = 3
+                                let totalSpacing = spacing * CGFloat(columns - 1)
+                                let cellSize = (geo.size.width - totalSpacing) / CGFloat(columns)
+
+                                LazyVGrid(
+                                    columns: Array(repeating: GridItem(.fixed(cellSize), spacing: spacing), count: columns),
+                                    spacing: spacing
+                                ) {
+                                    ForEach(sameSlotItems) { item in
+                                        InventorySlotView(
+                                            item: item,
+                                            isEquipped: false,
+                                            cellSize: cellSize,
+                                            statDeltas: [],
+                                            onTap: { onSelectItem?(item) }
+                                        )
                                     }
-                                    .buttonStyle(.plain)
                                 }
                             }
+                            .frame(height: similarItemsGridHeight)
                         }
                         .padding(12)
                         .background(Color(white: 0.1))
@@ -417,25 +426,11 @@ struct ItemDetailView: View {
             .padding(.horizontal, 12)
     }
 
-    private func similarItemCell(_ item: Equipment) -> some View {
-        VStack(spacing: 2) {
-            Text(item.slot.icon)
-                .font(.system(size: 28))
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(item.rarity.color.opacity(0.2))
-                .overlay(
-                    Rectangle().strokeBorder(item.rarity.color.opacity(0.4), lineWidth: 1)
-                )
-
-            Text(item.rarity.displayName.prefix(3).uppercased())
-                .font(.system(size: 7, weight: .bold, design: .monospaced))
-                .foregroundStyle(item.rarity.color)
-
-            Text("+\(item.totalBonusPoints)")
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .foregroundStyle(.white)
-        }
+    private var similarItemsGridHeight: CGFloat {
+        let rows = Int(ceil(Double(sameSlotItems.count) / 3.0))
+        let cellSize: CGFloat = 100
+        let spacing: CGFloat = 6
+        return CGFloat(rows) * cellSize + CGFloat(max(0, rows - 1)) * spacing
     }
 
     private func traitColor(_ tier: TraitTier) -> Color {
