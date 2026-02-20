@@ -7,11 +7,15 @@ struct CourtBackgroundView: View {
             let w = geo.size.width
             let h = geo.size.height
 
+            // Green apron spacing: top/bottom 2x the sides
+            let sidePad = w * 0.12
+            let vertPad = sidePad * 2
+
             // Perspective: near baseline is wider, far (net line) is narrower
-            let nearWidth = w * 0.95
-            let farWidth = w * 0.55
-            let courtTop = h * 0.08    // net line Y
-            let courtBottom = h * 0.98 // near baseline Y
+            let nearWidth = w - sidePad * 2
+            let farWidth = nearWidth * 0.58
+            let courtTop = vertPad           // net line Y
+            let courtBottom = h - vertPad    // near baseline Y
             let courtHeight = courtBottom - courtTop
 
             // Kitchen line at ~32% from the net
